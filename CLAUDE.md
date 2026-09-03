@@ -44,12 +44,15 @@ Medical Mate Android 앱 저장소에서 AI 에이전트가 작업할 때 참고
 | compileSdk | 37 | `app/build.gradle.kts` |
 | minSdk / targetSdk | 24 / 36 | `app/build.gradle.kts` |
 | ktlint / detekt | 14.2.0 / 1.23.8 | `gradle/libs.versions.toml` |
+| KSP / Hilt | 2.2.10-2.0.2 / 2.60.1 | `gradle/libs.versions.toml` |
 
 규칙:
 
 - **의존성은 반드시 `gradle/libs.versions.toml`(버전 카탈로그)에 추가하고 `libs.*` 별칭으로 참조합니다.** 빌드 스크립트에 좌표를 직접 쓰지 않습니다.
 - **`org.jetbrains.kotlin.android` 플러그인을 추가하지 마세요.** AGP 9의 내장 Kotlin 지원을 사용하며, 현재 `plugins` 블록에는 `com.android.application`과 `org.jetbrains.kotlin.plugin.compose`만 있습니다.
 - `compileSdk`는 37 이상을 유지합니다. `androidx.core:core-ktx:1.19.0`이 API 37 이상을 요구하며, 낮추면 `checkDebugAarMetadata`에서 빌드가 실패합니다.
+- **KSP 버전은 Kotlin 버전에 묶여 있습니다.** `kotlin`을 올리면 `ksp`도 함께 올려야 합니다. KSP 2.3.x는 Kotlin 2.3용이므로 지금 쓸 수 없습니다.
+- **`android.disallowKotlinSourceSets=false`를 지우지 마세요.** KSP가 생성 소스를 `kotlin.sourceSets`로 등록하는데 AGP 9의 내장 Kotlin 지원이 이 DSL을 금지합니다. AGP가 직접 안내하는 억제 옵션이며, 없으면 `:app` 설정 단계에서 빌드가 실패합니다. KSP가 built-in Kotlin에 대응하면 제거합니다.
 - `org.gradle.configuration-cache=true`가 켜져 있습니다. 빌드 스크립트에서 configuration cache와 호환되지 않는 패턴(태스크 실행 시점의 `Project` 접근 등)을 쓰지 않습니다.
 
 ---
@@ -74,8 +77,18 @@ MedicalMate/
 ```
 
 - 패키지 루트: `com.mist.medicalmate`
-- **아키텍처 레이어는 아직 정해지지 않았습니다.** 현재는 `MainActivity`와 테마뿐입니다. 레이어 구조(예: `ui` / `domain` / `data`)를 도입하는 시점에 이 문서를 함께 갱신합니다.
-- 다만 **로직은 JVM에서 테스트 가능한 위치에 둡니다.** ViewModel·UseCase·Repository의 로직이 Activity나 Composable 안에 들어가면 `testDebugUnitTest`로 검증할 수 없습니다.
+**정해진 것**
+
+- **UI는 Compose 단독입니다.** XML 뷰를 추가하지 않습니다. `res/values/themes.xml`은 Manifest용 테마로만 남습니다.
+- **패턴은 MVVM + 단방향 흐름입니다.** ViewModel이 상태를 노출하고 Composable이 소비합니다. MVI 라이브러리(Orbit, Mavericks)는 도입하지 않습니다.
+- **UseCase 계층은 기본적으로 두지 않습니다.** `ui → Repository`가 기본이고, 여러 Repository를 조합하거나 실제 비즈니스 규칙이 있을 때만 UseCase를 만듭니다. 한 줄 위임만 하는 UseCase를 만들지 마세요.
+- **DI는 Hilt입니다.** `@HiltAndroidApp`은 `MedicalMateApplication`, 화면 진입점은 `@AndroidEntryPoint`.
+- **로직은 JVM에서 테스트 가능한 위치에 둡니다.** ViewModel·Repository의 로직이 Activity나 Composable 안에 들어가면 `testDebugUnitTest`로 검증할 수 없습니다.
+
+**아직 안 정해진 것**
+
+- **패키지 구조는 의도적으로 만들지 않았습니다.** 첫 화면 작업을 시작할 때 정합니다. 그때까지 새 파일은 루트 패키지에 두고, 구조를 추측해서 빈 패키지를 만들지 마세요.
+- 네비게이션, 네트워크 클라이언트, 로컬 저장 방식은 미정입니다.
 
 ---
 
@@ -176,7 +189,10 @@ MedicalMate/
 | 항목 | 상태 |
 | -- | -- |
 | 유닛 테스트 | 템플릿 예제 1개뿐. 실질 커버리지 없음 |
-| 아키텍처 레이어 | 미정 |
+| 아키텍처 패턴 | MVVM 확정. UseCase는 필요할 때만 |
+| DI | Hilt 확정 |
+| 패키지 구조 | 미정. 첫 화면 작업 시 결정 |
+| 네비게이션 / 네트워크 / 로컬 저장 | 미정 |
 | 릴리즈 서명 | 없음. `bundleRelease` 산출물은 미서명 |
 | 스크린샷 테스트 (Paparazzi/Roborazzi) | 미도입 |
 | E2E (Maestro) | 미도입 |
