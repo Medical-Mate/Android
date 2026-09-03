@@ -1,15 +1,29 @@
+# Gradle / build output
 *.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
+.gradle/
+build/
 /captures
 .externalNativeBuild
 .cxx
+.kotlin/
+
+# Machine-specific config (SDK 경로 등)
 local.properties
+
+# IDE - Android Studio / IntelliJ
+.idea/
+
+# 서명 키와 시크릿 - 절대 커밋 금지
+*.jks
+*.keystore
+*.p12
+keystore.properties
+signing.properties
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
