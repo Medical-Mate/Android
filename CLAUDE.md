@@ -100,7 +100,7 @@ MedicalMate/
 
 ## 5. Git 컨벤션
 
-전체 규칙은 팀 공유 문서 `GIT_CONVENTION.md`에 있습니다. 이 저장소에서 반드시 지킬 것만 요약합니다.
+전체 규칙은 [`GIT_CONVENTION.md`](GIT_CONVENTION.md)에 있습니다. 이 저장소에서 반드시 지킬 것만 요약합니다.
 
 **커밋 메시지**
 
@@ -181,5 +181,6 @@ MedicalMate/
 | 스크린샷 테스트 (Paparazzi/Roborazzi) | 미도입 |
 | E2E (Maestro) | 미도입 |
 | `scripts/verify.sh` | 미작성. 1장의 Gradle 명령을 직접 사용 |
+| org 공통 문서 위치 | `GIT_CONVENTION.md`가 저장소별 사본으로 존재. 어긋나면 `.github` 저장소로 통합 필요 |
 
 `local.properties`는 `.gitignore` 대상입니다. 로컬에서는 Android SDK 경로가 필요하고, CI는 `ANDROID_HOME` 환경 변수를 사용합니다.
