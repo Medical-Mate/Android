@@ -1,0 +1,17 @@
+# Overrides layered on top of detekt's default config (buildUponDefaultConfig = true).
+# Only deviations from the defaults belong here.
+
+naming:
+  FunctionNaming:
+    # Jetpack Compose @Composable functions are PascalCase by convention.
+    ignoreAnnotated: ['Composable']
+
+style:
+  MagicNumber:
+    excludes: ['**/test/**', '**/androidTest/**', '**/ui/theme/**']
+  WildcardImport:
+    excludes: ['**/test/**', '**/androidTest/**']
+
+complexity:
+  LongParameterList:
+    ignoreAnnotated: ['Composable']
