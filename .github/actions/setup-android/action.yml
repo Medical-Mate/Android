@@ -7,19 +7,19 @@ runs:
   using: composite
   steps:
     - name: Set up JDK 21
-      uses: actions/setup-java@v4
+      uses: actions/setup-java@v6
       with:
         distribution: temurin
         java-version: '21'
 
     - name: Set up Android SDK
-      uses: android-actions/setup-android@v3
+      uses: android-actions/setup-android@v4
       with:
         # compileSdk = 37 (app/build.gradle.kts); build-tools 36.0.0 is AGP 9.3.2's default.
         packages: 'platform-tools platforms;android-37.0 build-tools;36.0.0'
 
     - name: Set up Gradle
-      uses: gradle/actions/setup-gradle@v4
+      uses: gradle/actions/setup-gradle@v6
       with:
         # Caches ~/.gradle/caches and the wrapper distribution. The cache is written
         # only from the default branch and read on PRs, so PRs can't poison it.
