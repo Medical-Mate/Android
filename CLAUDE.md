@@ -45,6 +45,7 @@ Medical Mate Android 앱 저장소에서 AI 에이전트가 작업할 때 참고
 | minSdk / targetSdk | 24 / 36 | `app/build.gradle.kts` |
 | ktlint / detekt | 14.2.0 / 1.23.8 | `gradle/libs.versions.toml` |
 | KSP / Hilt | 2.2.10-2.0.2 / 2.60.1 | `gradle/libs.versions.toml` |
+| 카카오 SDK | 2.25.0 | `gradle/libs.versions.toml` |
 
 규칙:
 
@@ -53,6 +54,9 @@ Medical Mate Android 앱 저장소에서 AI 에이전트가 작업할 때 참고
 - `compileSdk`는 37 이상을 유지합니다. `androidx.core:core-ktx:1.19.0`이 API 37 이상을 요구하며, 낮추면 `checkDebugAarMetadata`에서 빌드가 실패합니다.
 - **KSP 버전은 Kotlin 버전에 묶여 있습니다.** `kotlin`을 올리면 `ksp`도 함께 올려야 합니다. KSP 2.3.x는 Kotlin 2.3용이므로 지금 쓸 수 없습니다.
 - **`android.disallowKotlinSourceSets=false`를 지우지 마세요.** KSP가 생성 소스를 `kotlin.sourceSets`로 등록하는데 AGP 9의 내장 Kotlin 지원이 이 DSL을 금지합니다. AGP가 직접 안내하는 억제 옵션이며, 없으면 `:app` 설정 단계에서 빌드가 실패합니다. KSP가 built-in Kotlin에 대응하면 제거합니다.
+- **카카오 SDK는 Maven Central에 없습니다.** `settings.gradle.kts`의 `dependencyResolutionManagement`에 `https://devrepo.kakao.com/nexus/content/groups/public/`이 등록돼 있고 `includeGroup("com.kakao.sdk")`로 범위를 제한합니다. `repositoriesMode`가 `FAIL_ON_PROJECT_REPOS`라 모듈 빌드 스크립트에는 저장소를 넣을 수 없습니다.
+- **네이티브 앱 키는 `local.properties`의 `KAKAO_NATIVE_APP_KEY`에서 읽습니다.** 없으면 환경변수를 보고, 그것도 없으면 빈 문자열로 빌드는 통과합니다. 실패는 런타임 카카오 API 호출에서만 납니다. CI는 환경변수 경로를 씁니다.
+- 매니페스트에 `<queries>`를 직접 추가하지 마세요. `v2-common` AAR이 `com.kakao.talk`와 alpha·sandbox를 이미 선언하고 전이 병합됩니다. 손으로 넣으면 중복이고 alpha·sandbox가 빠집니다.
 - `org.gradle.configuration-cache=true`가 켜져 있습니다. 빌드 스크립트에서 configuration cache와 호환되지 않는 패턴(태스크 실행 시점의 `Project` 접근 등)을 쓰지 않습니다.
 
 ---
@@ -79,7 +83,7 @@ MedicalMate/
 - 패키지 루트: `com.mist.medicalmate`
 **정해진 것**
 
-- **UI는 Compose 단독입니다.** XML 뷰를 추가하지 않습니다. `res/values/themes.xml`은 Manifest용 테마로만 남습니다.
+- **UI는 Compose 단독입니다.** XML 뷰를 추가하지 않습니다. `res/values/themes.xml`은 Manifest용 테마로만 남습니다. 예외로 카카오 SDK가 `appcompat`과 `material` 뷰 라이브러리를 전이 의존으로 끌고 옵니다. SDK 액티비티가 그 테마를 쓰므로 exclude하면 런타임에 깨집니다.
 - **패턴은 MVVM + 단방향 흐름입니다.** ViewModel이 상태를 노출하고 Composable이 소비합니다. MVI 라이브러리(Orbit, Mavericks)는 도입하지 않습니다.
 - **UseCase 계층은 기본적으로 두지 않습니다.** `ui → Repository`가 기본이고, 여러 Repository를 조합하거나 실제 비즈니스 규칙이 있을 때만 UseCase를 만듭니다. 한 줄 위임만 하는 UseCase를 만들지 마세요.
 - **DI는 Hilt입니다.** `@HiltAndroidApp`은 `MedicalMateApplication`, 화면 진입점은 `@AndroidEntryPoint`.

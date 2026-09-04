@@ -12,6 +12,7 @@ detekt = "1.23.8"
 ktlint = "14.2.0"
 # KSP 버전은 Kotlin 버전에 묶여 있습니다. kotlin을 올리면 여기도 함께 올립니다.
 ksp = "2.2.10-2.0.2"
+kakao = "2.25.0"
 hilt = "2.60.1"
 
 [libraries]
@@ -30,6 +31,8 @@ androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
+# Maven Central에 없다. settings.gradle.kts의 devrepo.kakao.com에서 받는다.
+kakao-user = { group = "com.kakao.sdk", name = "v2-user", version.ref = "kakao" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
 
 [plugins]

@@ -2,6 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- 카카오 SDK 모듈 어디에도 uses-permission 선언이 없어 앱이 직접 넣어야 한다. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:name=".MedicalMateApplication"
         android:allowBackup="true"
@@ -22,6 +25,27 @@
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
+            카카오톡에서 인증을 마치고 앱으로 돌아오는 지점.
+            액티비티 자체는 v2-auth AAR에 선언돼 있지만 exported와 intent-filter가 없어
+            여기서 같은 이름으로 다시 선언해 병합한다.
+            스킴은 kakao{네이티브 앱 키} 형식이며 값은 manifestPlaceholders가 채운다.
+        -->
+        <activity
+            android:name="com.kakao.sdk.auth.AuthCodeHandlerActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="oauth"
+                    android:scheme="kakao${KAKAO_NATIVE_APP_KEY}" />
             </intent-filter>
         </activity>
     </application>
