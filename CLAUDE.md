@@ -71,7 +71,8 @@ MedicalMate/
 │   └── src/
 │       ├── main/java/com/mist/medicalmate/
 │       │   ├── MainActivity.kt          진입점 (ComponentActivity + Compose)
-│       │   └── ui/theme/                Color.kt, Theme.kt, Type.kt
+│       │   ├── MedicalMateApplication.kt  @HiltAndroidApp, KakaoSdk.init
+│       │   └── core/designsystem/       Color.kt, Theme.kt, Type.kt
 │       ├── test/                        JVM 유닛 테스트
 │       └── androidTest/                 계측 테스트 (CI에서 실행하지 않음)
 ├── config/detekt/detekt.yml     detekt 기본 설정 위에 얹는 예외
@@ -89,10 +90,33 @@ MedicalMate/
 - **DI는 Hilt입니다.** `@HiltAndroidApp`은 `MedicalMateApplication`, 화면 진입점은 `@AndroidEntryPoint`.
 - **로직은 JVM에서 테스트 가능한 위치에 둡니다.** ViewModel·Repository의 로직이 Activity나 Composable 안에 들어가면 `testDebugUnitTest`로 검증할 수 없습니다.
 
+- **패키지는 기능(도메인) 우선입니다.** 최상위에 도메인 패키지를 두고 그 안에 `ui`와 `data`를 둡니다. 레이어를 최상위에 두지 않습니다.
+
+  ```text
+  com.mist.medicalmate/
+  ├── core/
+  │   ├── designsystem/   테마, 공용 Composable
+  │   ├── network/        Retrofit, 인터셉터
+  │   └── model/          여러 도메인이 공유하는 타입
+  ├── navigation/
+  ├── auth/      ui/ data/    1o 로그인
+  ├── home/      ui/ data/    1n 홈
+  ├── profile/   ui/ data/    1a 1b 온보딩
+  ├── intake/    ui/ data/    1l 1c 1m 1d 문답
+  ├── card/      ui/ data/    1e 브리핑 카드
+  ├── handoff/   ui/          1g 진료실 전달
+  └── visit/     ui/ data/    1p 1q 사후 기록
+  ```
+
+  도메인 이름은 `Medical-Mate/Backend`의 패키지(`auth`, `profile`, `intake`, `card`, `handoff`, `visit`)와 맞췄습니다. 같은 단어가 양쪽에서 같은 것을 가리키게 하려는 목적입니다. `home`은 백엔드에 대응이 없습니다.
+
+- **빈 패키지를 미리 만들지 마세요.** 위 구조는 규칙이지 골격이 아닙니다. 폴더는 해당 기능에 실제로 착수할 때 만듭니다. 한 도메인에 파일이 하나뿐이면 `ui`·`data` 하위 폴더도 만들지 않고 도메인 폴더에 바로 둡니다.
+
+- **한 도메인이 다른 도메인을 직접 참조하지 않습니다.** 공유가 필요하면 `core`로 올립니다. 두 도메인이 같은 타입을 쓰면 그 타입은 `core/model`에 둡니다.
+
 **아직 안 정해진 것**
 
-- **패키지 구조는 의도적으로 만들지 않았습니다.** 첫 화면 작업을 시작할 때 정합니다. 그때까지 새 파일은 루트 패키지에 두고, 구조를 추측해서 빈 패키지를 만들지 마세요.
-- 네비게이션, 네트워크 클라이언트, 로컬 저장 방식은 미정입니다.
+- 네비게이션 라이브러리, 네트워크 클라이언트, 로컬 저장 방식은 미정입니다.
 
 ---
 
@@ -109,7 +133,7 @@ MedicalMate/
 
 **detekt** — `config/detekt/detekt.yml`. `buildUponDefaultConfig = true`이므로 이 파일에는 **기본값과 다른 부분만** 적습니다.
 
-- `MagicNumber`는 `test`, `androidTest`, `ui/theme`에서 제외됩니다. 테마 색상 리터럴 때문입니다.
+- `MagicNumber`는 `test`, `androidTest`, `core/designsystem`에서 제외됩니다. 테마 색상 리터럴 때문입니다.
 - `FunctionNaming`은 `@Composable`을 무시합니다.
 - 보고서: `app/build/reports/detekt/detekt.html`, `detekt.sarif`
 
@@ -195,7 +219,7 @@ MedicalMate/
 | 유닛 테스트 | 템플릿 예제 1개뿐. 실질 커버리지 없음 |
 | 아키텍처 패턴 | MVVM 확정. UseCase는 필요할 때만 |
 | DI | Hilt 확정 |
-| 패키지 구조 | 미정. 첫 화면 작업 시 결정 |
+| 패키지 구조 | 기능 우선 확정. 도메인명은 Backend와 일치 |
 | 네비게이션 / 네트워크 / 로컬 저장 | 미정 |
 | 릴리즈 서명 | 없음. `bundleRelease` 산출물은 미서명 |
 | 스크린샷 테스트 (Paparazzi/Roborazzi) | 미도입 |

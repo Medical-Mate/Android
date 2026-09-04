@@ -8,7 +8,7 @@ naming:
 
 style:
   MagicNumber:
-    excludes: ['**/test/**', '**/androidTest/**', '**/ui/theme/**']
+    excludes: ['**/test/**', '**/androidTest/**', '**/core/designsystem/**']
   WildcardImport:
     excludes: ['**/test/**', '**/androidTest/**']
 

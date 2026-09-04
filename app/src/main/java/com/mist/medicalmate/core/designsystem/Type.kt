@@ -1,4 +1,4 @@
-package com.mist.medicalmate.ui.theme
+package com.mist.medicalmate.core.designsystem
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
