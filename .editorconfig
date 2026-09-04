@@ -9,6 +9,9 @@ insert_final_newline = true
 trim_trailing_whitespace = true
 
 [*.{kt,kts}]
+# detekt MaxLineLength 기본값과 같은 값. 두 도구가 서로 다른 기준을 쓰면
+# ktlintFormat이 줄을 붙이고 detekt가 그 줄을 잡는 상태가 된다.
+max_line_length = 120
 ktlint_code_style = intellij_idea
 # Jetpack Compose @Composable functions are PascalCase by convention.
 ktlint_function_naming_ignore_when_annotated_with = Composable

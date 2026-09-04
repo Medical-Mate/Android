@@ -89,6 +89,8 @@ MedicalMate/
 - **UseCase 계층은 기본적으로 두지 않습니다.** `ui → Repository`가 기본이고, 여러 Repository를 조합하거나 실제 비즈니스 규칙이 있을 때만 UseCase를 만듭니다. 한 줄 위임만 하는 UseCase를 만들지 마세요.
 - **DI는 Hilt입니다.** `@HiltAndroidApp`은 `MedicalMateApplication`, 화면 진입점은 `@AndroidEntryPoint`.
 - **로직은 JVM에서 테스트 가능한 위치에 둡니다.** ViewModel·Repository의 로직이 Activity나 Composable 안에 들어가면 `testDebugUnitTest`로 검증할 수 없습니다.
+- **ViewModel에 Android `Context`를 넣지 않습니다.** 카카오 SDK처럼 Activity Context를 요구하는 호출은 UI 계층(`LoginRoute` 같은 상태 있는 컴포저블)이 담당하고, ViewModel은 결과만 받습니다. 그래서 `KakaoLoginClient`는 Hilt로 주입하지 않고 컴포저블에서 `remember`로 만듭니다.
+- **브랜드가 고정한 색상은 `colorScheme`에 넣지 않습니다.** 카카오 버튼 색(`KakaoContainer` 등)은 `core/designsystem/Color.kt`에 별도 상수로 둡니다. 카카오 디자인 가이드가 변경을 금지하므로 테마나 다크 모드에 따라 바뀌면 안 됩니다.
 
 - **패키지는 기능(도메인) 우선입니다.** 최상위에 도메인 패키지를 두고 그 안에 `ui`와 `data`를 둡니다. 레이어를 최상위에 두지 않습니다.
 
@@ -129,11 +131,13 @@ MedicalMate/
 - Jetpack Compose 관례에 따라 `@Composable` 함수는 PascalCase를 허용합니다(`ktlint_function_naming_ignore_when_annotated_with = Composable`).
 - 와일드카드 import는 금지입니다. 자동 수정되지 않으므로 직접 풀어 써야 합니다.
 - `*.kts` 빌드 스크립트도 검사 대상입니다.
+- `max_line_length = 120`은 detekt `MaxLineLength` 기본값과 맞춘 값입니다. **둘을 다르게 두면 `ktlintFormat`이 줄을 붙이고 detekt가 그 줄을 잡는 무한 왕복이 생깁니다.** 한쪽만 바꾸지 마세요.
 - 대부분의 위반은 `./gradlew :app:ktlintFormat`으로 해결됩니다.
 
 **detekt** — `config/detekt/detekt.yml`. `buildUponDefaultConfig = true`이므로 이 파일에는 **기본값과 다른 부분만** 적습니다.
 
-- `MagicNumber`는 `test`, `androidTest`, `core/designsystem`에서 제외됩니다. 테마 색상 리터럴 때문입니다.
+- `MagicNumber`는 `test`, `androidTest`, `core/designsystem`, 그리고 **`ui` 패키지 전체**에서 제외됩니다. 테마 색상 리터럴과 Compose 레이아웃의 `dp`·`sp` 값까지 잡으면 신호 대비 잡음이 너무 큽니다. `data`와 ViewModel의 계산 로직에서는 그대로 살아 있습니다.
+- `UnusedPrivateMember`는 `@Preview`를 무시합니다. Preview 컴포저블은 코드가 아니라 IDE·툴링이 호출하므로 미사용이 아닙니다.
 - `FunctionNaming`은 `@Composable`을 무시합니다.
 - 보고서: `app/build/reports/detekt/detekt.html`, `detekt.sarif`
 
@@ -216,10 +220,13 @@ MedicalMate/
 
 | 항목 | 상태 |
 | -- | -- |
-| 유닛 테스트 | 템플릿 예제 1개뿐. 실질 커버리지 없음 |
+| 유닛 테스트 | `LoginViewModel` 상태 전이 7건. 그 외는 템플릿 예제 1개 |
 | 아키텍처 패턴 | MVVM 확정. UseCase는 필요할 때만 |
 | DI | Hilt 확정 |
 | 패키지 구조 | 기능 우선 확정. 도메인명은 Backend와 일치 |
+| 로그인 화면(1o) | 카카오 버튼만 구현. 서버 토큰 교환 미연동 |
+| Apple · 전화번호 로그인 | 백엔드 미지원. `User` 엔티티 식별자가 `kakaoId` 단독 |
+| 카카오 말풍선 심볼 에셋 | 없음. 콘솔의 도구 > 리소스 다운로드에서 받아야 함 |
 | 네비게이션 / 네트워크 / 로컬 저장 | 미정 |
 | 릴리즈 서명 | 없음. `bundleRelease` 산출물은 미서명 |
 | 스크린샷 테스트 (Paparazzi/Roborazzi) | 미도입 |

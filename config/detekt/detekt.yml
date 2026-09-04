@@ -7,8 +7,14 @@ naming:
     ignoreAnnotated: ['Composable']
 
 style:
+  UnusedPrivateMember:
+    # @Preview 컴포저블은 코드에서 호출되지 않고 IDE·툴링이 실행한다.
+    # 미사용이 아니라 호출자가 코드 밖에 있는 경우다.
+    ignoreAnnotated: ['Preview']
   MagicNumber:
-    excludes: ['**/test/**', '**/androidTest/**', '**/core/designsystem/**']
+    # Compose 레이아웃 코드의 dp·sp 리터럴까지 잡으면 신호 대비 잡음이 너무 크다.
+    # 비즈니스 로직(data·ViewModel 계산)에서는 그대로 살아 있다.
+    excludes: ['**/test/**', '**/androidTest/**', '**/core/designsystem/**', '**/ui/**']
   WildcardImport:
     excludes: ['**/test/**', '**/androidTest/**']
 
