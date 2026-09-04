@@ -1,3 +1,12 @@
 <resources>
-    <string name="app_name">Medical Mate</string>
+    <string name="app_name">진료메이트</string>
+
+    <string name="login_title">진료메이트</string>
+    <string name="login_subtitle">진료실에서 하고 싶은 말, 미리 정리해요</string>
+    <!-- 카카오 디자인 가이드가 허용하는 레이블은 "카카오 로그인"과 "로그인"뿐이다. -->
+    <string name="login_kakao">카카오 로그인</string>
+    <string name="login_kakao_content_description">카카오로 로그인</string>
+    <!-- 문구와 링크 대상은 PO·디자인 확인 필요. 개인정보처리방침 URL이 아직 없다. -->
+    <string name="login_terms">계속하면 이용약관과 개인정보 처리방침에 동의하는 것으로 간주됩니다</string>
+    <string name="login_failed">로그인에 실패했어요. 잠시 후 다시 시도해주세요</string>
 </resources>
