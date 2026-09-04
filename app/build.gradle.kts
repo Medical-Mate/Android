@@ -60,6 +60,10 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        // minSdk 24에서 java.time을 쓰려면 필요하다. 켜지 않으면 lintDebug가
+        // NewApi 오류로 막는다(API 26 요구). 이 앱은 일정·복용 알림·카드 작성일까지
+        // 날짜를 계속 다뤄서 우회하면 나중에 타입을 전부 바꿔야 한다.
+        isCoreLibraryDesugaringEnabled = true
     }
     buildFeatures {
         compose = true
@@ -100,6 +104,7 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
     implementation(libs.hilt.android)

@@ -46,12 +46,14 @@ Medical Mate Android 앱 저장소에서 AI 에이전트가 작업할 때 참고
 | ktlint / detekt | 14.2.0 / 1.23.8 | `gradle/libs.versions.toml` |
 | KSP / Hilt | 2.2.10-2.0.2 / 2.60.1 | `gradle/libs.versions.toml` |
 | 카카오 SDK | 2.25.0 | `gradle/libs.versions.toml` |
+| desugar_jdk_libs | 2.1.5 | `gradle/libs.versions.toml` |
 
 규칙:
 
 - **의존성은 반드시 `gradle/libs.versions.toml`(버전 카탈로그)에 추가하고 `libs.*` 별칭으로 참조합니다.** 빌드 스크립트에 좌표를 직접 쓰지 않습니다.
 - **`org.jetbrains.kotlin.android` 플러그인을 추가하지 마세요.** AGP 9의 내장 Kotlin 지원을 사용하며, 현재 `plugins` 블록에는 `com.android.application`과 `org.jetbrains.kotlin.plugin.compose`만 있습니다.
 - `compileSdk`는 37 이상을 유지합니다. `androidx.core:core-ktx:1.19.0`이 API 37 이상을 요구하며, 낮추면 `checkDebugAarMetadata`에서 빌드가 실패합니다.
+- **`java.time`을 쓰려면 core library desugaring이 켜져 있어야 합니다.** minSdk 24라서 끄면 `lintDebug`가 `NewApi` 오류로 막습니다(API 26 요구). `app/build.gradle.kts`의 `isCoreLibraryDesugaringEnabled = true`와 `coreLibraryDesugaring(libs.desugar.jdk.libs)`를 지우지 마세요. 일정·복용 알림·카드 작성일까지 날짜가 계속 나옵니다.
 - **KSP 버전은 Kotlin 버전에 묶여 있습니다.** `kotlin`을 올리면 `ksp`도 함께 올려야 합니다. KSP 2.3.x는 Kotlin 2.3용이므로 지금 쓸 수 없습니다.
 - **`android.disallowKotlinSourceSets=false`를 지우지 마세요.** KSP가 생성 소스를 `kotlin.sourceSets`로 등록하는데 AGP 9의 내장 Kotlin 지원이 이 DSL을 금지합니다. AGP가 직접 안내하는 억제 옵션이며, 없으면 `:app` 설정 단계에서 빌드가 실패합니다. KSP가 built-in Kotlin에 대응하면 제거합니다.
 - **카카오 SDK는 Maven Central에 없습니다.** `settings.gradle.kts`의 `dependencyResolutionManagement`에 `https://devrepo.kakao.com/nexus/content/groups/public/`이 등록돼 있고 `includeGroup("com.kakao.sdk")`로 범위를 제한합니다. `repositoriesMode`가 `FAIL_ON_PROJECT_REPOS`라 모듈 빌드 스크립트에는 저장소를 넣을 수 없습니다.
@@ -70,9 +72,11 @@ MedicalMate/
 ├── app/                         유일한 모듈 (com.android.application)
 │   └── src/
 │       ├── main/java/com/mist/medicalmate/
-│       │   ├── MainActivity.kt          진입점 (ComponentActivity + Compose)
+│       │   ├── MainActivity.kt          진입점. 로그인·홈 임시 전환
 │       │   ├── MedicalMateApplication.kt  @HiltAndroidApp, KakaoSdk.init
-│       │   └── core/designsystem/       Color.kt, Theme.kt, Type.kt
+│       │   ├── core/designsystem/       Color.kt, Theme.kt, Type.kt
+│       │   ├── auth/  data/ ui/         1o 로그인
+│       │   └── home/  ui/               1n 홈
 │       ├── test/                        JVM 유닛 테스트
 │       └── androidTest/                 계측 테스트 (CI에서 실행하지 않음)
 ├── config/detekt/detekt.yml     detekt 기본 설정 위에 얹는 예외
@@ -220,11 +224,13 @@ MedicalMate/
 
 | 항목 | 상태 |
 | -- | -- |
-| 유닛 테스트 | `LoginViewModel` 상태 전이 7건. 그 외는 템플릿 예제 1개 |
+| 유닛 테스트 | `LoginViewModel` 7건, `HomeViewModel` 6건. 그 외 템플릿 1개 |
 | 아키텍처 패턴 | MVVM 확정. UseCase는 필요할 때만 |
 | DI | Hilt 확정 |
 | 패키지 구조 | 기능 우선 확정. 도메인명은 Backend와 일치 |
 | 로그인 화면(1o) | 카카오 버튼만 구현. 서버 토큰 교환 미연동 |
+| 홈 화면(1n) | 구조만. `HomeViewModel`이 픽스처를 노출. 서버 미연동 |
+| 화면 전환 | `MainActivity`의 임시 `if` 분기. 목적지가 늘면 NavHost로 교체 |
 | Apple · 전화번호 로그인 | 백엔드 미지원. `User` 엔티티 식별자가 `kakaoId` 단독 |
 | 카카오 말풍선 심볼 에셋 | 없음. 콘솔의 도구 > 리소스 다운로드에서 받아야 함 |
 | 네비게이션 / 네트워크 / 로컬 저장 | 미정 |

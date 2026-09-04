@@ -1,6 +1,7 @@
 package com.mist.medicalmate.auth.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -17,13 +18,26 @@ import kotlinx.coroutines.launch
  * 카카오 SDK가 Activity Context를 요구하므로 SDK 호출을 이 계층이 담당한다.
  * [KakaoLoginClient]를 Hilt로 주입하지 않는 이유도 같다. ViewModel에 Context가
  * 들어가면 상태 로직을 JVM에서 검증할 수 없다.
+ *
+ * [onAuthenticated]는 토큰을 넘기지 않는다. 서버 토큰 교환은 ViewModel이 맡을
+ * 예정이고, 자격증명을 UI 콜백으로 올려보낼 이유가 없다.
  */
 @Composable
-fun LoginRoute(modifier: Modifier = Modifier, viewModel: LoginViewModel = hiltViewModel()) {
+fun LoginRoute(
+    onAuthenticated: () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: LoginViewModel = hiltViewModel(),
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val kakaoLoginClient = remember { KakaoLoginClient() }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(state) {
+        if (state is LoginUiState.Authenticated) {
+            onAuthenticated()
+        }
+    }
 
     LoginScreen(
         state = state,
