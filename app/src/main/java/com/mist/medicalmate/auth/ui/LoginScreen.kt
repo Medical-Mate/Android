@@ -57,9 +57,9 @@ fun LoginScreen(state: LoginUiState, onKakaoLoginClick: () -> Unit, modifier: Mo
 
         Spacer(Modifier.weight(1f))
 
-        if (state == LoginUiState.Failed) {
+        if (state is LoginUiState.Failed) {
             Text(
-                text = stringResource(R.string.login_failed),
+                text = stringResource(state.reason.messageRes()),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
                 textAlign = TextAlign.Center,
@@ -68,8 +68,8 @@ fun LoginScreen(state: LoginUiState, onKakaoLoginClick: () -> Unit, modifier: Mo
         }
 
         KakaoLoginButton(
-            enabled = state != LoginUiState.InProgress,
-            inProgress = state == LoginUiState.InProgress,
+            enabled = !state.isBusy(),
+            inProgress = state.isBusy(),
             onClick = onKakaoLoginClick,
         )
 
@@ -124,26 +124,40 @@ private fun KakaoLoginButton(enabled: Boolean, inProgress: Boolean, onClick: () 
     }
 }
 
+/** 실패 갈래별 문구. 카피는 디자인 소관이라 서버가 준 메시지를 그대로 쓰지 않는다. */
+private fun LoginFailure.messageRes(): Int = when (this) {
+    LoginFailure.KAKAO -> R.string.login_failed_kakao
+    LoginFailure.NETWORK -> R.string.login_failed_network
+    LoginFailure.SERVER -> R.string.login_failed_server
+}
+
+@Composable
+private fun LoginScreenPreview(state: LoginUiState) {
+    MedicalMateTheme {
+        LoginScreen(state = state, onKakaoLoginClick = {})
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 private fun LoginScreenIdlePreview() {
-    MedicalMateTheme {
-        LoginScreen(state = LoginUiState.Idle, onKakaoLoginClick = {})
-    }
+    LoginScreenPreview(LoginUiState.Idle)
 }
 
 @Preview(showBackground = true)
 @Composable
-private fun LoginScreenInProgressPreview() {
-    MedicalMateTheme {
-        LoginScreen(state = LoginUiState.InProgress, onKakaoLoginClick = {})
-    }
+private fun LoginScreenExchangingPreview() {
+    LoginScreenPreview(LoginUiState.ExchangingToken)
 }
 
 @Preview(showBackground = true)
 @Composable
-private fun LoginScreenFailedPreview() {
-    MedicalMateTheme {
-        LoginScreen(state = LoginUiState.Failed, onKakaoLoginClick = {})
-    }
+private fun LoginScreenNetworkFailedPreview() {
+    LoginScreenPreview(LoginUiState.Failed(LoginFailure.NETWORK))
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun LoginScreenServerFailedPreview() {
+    LoginScreenPreview(LoginUiState.Failed(LoginFailure.SERVER))
 }

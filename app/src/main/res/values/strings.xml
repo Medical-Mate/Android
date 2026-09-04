@@ -8,7 +8,9 @@
     <string name="login_kakao_content_description">카카오로 로그인</string>
     <!-- 문구와 링크 대상은 PO·디자인 확인 필요. 개인정보처리방침 URL이 아직 없다. -->
     <string name="login_terms">계속하면 이용약관과 개인정보 처리방침에 동의하는 것으로 간주됩니다</string>
-    <string name="login_failed">로그인에 실패했어요. 잠시 후 다시 시도해주세요</string>
+    <string name="login_failed_kakao">카카오 로그인에 실패했어요. 다시 시도해주세요</string>
+    <string name="login_failed_network">인터넷 연결을 확인해주세요</string>
+    <string name="login_failed_server">로그인에 실패했어요. 잠시 후 다시 시도해주세요</string>
     <string name="home_greeting">안녕하세요, %1$s님</string>
     <string name="home_greeting_sub">오늘도 준비해볼까요?</string>
     <string name="home_notice_test_result">%1$s 검사 결과 확인일이에요</string>

@@ -19,12 +19,12 @@ import kotlinx.coroutines.launch
  * [KakaoLoginClient]를 Hilt로 주입하지 않는 이유도 같다. ViewModel에 Context가
  * 들어가면 상태 로직을 JVM에서 검증할 수 없다.
  *
- * [onAuthenticated]는 토큰을 넘기지 않는다. 서버 토큰 교환은 ViewModel이 맡을
- * 예정이고, 자격증명을 UI 콜백으로 올려보낼 이유가 없다.
+ * [onAuthenticated]는 토큰을 넘기지 않는다. 서버 JWT는 ViewModel과 저장소가 다루고,
+ * 자격증명을 UI 콜백으로 올려보낼 이유가 없다. 넘기는 것은 온보딩이 필요한지 여부뿐이다.
  */
 @Composable
 fun LoginRoute(
-    onAuthenticated: () -> Unit,
+    onAuthenticated: (onboardingRequired: Boolean) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LoginViewModel = hiltViewModel(),
 ) {
@@ -34,8 +34,9 @@ fun LoginRoute(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(state) {
-        if (state is LoginUiState.Authenticated) {
-            onAuthenticated()
+        val current = state
+        if (current is LoginUiState.Authenticated) {
+            onAuthenticated(current.onboardingRequired)
         }
     }
 

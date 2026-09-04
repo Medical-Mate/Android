@@ -5,11 +5,33 @@ plugins {
     alias(libs.plugins.ktlint)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 // 카카오 네이티브 앱 키. local.properties(커밋 대상 아님) 또는 환경변수에서 읽는다.
 // providers API를 쓰는 이유는 configuration cache가 입력을 추적하게 하기 위함이다.
 // 키가 없어도 빌드는 통과시키고, 실패는 런타임 KakaoSdk 호출에서만 나게 한다.
+/**
+ * 백엔드 base URL. local.properties나 환경변수로 덮어쓸 수 있다.
+ * 기본값은 배포된 dev 서버이며, 로컬 서버를 붙일 때 바꾼다.
+ */
+val backendBaseUrl: String =
+    providers
+        .fileContents(rootProject.layout.projectDirectory.file("local.properties"))
+        .asText
+        .map { text ->
+            text
+                .lineSequence()
+                .map(String::trim)
+                .firstOrNull { it.startsWith("BACKEND_BASE_URL=") }
+                ?.substringAfter("=")
+                ?.trim()
+                .orEmpty()
+        }
+        .filter(String::isNotBlank)
+        .orElse(providers.environmentVariable("BACKEND_BASE_URL"))
+        .getOrElse("https://jinryomate-backend.onrender.com/")
+
 val kakaoNativeAppKey: String =
     providers
         .fileContents(rootProject.layout.projectDirectory.file("local.properties"))
@@ -48,6 +70,7 @@ android {
         manifestPlaceholders["KAKAO_NATIVE_APP_KEY"] = kakaoNativeAppKey
         // KakaoSdk.init()에 넘길 값. manifestPlaceholders와는 별개 통로다.
         buildConfigField("String", "KAKAO_NATIVE_APP_KEY", "\"$kakaoNativeAppKey\"")
+        buildConfigField("String", "BACKEND_BASE_URL", "\"$backendBaseUrl\"")
     }
 
     buildTypes {
@@ -106,6 +129,12 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.logging.interceptor)
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.kotlinx.serialization)
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
     implementation(libs.hilt.android)
     implementation(libs.kakao.user)
@@ -113,6 +142,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)

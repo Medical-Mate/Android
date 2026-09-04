@@ -1,18 +1,41 @@
 package com.mist.medicalmate.auth.ui
 
+import com.mist.medicalmate.auth.data.AuthRepository
+import com.mist.medicalmate.auth.data.AuthResult
 import com.mist.medicalmate.auth.data.KakaoLoginResult
+import com.mist.medicalmate.auth.data.Session
+import com.mist.medicalmate.core.network.ApiErrorCode
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class LoginViewModelTest {
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
     @Test
     fun `처음 상태는 Idle이다`() {
-        assertEquals(LoginUiState.Idle, LoginViewModel().uiState.value)
+        assertEquals(LoginUiState.Idle, viewModel().uiState.value)
     }
 
     @Test
     fun `로그인을 시작하면 InProgress가 된다`() {
-        val viewModel = LoginViewModel()
+        val viewModel = viewModel()
 
         viewModel.onLoginStarted()
 
@@ -20,18 +43,8 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `성공하면 받은 토큰을 그대로 담은 Authenticated가 된다`() {
-        val viewModel = LoginViewModel()
-
-        viewModel.onLoginStarted()
-        viewModel.onLoginResult(KakaoLoginResult.Success("token-abc"))
-
-        assertEquals(LoginUiState.Authenticated("token-abc"), viewModel.uiState.value)
-    }
-
-    @Test
     fun `취소는 실패가 아니라 처음 상태로 돌아간다`() {
-        val viewModel = LoginViewModel()
+        val viewModel = viewModel()
 
         viewModel.onLoginStarted()
         viewModel.onLoginResult(KakaoLoginResult.Cancelled)
@@ -40,18 +53,69 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `실패하면 Failed가 된다`() {
-        val viewModel = LoginViewModel()
+    fun `카카오 단계에서 실패하면 KAKAO 갈래가 된다`() {
+        val viewModel = viewModel()
 
-        viewModel.onLoginStarted()
         viewModel.onLoginResult(KakaoLoginResult.Failure(IllegalStateException("boom")))
 
-        assertEquals(LoginUiState.Failed, viewModel.uiState.value)
+        assertEquals(LoginUiState.Failed(LoginFailure.KAKAO), viewModel.uiState.value)
+    }
+
+    @Test
+    fun `서버 교환이 성공하면 onboardingRequired를 그대로 담는다`() = runTest {
+        val viewModel =
+            viewModel(
+                FakeAuthRepository(AuthResult.Success(Session(onboardingRequired = true))),
+            )
+
+        viewModel.onLoginResult(KakaoLoginResult.Success("kakao-token"))
+
+        assertEquals(
+            LoginUiState.Authenticated(onboardingRequired = true),
+            viewModel.uiState.value,
+        )
+    }
+
+    @Test
+    fun `서버 교환에 넘기는 값은 카카오 액세스 토큰이다`() = runTest {
+        val repository = FakeAuthRepository()
+        val viewModel = viewModel(repository)
+
+        viewModel.onLoginResult(KakaoLoginResult.Success("kakao-token"))
+
+        assertEquals("kakao-token", repository.lastKakaoAccessToken)
+    }
+
+    @Test
+    fun `네트워크가 닿지 않으면 NETWORK 갈래가 된다`() = runTest {
+        val viewModel = viewModel(FakeAuthRepository(AuthResult.NetworkUnavailable))
+
+        viewModel.onLoginResult(KakaoLoginResult.Success("kakao-token"))
+
+        assertEquals(LoginUiState.Failed(LoginFailure.NETWORK), viewModel.uiState.value)
+    }
+
+    @Test
+    fun `서버가 인증을 거절하면 SERVER 갈래가 된다`() = runTest {
+        val viewModel = viewModel(FakeAuthRepository(rejected(ApiErrorCode.UNAUTHORIZED)))
+
+        viewModel.onLoginResult(KakaoLoginResult.Success("kakao-token"))
+
+        assertEquals(LoginUiState.Failed(LoginFailure.SERVER), viewModel.uiState.value)
+    }
+
+    @Test
+    fun `서버가 상위 서비스에 닿지 못한 경우는 NETWORK 갈래로 묶는다`() = runTest {
+        val viewModel = viewModel(FakeAuthRepository(rejected(ApiErrorCode.UPSTREAM_TIMEOUT)))
+
+        viewModel.onLoginResult(KakaoLoginResult.Success("kakao-token"))
+
+        assertEquals(LoginUiState.Failed(LoginFailure.NETWORK), viewModel.uiState.value)
     }
 
     @Test
     fun `실패를 확인하면 다시 시도할 수 있게 Idle로 돌아간다`() {
-        val viewModel = LoginViewModel()
+        val viewModel = viewModel()
 
         viewModel.onLoginResult(KakaoLoginResult.Failure(IllegalStateException("boom")))
         viewModel.onFailureAcknowledged()
@@ -59,13 +123,23 @@ class LoginViewModelTest {
         assertEquals(LoginUiState.Idle, viewModel.uiState.value)
     }
 
-    @Test
-    fun `Authenticated 상태에서 실패 확인은 상태를 바꾸지 않는다`() {
-        val viewModel = LoginViewModel()
+    private fun rejected(code: ApiErrorCode) = AuthResult.Rejected(code = code, requestId = "req_test")
 
-        viewModel.onLoginResult(KakaoLoginResult.Success("token-abc"))
-        viewModel.onFailureAcknowledged()
+    private fun viewModel(repository: AuthRepository = FakeAuthRepository()) = LoginViewModel(repository)
 
-        assertEquals(LoginUiState.Authenticated("token-abc"), viewModel.uiState.value)
+    private class FakeAuthRepository(
+        private val result: AuthResult = AuthResult.Success(Session(onboardingRequired = false)),
+    ) : AuthRepository {
+        var lastKakaoAccessToken: String? = null
+            private set
+
+        override suspend fun loginWithKakao(kakaoAccessToken: String): AuthResult {
+            lastKakaoAccessToken = kakaoAccessToken
+            return result
+        }
+
+        override suspend fun restoreSession(): AuthResult? = null
+
+        override suspend fun clearSession() = Unit
     }
 }
