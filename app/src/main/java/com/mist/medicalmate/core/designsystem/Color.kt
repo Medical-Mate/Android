@@ -1,4 +1,4 @@
-package com.mist.medicalmate.ui.theme
+package com.mist.medicalmate.core.designsystem
 
 import androidx.compose.ui.graphics.Color
 
