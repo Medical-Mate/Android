@@ -102,6 +102,7 @@ MedicalMate/
 - **네트워크는 Retrofit + OkHttp + kotlinx.serialization입니다.** 설정은 `core/network/NetworkModule`.
 - **API 실패는 예외가 아니라 값으로 다룹니다.** `apiCall()`이 `ApiResult`(`Success` / `Rejected` / `NetworkUnavailable`)를 돌려주고, Repository는 도메인 결과 타입으로 바꿉니다. ViewModel에 `try/catch`가 없습니다. 예외로 계층을 넘기면 호출자가 결국 `catch (e: Exception)`으로 뭉개게 되고, detekt의 `TooGenericExceptionCaught`·`SwallowedException`이 그걸 잡습니다. 설정을 완화하지 말고 결과 타입을 쓰세요.
 - **직렬화 실패 같은 계약 위반은 잡지 않습니다.** `apiCall()`은 `HttpException`과 `IOException`만 잡습니다. 계약이 어긋난 것을 "다시 시도해주세요"로 감추면 원인이 묻힙니다.
+- **`core`가 도메인을 참조하지 않습니다.** 인증 헤더를 붙이는 `AuthInterceptor`는 `core/network`에 있고 토큰이 필요하지만, `auth`의 `TokenStore`를 직접 쓰지 않고 `core/network/AccessTokenProvider` 인터페이스를 통해 받습니다. 구현 연결은 `auth/data/AuthModule`의 `@Binds`가 합니다. 반대로 두면 공용 계층이 특정 도메인에 묶입니다.
 - **서버 JWT는 `TokenStore`(DataStore)에만 둡니다.** 카카오 토큰은 SDK가 자체 보관하고 서버도 저장하지 않으므로 앱이 따로 저장하지 않습니다. 같은 자격증명을 여러 곳에 두면 처리 범위만 늘어납니다.
 - **`android:allowBackup="false"`를 되돌리지 마세요.** 토큰과 향후 로컬 캐시가 Google 클라우드 백업·기기 간 전송으로 나가는 것을 막습니다. refresh 토큰 TTL이 30일입니다.
 - **로직은 JVM에서 테스트 가능한 위치에 둡니다.** ViewModel·Repository의 로직이 Activity나 Composable 안에 들어가면 `testDebugUnitTest`로 검증할 수 없습니다.
@@ -236,13 +237,14 @@ MedicalMate/
 
 | 항목 | 상태 |
 | -- | -- |
-| 유닛 테스트 | `LoginViewModel` 10건, `SessionViewModel` 5건, `HomeViewModel` 6건, 템플릿 1개 |
+| 유닛 테스트 | `LoginViewModel` 10건, `SessionViewModel` 10건, `HomeViewModel` 6건, 템플릿 1개 |
 | 아키텍처 패턴 | MVVM 확정. UseCase는 필요할 때만 |
 | DI | Hilt 확정 |
 | 패키지 구조 | 기능 우선 확정. 도메인명은 Backend와 일치 |
 | 로그인 화면(1o) | 카카오 버튼만 구현. 서버 토큰 교환 미연동 |
 | 홈 화면(1n) | 구조만. `HomeViewModel`이 픽스처를 노출. 서버 미연동 |
-| 401 재발급 Authenticator | 미도입. 인증이 필요한 엔드포인트를 부를 때 붙임 |
+| 로그아웃 · 회원탈퇴 | 구현 완료. 홈 화면에 임시 진입점. 설정 화면 생기면 이동 |
+| 401 재발급 Authenticator | 미도입. 만료된 토큰으로 로그아웃·탈퇴하면 서버 호출이 401 |
 | 토큰 암호화 | 미적용. DataStore 평문. 백업 차단으로 샌드박스 밖 유출만 막음 |
 | 온보딩 필요 판단 | `refresh` 응답의 `onboardingRequired`는 서버가 항상 false. 프로필 조회로 옮겨야 함 |
 | 화면 전환 | `MainActivity`의 임시 `if` 분기. 목적지가 늘면 NavHost로 교체 |

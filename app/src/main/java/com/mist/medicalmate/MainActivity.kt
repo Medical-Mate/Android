@@ -16,11 +16,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mist.medicalmate.auth.ui.AccountActionState
 import com.mist.medicalmate.auth.ui.LoginRoute
 import com.mist.medicalmate.auth.ui.SessionUiState
 import com.mist.medicalmate.auth.ui.SessionViewModel
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
+import com.mist.medicalmate.home.ui.AccountActionCallbacks
 import com.mist.medicalmate.home.ui.HomeRoute
+import com.mist.medicalmate.home.ui.WithdrawFailedDialog
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -46,20 +49,17 @@ class MainActivity : ComponentActivity() {
  *
  * `onboardingRequired`가 true여도 온보딩 화면(1a·1b)이 없어 홈으로 보낸다.
  * 값을 받아두는 것은 온보딩이 들어올 자리를 남기려는 것이다.
+ *
+ * 로그아웃·탈퇴는 `auth` 소관이라 `SessionViewModel`이 수행하고, 홈에는 콜백만
+ * 내려보낸다. 홈이 `auth` 도메인을 직접 참조하지 않게 하려는 것이다.
  */
 @Composable
 private fun MedicalMateApp(modifier: Modifier = Modifier, sessionViewModel: SessionViewModel = hiltViewModel()) {
     val session by sessionViewModel.uiState.collectAsStateWithLifecycle()
+    val accountAction by sessionViewModel.accountAction.collectAsStateWithLifecycle()
 
     when (session) {
-        SessionUiState.Checking ->
-            Column(
-                modifier = modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                CircularProgressIndicator()
-            }
+        SessionUiState.Checking -> CheckingContent(modifier)
 
         SessionUiState.SignedOut ->
             LoginRoute(
@@ -67,6 +67,30 @@ private fun MedicalMateApp(modifier: Modifier = Modifier, sessionViewModel: Sess
                 modifier = modifier,
             )
 
-        is SessionUiState.SignedIn -> HomeRoute(modifier = modifier)
+        is SessionUiState.SignedIn ->
+            HomeRoute(
+                accountActions =
+                AccountActionCallbacks(
+                    enabled = accountAction != AccountActionState.InProgress,
+                    onLogoutClick = sessionViewModel::logout,
+                    onWithdrawClick = sessionViewModel::withdraw,
+                ),
+                modifier = modifier,
+            )
+    }
+
+    if (accountAction == AccountActionState.WithdrawFailed) {
+        WithdrawFailedDialog(onDismiss = sessionViewModel::onAccountActionFailureAcknowledged)
+    }
+}
+
+@Composable
+private fun CheckingContent(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        CircularProgressIndicator()
     }
 }

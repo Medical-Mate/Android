@@ -12,6 +12,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -79,11 +80,99 @@ class SessionViewModelTest {
         assertEquals(SessionUiState.SignedIn(onboardingRequired = true), viewModel.uiState.value)
     }
 
-    private class FakeAuthRepository(private val restoreResult: AuthResult?) : AuthRepository {
+    @Test
+    fun `로그아웃하면 SignedOut이 되고 Repository 로그아웃이 호출된다`() = runTest {
+        val repository =
+            FakeAuthRepository(
+                restoreResult = AuthResult.Success(Session(onboardingRequired = false)),
+            )
+        val viewModel = SessionViewModel(repository)
+
+        viewModel.logout()
+
+        assertEquals(SessionUiState.SignedOut, viewModel.uiState.value)
+        assertEquals(AccountActionState.Idle, viewModel.accountAction.value)
+        assertTrue(repository.logoutCalled)
+    }
+
+    @Test
+    fun `탈퇴에 성공하면 SignedOut이 된다`() = runTest {
+        val repository =
+            FakeAuthRepository(
+                restoreResult = AuthResult.Success(Session(onboardingRequired = false)),
+                withdrawResult = AuthResult.Success(Session(onboardingRequired = false)),
+            )
+        val viewModel = SessionViewModel(repository)
+
+        viewModel.withdraw()
+
+        assertEquals(SessionUiState.SignedOut, viewModel.uiState.value)
+        assertEquals(AccountActionState.Idle, viewModel.accountAction.value)
+    }
+
+    @Test
+    fun `탈퇴에 실패하면 로그인 상태를 유지하고 실패를 알린다`() = runTest {
+        val repository =
+            FakeAuthRepository(
+                restoreResult = AuthResult.Success(Session(onboardingRequired = false)),
+                withdrawResult =
+                AuthResult.Rejected(code = ApiErrorCode.INTERNAL, requestId = "req_test"),
+            )
+        val viewModel = SessionViewModel(repository)
+
+        viewModel.withdraw()
+
+        assertEquals(SessionUiState.SignedIn(onboardingRequired = false), viewModel.uiState.value)
+        assertEquals(AccountActionState.WithdrawFailed, viewModel.accountAction.value)
+    }
+
+    @Test
+    fun `오프라인이면 탈퇴가 실패로 남는다`() = runTest {
+        val repository =
+            FakeAuthRepository(
+                restoreResult = AuthResult.Success(Session(onboardingRequired = false)),
+                withdrawResult = AuthResult.NetworkUnavailable,
+            )
+        val viewModel = SessionViewModel(repository)
+
+        viewModel.withdraw()
+
+        assertEquals(SessionUiState.SignedIn(onboardingRequired = false), viewModel.uiState.value)
+        assertEquals(AccountActionState.WithdrawFailed, viewModel.accountAction.value)
+    }
+
+    @Test
+    fun `탈퇴 실패를 확인하면 다시 시도할 수 있게 Idle로 돌아간다`() = runTest {
+        val repository =
+            FakeAuthRepository(
+                restoreResult = AuthResult.Success(Session(onboardingRequired = false)),
+                withdrawResult = AuthResult.NetworkUnavailable,
+            )
+        val viewModel = SessionViewModel(repository)
+
+        viewModel.withdraw()
+        viewModel.onAccountActionFailureAcknowledged()
+
+        assertEquals(AccountActionState.Idle, viewModel.accountAction.value)
+    }
+
+    private class FakeAuthRepository(
+        private val restoreResult: AuthResult?,
+        private val withdrawResult: AuthResult = AuthResult.Success(Session(onboardingRequired = false)),
+    ) : AuthRepository {
+        var logoutCalled: Boolean = false
+            private set
+
         override suspend fun loginWithKakao(kakaoAccessToken: String): AuthResult =
             AuthResult.Success(Session(onboardingRequired = false))
 
         override suspend fun restoreSession(): AuthResult? = restoreResult
+
+        override suspend fun logout() {
+            logoutCalled = true
+        }
+
+        override suspend fun withdraw(): AuthResult = withdrawResult
 
         override suspend fun clearSession() = Unit
     }

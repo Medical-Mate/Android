@@ -140,6 +140,10 @@ class LoginViewModelTest {
 
         override suspend fun restoreSession(): AuthResult? = null
 
+        override suspend fun logout() = Unit
+
+        override suspend fun withdraw(): AuthResult = AuthResult.Success(Session(onboardingRequired = false))
+
         override suspend fun clearSession() = Unit
     }
 }

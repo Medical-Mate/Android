@@ -27,8 +27,9 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient = OkHttpClient
+    fun provideOkHttpClient(authInterceptor: AuthInterceptor): OkHttpClient = OkHttpClient
         .Builder()
+        .addInterceptor(authInterceptor)
         .addInterceptor(loggingInterceptor())
         // Render 무료 티어는 인스턴스가 잠들어 첫 요청이 수십 초 걸린다.
         .connectTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)

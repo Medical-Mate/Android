@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.mist.medicalmate.core.network.AccessTokenProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -27,11 +28,11 @@ private val Context.authDataStore: DataStore<Preferences> by preferencesDataStor
 @Singleton
 class TokenStore
 @Inject
-constructor(@ApplicationContext private val context: Context) {
+constructor(@ApplicationContext private val context: Context) : AccessTokenProvider {
     suspend fun readRefreshToken(): String? = context.authDataStore.data
         .first()[refreshTokenKey]
 
-    suspend fun readAccessToken(): String? = context.authDataStore.data
+    override suspend fun accessToken(): String? = context.authDataStore.data
         .first()[accessTokenKey]
 
     suspend fun save(accessToken: String, refreshToken: String) {

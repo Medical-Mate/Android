@@ -39,6 +39,21 @@ interface AuthRepository {
      */
     suspend fun restoreSession(): AuthResult?
 
+    /**
+     * 로그아웃. 서버 호출이 실패해도 로컬 토큰과 카카오 세션은 반드시 지운다.
+     * 사용자의 의도는 "이 기기에서 나가겠다"이고, 서버가 거절했다고 기기에 토큰을
+     * 남겨두면 의도와 반대가 된다. 그래서 결과를 돌려주지 않는다.
+     */
+    suspend fun logout()
+
+    /**
+     * 회원탈퇴. 서버가 계정과 카카오 연결을 지운다.
+     *
+     * 로그아웃과 달리 실패를 그대로 알린다. 서버 호출이 실패하면 계정이 남아 있는데
+     * 로컬만 지우고 성공한 척하면 사용자는 탈퇴됐다고 믿게 된다.
+     */
+    suspend fun withdraw(): AuthResult
+
     suspend fun clearSession()
 }
 
@@ -48,6 +63,7 @@ internal class DefaultAuthRepository
 constructor(
     private val api: AuthApi,
     private val tokenStore: TokenStore,
+    private val kakaoLoginClient: KakaoLoginClient,
     private val json: Json,
 ) : AuthRepository {
     override suspend fun loginWithKakao(kakaoAccessToken: String): AuthResult =
@@ -65,6 +81,31 @@ constructor(
             tokenStore.clear()
         }
         return result
+    }
+
+    override suspend fun logout() {
+        // 결과를 보지 않는다. 만료된 토큰이면 401이 오지만 그래도 로컬은 정리한다.
+        apiCall(json) { api.logout() }
+        // 서버는 자기 refresh 토큰만 폐기하고 카카오 세션은 건드리지 않는다.
+        kakaoLoginClient.logout()
+        tokenStore.clear()
+    }
+
+    override suspend fun withdraw(): AuthResult {
+        val result = apiCall(json) { api.withdraw() }
+        return when (result) {
+            is ApiResult.Success -> {
+                // 카카오 연결 끊기는 서버가 어드민 키로 대신 부른다. 앱이 unlink()를
+                // 또 부르면 중복 호출이다. 로컬 정리만 한다.
+                tokenStore.clear()
+                AuthResult.Success(Session(onboardingRequired = false))
+            }
+
+            is ApiResult.Rejected ->
+                AuthResult.Rejected(code = result.code, requestId = result.requestId)
+
+            is ApiResult.NetworkUnavailable -> AuthResult.NetworkUnavailable
+        }
     }
 
     override suspend fun clearSession() {

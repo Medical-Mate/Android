@@ -2,12 +2,15 @@ package com.mist.medicalmate.auth.data
 
 import kotlinx.serialization.Serializable
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.POST
 
 /**
  * 인증 API. `https://jinryomate-backend.onrender.com/v3/api-docs` 기준이다.
  *
- * 두 엔드포인트 모두 인증이 필요 없다(서버 `SecurityConfig`에서 열려 있음).
+ * [loginWithKakao]와 [refresh]는 인증이 필요 없다(서버 `SecurityConfig`에서 열려 있음).
+ * [logout]과 [withdraw]는 `Authorization: Bearer`가 필요하며, 없으면 401이 온다.
+ * 헤더는 `AuthInterceptor`가 붙인다.
  */
 internal interface AuthApi {
     @POST("api/auth/kakao")
@@ -15,6 +18,14 @@ internal interface AuthApi {
 
     @POST("api/auth/refresh")
     suspend fun refresh(@Body request: RefreshRequest): TokenResponse
+
+    /** 서버의 refresh 토큰만 폐기한다. 카카오 세션은 건드리지 않는다. */
+    @POST("api/auth/logout")
+    suspend fun logout()
+
+    /** 탈퇴. 서버가 어드민 키로 카카오 연결 끊기까지 대신 호출한다. */
+    @DELETE("api/me")
+    suspend fun withdraw()
 }
 
 @Serializable
