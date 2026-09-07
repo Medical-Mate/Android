@@ -36,4 +36,21 @@
     <string name="account_cancel">취소</string>
     <string name="account_withdraw_failed">탈퇴하지 못했어요. 계정은 그대로 있어요</string>
     <string name="account_confirm">확인</string>
+    <!--
+      통증 단계. DESIGN.md 8.2 표의 낱말과 상황 설명이다.
+      NRS 등가는 문서에 없어서 Figma의 Severity Readout(333:1126) 마스터에서 읽었다.
+      단계를 색만으로 전달하지 않으려고 숫자, 낱말, 설명, NRS를 함께 노출한다.
+    -->
+    <string name="severity_1_label">조금 불편해요</string>
+    <string name="severity_1_description">신경 쓰이지만 하던 일은 계속할 수 있어요</string>
+    <string name="severity_2_label">은근히 아파요</string>
+    <string name="severity_2_description">자꾸 생각나고 집중이 잘 안 돼요</string>
+    <string name="severity_3_label">꽤 아파요</string>
+    <string name="severity_3_description">하던 일을 멈추게 될 때가 있어요</string>
+    <string name="severity_4_label">많이 아파요</string>
+    <string name="severity_4_description">일상생활이 어렵고 참기 힘들어요</string>
+    <string name="severity_5_label">견디기 힘들어요</string>
+    <string name="severity_5_description">잠도 못 자고 아무것도 못 하겠어요</string>
+    <string name="severity_nrs">NRS %1$d\u2013%2$d</string>
+    <string name="severity_level_content_description">%1$d단계, %2$s</string>
 </resources>
