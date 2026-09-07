@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Figma 303:777 Icon/clock. 손으로 고치지 말고 원본에서 다시 내보낼 것. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M12 3.4 C13.129 3.4 14.248 3.623 15.291 4.055 C16.335 4.487 17.283 5.121 18.081 5.919 C18.88 6.718 19.513 7.666 19.945 8.709 C20.378 9.753 20.6 10.871 20.6 12 C20.6 13.13 20.378 14.248 19.945 15.291 C19.513 16.335 18.88 17.283 18.081 18.082 C17.283 18.88 16.335 19.514 15.291 19.946 C14.248 20.378 13.129 20.6 12 20.6 C9.719 20.6 7.532 19.694 5.919 18.082 C4.306 16.469 3.4 14.281 3.4 12 C3.4 9.72 4.306 7.532 5.919 5.919 C7.532 4.306 9.719 3.4 12 3.4 Z"
+        android:strokeColor="#131722"
+        android:strokeWidth="1.75"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M12 7.4 V12 L15.2 13.9"
+        android:strokeColor="#131722"
+        android:strokeWidth="1.75"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Figma 303:697 Icon/home. 손으로 고치지 말고 원본에서 다시 내보낼 것. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M3.6 10.6 L12 3.8 L20.4 10.6 V18.8 C20.4 19.01 20.359 19.218 20.278 19.412 C20.198 19.606 20.08 19.783 19.931 19.931 C19.783 20.08 19.606 20.198 19.412 20.278 C19.218 20.358 19.01 20.4 18.8 20.4 H5.2 C4.99 20.4 4.782 20.358 4.588 20.278 C4.394 20.198 4.217 20.08 4.069 19.931 C3.92 19.783 3.802 19.606 3.722 19.412 C3.641 19.218 3.6 19.01 3.6 18.8 V10.6 Z"
+        android:strokeColor="#131722"
+        android:strokeWidth="1.75"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M9.6 20.4 V14.4 H14.4 V20.4"
+        android:strokeColor="#131722"
+        android:strokeWidth="1.75"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

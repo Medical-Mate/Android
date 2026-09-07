@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Figma 302:768 Icon/alert-triangle. 손으로 고치지 말고 원본에서 다시 내보낼 것. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M10.6 4.1 L2.9 17.4 C2.759 17.644 2.685 17.921 2.686 18.203 C2.686 18.486 2.761 18.762 2.904 19.006 C3.046 19.25 3.25 19.451 3.495 19.591 C3.74 19.73 4.018 19.802 4.3 19.8 H19.7 C19.982 19.802 20.26 19.73 20.505 19.591 C20.75 19.451 20.954 19.25 21.096 19.006 C21.239 18.762 21.314 18.486 21.314 18.203 C21.315 17.921 21.241 17.644 21.1 17.4 L13.4 4.1 C13.262 3.85 13.059 3.641 12.813 3.496 C12.566 3.351 12.286 3.274 12 3.274 C11.714 3.274 11.434 3.351 11.187 3.496 C10.941 3.641 10.738 3.85 10.6 4.1 Z"
+        android:strokeColor="#131722"
+        android:strokeWidth="1.75"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M12 9.4 V13.4"
+        android:strokeColor="#131722"
+        android:strokeWidth="1.75"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M12 16.6 H12.01"
+        android:strokeColor="#131722"
+        android:strokeWidth="1.75"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>
