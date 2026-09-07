@@ -1,8 +1,11 @@
 package com.mist.medicalmate.core.designsystem
 
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -121,6 +124,67 @@ class DesignTokenTest {
                 assertEquals(MedicalMateFontFamily, style.fontFamily)
             }
         }
+    }
+
+    @Test
+    fun `간격 12단계가 문서 값과 같다`() {
+        val expected = listOf(2, 4, 6, 8, 10, 12, 14, 16, 20, 24, 32, 40).map { it.dp }
+        val actual =
+            with(MedicalMateSpace) {
+                listOf(s2, s4, s6, s8, s10, s12, s14, s16, s20, s24, s32, s40)
+            }
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `반경이 문서 값과 같다`() {
+        with(MedicalMateRadius) {
+            assertEquals(RoundedCornerShape(8.dp), xs)
+            assertEquals(RoundedCornerShape(12.dp), sm)
+            assertEquals(RoundedCornerShape(16.dp), md)
+            assertEquals(RoundedCornerShape(20.dp), lg)
+            assertEquals(RoundedCornerShape(24.dp), xl)
+            assertEquals(RoundedCornerShape(28.dp), xxl)
+            assertEquals(CircleShape, full)
+            // 4.2 Scale에 없는 중간값. 문서 8.1 Button M 전용이다.
+            assertEquals(RoundedCornerShape(14.dp), buttonM)
+        }
+    }
+
+    @Test
+    fun `크기와 레이아웃이 문서 값과 같다`() {
+        with(MedicalMateSize) {
+            assertEquals(48.dp, touchMin)
+            assertEquals(18.dp, iconSm)
+            assertEquals(20.dp, iconMd)
+            assertEquals(24.dp, iconLg)
+            assertEquals(40.dp, controlSm)
+            assertEquals(48.dp, controlMd)
+            assertEquals(56.dp, controlLg)
+            assertEquals(88.dp, mic)
+            assertEquals(390.dp, screenWidth)
+            assertEquals(20.dp, gutter)
+            assertEquals(350.dp, contentWidth)
+            assertEquals(24.dp, safeBottom)
+            assertEquals(56.dp, navBarHeight)
+        }
+    }
+
+    @Test
+    fun `Tab Bar 높이는 토큰이 아니라 활성 마스터 값을 쓴다`() {
+        // 문서 4.3의 layout/tabbar-h는 82이지만 Figma variant 3개는 390x79다.
+        // 문서 11.2가 확정을 남긴 항목이고, 그때까지 마스터 값을 따른다.
+        assertEquals(79.dp, MedicalMateSize.tabBarHeight)
+    }
+
+    @Test
+    fun `Glass 알파와 블러 최소 SDK가 문서 값과 같다`() {
+        assertEquals(24.dp, MedicalMateGlass.blurRadius)
+        assertEquals(0.78f, MedicalMateGlass.BOTTOM_CTA_ALPHA, 0f)
+        assertEquals(0.82f, MedicalMateGlass.NAV_BAR_ALPHA, 0f)
+        assertEquals(0.86f, MedicalMateGlass.TAB_BAR_ALPHA, 0f)
+        // RenderEffect가 API 31에 추가됐다. 아래에서는 Opaque 변형을 쓴다.
+        assertEquals(31, MedicalMateGlass.MIN_BLUR_SDK)
     }
 
     private fun assertStyle(
