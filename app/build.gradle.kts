@@ -139,6 +139,7 @@ dependencies {
     implementation(libs.hilt.android)
     implementation(libs.kakao.user)
     ksp(libs.hilt.compiler)
+    implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     testImplementation(libs.junit)
