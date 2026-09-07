@@ -3,8 +3,8 @@ package com.mist.medicalmate.home.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -15,8 +15,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.R
+import com.mist.medicalmate.core.designsystem.MedicalMateRadius
+import com.mist.medicalmate.core.designsystem.MedicalMateSize
+import com.mist.medicalmate.core.designsystem.MedicalMateSpace
+import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
 /**
  * 계정 관련 임시 진입점.
@@ -36,28 +39,43 @@ internal fun AccountActions(
 ) {
     var confirmingWithdraw by remember { mutableStateOf(false) }
 
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8),
+    ) {
         Text(
             text = stringResource(R.string.account_section),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MedicalMateTheme.typography.labelM,
+            color = MedicalMateTheme.colors.fgSubtle,
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12)) {
             OutlinedButton(
                 onClick = onLogoutClick,
                 enabled = enabled,
-                modifier = Modifier.weight(1f),
+                shape = MedicalMateRadius.buttonM,
+                modifier =
+                Modifier
+                    .weight(1f)
+                    .height(MedicalMateSize.controlMd),
             ) {
-                Text(text = stringResource(R.string.account_logout))
+                Text(
+                    text = stringResource(R.string.account_logout),
+                    style = MedicalMateTheme.typography.labelL,
+                )
             }
             OutlinedButton(
                 onClick = { confirmingWithdraw = true },
                 enabled = enabled,
-                modifier = Modifier.weight(1f),
+                shape = MedicalMateRadius.buttonM,
+                modifier =
+                Modifier
+                    .weight(1f)
+                    .height(MedicalMateSize.controlMd),
             ) {
                 Text(
                     text = stringResource(R.string.account_withdraw),
-                    color = MaterialTheme.colorScheme.error,
+                    style = MedicalMateTheme.typography.labelL,
+                    color = MedicalMateTheme.colors.fgDanger,
                 )
             }
         }
@@ -84,7 +102,7 @@ private fun WithdrawConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) 
             TextButton(onClick = onConfirm) {
                 Text(
                     text = stringResource(R.string.account_withdraw_confirm),
-                    color = MaterialTheme.colorScheme.error,
+                    color = MedicalMateTheme.colors.fgDanger,
                 )
             }
         },

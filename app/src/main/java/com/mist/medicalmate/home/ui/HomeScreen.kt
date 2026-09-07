@@ -4,20 +4,22 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.R
+import com.mist.medicalmate.core.designsystem.MedicalMateRadius
+import com.mist.medicalmate.core.designsystem.MedicalMateSize
+import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import java.time.LocalDate
 
@@ -84,13 +86,27 @@ private fun FailedContent(onRetryClick: () -> Unit, modifier: Modifier = Modifie
         modifier =
         modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(MedicalMateSize.gutter),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(text = stringResource(R.string.home_failed))
-        Button(onClick = onRetryClick, modifier = Modifier.padding(top = 12.dp)) {
-            Text(text = stringResource(R.string.home_retry))
+        Text(
+            text = stringResource(R.string.home_failed),
+            style = MedicalMateTheme.typography.bodyL,
+            color = MedicalMateTheme.colors.fgSubtle,
+        )
+        Button(
+            onClick = onRetryClick,
+            shape = MedicalMateRadius.buttonM,
+            modifier =
+            Modifier
+                .padding(top = MedicalMateSpace.s12)
+                .height(MedicalMateSize.controlMd),
+        ) {
+            Text(
+                text = stringResource(R.string.home_retry),
+                style = MedicalMateTheme.typography.labelL,
+            )
         }
     }
 }
@@ -107,8 +123,8 @@ private fun HomeContent(
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(MedicalMateSize.gutter),
+        verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s16),
     ) {
         item { Greeting(userName = content.userName) }
 
@@ -121,12 +137,19 @@ private fun HomeContent(
         item {
             Text(
                 text = stringResource(R.string.home_saved_cards),
-                style = MaterialTheme.typography.titleSmall,
+                // DESIGN.md 3절이 카드·리스트 그룹 제목을 Heading/S로 규정한다.
+                style = MedicalMateTheme.typography.headingS,
             )
         }
 
         if (content.savedCards.isEmpty()) {
-            item { Text(text = stringResource(R.string.home_saved_cards_empty)) }
+            item {
+                Text(
+                    text = stringResource(R.string.home_saved_cards_empty),
+                    style = MedicalMateTheme.typography.bodyM,
+                    color = MedicalMateTheme.colors.fgSubtle,
+                )
+            }
         } else {
             items(items = content.savedCards, key = { it.id }) { card ->
                 SavedCardRow(card = card, onClick = { onSavedCardClick(card.id) })
