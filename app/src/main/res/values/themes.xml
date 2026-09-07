@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.MedicalMate" parent="android:Theme.Material.Light.NoActionBar" />
+    <!--
+      Manifest용 테마. UI는 Compose가 그린다.
+      windowBackground은 Compose가 첫 프레임을 그리기 전에 보이는 면이라
+      bg/canvas로 맞춘다. 기본값인 흰색으로 두면 시작할 때 한 번 번쩍인다.
+      다크 모드 값이 없으므로 values-night를 만들지 않는다(DESIGN.md 11.7).
+    -->
+    <style name="Theme.MedicalMate" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/bg_canvas</item>
+    </style>
 </resources>
