@@ -67,7 +67,10 @@ private val MedicalMateColorScheme =
  * 시맨틱 컬러와 타이포그래피는 [MedicalMateTheme] 오브젝트로 읽는다. `colorScheme`과
  * `typography`에도 같은 값이 들어가 있어 기존 M3 호출은 그대로 동작한다.
  *
- * 간격(DESIGN.md 4.1), 반경(4.2), 크기(4.3), 고도(5절)는 아직 토큰으로 없다.
+ * 간격·반경·크기·고도는 테마에 싣지 않고 오브젝트로 둔다. [MedicalMateSpace],
+ * [MedicalMateRadius], [MedicalMateSize], [MedicalMateElevation], [MedicalMateGlass]다.
+ * 화면 폭에 따라 달라지는 값이 아니어서 CompositionLocal로 내려보낼 이유가 없다.
+ * 반경만 M3 `shapes` 슬롯에도 얹는다. M3 컴포넌트가 내부에서 읽기 때문이다.
  */
 @Composable
 fun MedicalMateTheme(content: @Composable () -> Unit) {
@@ -77,6 +80,7 @@ fun MedicalMateTheme(content: @Composable () -> Unit) {
     ) {
         MaterialTheme(
             colorScheme = MedicalMateColorScheme,
+            shapes = MedicalMateShapes,
             typography = MaterialTypography,
             content = content,
         )
