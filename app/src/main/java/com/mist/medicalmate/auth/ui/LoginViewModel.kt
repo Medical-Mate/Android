@@ -43,6 +43,19 @@ constructor(private val authRepository: AuthRepository) : ViewModel() {
         }
     }
 
+    /**
+     * 로그인 완료를 호출자가 처리한 뒤 부른다.
+     *
+     * 이 ViewModel은 Activity 스코프라 로그인 화면을 떠나도 살아 있다. 상태를
+     * 되돌리지 않으면 로그아웃 뒤 로그인 화면이 다시 열릴 때 예전 [LoginUiState.Authenticated]가
+     * 그대로 흘러나가 곧바로 홈으로 되돌아간다.
+     */
+    fun onAuthenticationHandled() {
+        if (mutableUiState.value is LoginUiState.Authenticated) {
+            mutableUiState.value = LoginUiState.Idle
+        }
+    }
+
     /** 오류 안내를 닫고 다시 시도할 수 있게 되돌린다. */
     fun onFailureAcknowledged() {
         if (mutableUiState.value is LoginUiState.Failed) {

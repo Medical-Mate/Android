@@ -105,6 +105,7 @@ MedicalMate/
 - **`core`가 도메인을 참조하지 않습니다.** 인증 헤더를 붙이는 `AuthInterceptor`는 `core/network`에 있고 토큰이 필요하지만, `auth`의 `TokenStore`를 직접 쓰지 않고 `core/network/AccessTokenProvider` 인터페이스를 통해 받습니다. 구현 연결은 `auth/data/AuthModule`의 `@Binds`가 합니다. 반대로 두면 공용 계층이 특정 도메인에 묶입니다.
 - **서버 JWT는 `TokenStore`(DataStore)에만 둡니다.** 카카오 토큰은 SDK가 자체 보관하고 서버도 저장하지 않으므로 앱이 따로 저장하지 않습니다. 같은 자격증명을 여러 곳에 두면 처리 범위만 늘어납니다.
 - **`android:allowBackup="false"`를 되돌리지 마세요.** 토큰과 향후 로컬 캐시가 Google 클라우드 백업·기기 간 전송으로 나가는 것을 막습니다. refresh 토큰 TTL이 30일입니다.
+- **ViewModel이 Activity 스코프라는 것을 전제하고 짜세요.** 화면 전환이 NavHost가 아니라 `MainActivity`의 `if` 분기라서 목적지별 스코프가 없습니다. `hiltViewModel()`로 가져온 ViewModel은 화면을 떠나도 살아 있고 상태가 남습니다. **완료·성공 같은 일회성 신호를 상태로 두면 화면이 다시 열릴 때 그 값이 다시 흘러나갑니다.** `LoginViewModel.onAuthenticationHandled()`처럼 소비 후 되돌리는 메서드를 두고, 호출자는 화면을 바꾸기 **전에** 소비 표시를 남기세요. 화면이 바뀌면 `LaunchedEffect`가 취소돼 뒤에 둔 코드가 실행되지 않습니다.
 - **로직은 JVM에서 테스트 가능한 위치에 둡니다.** ViewModel·Repository의 로직이 Activity나 Composable 안에 들어가면 `testDebugUnitTest`로 검증할 수 없습니다.
 - **ViewModel에 Android `Context`를 넣지 않습니다.** 카카오 SDK처럼 Activity Context를 요구하는 호출은 UI 계층(`LoginRoute` 같은 상태 있는 컴포저블)이 담당하고, ViewModel은 결과만 받습니다. 그래서 `KakaoLoginClient`는 Hilt로 주입하지 않고 컴포저블에서 `remember`로 만듭니다.
 - **브랜드가 고정한 색상은 `colorScheme`에 넣지 않습니다.** 카카오 버튼 색(`KakaoContainer` 등)은 `core/designsystem/Color.kt`에 별도 상수로 둡니다. 카카오 디자인 가이드가 변경을 금지하므로 테마나 다크 모드에 따라 바뀌면 안 됩니다.
@@ -237,13 +238,15 @@ MedicalMate/
 
 | 항목 | 상태 |
 | -- | -- |
-| 유닛 테스트 | `LoginViewModel` 10건, `SessionViewModel` 10건, `HomeViewModel` 6건, 템플릿 1개 |
+| 유닛 테스트 | `LoginViewModel` 13건, `SessionViewModel` 10건, `HomeViewModel` 6건, 템플릿 1개 |
 | 아키텍처 패턴 | MVVM 확정. UseCase는 필요할 때만 |
 | DI | Hilt 확정 |
 | 패키지 구조 | 기능 우선 확정. 도메인명은 Backend와 일치 |
 | 로그인 화면(1o) | 카카오 버튼만 구현. 서버 토큰 교환 미연동 |
 | 홈 화면(1n) | 구조만. `HomeViewModel`이 픽스처를 노출. 서버 미연동 |
 | 로그아웃 · 회원탈퇴 | 구현 완료. 홈 화면에 임시 진입점. 설정 화면 생기면 이동 |
+| ViewModel 스코프 | 전부 Activity 스코프. 로그아웃 후에도 상태가 남는다. 네비게이션 도입 시 목적지별로 분리 |
+| 계정 전환 시 이전 데이터 | `HomeViewModel`이 이전 계정 카드를 한 프레임 보여줄 수 있음. 지금은 픽스처라 무해 |
 | 401 재발급 Authenticator | 미도입. 만료된 토큰으로 로그아웃·탈퇴하면 서버 호출이 401 |
 | 토큰 암호화 | 미적용. DataStore 평문. 백업 차단으로 샌드박스 밖 유출만 막음 |
 | 온보딩 필요 판단 | `refresh` 응답의 `onboardingRequired`는 서버가 항상 false. 프로필 조회로 옮겨야 함 |

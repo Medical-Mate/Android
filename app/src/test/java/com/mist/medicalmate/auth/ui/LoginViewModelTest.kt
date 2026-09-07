@@ -123,6 +123,39 @@ class LoginViewModelTest {
         assertEquals(LoginUiState.Idle, viewModel.uiState.value)
     }
 
+    @Test
+    fun `로그인 완료를 처리하면 Idle로 돌아간다`() = runTest {
+        val viewModel = viewModel()
+
+        viewModel.onLoginResult(KakaoLoginResult.Success("kakao-token"))
+        viewModel.onAuthenticationHandled()
+
+        assertEquals(LoginUiState.Idle, viewModel.uiState.value)
+    }
+
+    @Test
+    fun `소비하지 않으면 Authenticated가 그대로 남아 재진입 시 다시 흘러나간다`() = runTest {
+        val viewModel = viewModel()
+
+        viewModel.onLoginResult(KakaoLoginResult.Success("kakao-token"))
+
+        // 이 ViewModel은 Activity 스코프라 로그인 화면을 떠나도 살아 있다. 이 상태가
+        // 남아 있으면 로그아웃 뒤 로그인 화면이 열리자마자 다시 홈으로 튕긴다.
+        assertEquals(
+            LoginUiState.Authenticated(onboardingRequired = false),
+            viewModel.uiState.value,
+        )
+    }
+
+    @Test
+    fun `Idle 상태에서 로그인 완료 처리를 불러도 상태가 바뀌지 않는다`() {
+        val viewModel = viewModel()
+
+        viewModel.onAuthenticationHandled()
+
+        assertEquals(LoginUiState.Idle, viewModel.uiState.value)
+    }
+
     private fun rejected(code: ApiErrorCode) = AuthResult.Rejected(code = code, requestId = "req_test")
 
     private fun viewModel(repository: AuthRepository = FakeAuthRepository()) = LoginViewModel(repository)

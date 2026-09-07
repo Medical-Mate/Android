@@ -5,6 +5,7 @@ import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.core.network.apiCall
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 
 /**
@@ -85,9 +86,12 @@ constructor(
 
     override suspend fun logout() {
         // 결과를 보지 않는다. 만료된 토큰이면 401이 오지만 그래도 로컬은 정리한다.
-        apiCall(json) { api.logout() }
+        // 서버가 잠들어 있으면 첫 요청이 수십 초 걸리는데, 로그아웃의 본질은 로컬
+        // 정리라서 응답을 무한정 기다리지 않는다. 시간을 넘기면 서버의 refresh
+        // 토큰이 남지만 이 기기에는 사본이 없어 쓸 수 없다.
+        withTimeoutOrNull(SERVER_LOGOUT_TIMEOUT_MS) { apiCall(json) { api.logout() } }
         // 서버는 자기 refresh 토큰만 폐기하고 카카오 세션은 건드리지 않는다.
-        kakaoLoginClient.logout()
+        withTimeoutOrNull(KAKAO_LOGOUT_TIMEOUT_MS) { kakaoLoginClient.logout() }
         tokenStore.clear()
     }
 
@@ -110,6 +114,11 @@ constructor(
 
     override suspend fun clearSession() {
         tokenStore.clear()
+    }
+
+    private companion object {
+        const val SERVER_LOGOUT_TIMEOUT_MS = 10_000L
+        const val KAKAO_LOGOUT_TIMEOUT_MS = 5_000L
     }
 
     private suspend fun ApiResult<TokenResponse>.toAuthResult(): AuthResult = when (this) {

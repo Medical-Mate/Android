@@ -36,6 +36,10 @@ fun LoginRoute(
     LaunchedEffect(state) {
         val current = state
         if (current is LoginUiState.Authenticated) {
+            // 소비 표시를 먼저 남긴다. onAuthenticated가 화면을 홈으로 바꾸면 이
+            // 효과가 취소되므로, 뒤에 두면 상태가 Authenticated로 남아 다음 로그아웃
+            // 때 로그인 화면이 열리자마자 다시 홈으로 튕긴다.
+            viewModel.onAuthenticationHandled()
             onAuthenticated(current.onboardingRequired)
         }
     }
