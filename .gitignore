@@ -20,6 +20,9 @@ local.properties
 keystore.properties
 signing.properties
 
+# 기술 선택 기록 - 포트폴리오용 개인 문서, 팀 공유 대상 아님
+PORTFOLIO.md
+
 # OS
 .DS_Store
 Thumbs.db
