@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Figma 303:769 Icon/search. 손으로 고치지 말고 원본에서 다시 내보낼 것. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M10.8 4.2 C12.55 4.2 14.229 4.896 15.467 6.133 C16.705 7.371 17.4 9.05 17.4 10.8 C17.4 12.551 16.705 14.229 15.467 15.467 C14.229 16.705 12.55 17.4 10.8 17.4 C9.05 17.4 7.371 16.705 6.133 15.467 C4.895 14.229 4.2 12.551 4.2 10.8 C4.2 9.05 4.895 7.371 6.133 6.133 C7.371 4.896 9.05 4.2 10.8 4.2 Z"
+        android:strokeColor="#131722"
+        android:strokeWidth="1.75"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M15.6 15.6 L20 20"
+        android:strokeColor="#131722"
+        android:strokeWidth="1.75"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

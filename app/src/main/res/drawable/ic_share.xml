@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Figma 303:754 Icon/share. 손으로 고치지 말고 원본에서 다시 내보낼 것. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M12 15.6 V4.2"
+        android:strokeColor="#131722"
+        android:strokeWidth="1.75"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M8 8.2 L12 4.2 L16 8.2"
+        android:strokeColor="#131722"
+        android:strokeWidth="1.75"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M5.2 13.4 V18.8 C5.2 19.225 5.369 19.632 5.669 19.932 C5.969 20.232 6.376 20.4 6.8 20.4 H17.2 C17.41 20.4 17.618 20.359 17.812 20.279 C18.006 20.198 18.183 20.08 18.331 19.932 C18.48 19.783 18.598 19.607 18.678 19.413 C18.759 19.219 18.8 19.011 18.8 18.8 V13.4"
+        android:strokeColor="#131722"
+        android:strokeWidth="1.75"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

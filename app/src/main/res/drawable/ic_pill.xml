@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Figma 305:1039 Icon/pill. 손으로 고치지 말고 원본에서 다시 내보낼 것. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M14.6 4.2 C15.504 3.488 16.637 3.133 17.785 3.202 C18.933 3.27 20.016 3.757 20.83 4.57 C21.643 5.383 22.13 6.466 22.198 7.614 C22.266 8.763 21.911 9.896 21.2 10.8 L10.8 21.2 C9.896 21.911 8.763 22.266 7.615 22.198 C6.467 22.129 5.384 21.643 4.57 20.829 C3.757 20.016 3.27 18.933 3.202 17.785 C3.134 16.637 3.489 15.504 4.2 14.6 L14.6 4.2 Z"
+        android:strokeColor="#131722"
+        android:strokeWidth="1.75"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M9.4 9.4 L15 15"
+        android:strokeColor="#131722"
+        android:strokeWidth="1.75"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>
