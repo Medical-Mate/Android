@@ -36,6 +36,7 @@ fun HomeScreen(
     onFamilyShareClick: () -> Unit,
     onRetryClick: () -> Unit,
     modifier: Modifier = Modifier,
+    accountActions: AccountActionCallbacks = AccountActionCallbacks(),
 ) {
     when (state) {
         HomeUiState.Loading -> LoadingContent(modifier)
@@ -47,10 +48,24 @@ fun HomeScreen(
                 onSavedCardClick = onSavedCardClick,
                 onCalendarClick = onCalendarClick,
                 onFamilyShareClick = onFamilyShareClick,
+                accountActions = accountActions,
                 modifier = modifier,
             )
     }
 }
+
+/**
+ * 계정 관련 임시 동작. 와이어프레임에 없는 개발용 진입점이라 한 덩어리로 묶어
+ * 기본값을 준다. 설정 화면이 생기면 이 파라미터는 사라진다.
+ *
+ * 홈이 `auth` 도메인을 직접 참조하지 않도록 콜백만 받는다. 실제 수행은
+ * `SessionViewModel`이 하고 `MainActivity`가 연결한다.
+ */
+data class AccountActionCallbacks(
+    val enabled: Boolean = true,
+    val onLogoutClick: () -> Unit = {},
+    val onWithdrawClick: () -> Unit = {},
+)
 
 @Composable
 private fun LoadingContent(modifier: Modifier = Modifier) {
@@ -87,6 +102,7 @@ private fun HomeContent(
     onSavedCardClick: (String) -> Unit,
     onCalendarClick: () -> Unit,
     onFamilyShareClick: () -> Unit,
+    accountActions: AccountActionCallbacks,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -121,6 +137,14 @@ private fun HomeContent(
             BottomActions(
                 onCalendarClick = onCalendarClick,
                 onFamilyShareClick = onFamilyShareClick,
+            )
+        }
+
+        item {
+            AccountActions(
+                enabled = accountActions.enabled,
+                onLogoutClick = accountActions.onLogoutClick,
+                onWithdrawClick = accountActions.onWithdrawClick,
             )
         }
     }

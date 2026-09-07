@@ -19,6 +19,7 @@ fun HomeRoute(
     onSavedCardClick: (String) -> Unit = {},
     onCalendarClick: () -> Unit = {},
     onFamilyShareClick: () -> Unit = {},
+    accountActions: AccountActionCallbacks = AccountActionCallbacks(),
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -34,5 +35,6 @@ fun HomeRoute(
         onFamilyShareClick = onFamilyShareClick,
         onRetryClick = viewModel::refresh,
         modifier = modifier,
+        accountActions = accountActions,
     )
 }
