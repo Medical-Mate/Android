@@ -127,7 +127,7 @@ MedicalMate/
 │       │   ├── MainActivity.kt            진입점. 세션 확인 중 로딩
 │       │   ├── MedicalMateApplication.kt  @HiltAndroidApp, KakaoSdk.init
 │       │   ├── core/
-│       │   │   ├── designsystem/          Color.kt, Theme.kt, Type.kt
+│       │   │   ├── designsystem/          토큰, 타이포, 아이콘, 로고
 │       │   │   └── network/               Retrofit·OkHttp 설정, ApiResult
 │       │   ├── navigation/                단일 NavHost, 세션 경계 동기화
 │       │   ├── auth/  data/ ui/           1o 로그인, 세션 복구
@@ -159,6 +159,37 @@ DI는 Hilt입니다. `@HiltAndroidApp`은 `MedicalMateApplication`, 화면 진�
 브랜드가 고정한 색상은 `colorScheme`에 넣지 않습니다. 카카오 버튼 색(`KakaoContainer` 등)은
 `core/designsystem/Color.kt`에 별도 상수로 둡니다. 카카오 디자인 가이드가 변경을 금지하므로
 테마나 다크 모드에 따라 바뀌면 안 됩니다.
+
+### 디자인 시스템
+
+값의 정본은 Figma다. 저장소의 `DESIGN.md`는 추출본이고, 어긋나면 Figma가 우선한다.
+실제로 `Elevation/Card`가 달랐다. 문서를 고치지 말고 디자인 트랙에 넘기세요.
+
+**화면 코드에서 `MaterialTheme`을 직접 읽지 마세요.** 색과 타이포는
+`MedicalMateTheme.colors`, `MedicalMateTheme.typography`로 읽습니다. `colorScheme`과
+`typography` 슬롯에도 같은 값이 들어 있지만 그쪽은 M3 컴포넌트가 내부에서 참조하려고
+채운 것입니다. 화면이 M3 이름을 쓰면 `bg/canvas`나 `fg/subtle`처럼 대응하는 역할이 없는
+토큰을 못 쓰고, 디자인 시스템과 이름이 갈립니다.
+
+**원시 팔레트를 화면에서 쓰지 마세요.** `Palette.kt`는 `internal`이고 시맨틱 토큰을
+정의하는 곳에서만 참조합니다. 브랜드가 고정한 색(`KakaoContainer` 등)은 `BrandColor.kt`에
+따로 있습니다. 카카오 디자인 가이드가 변경을 금지하므로 테마나 다크 모드에 따라 바뀌면
+안 됩니다.
+
+**간격과 크기는 `MedicalMateSpace`, `MedicalMateSize`, `MedicalMateRadius`를 씁니다.**
+임의의 dp를 쓰지 마세요. 새 값이 필요하면 하드코딩하기 전에 토큰을 추가할지 검토합니다.
+이 셋은 화면 폭이나 테마에 따라 달라지지 않아서 `CompositionLocal`이 아니라 오브젝트입니다.
+
+**아이콘과 로고는 `MedicalMateIcons`, `MedicalMateLogo`로 참조합니다.** `R.drawable`을
+직접 쓰지 않습니다. drawable 파일은 Figma에서 내보낸 것이라 손으로 고치지 말고 원본에서
+다시 내보냅니다.
+
+**다크 모드는 지원 대상이 아닙니다.** 디자인 시스템에 다크 값이 없습니다. `values-night`를
+만들거나 `isSystemInDarkTheme()`으로 분기하지 마세요. dynamic color도 쓰지 않습니다.
+Android 12 이상에서 사용자 월페이퍼 색이 브랜드 컬러를 덮습니다.
+
+**Glass 표면에는 Opaque 대안을 함께 두세요.** 블러가 `RenderEffect`에 의존하고 그것이
+API 31부터입니다. minSdk 24라서 Android 7.0~11에는 블러가 걸리지 않습니다.
 
 ### 네트워크와 오류 처리
 
@@ -399,7 +430,9 @@ com.mist.medicalmate/
 | 네비게이션 | Navigation Compose 2.10.0 확정. 단일 `NavHost` + 타입 세이프 라우트. 목적지는 1o·1n 두 개 |
 | 화면 전환 | `MedicalMateNavHost`. `MainActivity`는 세션 확인 중 로딩만 담당 |
 | ViewModel 스코프 | 화면 ViewModel은 목적지 스코프. `SessionViewModel`만 Activity 스코프 |
-| 로그인 화면(1o) | 카카오 버튼 + 서버 토큰 교환 구현 완료 |
+| 디자인 시스템 | DESIGN.md 1~7절 반영 완료. 시맨틱 40개, 타이포 15종, 토큰, 아이콘 45개, 로고 4개, Pretendard 4무게 |
+| 컴포넌트(8절) | 미착수. 39종 중 곧 쓰는 것부터 |
+| 로그인 화면(1o) | 카카오 버튼 + 서버 토큰 교환 구현 완료. 토큰 적용 완료 |
 | 홈 화면(1n) | 구조만. `HomeViewModel`이 픽스처를 노출. 서버 미연동 |
 | 로그아웃 · 회원탈퇴 | 구현 완료. 홈 화면에 임시 진입점. 설정 화면 생기면 이동 |
 | 계정 전환 시 이전 데이터 | 해결. 로그아웃 시 홈 엔트리가 pop되면서 `HomeViewModel`도 정리됨 |
@@ -408,6 +441,9 @@ com.mist.medicalmate/
 | 온보딩 필요 판단 | `refresh` 응답의 `onboardingRequired`가 서버에서 항상 false. 프로필 조회로 옮겨야 함 |
 | Apple · 전화번호 로그인 | 백엔드 미지원. `User` 엔티티 식별자가 `kakaoId` 단독 |
 | 카카오 말풍선 심볼 에셋 | 없음. 콘솔의 도구 > 리소스 다운로드에서 받아야 함 |
+| 소셜 로그인 버튼 규격 | DESIGN.md 8.2는 radius 16, 카카오 가이드는 12. 색은 가이드, 크기는 문서를 따름 |
+| `mipmap-*` 래스터 아이콘 | 템플릿 그대로. API 24~25에서 쓰인다. Android Studio Image Asset으로 교체 필요 |
+| 오픈소스 고지 화면 | 없음. Pretendard가 OFL이라 스토어 배포 시 필요 |
 | 로컬 저장 | 미정. 문답 화면 착수 때 백엔드 API를 보고 결정 |
 | 릴리즈 서명 | 하지 않기로 결정. `bundleRelease` 산출물은 미서명 |
 | 스크린샷 테스트 (Paparazzi/Roborazzi) | 미도입 |

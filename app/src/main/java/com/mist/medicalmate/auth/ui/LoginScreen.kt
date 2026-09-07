@@ -6,11 +6,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -24,6 +22,9 @@ import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.KakaoContainer
 import com.mist.medicalmate.core.designsystem.KakaoLabel
+import com.mist.medicalmate.core.designsystem.MedicalMateRadius
+import com.mist.medicalmate.core.designsystem.MedicalMateSize
+import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
 /**
@@ -38,20 +39,21 @@ fun LoginScreen(state: LoginUiState, onKakaoLoginClick: () -> Unit, modifier: Mo
         modifier =
         modifier
             .fillMaxSize()
-            .padding(horizontal = 24.dp),
+            .padding(horizontal = MedicalMateSize.gutter),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(Modifier.weight(1f))
 
         Text(
             text = stringResource(R.string.login_title),
-            style = MaterialTheme.typography.headlineMedium,
+            // DESIGN.md 3절이 화면 제목을 Heading/L로 규정한다.
+            style = MedicalMateTheme.typography.headingL,
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(MedicalMateSpace.s8))
         Text(
             text = stringResource(R.string.login_subtitle),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MedicalMateTheme.typography.bodyM,
+            color = MedicalMateTheme.colors.fgSubtle,
             textAlign = TextAlign.Center,
         )
 
@@ -60,11 +62,11 @@ fun LoginScreen(state: LoginUiState, onKakaoLoginClick: () -> Unit, modifier: Mo
         if (state is LoginUiState.Failed) {
             Text(
                 text = stringResource(state.reason.messageRes()),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.error,
+                style = MedicalMateTheme.typography.bodyM,
+                color = MedicalMateTheme.colors.fgDanger,
                 textAlign = TextAlign.Center,
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(MedicalMateSpace.s12))
         }
 
         KakaoLoginButton(
@@ -73,20 +75,26 @@ fun LoginScreen(state: LoginUiState, onKakaoLoginClick: () -> Unit, modifier: Mo
             onClick = onKakaoLoginClick,
         )
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(MedicalMateSpace.s16))
         Text(
             text = stringResource(R.string.login_terms),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MedicalMateTheme.typography.bodyS,
+            color = MedicalMateTheme.colors.fgSubtle,
             textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(MedicalMateSpace.s32))
     }
 }
 
 /**
- * 카카오 디자인 가이드를 따른다. 컨테이너 #FEE500, 레이블 검정 85%, radius 12.
- * 색상과 문구를 임의로 바꿀 수 없다.
+ * 카카오 로그인 버튼.
+ *
+ * 색은 카카오 디자인 가이드가 변경을 금지한다. 컨테이너 #FEE500, 레이블 #191600이다.
+ *
+ * 컨테이너 규격은 DESIGN.md 8.2의 `Social Login Button`을 따라 높이 56, radius 16이다.
+ * 카카오 가이드는 radius 12를 제시하는데, 문서가 소셜 로그인 버튼을 브랜드 가이드
+ * 예외로 명시하면서도 컨테이너 규격은 자기 값으로 정해 두었다. 색만 가이드를 따르고
+ * 크기는 문서를 따른다. 어긋나면 디자인 트랙과 정리한다.
  *
  * 말풍선 심볼은 아직 없다. 콘솔의 도구 > 리소스 다운로드에서 받아 레이블 왼쪽에 넣어야
  * 가이드를 완전히 충족한다.
@@ -97,8 +105,8 @@ private fun KakaoLoginButton(enabled: Boolean, inProgress: Boolean, onClick: () 
     Button(
         onClick = onClick,
         enabled = enabled,
-        // 가이드가 radius 12를 지정한다. 테마 shapes가 바뀌어도 흔들리지 않게 직접 준다.
-        shape = RoundedCornerShape(12.dp),
+        // 테마 shapes가 바뀌어도 흔들리지 않게 직접 준다.
+        shape = MedicalMateRadius.md,
         colors =
         ButtonDefaults.buttonColors(
             containerColor = KakaoContainer,
@@ -109,17 +117,18 @@ private fun KakaoLoginButton(enabled: Boolean, inProgress: Boolean, onClick: () 
         modifier =
         Modifier
             .fillMaxWidth()
-            .height(48.dp)
+            .height(MedicalMateSize.controlLg)
             .semantics { contentDescription = label },
     ) {
         if (inProgress) {
             CircularProgressIndicator(
-                modifier = Modifier.height(20.dp),
+                modifier = Modifier.height(MedicalMateSize.iconMd),
                 color = KakaoLabel,
                 strokeWidth = 2.dp,
             )
         } else {
-            Text(text = label, style = MaterialTheme.typography.titleMedium)
+            // DESIGN.md 3절이 높이 56 버튼 라벨을 Label/L로 규정한다.
+            Text(text = label, style = MedicalMateTheme.typography.labelL)
         }
     }
 }
