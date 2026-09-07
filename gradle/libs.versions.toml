@@ -7,7 +7,9 @@ espressoCore = "3.7.0"
 lifecycleRuntimeKtx = "2.11.0"
 activityCompose = "1.13.0"
 kotlin = "2.2.10"
-composeBom = "2026.02.01"
+# navigation-compose 2.10.0이 Compose 1.10.5를 요구한다. 2026.02.01은 1.10.4를 고정해
+# ui·runtime·animation만 1.10.5로 올라가고 나머지는 1.10.4에 남는다. 버전을 맞추려고 올렸다.
+composeBom = "2026.03.00"
 detekt = "1.23.8"
 ktlint = "14.2.0"
 # KSP 버전은 Kotlin 버전에 묶여 있습니다. kotlin을 올리면 여기도 함께 올립니다.
@@ -22,6 +24,8 @@ okhttp = "5.5.0"
 kotlinxSerialization = "1.9.0"
 # Compose BOM이 끌어오는 coroutines 버전과 맞춘 값이다. BOM이 바뀌면 함께 본다.
 kotlinxCoroutines = "1.9.0"
+# 타입 세이프 라우트는 kotlinx-serialization-core 1.7.3 이상을 요구한다. 위의 1.9.0으로 충족된다.
+navigation = "2.10.0"
 datastore = "1.2.1"
 hilt = "2.60.1"
 
@@ -53,6 +57,7 @@ okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhtt
 okhttp-logging-interceptor = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
 # minSdk 24에서 java.time을 쓰기 위한 core library desugaring
 desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugarJdkLibs" }

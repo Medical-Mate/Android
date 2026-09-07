@@ -38,7 +38,7 @@ Medical Mate Android 앱 저장소에서 AI 에이전트가 작업할 때 참고
 | Gradle | 9.5.0 | `gradle/wrapper/gradle-wrapper.properties` |
 | AGP | 9.3.2 | `gradle/libs.versions.toml` |
 | Kotlin | 2.2.10 | `gradle/libs.versions.toml` |
-| Compose BOM | 2026.02.01 | `gradle/libs.versions.toml` |
+| Compose BOM | 2026.03.00 | `gradle/libs.versions.toml` |
 | Gradle 데몬 JDK | 21 | `gradle/gradle-daemon-jvm.properties` |
 | Java 소스 호환성 | 11 | `app/build.gradle.kts` |
 | compileSdk | 37 | `app/build.gradle.kts` |
@@ -49,6 +49,7 @@ Medical Mate Android 앱 저장소에서 AI 에이전트가 작업할 때 참고
 | desugar_jdk_libs | 2.1.5 | `gradle/libs.versions.toml` |
 | Retrofit / OkHttp | 3.0.0 / 5.5.0 | `gradle/libs.versions.toml` |
 | kotlinx.serialization | 1.9.0 | `gradle/libs.versions.toml` |
+| Navigation Compose | 2.10.0 | `gradle/libs.versions.toml` |
 | DataStore Preferences | 1.2.1 | `gradle/libs.versions.toml` |
 
 규칙:
@@ -64,6 +65,7 @@ Medical Mate Android 앱 저장소에서 AI 에이전트가 작업할 때 참고
 - **카카오 SDK는 Maven Central에 없습니다.** `settings.gradle.kts`의 `dependencyResolutionManagement`에 `https://devrepo.kakao.com/nexus/content/groups/public/`이 등록돼 있고 `includeGroup("com.kakao.sdk")`로 범위를 제한합니다. `repositoriesMode`가 `FAIL_ON_PROJECT_REPOS`라 모듈 빌드 스크립트에는 저장소를 넣을 수 없습니다.
 - **네이티브 앱 키는 `local.properties`의 `KAKAO_NATIVE_APP_KEY`에서 읽습니다.** 없으면 환경변수를 보고, 그것도 없으면 빈 문자열로 빌드는 통과합니다. 실패는 런타임 카카오 API 호출에서만 납니다. CI는 환경변수 경로를 씁니다.
 - 매니페스트에 `<queries>`를 직접 추가하지 마세요. `v2-common` AAR이 `com.kakao.talk`와 alpha·sandbox를 이미 선언하고 전이 병합됩니다. 손으로 넣으면 중복이고 alpha·sandbox가 빠집니다.
+- **Compose BOM은 navigation-compose가 요구하는 Compose 버전과 맞춰야 합니다.** navigation-compose 2.10.0이 `ui`·`runtime`·`animation` 1.10.5를 요구합니다. BOM 2026.02.01은 1.10.4를 고정해서, 그 세 개만 1.10.5로 올라가고 `foundation`·`material3`는 1.10.4에 남는 혼합 상태가 됩니다. 그래서 BOM을 2026.03.00으로 올렸습니다. navigation을 올릴 때 BOM을 함께 확인하세요. 확인 방법은 `./gradlew :app:dependencies --configuration debugRuntimeClasspath`입니다.
 - `org.gradle.configuration-cache=true`가 켜져 있습니다. 빌드 스크립트에서 configuration cache와 호환되지 않는 패턴(태스크 실행 시점의 `Project` 접근 등)을 쓰지 않습니다.
 
 ---
@@ -82,6 +84,7 @@ MedicalMate/
 │       │   ├── core/
 │       │   │   ├── designsystem/        Color.kt, Theme.kt, Type.kt
 │       │   │   └── network/             Retrofit·OkHttp 설정, ApiResult
+│       │   ├── navigation/            단일 NavHost, 세션 경계 동기화
 │       │   ├── auth/  data/ ui/         1o 로그인, 세션 복구
 │       │   └── home/  ui/               1n 홈
 │       ├── test/                        JVM 유닛 테스트
@@ -105,7 +108,11 @@ MedicalMate/
 - **`core`가 도메인을 참조하지 않습니다.** 인증 헤더를 붙이는 `AuthInterceptor`는 `core/network`에 있고 토큰이 필요하지만, `auth`의 `TokenStore`를 직접 쓰지 않고 `core/network/AccessTokenProvider` 인터페이스를 통해 받습니다. 구현 연결은 `auth/data/AuthModule`의 `@Binds`가 합니다. 반대로 두면 공용 계층이 특정 도메인에 묶입니다.
 - **서버 JWT는 `TokenStore`(DataStore)에만 둡니다.** 카카오 토큰은 SDK가 자체 보관하고 서버도 저장하지 않으므로 앱이 따로 저장하지 않습니다. 같은 자격증명을 여러 곳에 두면 처리 범위만 늘어납니다.
 - **`android:allowBackup="false"`를 되돌리지 마세요.** 토큰과 향후 로컬 캐시가 Google 클라우드 백업·기기 간 전송으로 나가는 것을 막습니다. refresh 토큰 TTL이 30일입니다.
-- **ViewModel이 Activity 스코프라는 것을 전제하고 짜세요.** 화면 전환이 NavHost가 아니라 `MainActivity`의 `if` 분기라서 목적지별 스코프가 없습니다. `hiltViewModel()`로 가져온 ViewModel은 화면을 떠나도 살아 있고 상태가 남습니다. **완료·성공 같은 일회성 신호를 상태로 두면 화면이 다시 열릴 때 그 값이 다시 흘러나갑니다.** `LoginViewModel.onAuthenticationHandled()`처럼 소비 후 되돌리는 메서드를 두고, 호출자는 화면을 바꾸기 **전에** 소비 표시를 남기세요. 화면이 바뀌면 `LaunchedEffect`가 취소돼 뒤에 둔 코드가 실행되지 않습니다.
+- **네비게이션은 Navigation Compose이고, 그래프는 하나입니다.** `navigation/MedicalMateNavHost`가 유일한 `NavHost`입니다. 라우트는 `@Serializable data object`·`data class`로 정의하는 타입 세이프 방식을 쓰고, 문자열 경로를 쓰지 않습니다.
+- **그래프를 로그인용과 본문용으로 쪼개지 마세요.** `NavHost`는 컴포지션을 떠날 때 아무것도 정리하지 않고(소스의 `onDispose {}`가 비어 있음) 목적지별 `ViewModelStore`는 Activity의 스토어에 얹혀 있습니다. 세션 상태로 `NavHost` 자체를 갈아치우면 로그아웃할 때마다 ViewModel이 정리되지 않고 쌓입니다. 백스택에서 pop될 때만 확실히 정리되므로, 로그인·로그아웃 경계는 `popUpTo(graph.id) { inclusive = true }`로 넘어갑니다.
+- **화면 ViewModel은 목적지 스코프입니다.** `composable<T> { }` 안에서 `hiltViewModel()`을 부르면 그 back stack entry에 묶입니다. 로그아웃으로 엔트리가 pop되면 ViewModel도 사라지므로, 다음 계정으로 로그인해도 이전 계정 데이터가 남지 않습니다. 예외는 `SessionViewModel`입니다. 세션은 특정 화면의 상태가 아니라 앱 전체의 상태이므로 `MainActivity`에서 Activity 스코프로 둡니다.
+- **라우트 타입과 그래프 등록은 기능 패키지에 둡니다.** `auth/ui/LoginDestination.kt`처럼 라우트 `data object`와 `NavGraphBuilder` 확장 함수를 같은 파일에 두고, `navigation`은 그 확장 함수만 호출합니다. `navigation`이 화면 컴포저블의 파라미터까지 알 필요가 없습니다. `navigation`은 조합 루트라서 모든 기능을 참조해도 되는 유일한 패키지입니다.
+- **일회성 신호를 상태로 두면 화면이 다시 열릴 때 그 값이 다시 흘러나갑니다.** 목적지 스코프가 대부분을 막아주지만, pop 없이 화면이 다시 조합되면 여전히 납니다. `LoginViewModel.onAuthenticationHandled()`처럼 소비 후 되돌리는 메서드를 두고, 호출자는 화면을 바꾸기 **전에** 소비 표시를 남기세요. 화면이 바뀌면 `LaunchedEffect`가 취소돼 뒤에 둔 코드가 실행되지 않습니다.
 - **로직은 JVM에서 테스트 가능한 위치에 둡니다.** ViewModel·Repository의 로직이 Activity나 Composable 안에 들어가면 `testDebugUnitTest`로 검증할 수 없습니다.
 - **ViewModel에 Android `Context`를 넣지 않습니다.** 카카오 SDK처럼 Activity Context를 요구하는 호출은 UI 계층(`LoginRoute` 같은 상태 있는 컴포저블)이 담당하고, ViewModel은 결과만 받습니다. 그래서 `KakaoLoginClient`는 Hilt로 주입하지 않고 컴포저블에서 `remember`로 만듭니다.
 - **브랜드가 고정한 색상은 `colorScheme`에 넣지 않습니다.** 카카오 버튼 색(`KakaoContainer` 등)은 `core/designsystem/Color.kt`에 별도 상수로 둡니다. 카카오 디자인 가이드가 변경을 금지하므로 테마나 다크 모드에 따라 바뀌면 안 됩니다.
@@ -136,7 +143,7 @@ MedicalMate/
 
 **아직 안 정해진 것**
 
-- 네비게이션 라이브러리와 로컬 저장 방식은 미정입니다. 네비게이션을 정하면 ViewModel 스코프와 화면 전환 방식이 함께 정해집니다.
+- 로컬 저장 방식은 미정입니다. 문답 중간 저장이 서버에 있으면 앱에서 할 일이 없어서, 문답 화면(1l~1d)에 착수할 때 백엔드 API를 보고 정합니다.
 
 ---
 
@@ -239,21 +246,23 @@ MedicalMate/
 | 항목 | 상태 |
 | -- | -- |
 | 유닛 테스트 | `LoginViewModel` 13건, `SessionViewModel` 10건, `HomeViewModel` 6건, 템플릿 1개 |
+| 네비게이션 테스트 | 없음. `NavHost` 동작은 계측 테스트가 필요하고 CI가 androidTest를 돌리지 않는다 |
 | 아키텍처 패턴 | MVVM 확정. UseCase는 필요할 때만 |
 | DI | Hilt 확정 |
 | 패키지 구조 | 기능 우선 확정. 도메인명은 Backend와 일치 |
 | 로그인 화면(1o) | 카카오 버튼 + 서버 토큰 교환 구현 완료 |
 | 홈 화면(1n) | 구조만. `HomeViewModel`이 픽스처를 노출. 서버 미연동 |
 | 로그아웃 · 회원탈퇴 | 구현 완료. 홈 화면에 임시 진입점. 설정 화면 생기면 이동 |
-| ViewModel 스코프 | 전부 Activity 스코프. 로그아웃 후에도 상태가 남는다. 네비게이션 도입 시 목적지별로 분리 |
-| 계정 전환 시 이전 데이터 | `HomeViewModel`이 이전 계정 카드를 한 프레임 보여줄 수 있음. 지금은 픽스처라 무해 |
+| 네비게이션 | Navigation Compose 2.10.0 확정. 단일 `NavHost` + 타입 세이프 라우트. 목적지는 1o·1n 두 개 |
+| ViewModel 스코프 | 화면 ViewModel은 목적지 스코프. `SessionViewModel`만 Activity 스코프 |
+| 계정 전환 시 이전 데이터 | 해결. 로그아웃 시 홈 엔트리가 pop되면서 `HomeViewModel`이 정리된다 |
 | 401 재발급 Authenticator | 미도입. 만료된 토큰으로 로그아웃·탈퇴하면 서버 호출이 401 |
 | 토큰 암호화 | 미적용. DataStore 평문. 백업 차단으로 샌드박스 밖 유출만 막음 |
 | 온보딩 필요 판단 | `refresh` 응답의 `onboardingRequired`는 서버가 항상 false. 프로필 조회로 옮겨야 함 |
-| 화면 전환 | `MainActivity`의 임시 `if` 분기. 목적지가 늘면 NavHost로 교체 |
+| 화면 전환 | `MedicalMateNavHost`. `MainActivity`는 세션 확인 중 로딩만 담당 |
 | Apple · 전화번호 로그인 | 백엔드 미지원. `User` 엔티티 식별자가 `kakaoId` 단독 |
 | 카카오 말풍선 심볼 에셋 | 없음. 콘솔의 도구 > 리소스 다운로드에서 받아야 함 |
-| 네비게이션 / 로컬 저장 | 미정. 네비게이션이 ViewModel 스코프·화면 전환의 선행 조건 |
+| 로컬 저장 | 미정. 문답 화면 착수 때 백엔드 API를 보고 결정 |
 | 릴리즈 서명 | 하지 않기로 결정. `bundleRelease` 산출물은 미서명 |
 | 스크린샷 테스트 (Paparazzi/Roborazzi) | 미도입 |
 | E2E (Maestro) | 미도입 |
