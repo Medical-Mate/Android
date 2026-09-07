@@ -5,30 +5,33 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import com.mist.medicalmate.R
 
 /**
- * DESIGN.md 3절 기본 서체는 Pretendard다.
+ * DESIGN.md 3절 기본 서체.
  *
- * 폰트 파일이 아직 저장소에 없다. `res/font`에 파일이 들어오면 이 한 곳만 바꾼다.
+ * Pretendard v1.3.9의 static OTF를 동봉한다. Google Fonts에 없어 Downloadable Fonts로는
+ * 받을 수 없다.
  *
- * ```
- * internal val MedicalMateFontFamily = FontFamily(
- *     Font(R.font.pretendard_regular, FontWeight.Normal),
- *     Font(R.font.pretendard_medium, FontWeight.Medium),
- *     Font(R.font.pretendard_semibold, FontWeight.SemiBold),
- *     Font(R.font.pretendard_bold, FontWeight.Bold),
- * )
- * ```
+ * DESIGN.md가 쓰는 무게만 넣었다. Regular 400, Medium 500, SemiBold 600, Bold 700이다.
+ * 무게가 모두 실물로 있으므로 `Strong` 스타일에 합성 굵기가 걸리지 않는다.
  *
- * 그때까지 시스템 서체로 렌더된다. 크기·행간·자간·굵기는 이미 문서 값이라 서체만
- * 교체하면 된다. Pretendard는 Google Fonts에 없어 Downloadable Fonts로는 받을 수 없다.
+ * 라이선스는 SIL Open Font License 1.1이고 원문은 `licenses/Pretendard-OFL.txt`에 있다.
+ * 재배포 시 저작권 표시와 라이선스를 함께 배포해야 한다.
  */
-internal val MedicalMateFontFamily = FontFamily.Default
+internal val MedicalMateFontFamily =
+    FontFamily(
+        Font(R.font.pretendard_regular, FontWeight.Normal),
+        Font(R.font.pretendard_medium, FontWeight.Medium),
+        Font(R.font.pretendard_semibold, FontWeight.SemiBold),
+        Font(R.font.pretendard_bold, FontWeight.Bold),
+    )
 
 /**
  * Figma의 행간을 그대로 재현하기 위한 공통 설정.
