@@ -147,9 +147,12 @@ constructor(private val authRepository: AuthRepository) : ViewModel() {
         /**
          * 스플래시 최소 노출 시간.
          *
-         * Figma에 값이 없어서 정한 값이다. 로고와 태그라인을 읽을 수 있는 하한이면서
-         * 진입을 기다리게 하지 않는 선으로 잡았다.
+         * Figma에 값이 없어서 정한 값이다. 태그라인을 읽는 데만 1초 가까이 걸려서 그보다
+         * 짧으면 로고만 스치고 문구는 남지 않는다. 반대로 2초를 넘기면 앱이 느리다는
+         * 인상이 생긴다. 브랜드 스플래시의 통상 범위인 1~2초의 아래쪽으로 잡았다.
+         *
+         * 시스템 스플래시의 1초 제한과는 무관하다. 이 화면은 우리가 그린다.
          */
-        const val MIN_SPLASH_MILLIS = 800L
+        const val MIN_SPLASH_MILLIS = 1_200L
     }
 }
