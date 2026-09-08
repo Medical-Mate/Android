@@ -10,10 +10,13 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import com.mist.medicalmate.auth.ui.LoginDestination
+import com.mist.medicalmate.auth.ui.SessionUiState
 import com.mist.medicalmate.auth.ui.loginDestination
 import com.mist.medicalmate.home.ui.AccountActionCallbacks
 import com.mist.medicalmate.home.ui.HomeDestination
 import com.mist.medicalmate.home.ui.homeDestination
+import com.mist.medicalmate.profile.ui.OnboardingIntroDestination
+import com.mist.medicalmate.profile.ui.onboardingIntroDestination
 import kotlinx.coroutines.flow.drop
 
 /**
@@ -31,11 +34,15 @@ import kotlinx.coroutines.flow.drop
  * 이 구조 덕에 화면 ViewModel은 목적지 스코프를 갖는다. 로그아웃하면 홈 엔트리가
  * pop되면서 `HomeViewModel`도 사라지고, 다음 계정으로 로그인했을 때 이전 계정의
  * 데이터가 남지 않는다.
+ *
+ * 시작 목적지와 경계 이동을 [SessionUiState] 하나로 정한다. 로그인 여부와 온보딩 필요
+ * 여부를 각각 받으면 둘 다 참일 수 없는 조합까지 서명에 들어온다.
  */
 @Composable
 internal fun MedicalMateNavHost(
-    signedIn: Boolean,
+    session: SessionUiState,
     onAuthenticated: (onboardingRequired: Boolean) -> Unit,
+    onOnboardingCompleted: () -> Unit,
     accountActions: AccountActionCallbacks,
     modifier: Modifier = Modifier,
 ) {
@@ -43,14 +50,28 @@ internal fun MedicalMateNavHost(
 
     NavHost(
         navController = navController,
-        startDestination = if (signedIn) HomeDestination else LoginDestination,
+        startDestination = session.destination(),
         modifier = modifier,
     ) {
         loginDestination(onAuthenticated = onAuthenticated)
+        onboardingIntroDestination(onStartClick = onOnboardingCompleted)
         homeDestination(accountActions = accountActions)
     }
 
-    SessionBoundarySync(navController = navController, signedIn = signedIn)
+    SessionBoundarySync(navController = navController, session = session)
+}
+
+/**
+ * 세션 상태가 가리키는 목적지.
+ *
+ * [SessionUiState.Checking]은 `MainActivity`가 스플래시로 잡아서 여기까지 오지 않는다.
+ * 로그인과 같이 두는 것은 분기를 하나 더 만들지 않으려는 것이고, 그래도 온다면 인증이
+ * 필요한 화면을 열지 않는 쪽이 안전하다.
+ */
+private fun SessionUiState.destination(): Any = when (this) {
+    SessionUiState.Checking, SessionUiState.SignedOut -> LoginDestination
+    is SessionUiState.SignedIn ->
+        if (onboardingRequired) OnboardingIntroDestination else HomeDestination
 }
 
 /**
@@ -60,19 +81,20 @@ internal fun MedicalMateNavHost(
  * 시작 목적지로 한 번 더 navigate가 나간다.
  *
  * [rememberUpdatedState]를 거치는 이유는 [snapshotFlow]가 스냅샷 상태만 관찰하기
- * 때문이다. `signedIn` 파라미터를 그대로 읽으면 [LaunchedEffect]가 처음 실행될 때의
+ * 때문이다. `session` 파라미터를 그대로 읽으면 [LaunchedEffect]가 처음 실행될 때의
  * 값에 고정돼 로그아웃을 놓친다.
+ *
+ * 상태가 아니라 목적지를 관찰한다. 온보딩을 마치면 세션은 그대로 로그인 상태이고 목적지만
+ * 홈으로 바뀌는데, 상태를 관찰하면 그 변화가 경계 이동으로 잡히지 않는다.
  */
 @Composable
-private fun SessionBoundarySync(navController: NavHostController, signedIn: Boolean) {
-    val currentSignedIn by rememberUpdatedState(signedIn)
+private fun SessionBoundarySync(navController: NavHostController, session: SessionUiState) {
+    val currentSession by rememberUpdatedState(session)
 
     LaunchedEffect(navController) {
-        snapshotFlow { currentSignedIn }
+        snapshotFlow { currentSession.destination() }
             .drop(1)
-            .collect { nowSignedIn ->
-                navController.resetTo(if (nowSignedIn) HomeDestination else LoginDestination)
-            }
+            .collect { destination -> navController.resetTo(destination) }
     }
 }
 

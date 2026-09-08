@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+      API 31부터 시스템이 앱 아이콘으로 스플래시를 띄운다. 끌 수는 없고 모습만 정할 수 있다.
+
+      기본값은 windowBackground 면에 런처 아이콘(그라디언트 로고)이라, 우리 스플래시(1a-1)로
+      넘어갈 때 면 색과 로고가 동시에 바뀌어 번쩍인다. 그래서 면을 bg/primary로 맞추고
+      아이콘은 비운다. 시스템 스플래시가 파란 면만 보여주고, 그 위로 우리 화면의 락업과
+      태그라인이 이어서 나온다.
+
+      아이콘을 흰 마크로 두는 방법도 있지만, 시스템은 아이콘을 창 가운데에 놓고 우리 화면은
+      태그라인과 묶어 가운데를 잡기 때문에 마크가 눈에 보이게 튄다.
+    -->
+    <style name="Theme.MedicalMate" parent="Theme.MedicalMate.Base">
+        <item name="android:windowSplashScreenBackground">@color/bg_primary</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon_none</item>
+    </style>
+</resources>

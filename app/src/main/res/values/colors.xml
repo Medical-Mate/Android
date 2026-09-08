@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Compose 밖에서 필요한 색만 둔다. DESIGN.md bg/canvas. 정본은 Palette.kt다. -->
+    <!-- Compose 밖에서 필요한 색만 둔다. 정본은 Palette.kt다. -->
     <color name="bg_canvas">#F5F6FA</color>
+
+    <!-- DESIGN.md bg/primary. 시스템 스플래시와 첫 프레임 전 창 배경에 쓴다. -->
+    <color name="bg_primary">#5566D2</color>
 </resources>

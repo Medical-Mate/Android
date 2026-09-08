@@ -4,21 +4,18 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mist.medicalmate.auth.ui.AccountActionState
 import com.mist.medicalmate.auth.ui.SessionUiState
 import com.mist.medicalmate.auth.ui.SessionViewModel
+import com.mist.medicalmate.auth.ui.SplashScreen
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.home.ui.AccountActionCallbacks
 import com.mist.medicalmate.home.ui.WithdrawFailedDialog
@@ -32,9 +29,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MedicalMateTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    MedicalMateApp(modifier = Modifier.padding(innerPadding))
-                }
+                MedicalMateApp()
             }
         }
     }
@@ -53,43 +48,39 @@ class MainActivity : ComponentActivity() {
  * 로그아웃·탈퇴는 `auth` 소관이라 [SessionViewModel]이 수행하고 홈에는 콜백만
  * 내려보낸다. 홈이 `auth`를 직접 참조하지 않게 하려는 것이다.
  *
- * `onboardingRequired`가 true여도 온보딩 화면(1a·1b)이 없어 홈으로 보낸다. 화면이
- * 생기면 `MedicalMateNavHost`의 시작 목적지 계산에 이 값이 들어간다.
+ * 온보딩이 필요하면 온보딩 인트로(1a-2)로 보낸다. 그 판단은 `MedicalMateNavHost`가
+ * 세션 상태에서 한다.
+ *
+ * 스플래시(1a-1)는 `Scaffold` 밖에서 그린다. 브랜드 면이 화면 끝까지 닿아야 하는데
+ * `innerPadding`을 받으면 상태바 자리에 흰 띠가 남는다. 나머지 화면은 시스템 바를 피해야
+ * 해서 `Scaffold`를 유지한다.
  */
 @Composable
-private fun MedicalMateApp(modifier: Modifier = Modifier, sessionViewModel: SessionViewModel = hiltViewModel()) {
+private fun MedicalMateApp(sessionViewModel: SessionViewModel = hiltViewModel()) {
     val session by sessionViewModel.uiState.collectAsStateWithLifecycle()
     val accountAction by sessionViewModel.accountAction.collectAsStateWithLifecycle()
 
-    when (session) {
-        SessionUiState.Checking -> CheckingContent(modifier)
+    if (session == SessionUiState.Checking) {
+        SplashScreen(modifier = Modifier.fillMaxSize())
+        return
+    }
 
-        SessionUiState.SignedOut, is SessionUiState.SignedIn ->
-            MedicalMateNavHost(
-                signedIn = session is SessionUiState.SignedIn,
-                onAuthenticated = sessionViewModel::onSignedIn,
-                accountActions =
-                AccountActionCallbacks(
-                    enabled = accountAction != AccountActionState.InProgress,
-                    onLogoutClick = sessionViewModel::logout,
-                    onWithdrawClick = sessionViewModel::withdraw,
-                ),
-                modifier = modifier,
-            )
+    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+        MedicalMateNavHost(
+            session = session,
+            onAuthenticated = sessionViewModel::onSignedIn,
+            onOnboardingCompleted = sessionViewModel::onOnboardingCompleted,
+            accountActions =
+            AccountActionCallbacks(
+                enabled = accountAction != AccountActionState.InProgress,
+                onLogoutClick = sessionViewModel::logout,
+                onWithdrawClick = sessionViewModel::withdraw,
+            ),
+            modifier = Modifier.padding(innerPadding),
+        )
     }
 
     if (accountAction == AccountActionState.WithdrawFailed) {
         WithdrawFailedDialog(onDismiss = sessionViewModel::onAccountActionFailureAcknowledged)
-    }
-}
-
-@Composable
-private fun CheckingContent(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        CircularProgressIndicator()
     }
 }
