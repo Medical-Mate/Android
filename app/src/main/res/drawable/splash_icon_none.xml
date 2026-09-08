@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  시스템 스플래시의 아이콘 자리를 비우는 투명 드로어블.
+  windowSplashScreenAnimatedIcon은 드로어블만 받고, 비우는 값이 따로 없다.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@android:color/transparent" />
+</shape>
