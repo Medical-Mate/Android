@@ -16,16 +16,23 @@ import kotlinx.serialization.Serializable
 internal data class HomeDestination(val justRegistered: Boolean = false)
 
 /**
- * 그래프 등록. 홈에서 뻗어나가는 목적지(문답 1l, 카드 1e, 캘린더, 가족 공유함)가 아직 없다.
- * [HomeRoute]의 해당 콜백은 기본값인 빈 동작으로 남기고, 화면이 생길 때 여기서
- * `navController.navigate(...)`를 연결한다.
+ * 그래프 등록. 아직 없는 목적지(카드 1e, 기록 1j, 캘린더 1r, 내 정보 1s)의 콜백은 기본값인
+ * 빈 동작으로 남기고, 화면이 생길 때 여기서 `navController.navigate(...)`를 연결한다.
+ *
+ * [onStartIntakeClick]은 증상 정리 시작하기와 이어서 하기가 함께 쓴다. 이어서 하기는
+ * 저장된 진행 상태를 불러와야 하는데 그 저장이 아직 없어서 지금은 같은 곳으로 간다(#69).
  */
-internal fun NavGraphBuilder.homeDestination(accountActions: AccountActionCallbacks) {
+internal fun NavGraphBuilder.homeDestination(accountActions: AccountActionCallbacks, onStartIntakeClick: () -> Unit) {
     composable<HomeDestination> { entry ->
         val destination = entry.toRoute<HomeDestination>()
         HomeRoute(
             accountActions = accountActions,
             justRegistered = destination.justRegistered,
+            callbacks =
+            HomeCallbacks(
+                onStartIntakeClick = onStartIntakeClick,
+                onResumeClick = onStartIntakeClick,
+            ),
         )
     }
 }

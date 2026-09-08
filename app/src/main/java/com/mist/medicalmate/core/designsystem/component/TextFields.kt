@@ -6,6 +6,7 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -16,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -37,6 +39,9 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
  * Default는 테두리 없는 subtle 면이다. Focus와 Filled는 surface 면에 테두리가 생긴다.
  * 모든 칸에 테두리를 두르면 화면이 선으로 가득 찬다(문서 5절).
  *
+ * [trailing]은 Figma의 `Actions` 슬롯이다. 지우기·보내기·추가처럼 그 필드에 딸린 동작을
+ * 필드 안쪽 끝에 붙인다. 옆에 따로 두면 무엇에 딸린 버튼인지가 흐려진다.
+ *
  * [errorText]는 무엇이 잘못됐는지가 아니라 어떻게 고치는지를 적는다. 문서 8.2가 "행동
  * 지침을 함께 표시"하라고 하고, 9절은 비활성만으로 필수 행동을 숨기지 말라고 한다.
  */
@@ -51,6 +56,7 @@ fun MedicalMateTextField(
     errorText: String? = null,
     enabled: Boolean = true,
     keyboardType: KeyboardType = KeyboardType.Text,
+    trailing: (@Composable () -> Unit)? = null,
 ) {
     val colors = MedicalMateTheme.colors
     val interactionSource = remember { MutableInteractionSource() }
@@ -74,16 +80,26 @@ fun MedicalMateTextField(
                 color = if (enabled) colors.fgSubtle else colors.fgDisabled,
             )
         }
-        FieldSurface(style = style, minHeight = MedicalMateSize.controlLg) {
-            FieldText(
-                value = value,
-                onValueChange = onValueChange,
-                placeholder = placeholder,
-                enabled = enabled,
-                singleLine = true,
-                interactionSource = interactionSource,
-                keyboardType = keyboardType,
-            )
+        FieldSurface(
+            style = style,
+            minHeight = MedicalMateSize.controlLg,
+            // 오른쪽에 버튼이 붙으면 그 자리를 여백으로 두지 않는다. Figma의 Actions 슬롯이
+            // 필드 안쪽 끝에 4만 남기고 붙어 있다.
+            endPadding = if (trailing == null) MedicalMateSpace.s16 else MedicalMateSpace.s4,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                FieldText(
+                    value = value,
+                    onValueChange = onValueChange,
+                    placeholder = placeholder,
+                    enabled = enabled,
+                    singleLine = true,
+                    interactionSource = interactionSource,
+                    keyboardType = keyboardType,
+                    modifier = Modifier.weight(1f),
+                )
+                trailing?.invoke()
+            }
         }
         SupportText(errorText = errorText, helperText = helperText)
     }
@@ -155,6 +171,7 @@ private fun FieldSurface(
     style: FieldStyle,
     minHeight: Dp,
     modifier: Modifier = Modifier,
+    endPadding: Dp = MedicalMateSpace.s16,
     content: @Composable () -> Unit,
 ) {
     Surface(
@@ -167,7 +184,12 @@ private fun FieldSurface(
             modifier =
             Modifier
                 .heightIn(min = minHeight)
-                .padding(horizontal = MedicalMateSpace.s16, vertical = MedicalMateSpace.s14),
+                .padding(
+                    start = MedicalMateSpace.s16,
+                    end = endPadding,
+                    top = MedicalMateSpace.s14,
+                    bottom = MedicalMateSpace.s14,
+                ),
             content = { content() },
         )
     }
@@ -182,29 +204,34 @@ private fun FieldText(
     singleLine: Boolean,
     interactionSource: MutableInteractionSource,
     keyboardType: KeyboardType,
+    modifier: Modifier = Modifier,
 ) {
     val colors = MedicalMateTheme.colors
-    if (value.isEmpty() && placeholder != null) {
-        Text(
-            text = placeholder,
-            style = MedicalMateTheme.typography.bodyL,
-            color = colors.fgSubtle,
+
+    // 안내 문구를 입력 위에 겹친다. 나란히 두면 글을 적기 시작할 때 자리가 밀린다.
+    Box(modifier = modifier) {
+        if (value.isEmpty() && placeholder != null) {
+            Text(
+                text = placeholder,
+                style = MedicalMateTheme.typography.bodyL,
+                color = colors.fgSubtle,
+            )
+        }
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            enabled = enabled,
+            singleLine = singleLine,
+            textStyle =
+            MedicalMateTheme.typography.bodyL.copy(
+                color = if (enabled) colors.fgDefault else colors.fgDisabled,
+            ),
+            cursorBrush = SolidColor(colors.borderFocus),
+            interactionSource = interactionSource,
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            modifier = Modifier.fillMaxWidth(),
         )
     }
-    BasicTextField(
-        value = value,
-        onValueChange = onValueChange,
-        enabled = enabled,
-        singleLine = singleLine,
-        textStyle =
-        MedicalMateTheme.typography.bodyL.copy(
-            color = if (enabled) colors.fgDefault else colors.fgDisabled,
-        ),
-        cursorBrush = SolidColor(colors.borderFocus),
-        interactionSource = interactionSource,
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-        modifier = Modifier.fillMaxWidth(),
-    )
 }
 
 /** 오류 문구가 있으면 도움말을 대신한다. 둘을 함께 보여주면 무엇을 고쳐야 할지 흐려진다. */
