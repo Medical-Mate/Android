@@ -15,6 +15,8 @@ import com.mist.medicalmate.auth.ui.loginDestination
 import com.mist.medicalmate.home.ui.AccountActionCallbacks
 import com.mist.medicalmate.home.ui.HomeDestination
 import com.mist.medicalmate.home.ui.homeDestination
+import com.mist.medicalmate.intake.ui.IntakeDestination
+import com.mist.medicalmate.intake.ui.intakeDestination
 import com.mist.medicalmate.profile.ui.OnboardingIntroDestination
 import com.mist.medicalmate.profile.ui.ProfileCompleteDestination
 import com.mist.medicalmate.profile.ui.ProfileSetupDestination
@@ -72,7 +74,14 @@ internal fun MedicalMateNavHost(
                 navController.resetTo(HomeDestination(justRegistered = true))
             },
         )
-        homeDestination(accountActions = accountActions)
+        intakeDestination(
+            onCompleted = { navController.resetTo(HomeDestination()) },
+            onExit = { navController.popBackStack() },
+        )
+        homeDestination(
+            accountActions = accountActions,
+            onStartIntakeClick = { navController.navigate(IntakeDestination) },
+        )
     }
 
     SessionBoundarySync(

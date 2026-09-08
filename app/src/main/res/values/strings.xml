@@ -21,6 +21,36 @@
     <string name="login_failed_kakao">카카오 로그인에 실패했어요. 다시 시도해주세요</string>
     <string name="login_failed_network">인터넷 연결을 확인해주세요</string>
     <string name="login_failed_server">로그인에 실패했어요. 잠시 후 다시 시도해주세요</string>
+    <!-- Figma 1l·1c·1d·1i 증상 정리. -->
+    <string name="intake_title">증상 정리</string>
+    <string name="intake_progress_label">증상 문답</string>
+    <string name="intake_next">다음</string>
+
+    <string name="intake_body_part_question">어디가 아프세요?</string>
+    <string name="intake_body_part_description">가장 불편한 곳 하나를 짚어주세요. 나머지는 문답에서 여쭤볼게요.</string>
+    <string name="intake_body_part_pending_title">인체도 화면을 준비하고 있어요</string>
+    <string name="intake_body_part_pending_body">지금은 복부로 진행해요. 그림에서 부위를 짚는 화면이 준비되면 이 자리에 들어갑니다.</string>
+
+    <string name="intake_chat_ai">AI</string>
+    <string name="intake_chat_context">짚은 부위</string>
+    <string name="intake_chat_placeholder">메시지 입력</string>
+    <string name="intake_chat_send">보내기</string>
+    <string name="intake_chat_voice">음성으로 답하기</string>
+    <string name="intake_chat_waiting">답변을 준비하고 있어요</string>
+
+    <string name="intake_severity_question">%1$s가 얼마나 아프세요?</string>
+    <string name="intake_severity_description">지금 느끼는 정도를 골라주세요. 정확한 숫자가 아니어도 괜찮아요.</string>
+    <string name="intake_severity_notice_title">숫자는 진료실에서 의사가 읽어요</string>
+    <string name="intake_severity_notice_body">환자분은 낱말로 고르시면 돼요. 카드에는 NRS 등가로 함께 표시됩니다.</string>
+
+    <string name="intake_questions_question">의사에게 물어볼 것을 적어두세요</string>
+    <string name="intake_questions_description">진료실에서 잊지 않고 꺼낼 수 있게, 브리핑 카드 맨 아래에 함께 담아드려요.</string>
+    <string name="intake_questions_placeholder">예) 검사를 받아야 하나요?</string>
+    <string name="intake_questions_add">질문 추가</string>
+    <string name="intake_questions_saved">적어둔 질문</string>
+    <string name="intake_questions_count">%1$d개</string>
+    <string name="intake_questions_remove">%1$d번째 질문 지우기</string>
+
     <!-- Figma 1a-1(397:1179) 스플래시. -->
     <string name="splash_tagline">진료실에서 하고 싶은 말, 미리 정리해요</string>
 

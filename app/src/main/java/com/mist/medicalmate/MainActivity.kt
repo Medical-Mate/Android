@@ -4,8 +4,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -71,7 +73,13 @@ private fun MedicalMateApp(
         return
     }
 
-    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+    // 인셋을 한 곳에서 합친다. safeDrawing이 시스템 바와 키보드, 컷아웃을 합집합으로
+    // 계산해 준다. imePadding과 화면별 safe-area 여백을 각각 두면 키보드 위에 여백이
+    // 두 겹으로 남는다.
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        contentWindowInsets = WindowInsets.safeDrawing,
+    ) { innerPadding ->
         MedicalMateNavHost(
             session = session,
             onboardingCompleted = onboardingCompleted == true,
