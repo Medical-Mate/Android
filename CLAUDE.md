@@ -130,8 +130,12 @@ MedicalMate/
 │       │   │   ├── designsystem/          토큰, 타이포, 아이콘, 로고
 │       │   │   │   └── component/        8절 컴포넌트 43종
 │       │   │   └── network/               Retrofit·OkHttp 설정, ApiResult
-│       │   ├── navigation/                단일 NavHost, 세션 경계 동기화
-│       │   ├── auth/  data/ ui/           1o 로그인, 세션 복구
+│       │   ├── navigation/                단일 NavHost, 세션 경계 동기화, 하단 탭 이동
+│       │   ├── auth/  data/ ui/           1o 로그인, 1a-1 스플래시, 세션 복구
+│       │   ├── profile/  data/ ui/        1a-2 온보딩, 1b 신상정보, 온보딩 노출 기록
+│       │   ├── intake/  ui/               1l·1c·1d·1i 증상 정리
+│       │   ├── card/  ui/                 1e 브리핑 카드, 1f 진료실 화면, 1j 기록
+│       │   ├── calendar/  ui/             1r 캘린더
 │       │   └── home/  ui/                 1n 홈
 │       ├── test/                          JVM 유닛 테스트
 │       └── androidTest/                   계측 테스트 (CI에서 실행하지 않음)
@@ -428,7 +432,7 @@ com.mist.medicalmate/
 
 | 항목 | 상태 |
 | -- | -- |
-| 유닛 테스트 | `LoginViewModel` 13건, `SessionViewModel` 15건, `HomeViewModel` 9건, `IntakeViewModel` 12건, `BriefCardViewModel` 8건, `ProfileSetupViewModel` 7건, `HomeSchedule` 4건, 템플릿 1개 |
+| 유닛 테스트 | `LoginViewModel` 13건, `SessionViewModel` 15건, `HomeViewModel` 9건, `IntakeViewModel` 12건, `BriefCardViewModel` 8건, `CalendarViewModel` 7건, `ProfileSetupViewModel` 7건, `HomeSchedule` 4건, 템플릿 1개 |
 | 네비게이션 테스트 | 없음. `NavHost`는 계측 테스트가 필요하고 CI가 androidTest를 실행하지 않음 |
 | 아키텍처 패턴 | MVVM 확정. UseCase는 필요할 때만 |
 | DI | Hilt 확정 |
@@ -441,11 +445,13 @@ com.mist.medicalmate/
 | Body Map | 미구현. 디자인 확정 대기(#51) |
 | Search Field | 미구현. Figma에 마스터가 있으나 DESIGN.md 8절에 항목이 없어 확정 확인 필요 |
 | 로그인 화면(1o) | 카카오 버튼 + 서버 토큰 교환 구현 완료. 토큰 적용 완료 |
-| 홈 화면(1n) | Figma 1n-1·1n-2 반영. `HomeViewModel`이 픽스처를 노출. 서버 미연동. Tab Bar는 목적지가 없어 미부착 |
+| 홈 화면(1n) | Figma 1n-1·1n-2 반영. `HomeViewModel`이 픽스처를 노출. 서버 미연동 |
 | 진입 · 온보딩(1a) | 스플래시(1a-1)와 온보딩 인트로(1a-2) 구현 완료. 스플래시는 최소 2초 노출 |
 | 신상정보 입력(1b) | 1b-1~1b-3 화면과 1b-4 완료 모션, 홈 등록 완료 토스트까지 구현. **서버 저장 미연동** |
 | 증상 정리(1c·1d·1i) | 네 단계 화면 구현. AI 응답과 음성 인식 미연동. 1단계 아픈 부위는 인체도 시안 대기로 버튼만 |
 | 브리핑 카드(1e·1f) | 카드 읽기·전체 수정·진료실 화면 구현. 카드 내용은 픽스처. AI 응답과 저장 미연동 |
+| 기록·캘린더(1j·1r) | 네 화면 구현. 목록과 일정은 픽스처. 할 일 체크와 일정 추가는 저장 미연동 |
+| 하단 탭 | 기록·홈·캘린더 세 탭 연결 완료. 내 정보는 탭이 아니라 홈 헤더 아바타로 진입(1s 미구현) |
 | 로그아웃 · 회원탈퇴 | 구현 완료. 홈 화면에 임시 진입점. 설정 화면 생기면 이동 |
 | 계정 전환 시 이전 데이터 | 해결. 로그아웃 시 홈 엔트리가 pop되면서 `HomeViewModel`도 정리됨 |
 | 401 재발급 Authenticator | 미도입. 만료된 토큰으로 로그아웃·탈퇴하면 서버 호출이 401 |
