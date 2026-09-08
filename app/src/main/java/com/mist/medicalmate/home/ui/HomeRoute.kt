@@ -9,6 +9,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
 import kotlinx.coroutines.delay
 import java.time.LocalDate
 
@@ -30,6 +31,7 @@ fun HomeRoute(
     callbacks: HomeCallbacks = HomeCallbacks(),
     accountActions: AccountActionCallbacks = AccountActionCallbacks(),
     justRegistered: Boolean = false,
+    onTabSelect: (MedicalMateTab) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -52,6 +54,7 @@ fun HomeRoute(
         modifier = modifier,
         accountActions = accountActions,
         registeredToastVisible = toastVisible,
+        onTabSelect = onTabSelect,
     )
 }
 

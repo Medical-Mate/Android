@@ -6,16 +6,24 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import com.mist.medicalmate.auth.ui.LoginDestination
 import com.mist.medicalmate.auth.ui.SessionUiState
 import com.mist.medicalmate.auth.ui.loginDestination
+import com.mist.medicalmate.calendar.ui.CalendarDayDestination
+import com.mist.medicalmate.calendar.ui.CalendarDestination
+import com.mist.medicalmate.calendar.ui.calendarDayDestination
+import com.mist.medicalmate.calendar.ui.calendarDestination
 import com.mist.medicalmate.card.ui.BriefCardDestination
 import com.mist.medicalmate.card.ui.HandoffDestination
+import com.mist.medicalmate.card.ui.RecordDestination
 import com.mist.medicalmate.card.ui.briefCardDestination
 import com.mist.medicalmate.card.ui.handoffDestination
+import com.mist.medicalmate.card.ui.recordDestination
+import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
 import com.mist.medicalmate.home.ui.AccountActionCallbacks
 import com.mist.medicalmate.home.ui.HomeDestination
 import com.mist.medicalmate.home.ui.homeDestination
@@ -92,6 +100,21 @@ internal fun MedicalMateNavHost(
             accountActions = accountActions,
             onStartIntakeClick = { navController.navigate(IntakeDestination) },
             onCardClick = { cardId -> navController.navigate(BriefCardDestination(cardId)) },
+            onTabSelect = navController::selectTab,
+        )
+        recordDestination(
+            onItemClick = { cardId -> navController.navigate(BriefCardDestination(cardId)) },
+            onStartIntakeClick = { navController.navigate(IntakeDestination) },
+            onTabSelect = navController::selectTab,
+        )
+        calendarDestination(
+            onDayOpen = { date -> navController.navigate(CalendarDayDestination(date.toString())) },
+            onAddClick = { },
+            onTabSelect = navController::selectTab,
+        )
+        calendarDayDestination(
+            onCardOpen = { cardId -> navController.navigate(BriefCardDestination(cardId)) },
+            onExit = { navController.popBackStack() },
         )
     }
 
@@ -159,6 +182,29 @@ private fun SessionBoundarySync(
             .collect {
                 navController.resetTo(currentSession.destination(currentOnboardingCompleted))
             }
+    }
+}
+
+/**
+ * 하단 탭 이동.
+ *
+ * 탭은 서로의 형제다. 탭을 옮길 때마다 백스택에 쌓으면 뒤로 가기가 탭 방문 이력을 되짚는다.
+ * 시작 목적지까지 pop하고 상태를 저장·복원해서, 탭을 오갔다 돌아오면 스크롤과 고른 날이
+ * 남아 있게 한다.
+ *
+ * `launchSingleTop`은 같은 탭을 다시 눌렀을 때 같은 화면이 두 장 쌓이는 것을 막는다.
+ */
+private fun NavHostController.selectTab(tab: MedicalMateTab) {
+    val destination =
+        when (tab) {
+            MedicalMateTab.RECORD -> RecordDestination
+            MedicalMateTab.HOME -> HomeDestination()
+            MedicalMateTab.CALENDAR -> CalendarDestination
+        }
+    navigate(destination) {
+        popUpTo(graph.findStartDestination().id) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
     }
 }
 

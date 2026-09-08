@@ -3,6 +3,7 @@ package com.mist.medicalmate.home.ui
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
 import kotlinx.serialization.Serializable
 
 /**
@@ -26,6 +27,7 @@ internal fun NavGraphBuilder.homeDestination(
     accountActions: AccountActionCallbacks,
     onStartIntakeClick: () -> Unit,
     onCardClick: (String) -> Unit,
+    onTabSelect: (MedicalMateTab) -> Unit,
 ) {
     composable<HomeDestination> { entry ->
         val destination = entry.toRoute<HomeDestination>()
@@ -38,6 +40,7 @@ internal fun NavGraphBuilder.homeDestination(
                 onResumeClick = onStartIntakeClick,
                 onSavedCardClick = onCardClick,
             ),
+            onTabSelect = onTabSelect,
         )
     }
 }
