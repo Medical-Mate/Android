@@ -1,0 +1,260 @@
+[
+  {
+    "nodeId": "311:839",
+    "componentName": "MedicalMateAvatar",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/Avatar.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "311:834",
+    "componentName": "MedicalMateBadge",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/Badge.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "294:652",
+    "componentName": "MedicalMateBottomCtaBar",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/BottomCtaBar.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "294:681",
+    "componentName": "MedicalMateBottomSheet",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/BottomSheet.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "313:999",
+    "componentName": "MedicalMateBubble",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/Bubble.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "291:670",
+    "componentName": "MedicalMateButton",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/Button.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "293:657",
+    "componentName": "MedicalMateCallout",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/Callout.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "293:656",
+    "componentName": "MedicalMateCard",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/Card.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "311:851",
+    "componentName": "MedicalMateCheckbox",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/Selection.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "311:823",
+    "componentName": "MedicalMateChip",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/Chip.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "335:1188",
+    "componentName": "MedicalMateDateCell",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/DateCell.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "312:845",
+    "componentName": "MedicalMateDialog",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/Dialog.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "333:1088",
+    "componentName": "MedicalMateDivider",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/Rows.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "333:1155",
+    "componentName": "MedicalMateDoctorCard",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/DoctorCard.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "335:1166",
+    "componentName": "MedicalMateEmptyState",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/EmptyState.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "298:715",
+    "componentName": "MedicalMateIconButton",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/IconButton.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "333:1100",
+    "componentName": "MedicalMateKvRow",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/Rows.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "335:1114",
+    "componentName": "MedicalMateListRow",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/Rows.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "335:1175",
+    "componentName": "MedicalMateLoadingSpinner",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/Loading.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "351:1303",
+    "componentName": "MedicalMateLogo.Lockup",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/MedicalMateLogo.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "351:1281",
+    "componentName": "MedicalMateLogo.Symbol",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/MedicalMateLogo.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "298:739",
+    "componentName": "MedicalMateNavBar",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/NavBar.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "292:668",
+    "componentName": "MedicalMateNotice",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/Notice.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "335:1189",
+    "componentName": "MedicalMateOverlayScrim",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/OverlayScrim.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "334:1139",
+    "componentName": "MedicalMateProgressIndicator",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/ProgressIndicator.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "311:858",
+    "componentName": "MedicalMateRadio",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/Selection.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "334:1156",
+    "componentName": "MedicalMateSectionHeader",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/Rows.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "334:1150",
+    "componentName": "MedicalMateSegmentedControl",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/SegmentedControl.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "333:1126",
+    "componentName": "MedicalMateSeverityReadout",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/SeverityReadout.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "331:1188",
+    "componentName": "MedicalMateSeverityScale",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/SeverityInputs.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "295:898",
+    "componentName": "MedicalMateSeveritySelect",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/SeverityInputs.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "339:1293",
+    "componentName": "MedicalMateSeveritySlider",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/SeverityInputs.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "383:1302",
+    "componentName": "MedicalMateSocialLoginButton",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/SocialLoginButton.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "383:1303",
+    "componentName": "MedicalMateSocialLoginStack",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/SocialLoginButton.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "313:1022",
+    "componentName": "MedicalMateSourceQuote",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/SourceQuote.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "319:1026",
+    "componentName": "MedicalMateTabBar",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/TabBar.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "334:1102",
+    "componentName": "MedicalMateTextArea",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/TextFields.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "295:692",
+    "componentName": "MedicalMateTextField",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/TextFields.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "312:844",
+    "componentName": "MedicalMateToast",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/Toast.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "334:1155",
+    "componentName": "MedicalMateToggle",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/Selection.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "542:1295",
+    "componentName": "MedicalMateTooltipTrigger",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/TooltipTrigger.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "575:1287",
+    "componentName": "MedicalMateTooltipBubble",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/TooltipBubble.kt",
+    "label": "Compose"
+  },
+  {
+    "nodeId": "313:993",
+    "componentName": "MedicalMateVoiceInput",
+    "source": "app/src/main/java/com/mist/medicalmate/core/designsystem/component/VoiceInput.kt",
+    "label": "Compose"
+  }
+]
