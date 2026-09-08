@@ -21,19 +21,42 @@
     <string name="login_failed_kakao">카카오 로그인에 실패했어요. 다시 시도해주세요</string>
     <string name="login_failed_network">인터넷 연결을 확인해주세요</string>
     <string name="login_failed_server">로그인에 실패했어요. 잠시 후 다시 시도해주세요</string>
-    <string name="home_greeting">안녕하세요, %1$s님</string>
-    <string name="home_greeting_sub">오늘도 준비해볼까요?</string>
-    <string name="home_notice_test_result">%1$s 검사 결과 확인일이에요</string>
-    <string name="home_notice_revisit">%1$s 재방문 예정이에요</string>
-    <string name="home_start_intake_title">새 진료 준비하기</string>
-    <string name="home_start_intake_subtitle">증상 정리부터 브리핑 카드까지 5분</string>
-    <string name="home_saved_cards">저장된 브리핑 카드</string>
-    <string name="home_saved_cards_empty">아직 저장된 카드가 없어요</string>
-    <string name="home_card_written_on">%1$s 작성</string>
-    <string name="home_card_continue">이어서 작성</string>
+    <!-- Figma 1n-1(399:1339)·1n-2(399:1720)의 홈 문구. -->
+    <string name="home_notification">알림</string>
+    <string name="home_notification_unread">알림, 읽지 않은 알림 있음</string>
+    <string name="home_profile">내 정보</string>
+
+    <string name="home_today_first_label">처음 오셨네요</string>
+    <string name="home_today_first_title">아픈 곳을 말로 편하게 알려주세요</string>
+    <string name="home_today_first_body">어디가, 언제부터, 얼마나 아픈지 하나씩 물어볼게요. 답한 내용은 진료실에서 보여줄 카드로 정리돼요.</string>
+    <string name="home_today_since_label">오늘의 한 줄</string>
+    <string name="home_today_since_title">지난 진료 후 %1$d일이 지났어요</string>
+    <string name="home_today_since_body_next">다음 진료가 %1$s이에요. 그동안 달라진 점이 있으면 미리 정리해두세요.</string>
+    <string name="home_today_since_body">그동안 달라진 점이 있으면 미리 정리해두세요.</string>
+
+    <string name="home_start_intake">증상 정리 시작하기</string>
+
+    <string name="home_resume_label">이어서 하기</string>
+    <string name="home_resume_title">작성 중이던 증상 정리가 있어요</string>
+    <string name="home_resume_progress">%1$s · %2$d단계 중 %3$d단계까지 답했어요</string>
+
+    <string name="home_saved_cards">최근 브리핑 카드</string>
+    <string name="home_saved_cards_all">전체 보기</string>
+    <string name="home_card_confirmed">진료 완료</string>
+    <string name="home_card_meta">%1$s · %2$s</string>
+    <string name="home_card_meta_draft">%1$s · 카드만 작성됨</string>
+
+    <string name="home_upcoming">다가오는 일정</string>
     <string name="home_calendar">캘린더</string>
-    <string name="home_family_share">가족 공유함</string>
-    <string name="home_failed">불러오지 못했어요. 다시 시도해주세요</string>
+    <string name="home_schedule_meta">%1$s %2$s</string>
+    <string name="home_schedule_dday">D-%1$d</string>
+
+    <string name="home_empty_title">아직 진료 기록이 없어요</string>
+    <string name="home_empty_description">증상을 정리해두면 진료실에서 바로 보여줄 수 있어요</string>
+    <string name="home_empty_action">증상 정리하기</string>
+
+    <string name="home_failed_title">불러오지 못했어요</string>
+    <string name="home_failed_description">인터넷 연결을 확인하고 다시 시도해주세요</string>
     <string name="home_retry">다시 시도</string>
 
     <!-- 개발용 임시 진입점. 설정 화면이 생기면 옮긴다. -->
