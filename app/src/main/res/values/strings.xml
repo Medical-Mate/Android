@@ -1,13 +1,23 @@
 <resources>
     <string name="app_name">진료메이트</string>
 
-    <string name="login_title">진료메이트</string>
-    <string name="login_subtitle">진료실에서 하고 싶은 말, 미리 정리해요</string>
-    <!-- 카카오 디자인 가이드가 허용하는 레이블은 "카카오 로그인"과 "로그인"뿐이다. -->
-    <string name="login_kakao">카카오 로그인</string>
+    <!-- Figma 1o(397:1192)의 Hero 문구. 제목과 설명 모두 두 줄이다. -->
+    <string name="login_title">진료실에서 하고 싶은 말,\n미리 정리해요</string>
+    <string name="login_subtitle">증상을 기억하지 못해도, 말이 잘 안 나와도 괜찮아요.\nAI와 대화하면 진료 전에 정리해드려요.</string>
+    <!--
+      Figma 1o의 버튼 문구다.
+      카카오 가이드는 "기본 레이블은 아래와 같이 완성형과 축약형으로 사용할 수 있습니다"라며
+      "카카오 로그인"과 "로그인"을 든다. 허용문이고 금지 조항이 없어서 다른 문구를 막지
+      않는다. 색상 쪽은 "위의 색상 규정에 벗어난 색상을 적용해서는 안 됩니다"로 금지문이라
+      어투가 다르다. 색은 가이드를 그대로 따르고 문구는 디자인을 따른다.
+    -->
+    <string name="login_kakao">카카오로 시작하기</string>
     <string name="login_kakao_content_description">카카오로 로그인</string>
-    <!-- 문구와 링크 대상은 PO·디자인 확인 필요. 개인정보처리방침 URL이 아직 없다. -->
-    <string name="login_terms">계속하면 이용약관과 개인정보 처리방침에 동의하는 것으로 간주됩니다</string>
+    <!--
+      Figma 1o의 Legal 문구다. 이전에 있던 약관·개인정보 동의 안내가 이 문구로 바뀌었다.
+      둘 다 필요할 수 있어 #55에 남겼다. 법무 판단이 필요하다.
+    -->
+    <string name="login_disclaimer">진료메이트가 정리한 내용은 진료를 돕기 위한 참고 자료예요. 진단이나 처방이 아니니 최종 판단은 의사 선생님과 상의해 주세요.</string>
     <string name="login_failed_kakao">카카오 로그인에 실패했어요. 다시 시도해주세요</string>
     <string name="login_failed_network">인터넷 연결을 확인해주세요</string>
     <string name="login_failed_server">로그인에 실패했어요. 잠시 후 다시 시도해주세요</string>
