@@ -32,6 +32,8 @@ class DesignTokenTest {
             assertEquals(Color(0xFFFFF4D6), bgWarning)
             assertEquals(Color(0xFFFFEDEB), bgDanger)
             assertEquals(Color(0xFF131722), bgInverse)
+            // Figma가 나중에 늘린 토큰. bg/inverse보다 옅다.
+            assertEquals(Color(0xFF3A4053), bgInverseSoft)
             assertEquals(Color(0xFF131722), bgScrim)
         }
     }

@@ -28,6 +28,13 @@ data class MedicalMateColors(
     val bgWarning: Color,
     val bgDanger: Color,
     val bgInverse: Color,
+    /**
+     * Tooltip Bubble의 면. `bg/inverse`보다 옅다.
+     *
+     * Figma가 나중에 늘린 토큰이라 처음 옮긴 40개에 없었다. 화면에 겹쳐 뜨는 짧은
+     * 설명이라 Toast만큼 무겁지 않게 둔 것으로 보인다.
+     */
+    val bgInverseSoft: Color,
     /** Overlay Scrim. 컴포넌트에서 opacity 50%를 적용한다(DESIGN.md 8.5). */
     val bgScrim: Color,
     val fgDefault: Color,
@@ -78,6 +85,7 @@ internal val LightMedicalMateColors =
         bgWarning = Amber50,
         bgDanger = Red50,
         bgInverse = Neutral900,
+        bgInverseSoft = Neutral700,
         bgScrim = Neutral900,
         fgDefault = Neutral900,
         fgSubtle = Neutral600,

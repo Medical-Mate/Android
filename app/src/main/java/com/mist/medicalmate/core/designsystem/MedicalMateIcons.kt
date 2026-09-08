@@ -3,7 +3,7 @@ package com.mist.medicalmate.core.designsystem
 import com.mist.medicalmate.R
 
 /**
- * DESIGN.md 6절 아이콘 45종.
+ * DESIGN.md 6절 아이콘 45종에 Figma가 나중에 더한 `arrow-up`을 합쳐 46종.
  *
  * 호출부가 `R.drawable`을 직접 쓰지 않게 이름을 한곳에 모았다. 이름은 Figma의
  * `Icon/{name}`을 PascalCase로 옮긴 것이다.
@@ -29,6 +29,7 @@ object MedicalMateIcons {
     val ChevronUp = R.drawable.ic_chevron_up
     val ChevronDown = R.drawable.ic_chevron_down
     val ArrowRight = R.drawable.ic_arrow_right
+    val ArrowUp = R.drawable.ic_arrow_up
     val Close = R.drawable.ic_close
     val Plus = R.drawable.ic_plus
     val Minus = R.drawable.ic_minus

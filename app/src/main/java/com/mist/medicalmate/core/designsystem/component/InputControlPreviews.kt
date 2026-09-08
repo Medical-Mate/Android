@@ -110,3 +110,16 @@ private fun TooltipTriggerPreview() {
         }
     }
 }
+
+@Preview(showBackground = true, name = "Tooltip Bubble", widthDp = 390)
+@Composable
+private fun TooltipBubblePreview() {
+    ComponentPreviewSurface(gap = MedicalMateSpace.s16) {
+        MedicalMateTooltipBubble(text = "여기에 짧은 설명이 들어갑니다")
+        // 꼬리 위치는 트리거 위치에 맞춰 옮긴다.
+        MedicalMateTooltipBubble(
+            text = "꼬리를 왼쪽으로",
+            arrowOffsetFromEnd = MedicalMateSpace.s40 * 3,
+        )
+    }
+}
