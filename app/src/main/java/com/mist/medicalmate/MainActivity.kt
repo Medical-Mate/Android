@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -86,7 +87,14 @@ private fun MedicalMateApp(
                 onLogoutClick = sessionViewModel::logout,
                 onWithdrawClick = sessionViewModel::withdraw,
             ),
-            modifier = Modifier.padding(innerPadding),
+            // imePadding을 여기서 한 번 준다. enableEdgeToEdge를 쓰면 창이 스스로 줄지
+            // 않아서, 키보드가 올라올 때 입력창이 그 아래로 가려진다. 매니페스트의
+            // adjustResize만으로는 부족하다. 화면마다 붙이면 입력이 있는 화면을 만들 때마다
+            // 빠뜨린다.
+            modifier =
+            Modifier
+                .padding(innerPadding)
+                .imePadding(),
         )
     }
 
