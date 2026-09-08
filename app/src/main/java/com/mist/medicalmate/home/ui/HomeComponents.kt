@@ -19,6 +19,8 @@ import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
+import com.mist.medicalmate.core.designsystem.component.MedicalMateNotice
+import com.mist.medicalmate.core.designsystem.component.MedicalMateNoticeTone
 import java.time.format.DateTimeFormatter
 
 /**
@@ -43,8 +45,10 @@ internal fun Greeting(userName: String) {
 }
 
 /**
- * DESIGN.md 8.4의 `Notice` Info 톤에 대응한다. 화면에 남는 인라인 안내다.
- * 제목과 본문을 나누는 구조는 문답 화면에서 Notice를 실제로 만들 때 맞춘다.
+ * 홈 상단 안내. 디자인 시스템의 `Notice` Info 톤을 그대로 쓴다.
+ *
+ * 본문 없이 제목만 준다. 지금 문구가 한 줄이라 쪼개면 없는 내용을 지어내야 한다.
+ * 카피가 제목과 설명으로 나뉘면 `body`를 채운다.
  */
 @Composable
 internal fun NoticeBanner(notice: HomeNotice) {
@@ -54,18 +58,7 @@ internal fun NoticeBanner(notice: HomeNotice) {
             HomeNotice.Kind.TEST_RESULT -> stringResource(R.string.home_notice_test_result, formatted)
             HomeNotice.Kind.REVISIT -> stringResource(R.string.home_notice_revisit, formatted)
         }
-    Card(
-        shape = MedicalMateRadius.md,
-        colors = CardDefaults.cardColors(containerColor = MedicalMateTheme.colors.bgInfo),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Text(
-            text = text,
-            style = MedicalMateTheme.typography.bodyM,
-            color = MedicalMateTheme.colors.fgDefault,
-            modifier = Modifier.padding(MedicalMateSpace.s16),
-        )
-    }
+    MedicalMateNotice(title = text, tone = MedicalMateNoticeTone.INFO)
 }
 
 /**

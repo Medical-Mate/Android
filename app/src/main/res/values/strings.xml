@@ -53,4 +53,7 @@
     <string name="severity_5_description">잠도 못 자고 아무것도 못 하겠어요</string>
     <string name="severity_nrs">NRS %1$d\u2013%2$d</string>
     <string name="severity_level_content_description">%1$d단계, %2$s</string>
+
+    <!-- 진행 표시. 칸과 함께 숫자로도 읽히게 한다(DESIGN.md 8.4). -->
+    <string name="progress_step">%1$d/%2$d 단계</string>
 </resources>
