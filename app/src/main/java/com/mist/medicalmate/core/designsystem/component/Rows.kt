@@ -128,6 +128,9 @@ enum class MedicalMateListRowType {
  *
  * [MedicalMateListRowType.BADGE]는 [badge]를 오른쪽에 놓고,
  * [MedicalMateListRowType.PLAIN]은 chevron을 두지 않는다.
+ *
+ * [badgeTone]은 배지가 무엇을 뜻하는지에 따라 고른다. 완료는 Success, 남은 일수처럼
+ * 브랜드 정보는 Brand다. 기본은 중립이다.
  */
 @Composable
 fun MedicalMateListRow(
@@ -135,6 +138,7 @@ fun MedicalMateListRow(
     modifier: Modifier = Modifier,
     meta: String? = null,
     badge: String? = null,
+    badgeTone: MedicalMateBadgeTone = MedicalMateBadgeTone.NEUTRAL,
     type: MedicalMateListRowType = MedicalMateListRowType.DEFAULT,
     onClick: (() -> Unit)? = null,
 ) {
@@ -161,7 +165,7 @@ fun MedicalMateListRow(
                 }
             }
             if (type == MedicalMateListRowType.BADGE && badge != null) {
-                MedicalMateBadge(label = badge)
+                MedicalMateBadge(label = badge, tone = badgeTone)
             }
             if (type != MedicalMateListRowType.PLAIN && onClick != null) {
                 Icon(

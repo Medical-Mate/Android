@@ -1,7 +1,9 @@
 package com.mist.medicalmate.core.designsystem.component
 
 import androidx.annotation.DrawableRes
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -15,6 +17,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
+import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
@@ -37,6 +40,9 @@ enum class MedicalMateEmptyStateType {
  * 환자는 방금 적은 증상이 날아갔다고 생각한다.
  *
  * 행동 버튼은 Tonal이다. 브랜드 채움은 실제 주 행동에만 쓴다(문서 8.1).
+ *
+ * 아이콘이 옅은 원 안에 들어간다. Figma 1n-2의 인스턴스가 그렇게 그려져 있다. 맨 아이콘만
+ * 두면 빈 화면 가운데에 회색 획만 남아 무엇을 보라는 것인지 약하다.
  */
 @Composable
 fun MedicalMateEmptyState(
@@ -66,12 +72,7 @@ fun MedicalMateEmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12),
     ) {
-        Icon(
-            painter = painterResource(icon),
-            contentDescription = null,
-            tint = colors.fgMuted,
-            modifier = Modifier.size(EmptyStateIconSize),
-        )
+        IconCircle(icon)
         note?.let {
             Text(
                 text = it,
@@ -103,5 +104,30 @@ fun MedicalMateEmptyState(
     }
 }
 
+/** 옅은 원 안의 아이콘. 맨 아이콘만 두면 빈 화면 가운데에 회색 획만 남는다. */
+@Composable
+private fun IconCircle(@DrawableRes icon: Int) {
+    Box(
+        modifier =
+        Modifier
+            .size(EmptyStateCircleSize)
+            .background(
+                color = MedicalMateTheme.colors.bgSubtle,
+                shape = MedicalMateRadius.full,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = null,
+            tint = MedicalMateTheme.colors.fgMuted,
+            modifier = Modifier.size(EmptyStateIconSize),
+        )
+    }
+}
+
 /** 빈 상태 그림은 기본 아이콘보다 크게 둔다. 화면 가운데를 채우는 유일한 요소다. */
-private val EmptyStateIconSize = 48.dp
+private val EmptyStateIconSize = 28.dp
+
+/** 아이콘을 감싸는 옅은 원. Figma 1n-2에서 재서 얻었다. */
+private val EmptyStateCircleSize = 72.dp
