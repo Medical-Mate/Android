@@ -2,7 +2,6 @@ package com.mist.medicalmate.profile.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -13,15 +12,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateScreenPreviews
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
@@ -33,8 +27,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateProgressIndicator
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTextField
-import com.mist.medicalmate.core.designsystem.component.MedicalMateTooltipBubble
-import com.mist.medicalmate.core.designsystem.component.MedicalMateTooltipTrigger
+import com.mist.medicalmate.core.designsystem.component.MedicalMateTooltip
 
 /**
  * 와이어프레임 1b-1·1b-2·1b-3. Figma `398:1225`, `398:1285`, `398:1341`.
@@ -107,52 +100,39 @@ fun ProfileSetupScreen(
 /**
  * 질문과 설명. Figma `398:1244`.
  *
- * 알러지 단계에만 툴팁 트리거가 붙는다. 왜 묻는지가 그 단계에서만 설명이 필요하다.
- * 브리핑 카드 맨 위에 항상 표시되는 항목이라서다.
+ * 알러지 단계에만 툴팁이 붙는다. 왜 묻는지가 그 단계에서만 설명이 필요하다. 브리핑 카드
+ * 맨 위에 항상 표시되는 항목이라서다.
+ *
+ * 말풍선은 [MedicalMateTooltip]이 별도 창에 띄운다. 같은 레이아웃에서 겹치면 감싸는 상자가
+ * 커져서 아래 칩들이 밀려 내려간다(#71).
  */
 @Composable
 private fun Question(step: ProfileSetupStep) {
-    var tooltipOpen by remember { mutableStateOf(false) }
-
-    Box(modifier = Modifier.padding(top = MedicalMateSpace.s8)) {
-        Column(verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = stringResource(step.questionRes),
-                    style = MedicalMateTheme.typography.headingL,
-                    color = MedicalMateTheme.colors.fgDefault,
-                    modifier = Modifier.weight(1f),
-                )
-                if (step == ProfileSetupStep.ALLERGIES) {
-                    MedicalMateTooltipTrigger(
-                        active = tooltipOpen,
-                        onClick = { tooltipOpen = !tooltipOpen },
-                        contentDescription = stringResource(R.string.profile_setup_allergies_tooltip_open),
-                    )
-                }
-            }
+    Column(
+        modifier = Modifier.padding(top = MedicalMateSpace.s8),
+        verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = stringResource(step.descriptionRes),
-                style = MedicalMateTheme.typography.bodyM,
-                color = MedicalMateTheme.colors.fgSubtle,
+                text = stringResource(step.questionRes),
+                style = MedicalMateTheme.typography.headingL,
+                color = MedicalMateTheme.colors.fgDefault,
+                modifier = Modifier.weight(1f),
             )
+            if (step == ProfileSetupStep.ALLERGIES) {
+                MedicalMateTooltip(
+                    text = stringResource(R.string.profile_setup_allergies_tooltip),
+                    contentDescription = stringResource(R.string.profile_setup_allergies_tooltip_open),
+                )
+            }
         }
-        if (step == ProfileSetupStep.ALLERGIES && tooltipOpen) {
-            // 말풍선을 흐름에 넣지 않고 얹는다. 흐름에 넣으면 열고 닫을 때마다 아래 내용이
-            // 밀린다. Figma도 설명 문구 위에 겹쳐 뒀다.
-            MedicalMateTooltipBubble(
-                text = stringResource(R.string.profile_setup_allergies_tooltip),
-                modifier =
-                Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = TooltipTop),
-            )
-        }
+        Text(
+            text = stringResource(step.descriptionRes),
+            style = MedicalMateTheme.typography.bodyM,
+            color = MedicalMateTheme.colors.fgSubtle,
+        )
     }
 }
-
-/** 질문 한 줄(행간 34) 아래에 붙는다. 트리거 바로 밑이다. */
-private val TooltipTop = 38.dp
 
 /** 고를 항목들. Figma `398:1247`. 줄이 넘치면 다음 줄로 흐른다. */
 @Composable
