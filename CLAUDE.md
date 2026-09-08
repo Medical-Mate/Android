@@ -449,6 +449,7 @@ com.mist.medicalmate/
 | 온보딩 필요 판단 | `refresh` 응답의 `onboardingRequired`가 서버에서 항상 false. 프로필 조회로 옮겨야 함 |
 | Apple · 전화번호 로그인 | 백엔드 미지원. `User` 엔티티 식별자가 `kakaoId` 단독 |
 | 카카오 말풍선 심볼 에셋 | 없음. 콘솔의 도구 > 리소스 다운로드에서 받아야 함 |
+| 디자인 캔버스 | 현재 시안 390dp. 360dp로 다시 잡기로 결정됨. 확정되면 화면 배치를 재작업한다. 그때까지는 현행 시안대로 구현한다 |
 | 소셜 로그인 버튼 규격 | DESIGN.md 8.2는 radius 16, 카카오 가이드는 12. 색은 가이드, 크기는 문서를 따름 |
 | `mipmap-*` 래스터 아이콘 | 템플릿 그대로. API 24~25에서 쓰인다. Android Studio Image Asset으로 교체 필요 |
 | 오픈소스 고지 화면 | 없음. Pretendard가 OFL이라 스토어 배포 시 필요 |

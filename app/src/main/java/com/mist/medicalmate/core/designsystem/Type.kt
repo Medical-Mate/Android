@@ -8,6 +8,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -45,16 +46,39 @@ private val MedicalMateLineHeightStyle =
         trim = LineHeightStyle.Trim.None,
     )
 
-private fun mmTextStyle(weight: FontWeight, size: Int, lineHeight: Int, letterSpacingPercent: Double): TextStyle =
-    TextStyle(
-        fontFamily = MedicalMateFontFamily,
-        fontWeight = weight,
-        fontSize = size.sp,
-        lineHeight = lineHeight.sp,
-        letterSpacing = (letterSpacingPercent / 100).em,
-        lineHeightStyle = MedicalMateLineHeightStyle,
-        platformStyle = PlatformTextStyle(includeFontPadding = false),
-    )
+/**
+ * 줄바꿈 규칙.
+ *
+ * 기기 폭은 360부터 412까지 갈리고 사용자가 글꼴 배율을 2배까지 올린다. Figma 캔버스는
+ * 390 하나라서, 한 줄에 맞춰 그린 문장이 실제 기기에서 넘어간다. 넘어가는 것을 막을 수는
+ * 없으니 어디서 끊길지를 정한다.
+ *
+ * 규칙이 없으면 한국어가 어절 중간에서 끊긴다. "몰라도 괜찮 / 아요"처럼 읽힌다.
+ *
+ * [LineBreak.Heading]은 `Balanced + Loose + Phrase`다. 어절 단위로 끊고 줄 길이를 고르게
+ * 맞춘다. 제목과 라벨처럼 짧은 문장에 쓴다. [LineBreak.Paragraph]는 더 느리지만 긴 글의
+ * 가독성이 낫다.
+ *
+ * 어절 단위(`WordBreak.Phrase`)는 `StaticLayout`이 API 33 이상에서만 적용하고 그 아래에서는
+ * 조용히 무시된다. 줄 길이를 고르게 하는 `Balanced`는 API 23부터라 minSdk 24에서도 먹는다.
+ * 그래서 낮은 버전에서도 절반은 효과가 있다.
+ */
+private fun mmTextStyle(
+    weight: FontWeight,
+    size: Int,
+    lineHeight: Int,
+    letterSpacingPercent: Double,
+    lineBreak: LineBreak = LineBreak.Heading,
+): TextStyle = TextStyle(
+    fontFamily = MedicalMateFontFamily,
+    fontWeight = weight,
+    fontSize = size.sp,
+    lineHeight = lineHeight.sp,
+    letterSpacing = (letterSpacingPercent / 100).em,
+    lineHeightStyle = MedicalMateLineHeightStyle,
+    platformStyle = PlatformTextStyle(includeFontPadding = false),
+    lineBreak = lineBreak,
+)
 
 /**
  * DESIGN.md 3절 타이포그래피 15종.
@@ -87,12 +111,12 @@ internal val DefaultMedicalMateTypography =
         headingL = mmTextStyle(FontWeight.Bold, 24, 34, -2.0),
         headingM = mmTextStyle(FontWeight.SemiBold, 20, 28, -1.5),
         headingS = mmTextStyle(FontWeight.SemiBold, 17, 24, -1.0),
-        bodyL = mmTextStyle(FontWeight.Normal, 17, 26, 0.0),
-        bodyLStrong = mmTextStyle(FontWeight.SemiBold, 17, 26, 0.0),
-        bodyM = mmTextStyle(FontWeight.Normal, 15, 24, 0.0),
-        bodyMStrong = mmTextStyle(FontWeight.SemiBold, 15, 24, 0.0),
-        bodyS = mmTextStyle(FontWeight.Normal, 13, 20, 0.0),
-        bodySStrong = mmTextStyle(FontWeight.SemiBold, 13, 20, 0.0),
+        bodyL = mmTextStyle(FontWeight.Normal, 17, 26, 0.0, LineBreak.Paragraph),
+        bodyLStrong = mmTextStyle(FontWeight.SemiBold, 17, 26, 0.0, LineBreak.Paragraph),
+        bodyM = mmTextStyle(FontWeight.Normal, 15, 24, 0.0, LineBreak.Paragraph),
+        bodyMStrong = mmTextStyle(FontWeight.SemiBold, 15, 24, 0.0, LineBreak.Paragraph),
+        bodyS = mmTextStyle(FontWeight.Normal, 13, 20, 0.0, LineBreak.Paragraph),
+        bodySStrong = mmTextStyle(FontWeight.SemiBold, 13, 20, 0.0, LineBreak.Paragraph),
         labelL = mmTextStyle(FontWeight.SemiBold, 15, 20, 0.0),
         labelM = mmTextStyle(FontWeight.SemiBold, 13, 18, 0.0),
         labelS = mmTextStyle(FontWeight.Medium, 11, 16, 2.0),

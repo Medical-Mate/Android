@@ -16,18 +16,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
-import androidx.compose.ui.unit.sp
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateFontFamily
 import com.mist.medicalmate.core.designsystem.MedicalMateLogo
+import com.mist.medicalmate.core.designsystem.MedicalMateScreenPreviews
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
@@ -90,6 +90,11 @@ fun SplashScreen(modifier: Modifier = Modifier) {
  *
  * 크기는 마스터(심볼 36 · 워드마크 22 · 간격 10)의 1.4배다. Figma 인스턴스를 키운 값이라
  * 반올림하지 않았다.
+ *
+ * **워드마크가 글꼴 배율을 따라가지 않는다.** 심볼은 `dp`라서 그대로인데 글자만 커지면
+ * 락업의 비율이 깨진다. 로고는 읽는 문장이 아니라 그림이고, 문서 7절도 비율을 고정하라고
+ * 한다. `dp`를 그 시점 밀도로 `sp`로 바꿔서 배율에서 떼어낸다. 태그라인은 문장이므로
+ * 그대로 배율을 따른다.
  */
 @Composable
 private fun MonoLightLockup() {
@@ -105,7 +110,7 @@ private fun MonoLightLockup() {
         )
         Text(
             text = stringResource(R.string.app_name),
-            style = WordmarkStyle,
+            style = wordmarkStyle(),
             color = MedicalMateTheme.colors.fgOnPrimary,
         )
     }
@@ -118,16 +123,24 @@ private val LockupSymbolSize = 50.4.dp
 private val LockupGap = 14.dp
 
 /** 마스터 22 Bold의 1.4배. 자간 -3%는 락업 규정이다. */
-private val WordmarkStyle =
-    TextStyle(
+@Composable
+private fun wordmarkStyle(): TextStyle {
+    val density = LocalDensity.current
+    return TextStyle(
         fontFamily = MedicalMateFontFamily,
         fontWeight = FontWeight.Bold,
-        fontSize = 30.8.sp,
-        lineHeight = 39.2.sp,
+        fontSize = with(density) { WordmarkSize.toSp() },
+        lineHeight = with(density) { WordmarkLineHeight.toSp() },
         letterSpacing = (-0.03).em,
     )
+}
 
-@Preview(showBackground = true, name = "1a-1 스플래시", widthDp = 390, heightDp = 844)
+/** 마스터 22의 1.4배. `dp`로 두는 이유는 위 KDoc에 있다. */
+private val WordmarkSize = 30.8.dp
+
+private val WordmarkLineHeight = 39.2.dp
+
+@MedicalMateScreenPreviews
 @Composable
 private fun SplashScreenPreview() {
     MedicalMateTheme {

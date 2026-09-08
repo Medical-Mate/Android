@@ -6,7 +6,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -93,7 +93,7 @@ fun MedicalMateButton(
         contentColor = colors.content,
         border = colors.border?.let { BorderStroke(width = 1.dp, color = it) },
         interactionSource = interactionSource,
-        modifier = modifier.height(size.height),
+        modifier = modifier.heightIn(min = size.height),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = MedicalMateSpace.s20),

@@ -16,7 +16,9 @@ style:
   UnusedPrivateMember:
     # @Preview 컴포저블은 코드에서 호출되지 않고 IDE·툴링이 실행한다.
     # 미사용이 아니라 호출자가 코드 밖에 있는 경우다.
-    ignoreAnnotated: ['Preview']
+    # MedicalMateScreenPreviews는 @Preview 여러 개를 묶은 우리 애노테이션이다.
+    # detekt는 애노테이션 이름만 보고 그 안에 무엇이 붙어 있는지 따라가지 않는다.
+    ignoreAnnotated: ['Preview', 'MedicalMateScreenPreviews']
   MagicNumber:
     # Compose 레이아웃 코드의 dp·sp 리터럴까지 잡으면 신호 대비 잡음이 너무 크다.
     # 비즈니스 로직(data·ViewModel 계산)에서는 그대로 살아 있다.

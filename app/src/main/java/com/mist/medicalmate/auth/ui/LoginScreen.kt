@@ -17,6 +17,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateLogo
+import com.mist.medicalmate.core.designsystem.MedicalMateScreenPreviews
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
@@ -125,7 +126,7 @@ private fun LoginScreenPreview(state: LoginUiState) {
     }
 }
 
-@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@MedicalMateScreenPreviews
 @Composable
 private fun LoginScreenIdlePreview() {
     LoginScreenPreview(LoginUiState.Idle)

@@ -30,11 +30,11 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateLogo
+import com.mist.medicalmate.core.designsystem.MedicalMateScreenPreviews
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
@@ -214,7 +214,7 @@ private const val REST_MS = 660
 /** 부제는 정지 상태에서도 완전히 불투명하지 않다. Figma `677:4017`이 0.85다. */
 private const val SUB_REST_ALPHA = 0.85f
 
-@Preview(showBackground = true, name = "1b-4 신상정보 완료", widthDp = 390, heightDp = 844)
+@MedicalMateScreenPreviews
 @Composable
 private fun ProfileCompleteScreenPreview() {
     MedicalMateTheme {
