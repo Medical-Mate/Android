@@ -22,7 +22,11 @@ internal data class HomeDestination(val justRegistered: Boolean = false)
  * [onStartIntakeClick]은 증상 정리 시작하기와 이어서 하기가 함께 쓴다. 이어서 하기는
  * 저장된 진행 상태를 불러와야 하는데 그 저장이 아직 없어서 지금은 같은 곳으로 간다(#69).
  */
-internal fun NavGraphBuilder.homeDestination(accountActions: AccountActionCallbacks, onStartIntakeClick: () -> Unit) {
+internal fun NavGraphBuilder.homeDestination(
+    accountActions: AccountActionCallbacks,
+    onStartIntakeClick: () -> Unit,
+    onCardClick: (String) -> Unit,
+) {
     composable<HomeDestination> { entry ->
         val destination = entry.toRoute<HomeDestination>()
         HomeRoute(
@@ -32,6 +36,7 @@ internal fun NavGraphBuilder.homeDestination(accountActions: AccountActionCallba
             HomeCallbacks(
                 onStartIntakeClick = onStartIntakeClick,
                 onResumeClick = onStartIntakeClick,
+                onSavedCardClick = onCardClick,
             ),
         )
     }

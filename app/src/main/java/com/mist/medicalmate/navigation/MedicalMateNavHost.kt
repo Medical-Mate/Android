@@ -12,6 +12,10 @@ import androidx.navigation.compose.rememberNavController
 import com.mist.medicalmate.auth.ui.LoginDestination
 import com.mist.medicalmate.auth.ui.SessionUiState
 import com.mist.medicalmate.auth.ui.loginDestination
+import com.mist.medicalmate.card.ui.BriefCardDestination
+import com.mist.medicalmate.card.ui.HandoffDestination
+import com.mist.medicalmate.card.ui.briefCardDestination
+import com.mist.medicalmate.card.ui.handoffDestination
 import com.mist.medicalmate.home.ui.AccountActionCallbacks
 import com.mist.medicalmate.home.ui.HomeDestination
 import com.mist.medicalmate.home.ui.homeDestination
@@ -75,12 +79,19 @@ internal fun MedicalMateNavHost(
             },
         )
         intakeDestination(
-            onCompleted = { navController.resetTo(HomeDestination()) },
+            onCompleted = { navController.navigate(BriefCardDestination(cardId = NEW_CARD_ID)) },
             onExit = { navController.popBackStack() },
         )
+        briefCardDestination(
+            onSaved = { navController.resetTo(HomeDestination()) },
+            onHandoff = { cardId -> navController.navigate(HandoffDestination(cardId)) },
+            onExit = { navController.popBackStack() },
+        )
+        handoffDestination(onDone = { navController.popBackStack() })
         homeDestination(
             accountActions = accountActions,
             onStartIntakeClick = { navController.navigate(IntakeDestination) },
+            onCardClick = { cardId -> navController.navigate(BriefCardDestination(cardId)) },
         )
     }
 
@@ -90,6 +101,14 @@ internal fun MedicalMateNavHost(
         onboardingCompleted = onboardingCompleted,
     )
 }
+
+/**
+ * 방금 만든 카드의 임시 id.
+ *
+ * 문답을 마치면 서버가 카드를 만들고 그 id를 준다. 그 호출이 아직 없어서 자리만 채운다.
+ * 카드 화면은 지금 id를 보지 않고 픽스처를 그린다.
+ */
+private const val NEW_CARD_ID = "new"
 
 /**
  * 세션 상태가 가리키는 목적지.
