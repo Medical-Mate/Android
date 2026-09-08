@@ -85,3 +85,28 @@ private fun SocialLoginPreview() {
         )
     }
 }
+
+@Preview(showBackground = true, name = "Tooltip Trigger", widthDp = 390)
+@Composable
+private fun TooltipTriggerPreview() {
+    ComponentPreviewSurface(gap = MedicalMateSpace.s16) {
+        var active by remember { mutableStateOf(false) }
+        Row(horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8)) {
+            MedicalMateTooltipTrigger(
+                active = false,
+                onClick = {},
+                contentDescription = "이 항목 설명 보기",
+            )
+            MedicalMateTooltipTrigger(
+                active = true,
+                onClick = {},
+                contentDescription = "이 항목 설명 닫기",
+            )
+            MedicalMateTooltipTrigger(
+                active = active,
+                onClick = { active = !active },
+                contentDescription = "눌러서 열고 닫기",
+            )
+        }
+    }
+}
