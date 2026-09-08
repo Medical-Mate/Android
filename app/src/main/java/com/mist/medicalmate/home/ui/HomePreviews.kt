@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.mist.medicalmate.R
+import com.mist.medicalmate.core.designsystem.MedicalMateScreenPreviews
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
@@ -75,7 +76,7 @@ private fun HomeScreenPreview(state: HomeUiState) {
     }
 }
 
-@Preview(showBackground = true, name = "1n-1 기록 있음", widthDp = 390, heightDp = 960)
+@MedicalMateScreenPreviews
 @Composable
 private fun HomeScreenContentPreview() {
     HomeScreenPreview(previewContent)
