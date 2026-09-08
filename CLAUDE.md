@@ -128,6 +128,7 @@ MedicalMate/
 │       │   ├── MedicalMateApplication.kt  @HiltAndroidApp, KakaoSdk.init
 │       │   ├── core/
 │       │   │   ├── designsystem/          토큰, 타이포, 아이콘, 로고
+│       │   │   │   └── component/        8절 컴포넌트 43종
 │       │   │   └── network/               Retrofit·OkHttp 설정, ApiResult
 │       │   ├── navigation/                단일 NavHost, 세션 경계 동기화
 │       │   ├── auth/  data/ ui/           1o 로그인, 세션 복구
@@ -179,6 +180,11 @@ DI는 Hilt입니다. `@HiltAndroidApp`은 `MedicalMateApplication`, 화면 진�
 **간격과 크기는 `MedicalMateSpace`, `MedicalMateSize`, `MedicalMateRadius`를 씁니다.**
 임의의 dp를 쓰지 마세요. 새 값이 필요하면 하드코딩하기 전에 토큰을 추가할지 검토합니다.
 이 셋은 화면 폭이나 테마에 따라 달라지지 않아서 `CompositionLocal`이 아니라 오브젝트입니다.
+
+**컴포넌트가 Figma 어느 마스터에서 왔는지는 `COMPONENT_MAP.md`에 있습니다.** 노드 id까지
+적혀 있어 원본과 대조할 때 씁니다. 생성한 표라서 손으로 고치지 말고 그 문서에 적힌 절차로
+다시 만듭니다. Code Connect로 Figma에 표시하려면 Dev 시트가 필요해서 지금은 문서로만
+둡니다.
 
 **아이콘과 로고는 `MedicalMateIcons`, `MedicalMateLogo`로 참조합니다.** `R.drawable`을
 직접 쓰지 않습니다. drawable 파일은 Figma에서 내보낸 것이라 손으로 고치지 말고 원본에서
@@ -430,8 +436,10 @@ com.mist.medicalmate/
 | 네비게이션 | Navigation Compose 2.10.0 확정. 단일 `NavHost` + 타입 세이프 라우트. 목적지는 1o·1n 두 개 |
 | 화면 전환 | `MedicalMateNavHost`. `MainActivity`는 세션 확인 중 로딩만 담당 |
 | ViewModel 스코프 | 화면 ViewModel은 목적지 스코프. `SessionViewModel`만 Activity 스코프 |
-| 디자인 시스템 | DESIGN.md 1~7절 반영 완료. 시맨틱 40개, 타이포 15종, 토큰, 아이콘 45개, 로고 4개, Pretendard 4무게 |
-| 컴포넌트(8절) | 미착수. 39종 중 곧 쓰는 것부터 |
+| 디자인 시스템 | DESIGN.md 1~7절 반영 완료. 시맨틱 41개, 타이포 15종, 토큰, 아이콘 45개, 로고 4개, Pretendard 4무게 |
+| 컴포넌트(8절) | 43종 구현. Figma 마스터 대응은 `COMPONENT_MAP.md` |
+| Body Map | 미구현. 디자인 확정 대기(#51) |
+| Search Field | 미구현. Figma에 마스터가 있으나 DESIGN.md 8절에 항목이 없어 확정 확인 필요 |
 | 로그인 화면(1o) | 카카오 버튼 + 서버 토큰 교환 구현 완료. 토큰 적용 완료 |
 | 홈 화면(1n) | Figma 1n-1·1n-2 반영. `HomeViewModel`이 픽스처를 노출. 서버 미연동. Tab Bar는 목적지가 없어 미부착 |
 | 로그아웃 · 회원탈퇴 | 구현 완료. 홈 화면에 임시 진입점. 설정 화면 생기면 이동 |
