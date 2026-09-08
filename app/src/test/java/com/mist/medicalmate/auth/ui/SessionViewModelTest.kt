@@ -156,6 +156,34 @@ class SessionViewModelTest {
         assertEquals(AccountActionState.Idle, viewModel.accountAction.value)
     }
 
+    @Test
+    fun `온보딩이 필요한 로그인은 그 표시를 들고 있다`() = runTest {
+        val viewModel = SessionViewModel(FakeAuthRepository(restoreResult = null))
+
+        viewModel.onSignedIn(onboardingRequired = true)
+
+        assertEquals(SessionUiState.SignedIn(onboardingRequired = true), viewModel.uiState.value)
+    }
+
+    @Test
+    fun `온보딩을 마치면 로그인 상태는 그대로 두고 표시만 내린다`() = runTest {
+        val viewModel = SessionViewModel(FakeAuthRepository(restoreResult = null))
+        viewModel.onSignedIn(onboardingRequired = true)
+
+        viewModel.onOnboardingCompleted()
+
+        assertEquals(SessionUiState.SignedIn(onboardingRequired = false), viewModel.uiState.value)
+    }
+
+    @Test
+    fun `로그인 상태가 아니면 온보딩 완료는 아무것도 바꾸지 않는다`() = runTest {
+        val viewModel = SessionViewModel(FakeAuthRepository(restoreResult = null))
+
+        viewModel.onOnboardingCompleted()
+
+        assertEquals(SessionUiState.SignedOut, viewModel.uiState.value)
+    }
+
     private class FakeAuthRepository(
         private val restoreResult: AuthResult?,
         private val withdrawResult: AuthResult = AuthResult.Success(Session(onboardingRequired = false)),

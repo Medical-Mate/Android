@@ -61,6 +61,20 @@ constructor(private val authRepository: AuthRepository) : ViewModel() {
     }
 
     /**
+     * 온보딩을 마쳤다. 세션은 그대로 두고 온보딩 필요 표시만 내린다.
+     *
+     * 로그인 상태가 아니면 아무것도 하지 않는다. 이 메서드로 로그인이 되어서는 안 된다.
+     *
+     * 지금은 온보딩 인트로(1a-2)의 시작하기가 부르지만, 신상정보 입력(1b-1~1b-4)이 생기면
+     * 그 흐름의 끝으로 옮겨야 한다. 인트로만 보고 넘어간 사람은 아직 신상정보를 넣지 않았다.
+     */
+    fun onOnboardingCompleted() {
+        if (mutableUiState.value is SessionUiState.SignedIn) {
+            mutableUiState.value = SessionUiState.SignedIn(onboardingRequired = false)
+        }
+    }
+
+    /**
      * 로그아웃. 서버 호출 결과와 무관하게 로그인 화면으로 보낸다.
      * Repository가 로컬 토큰과 카카오 세션을 반드시 정리한다.
      */
