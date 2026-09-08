@@ -5,31 +5,73 @@ import java.time.LocalDate
 sealed interface HomeUiState {
     data object Loading : HomeUiState
 
-    data class Content(val userName: String, val notice: HomeNotice?, val savedCards: List<SavedCardSummary>) :
-        HomeUiState
+    /**
+     * Figma `1n-1`과 `1n-2`가 같은 상태의 두 갈래다. [savedCards]와 [upcoming]이 비어
+     * 있으면 빈 상태 화면이 된다. 별도 상태로 두지 않는 이유는 헤더와 오늘의 한 줄,
+     * 시작 버튼이 두 화면에서 같기 때문이다.
+     */
+    data class Content(
+        val userInitial: String,
+        val hasUnreadNotification: Boolean,
+        val todayLine: HomeTodayLine,
+        val resume: HomeResume?,
+        val savedCards: List<SavedCardSummary>,
+        val upcoming: List<HomeSchedule>,
+    ) : HomeUiState
 
     data object Failed : HomeUiState
 }
 
 /**
- * 홈 상단 배너. 와이어프레임의 "9/3 검사 결과 확인일이에요"에 해당한다.
+ * 홈 맨 위 "오늘의 한 줄" 카드의 내용.
  *
- * 표시 문구를 담지 않고 종류와 날짜만 갖는다. 문구는 `strings.xml`에 있고
- * 화면단에서 조립한다. 카피가 바뀌어도 이 타입은 그대로다.
+ * 문구를 담지 않고 상황만 갖는다. 카피는 `strings.xml`에 있고 화면이 조립한다. 첫 방문과
+ * 재방문의 문구가 아예 다르므로 갈래로 나눴다. 하나의 문자열로 받으면 어느 상황인지
+ * 알 수 없어 테스트할 것이 없어진다.
  */
-data class HomeNotice(val date: LocalDate, val kind: Kind) {
-    enum class Kind { TEST_RESULT, REVISIT }
+sealed interface HomeTodayLine {
+    /** 진료 기록이 아직 없는 사용자. Figma `1n-2`의 "처음 오셨네요". */
+    data object FirstVisit : HomeTodayLine
+
+    /**
+     * 지난 진료 이후 [daysSinceLastVisit]일이 지났다.
+     *
+     * [nextVisit]이 있으면 다음 진료 날짜를 함께 알린다. 없으면 그 문장을 빼야 하므로
+     * 화면이 문구를 갈라 쓴다.
+     */
+    data class SinceLastVisit(val daysSinceLastVisit: Int, val nextVisit: LocalDate?) : HomeTodayLine
 }
+
+/**
+ * 작성 중이던 증상 정리.
+ *
+ * Figma `1n-1`의 "이어서 하기" 카드다. 진행 정도를 [answeredSteps] / [totalSteps]로 갖는다.
+ * "3단계 중 2단계까지 답했어요"를 문자열로 받으면 진행률을 다시 계산할 수 없다.
+ */
+data class HomeResume(val intakeId: String, val symptomTitle: String, val answeredSteps: Int, val totalSteps: Int)
 
 /**
  * 저장된 브리핑 카드 요약.
  *
- * [status]는 백엔드의 카드 상태 `draft` / `confirmed`에 대응한다. 확정된 카드는
- * 작성일을, 진행 중인 카드는 "이어서 작성"을 보여준다.
+ * [status]는 백엔드의 카드 상태 `draft` / `confirmed`에 대응한다. [clinic]은 Figma의
+ * "서울OO병원 내과"처럼 병원과 진료과를 합친 표시용 문자열이다. 확정 전 카드에는 없다.
  *
  * 카드 화면(1e)을 만들 때 `card` 도메인으로 옮기거나 그쪽 모델을 참조하게 된다.
- * 지금은 홈만 쓰므로 여기 둔다.
  */
-data class SavedCardSummary(val id: String, val title: String, val status: Status, val writtenOn: LocalDate) {
+data class SavedCardSummary(
+    val id: String,
+    val title: String,
+    val status: Status,
+    val writtenOn: LocalDate,
+    val clinic: String?,
+) {
     enum class Status { DRAFT, CONFIRMED }
 }
+
+/**
+ * 다가오는 진료 일정.
+ *
+ * D-day를 문자열로 받지 않고 [date]에서 계산한다. 화면이 열린 날에 따라 값이 달라지므로
+ * 미리 만들어 두면 날짜가 바뀐 뒤에도 옛 값이 남는다.
+ */
+data class HomeSchedule(val id: String, val title: String, val date: LocalDate, val time: String)
