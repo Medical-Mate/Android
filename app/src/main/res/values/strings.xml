@@ -56,4 +56,17 @@
 
     <!-- 진행 표시. 칸과 함께 숫자로도 읽히게 한다(DESIGN.md 8.4). -->
     <string name="progress_step">%1$d/%2$d 단계</string>
+
+    <!--
+      하단 탭. Figma 마스터와 와이어프레임 모두 세 개다(기록·홈·캘린더).
+      DESIGN.md 8.5가 "내 정보"를 넣어 넷으로 적은 것은 문서 오류다.
+      디자인이 확정 전이라 목적지와 순서가 바뀔 수 있다.
+    -->
+    <string name="tab_record">기록</string>
+    <string name="tab_home">홈</string>
+    <string name="tab_calendar">캘린더</string>
+
+    <!-- 아이콘 단독 버튼의 접근성 이름(DESIGN.md 9절). -->
+    <string name="nav_back">뒤로</string>
+    <string name="nav_close">닫기</string>
 </resources>
