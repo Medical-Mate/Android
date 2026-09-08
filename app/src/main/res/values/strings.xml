@@ -69,4 +69,29 @@
     <!-- 아이콘 단독 버튼의 접근성 이름(DESIGN.md 9절). -->
     <string name="nav_back">뒤로</string>
     <string name="nav_close">닫기</string>
+
+    <!--
+      음성 입력. 상태마다 문구가 정해져 있어 컴포넌트가 들고 있다.
+      Figma의 Voice Input 마스터(313:993)에서 읽었다.
+      어느 상태에서도 직접 입력 대안을 같은 자리에 둔다(DESIGN.md 8.2, 9절).
+    -->
+    <string name="voice_idle_title">말씀해 주세요</string>
+    <string name="voice_idle_description">편하게 말씀하시면 제가 정리할게요</string>
+    <string name="voice_listening_title">듣고 있어요</string>
+    <string name="voice_listening_description">다 말씀하시면 버튼을 다시 눌러주세요</string>
+    <string name="voice_processing_title">정리하는 중이에요</string>
+    <string name="voice_processing_description">잠시만 기다려 주세요</string>
+    <string name="voice_denied_title">마이크를 쓸 수 없어요</string>
+    <string name="voice_denied_description">설정에서 마이크 권한을 켜주세요</string>
+    <string name="voice_type_instead">직접 입력할게요</string>
+    <string name="voice_mic_start">말하기 시작</string>
+    <string name="voice_mic_stop">말하기 끝내기</string>
+
+    <!-- 통증 슬라이더 양끝 라벨. Figma Severity Slider 마스터에서 읽었다. -->
+    <string name="severity_scale_low">가벼운 불편</string>
+    <string name="severity_scale_high">매우 심함</string>
+
+    <!-- 날짜 칸. 기록이 있는 날은 점으로도 표시하므로 이름으로도 알린다. -->
+    <string name="date_cell_has_record">기록 있음</string>
+    <string name="date_cell_today">오늘</string>
 </resources>
