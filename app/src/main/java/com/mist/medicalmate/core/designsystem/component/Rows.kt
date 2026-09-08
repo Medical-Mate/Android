@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -19,7 +20,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
@@ -48,6 +51,10 @@ enum class MedicalMateKvRowType {
  *
  * [MedicalMateKvRowType.EDITING]은 값 아래에 `border/strong` 밑줄을 둔다. 고칠 수 있는
  * 값이라는 표시다. 밑줄만으로는 눌러야 한다는 것이 약하므로 [onClick]을 함께 준다.
+ *
+ * [onValueChange]를 주면 그 자리에서 고친다. 브리핑 카드의 전체 수정(1e-1-E)이 그 경우다.
+ * 값만 입력으로 바뀌고 키 폭과 행 높이는 그대로여서 다른 행과의 정렬이 흐트러지지 않는다.
+ * 주지 않으면 밑줄만 그린 읽기 값이다.
  */
 @Composable
 fun MedicalMateKvRow(
@@ -56,6 +63,7 @@ fun MedicalMateKvRow(
     modifier: Modifier = Modifier,
     type: MedicalMateKvRowType = MedicalMateKvRowType.DEFAULT,
     onClick: (() -> Unit)? = null,
+    onValueChange: ((String) -> Unit)? = null,
 ) {
     val colors = MedicalMateTheme.colors
     val typography = MedicalMateTheme.typography
@@ -91,10 +99,10 @@ fun MedicalMateKvRow(
                 color = colors.fgSubtle,
                 modifier = Modifier.width(KeyColumnWidth),
             )
-            Text(
-                text = value,
-                style = valueStyle,
-                color = valueColor,
+            KvValue(
+                value = value,
+                style = valueStyle.copy(color = valueColor),
+                onValueChange = onValueChange.takeIf { type == MedicalMateKvRowType.EDITING },
                 modifier = valueModifier,
             )
         }
@@ -247,6 +255,32 @@ fun MedicalMateDivider(modifier: Modifier = Modifier) {
             content = {},
         )
     }
+}
+
+/**
+ * 값 칸. [onValueChange]가 있으면 그 자리에서 고치고 없으면 읽기 값이다.
+ *
+ * 두 경우의 글자 모양이 같아야 한다. 수정으로 열릴 때 글자가 움직이면 무엇이 바뀐 것인지
+ * 알기 어렵다.
+ */
+@Composable
+private fun KvValue(
+    value: String,
+    style: TextStyle,
+    onValueChange: ((String) -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
+    if (onValueChange == null) {
+        Text(text = value, style = style, modifier = modifier)
+        return
+    }
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        textStyle = style,
+        cursorBrush = SolidColor(MedicalMateTheme.colors.borderFocus),
+        modifier = modifier,
+    )
 }
 
 /**
