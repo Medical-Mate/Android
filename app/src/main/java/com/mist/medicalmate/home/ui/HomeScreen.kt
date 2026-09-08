@@ -22,6 +22,8 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.component.MedicalMateEmptyState
 import com.mist.medicalmate.core.designsystem.component.MedicalMateEmptyStateType
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
+import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
+import com.mist.medicalmate.core.designsystem.component.MedicalMateTabBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateToast
 import com.mist.medicalmate.core.designsystem.component.MedicalMateToastTone
 import java.time.LocalDate
@@ -38,8 +40,8 @@ import java.time.LocalDate
  * [today]를 받는 이유는 D-day를 화면이 열린 날 기준으로 계산해야 하기 때문이다. 기본값을
  * `LocalDate.now()`로 두면 Preview와 테스트에서 값을 고정할 수 없다.
  *
- * **Tab Bar는 붙이지 않았다.** 컴포넌트는 있지만 네비게이션 그래프에 기록·캘린더 목적지가
- * 없다. 세 탭 중 둘이 눌러도 아무 일이 없으면 사용자가 눌러본다. 목적지가 생기면 붙인다.
+ * 1Depth 화면이라 하단 탭을 함께 그린다. 기록과 캘린더 목적지가 생겨서 세 탭이 모두
+ * 동작한다(#75).
  *
  * 화면을 이루는 조각들은 `HomeComponents.kt`, Preview는 `HomePreviews.kt`에 있다.
  */
@@ -51,6 +53,30 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     accountActions: AccountActionCallbacks = AccountActionCallbacks(),
     registeredToastVisible: Boolean = false,
+    onTabSelect: (MedicalMateTab) -> Unit = {},
+) {
+    Column(modifier = modifier) {
+        HomeBody(
+            state = state,
+            today = today,
+            callbacks = callbacks,
+            accountActions = accountActions,
+            registeredToastVisible = registeredToastVisible,
+            modifier = Modifier.weight(1f),
+        )
+        MedicalMateTabBar(selected = MedicalMateTab.HOME, onSelect = onTabSelect)
+    }
+}
+
+/** 탭바를 뺀 본문. 상태에 따라 내용이 갈리고 토스트가 그 위에 얹힌다. */
+@Composable
+private fun HomeBody(
+    state: HomeUiState,
+    today: LocalDate,
+    callbacks: HomeCallbacks,
+    accountActions: AccountActionCallbacks,
+    registeredToastVisible: Boolean,
+    modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier) {
         when (state) {

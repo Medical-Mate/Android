@@ -21,6 +21,47 @@
     <string name="login_failed_kakao">카카오 로그인에 실패했어요. 다시 시도해주세요</string>
     <string name="login_failed_network">인터넷 연결을 확인해주세요</string>
     <string name="login_failed_server">로그인에 실패했어요. 잠시 후 다시 시도해주세요</string>
+    <!-- Figma 1j-1(406:2569)·1j-2(406:2646) 기록. -->
+    <string name="record_title">기록</string>
+    <string name="record_count">%1$d건</string>
+    <string name="record_status_draft">작성 중</string>
+    <string name="record_status_before_visit">진료 전</string>
+    <string name="record_status_confirmed">진료 완료</string>
+    <string name="record_empty_title">아직 진료 기록이 없어요</string>
+    <string name="record_empty_description">증상을 정리해두면 진료실에서 바로 보여줄 수 있어요</string>
+    <string name="record_empty_action">증상 정리하기</string>
+
+    <!-- Figma 1r-1(406:2310)·1r-2(406:2514) 캘린더. -->
+    <string name="calendar_title">캘린더</string>
+    <string name="calendar_previous_month">지난달</string>
+    <string name="calendar_next_month">다음달</string>
+    <string name="calendar_month">%1$d년 %2$d월</string>
+    <string name="calendar_add_schedule">일정 추가</string>
+    <!-- 월 격자의 요일 머리글. 일요일 시작. -->
+    <string-array name="calendar_weekdays">
+        <item>일</item>
+        <item>월</item>
+        <item>화</item>
+        <item>수</item>
+        <item>목</item>
+        <item>금</item>
+        <item>토</item>
+    </string-array>
+    <string name="calendar_day_empty">이 날은 일정이 없어요</string>
+
+    <string name="calendar_day_schedule">이 날 일정</string>
+    <string name="calendar_day_schedule_edit">수정</string>
+    <string name="calendar_day_dday">D-%1$d</string>
+    <string name="calendar_day_card">가져갈 브리핑 카드</string>
+    <string name="calendar_day_card_open">열기</string>
+    <string name="calendar_day_todo">진료 전 할 일</string>
+    <string name="calendar_day_todo_add">추가</string>
+    <string name="calendar_day_record">이 날 기록</string>
+    <string name="calendar_day_record_add">추가</string>
+    <string name="calendar_day_record_empty_title">아직 진료 전이에요</string>
+    <string name="calendar_day_record_empty_description">진료가 끝나면 들은 내용을 여기에 기록할 수 있어요</string>
+    <string name="calendar_day_record_empty_action">진료 후 기록하기</string>
+
     <!-- Figma 1e-1(404:1679)·1e-1-E(597:4804)·1f-1(404:1835) 브리핑 카드. -->
     <string name="brief_card_title">브리핑 카드</string>
     <string name="brief_card_status_before_visit">진료 전</string>
