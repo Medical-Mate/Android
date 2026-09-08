@@ -38,19 +38,27 @@ import com.mist.medicalmate.core.designsystem.MedicalMateScreenPreviews
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
+import kotlinx.coroutines.delay
 
 /**
  * 와이어프레임 1b-4. Figma `676:2519`.
  *
- * 신상정보 세 화면(복용약·기저질환·알러지)을 끝내고 완료를 누르면 나온다. 버튼이 없다.
- * 다음이 `1b-4 · 홈 · 등록 완료 토스트`라서 잠깐 머문 뒤 홈으로 넘어가는 자리다. 넘어가는
- * 것은 1b 플로우가 생길 때 붙인다. 머무는 시간이 아직 정해지지 않았다.
+ * 신상정보 세 화면(복용약·기저질환·알러지)을 끝내고 완료를 누르면 나온다. 버튼이 없어서
+ * 머문 뒤 스스로 [onFinished]를 부른다. 다음은 `1b-4 · 홈 · 등록 완료 토스트`다.
+ *
+ * 머무는 시간은 모션이 끝나는 시점([ProfileCompleteMotion]의 660ms) 뒤로 문구를 읽을
+ * 만큼을 더해 잡았다. 스플래시와 같은 값이다. Figma에 값이 없어서 정한 것이다.
  *
  * 들어올 때 [ProfileCompleteMotion]이 한 번 돈다. 화면이 다시 조합될 때마다 다시 돌지
  * 않도록 [Animatable]을 `remember`로 들고 있는다.
  */
 @Composable
-fun ProfileCompleteScreen(modifier: Modifier = Modifier) {
+fun ProfileCompleteScreen(onFinished: () -> Unit, modifier: Modifier = Modifier) {
+    LaunchedEffect(Unit) {
+        delay(DWELL_MILLIS)
+        onFinished()
+    }
+
     Column(
         modifier =
         modifier
@@ -214,10 +222,13 @@ private const val REST_MS = 660
 /** 부제는 정지 상태에서도 완전히 불투명하지 않다. Figma `677:4017`이 0.85다. */
 private const val SUB_REST_ALPHA = 0.85f
 
+/** 화면에 머무는 시간. 모션 660ms가 끝나고 문구를 읽을 만큼 남는다. */
+private const val DWELL_MILLIS = 2_000L
+
 @MedicalMateScreenPreviews
 @Composable
 private fun ProfileCompleteScreenPreview() {
     MedicalMateTheme {
-        ProfileCompleteScreen()
+        ProfileCompleteScreen(onFinished = {})
     }
 }

@@ -20,6 +20,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.home.ui.AccountActionCallbacks
 import com.mist.medicalmate.home.ui.WithdrawFailedDialog
 import com.mist.medicalmate.navigation.MedicalMateNavHost
+import com.mist.medicalmate.profile.ui.OnboardingGateViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -49,18 +50,23 @@ class MainActivity : ComponentActivity() {
  * 내려보낸다. 홈이 `auth`를 직접 참조하지 않게 하려는 것이다.
  *
  * 온보딩이 필요하면 온보딩 인트로(1a-2)로 보낸다. 그 판단은 `MedicalMateNavHost`가
- * 세션 상태에서 한다.
+ * 세션 상태와 온보딩 기록에서 한다. 기록을 읽는 동안에도 스플래시를 유지한다. 기본값을
+ * 정해 두고 시작하면 이미 마친 사람에게 온보딩이 한 프레임 스친다.
  *
  * 스플래시(1a-1)는 `Scaffold` 밖에서 그린다. 브랜드 면이 화면 끝까지 닿아야 하는데
  * `innerPadding`을 받으면 상태바 자리에 흰 띠가 남는다. 나머지 화면은 시스템 바를 피해야
  * 해서 `Scaffold`를 유지한다.
  */
 @Composable
-private fun MedicalMateApp(sessionViewModel: SessionViewModel = hiltViewModel()) {
+private fun MedicalMateApp(
+    sessionViewModel: SessionViewModel = hiltViewModel(),
+    onboardingGateViewModel: OnboardingGateViewModel = hiltViewModel(),
+) {
     val session by sessionViewModel.uiState.collectAsStateWithLifecycle()
     val accountAction by sessionViewModel.accountAction.collectAsStateWithLifecycle()
+    val onboardingCompleted by onboardingGateViewModel.completed.collectAsStateWithLifecycle()
 
-    if (session == SessionUiState.Checking) {
+    if (session == SessionUiState.Checking || onboardingCompleted == null) {
         SplashScreen(modifier = Modifier.fillMaxSize())
         return
     }
@@ -68,8 +74,12 @@ private fun MedicalMateApp(sessionViewModel: SessionViewModel = hiltViewModel())
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         MedicalMateNavHost(
             session = session,
+            onboardingCompleted = onboardingCompleted == true,
             onAuthenticated = sessionViewModel::onSignedIn,
-            onOnboardingCompleted = sessionViewModel::onOnboardingCompleted,
+            onOnboardingCompleted = {
+                sessionViewModel.onOnboardingCompleted()
+                onboardingGateViewModel.markCompleted()
+            },
             accountActions =
             AccountActionCallbacks(
                 enabled = accountAction != AccountActionState.InProgress,

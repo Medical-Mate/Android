@@ -16,7 +16,11 @@ import com.mist.medicalmate.home.ui.AccountActionCallbacks
 import com.mist.medicalmate.home.ui.HomeDestination
 import com.mist.medicalmate.home.ui.homeDestination
 import com.mist.medicalmate.profile.ui.OnboardingIntroDestination
+import com.mist.medicalmate.profile.ui.ProfileCompleteDestination
+import com.mist.medicalmate.profile.ui.ProfileSetupDestination
 import com.mist.medicalmate.profile.ui.onboardingIntroDestination
+import com.mist.medicalmate.profile.ui.profileCompleteDestination
+import com.mist.medicalmate.profile.ui.profileSetupDestination
 import kotlinx.coroutines.flow.drop
 
 /**
@@ -41,6 +45,7 @@ import kotlinx.coroutines.flow.drop
 @Composable
 internal fun MedicalMateNavHost(
     session: SessionUiState,
+    onboardingCompleted: Boolean,
     onAuthenticated: (onboardingRequired: Boolean) -> Unit,
     onOnboardingCompleted: () -> Unit,
     accountActions: AccountActionCallbacks,
@@ -50,15 +55,31 @@ internal fun MedicalMateNavHost(
 
     NavHost(
         navController = navController,
-        startDestination = session.destination(),
+        startDestination = session.destination(onboardingCompleted),
         modifier = modifier,
     ) {
         loginDestination(onAuthenticated = onAuthenticated)
-        onboardingIntroDestination(onStartClick = onOnboardingCompleted)
+        onboardingIntroDestination(
+            onStartClick = { navController.navigate(ProfileSetupDestination) },
+        )
+        profileSetupDestination(
+            onCompleted = { navController.navigate(ProfileCompleteDestination) },
+            onExit = { navController.popBackStack() },
+        )
+        profileCompleteDestination(
+            onFinished = {
+                onOnboardingCompleted()
+                navController.resetTo(HomeDestination(justRegistered = true))
+            },
+        )
         homeDestination(accountActions = accountActions)
     }
 
-    SessionBoundarySync(navController = navController, session = session)
+    SessionBoundarySync(
+        navController = navController,
+        session = session,
+        onboardingCompleted = onboardingCompleted,
+    )
 }
 
 /**
@@ -67,11 +88,18 @@ internal fun MedicalMateNavHost(
  * [SessionUiState.Checking]은 `MainActivity`가 스플래시로 잡아서 여기까지 오지 않는다.
  * 로그인과 같이 두는 것은 분기를 하나 더 만들지 않으려는 것이고, 그래도 온다면 인증이
  * 필요한 화면을 열지 않는 쪽이 안전하다.
+ *
+ * 온보딩은 가입하고 한 번만 나온다. 서버가 필요하다고 해도 기기에 마쳤다는 기록이 있으면
+ * 홈으로 보낸다. 두 값을 함께 보는 이유는 `profile/data/OnboardingStore`에 적었다.
  */
-private fun SessionUiState.destination(): Any = when (this) {
+private fun SessionUiState.destination(onboardingCompleted: Boolean): Any = when (this) {
     SessionUiState.Checking, SessionUiState.SignedOut -> LoginDestination
     is SessionUiState.SignedIn ->
-        if (onboardingRequired) OnboardingIntroDestination else HomeDestination
+        if (onboardingRequired && !onboardingCompleted) {
+            OnboardingIntroDestination
+        } else {
+            HomeDestination()
+        }
 }
 
 /**
@@ -84,17 +112,25 @@ private fun SessionUiState.destination(): Any = when (this) {
  * 때문이다. `session` 파라미터를 그대로 읽으면 [LaunchedEffect]가 처음 실행될 때의
  * 값에 고정돼 로그아웃을 놓친다.
  *
- * 상태가 아니라 목적지를 관찰한다. 온보딩을 마치면 세션은 그대로 로그인 상태이고 목적지만
- * 홈으로 바뀌는데, 상태를 관찰하면 그 변화가 경계 이동으로 잡히지 않는다.
+ * **로그인 여부만 관찰한다.** 목적지 전체를 관찰하면 온보딩을 마치는 순간에도 이동이 한 번
+ * 더 나간다. 그 이동은 그래프가 등록 완료 토스트까지 담아 처리했는데, 뒤늦은 재설정이
+ * 그것을 덮어써서 토스트가 사라진다. 넘어갈 곳을 정할 때만 온보딩 여부를 본다.
  */
 @Composable
-private fun SessionBoundarySync(navController: NavHostController, session: SessionUiState) {
+private fun SessionBoundarySync(
+    navController: NavHostController,
+    session: SessionUiState,
+    onboardingCompleted: Boolean,
+) {
     val currentSession by rememberUpdatedState(session)
+    val currentOnboardingCompleted by rememberUpdatedState(onboardingCompleted)
 
     LaunchedEffect(navController) {
-        snapshotFlow { currentSession.destination() }
+        snapshotFlow { currentSession is SessionUiState.SignedIn }
             .drop(1)
-            .collect { destination -> navController.resetTo(destination) }
+            .collect {
+                navController.resetTo(currentSession.destination(currentOnboardingCompleted))
+            }
     }
 }
 
