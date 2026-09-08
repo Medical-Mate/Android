@@ -1,6 +1,7 @@
 package com.mist.medicalmate.core.designsystem.component
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,9 +32,19 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
  * 접근성 트리에서는 "3/4 단계"로 한 번만 읽는다. 칸을 하나씩 읽으면 소리만 길어진다.
  */
 @Composable
-fun MedicalMateProgressIndicator(current: Int, modifier: Modifier = Modifier, total: Int = DEFAULT_STEPS) {
+fun MedicalMateProgressIndicator(
+    current: Int,
+    modifier: Modifier = Modifier,
+    total: Int = DEFAULT_STEPS,
+    label: String? = null,
+) {
     require(isValidStep(current, total)) { "현재 단계는 1..$total 범위여야 합니다. 받은 값: $current" }
     val spoken = stringResource(R.string.progress_step, current, total)
+
+    if (label != null) {
+        LabeledProgress(current = current, total = total, label = label, spoken = spoken, modifier = modifier)
+        return
+    }
 
     Row(
         modifier =
@@ -54,6 +65,46 @@ fun MedicalMateProgressIndicator(current: Int, modifier: Modifier = Modifier, to
             style = MedicalMateTheme.typography.labelM,
             color = MedicalMateTheme.colors.fgSubtle,
         )
+    }
+}
+
+/**
+ * 라벨이 붙은 변형. Figma `334:1139`의 `Meta` 슬롯을 켠 모습이다.
+ *
+ * 진행 막대 옆에 숫자만 두면 무엇의 진행인지 알 수 없다. 신상정보 입력처럼 흐름 이름이
+ * 있는 화면은 이름과 숫자를 한 줄로 올리고 막대를 그 아래에 둔다.
+ *
+ * 접근성 트리에서는 이름과 단계를 한 번에 읽는다. 칸과 숫자를 따로 읽으면 소리만 길어진다.
+ */
+@Composable
+private fun LabeledProgress(current: Int, total: Int, label: String, spoken: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier =
+        modifier
+            .fillMaxWidth()
+            .clearAndSetSemantics { contentDescription = "$label, $spoken" },
+        verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = label,
+                style = MedicalMateTheme.typography.bodyS,
+                color = MedicalMateTheme.colors.fgSubtle,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                // 보이는 표기는 "1 / 3"이고 읽어주는 문구는 "1/3 단계"다. 눈으로는 숫자만
+                // 있으면 되고, 소리로는 무엇의 숫자인지가 필요하다.
+                text = stringResource(R.string.progress_step_count, current, total),
+                style = MedicalMateTheme.typography.bodySStrong,
+                color = MedicalMateTheme.colors.fgPrimary,
+            )
+        }
+        if (shouldUseContinuousBar(total)) {
+            ContinuousBar(current = current, total = total)
+        } else {
+            SegmentedBar(current = current, total = total)
+        }
     }
 }
 

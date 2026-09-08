@@ -32,6 +32,56 @@
     <string name="onboarding_step_3">카드를 진료실에서 보여줘요</string>
     <string name="onboarding_start">시작하기</string>
 
+    <!-- Figma 1b-1(398:1225)·1b-2(398:1285)·1b-3(398:1341) 신상정보 입력. -->
+    <string name="profile_setup_title">내 정보 등록</string>
+    <string name="profile_setup_next">다음</string>
+    <string name="profile_setup_done">완료</string>
+    <string name="profile_setup_other_label">직접 입력</string>
+    <string name="profile_setup_other_placeholder">목록에 없으면 여기에 적어주세요</string>
+    <string name="profile_setup_other_helper">정확한 이름을 몰라도 괜찮아요</string>
+
+    <string name="profile_setup_medications_question">지금 드시는 약이 있나요?</string>
+    <string name="profile_setup_medications_description">처방약, 영양제, 한약 모두 포함해요. 여러 개 골라도 돼요.</string>
+    <string-array name="profile_setup_medications_options">
+        <item>혈압약</item>
+        <item>당뇨약</item>
+        <item>진통제</item>
+        <item>위장약</item>
+        <item>영양제</item>
+        <item>한약</item>
+        <item>피임약</item>
+        <item>수면제</item>
+    </string-array>
+
+    <string name="profile_setup_conditions_question">진단받은 병이 있나요?</string>
+    <string name="profile_setup_conditions_description">지금 치료 중이거나 꾸준히 관리하는 것을 알려주세요.</string>
+    <string-array name="profile_setup_conditions_options">
+        <item>고혈압</item>
+        <item>당뇨</item>
+        <item>고지혈증</item>
+        <item>천식</item>
+        <item>갑상선</item>
+        <item>위염·역류</item>
+        <item>관절염</item>
+        <item>우울·불안</item>
+    </string-array>
+
+    <string name="profile_setup_allergies_question">알러지가 있나요?</string>
+    <string name="profile_setup_allergies_description">약이나 음식에 반응이 있었다면 꼭 알려주세요.</string>
+    <string name="profile_setup_allergies_tooltip">브리핑 카드 맨 위에 항상 표시돼요</string>
+    <string name="profile_setup_allergies_tooltip_open">알러지를 왜 묻는지 보기</string>
+    <string-array name="profile_setup_allergies_options">
+        <item>페니실린</item>
+        <item>아스피린</item>
+        <item>조개·갑각류</item>
+        <item>땅콩</item>
+        <item>계란</item>
+        <item>꽃가루</item>
+        <item>먼지·진드기</item>
+    </string-array>
+
+    <string name="home_registered_toast">내 정보가 등록되었어요</string>
+
     <!-- Figma 1b-4(676:2519) 신상정보 완료. -->
     <string name="profile_complete_title">내 정보가 등록되었어요</string>
     <string name="profile_complete_description">복용약 · 기저질환 · 알러지는 브리핑 카드에 자동으로 담겨요</string>
@@ -104,6 +154,8 @@
 
     <!-- 진행 표시. 칸과 함께 숫자로도 읽히게 한다(DESIGN.md 8.4). -->
     <string name="progress_step">%1$d/%2$d 단계</string>
+    <!-- 화면에 보이는 단계 표기. Figma가 "1 / 3"이다. 읽어주는 문구는 progress_step이다. -->
+    <string name="progress_step_count">%1$d / %2$d</string>
 
     <!--
       하단 탭. Figma 마스터와 와이어프레임 모두 세 개다(기록·홈·캘린더).

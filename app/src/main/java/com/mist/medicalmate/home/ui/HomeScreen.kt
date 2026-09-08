@@ -1,6 +1,8 @@
 package com.mist.medicalmate.home.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,12 +15,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.component.MedicalMateEmptyState
 import com.mist.medicalmate.core.designsystem.component.MedicalMateEmptyStateType
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
+import com.mist.medicalmate.core.designsystem.component.MedicalMateToast
+import com.mist.medicalmate.core.designsystem.component.MedicalMateToastTone
 import java.time.LocalDate
 
 /**
@@ -45,20 +50,50 @@ fun HomeScreen(
     callbacks: HomeCallbacks,
     modifier: Modifier = Modifier,
     accountActions: AccountActionCallbacks = AccountActionCallbacks(),
+    registeredToastVisible: Boolean = false,
 ) {
-    when (state) {
-        HomeUiState.Loading -> LoadingContent(modifier)
-        HomeUiState.Failed -> FailedContent(onRetryClick = callbacks.onRetryClick, modifier = modifier)
-        is HomeUiState.Content ->
-            HomeContent(
-                content = state,
-                today = today,
-                callbacks = callbacks,
-                accountActions = accountActions,
-                modifier = modifier,
-            )
+    Box(modifier = modifier) {
+        when (state) {
+            HomeUiState.Loading -> LoadingContent()
+            HomeUiState.Failed -> FailedContent(onRetryClick = callbacks.onRetryClick)
+            is HomeUiState.Content ->
+                HomeContent(
+                    content = state,
+                    today = today,
+                    callbacks = callbacks,
+                    accountActions = accountActions,
+                )
+        }
+        if (registeredToastVisible) {
+            RegisteredToast()
+        }
     }
 }
+
+/**
+ * 신상정보를 등록하고 홈에 도착했을 때의 토스트. Figma `1b-4 · 홈 · 등록 완료 토스트`
+ * (`681:3700`)의 `681:3768`이다.
+ *
+ * 헤더 아래 68에 얹는다. 헤더를 가리지 않고 첫 카드 위에 뜬다.
+ *
+ * **문서 8.4는 Toast를 화면 아래에 두라고 한다.** Figma의 이 인스턴스는 위에 있다. 값의
+ * 정본이 Figma라서 그대로 뒀고 디자인 트랙에 넘길 항목으로 남겼다(#67).
+ */
+@Composable
+private fun BoxScope.RegisteredToast() {
+    MedicalMateToast(
+        message = stringResource(R.string.home_registered_toast),
+        tone = MedicalMateToastTone.POSITIVE,
+        modifier =
+        Modifier
+            .align(Alignment.TopCenter)
+            .padding(horizontal = MedicalMateSize.gutter)
+            .padding(top = ToastTop),
+    )
+}
+
+/** Figma가 토스트를 헤더 아래 68에 놓았다. */
+private val ToastTop = 68.dp
 
 /**
  * 홈에서 나가는 길들.
