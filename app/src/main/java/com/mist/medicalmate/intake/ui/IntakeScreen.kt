@@ -126,7 +126,7 @@ private fun IntakeFooter(state: IntakeUiState, callbacks: IntakeCallbacks) {
                 start = MedicalMateSize.gutter,
                 end = MedicalMateSize.gutter,
                 top = MedicalMateSpace.s12,
-                bottom = MedicalMateSize.safeBottom,
+                bottom = MedicalMateSpace.s8,
             ),
         verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12),
     ) {

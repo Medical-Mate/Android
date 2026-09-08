@@ -190,7 +190,7 @@ private fun Footer(isLast: Boolean, onNextClick: () -> Unit) {
                 start = MedicalMateSize.gutter,
                 end = MedicalMateSize.gutter,
                 top = MedicalMateSpace.s12,
-                bottom = MedicalMateSize.safeBottom,
+                bottom = MedicalMateSpace.s8,
             ),
     ) {
         MedicalMateButton(
