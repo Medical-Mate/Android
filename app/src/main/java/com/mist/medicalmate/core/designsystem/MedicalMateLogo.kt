@@ -32,4 +32,15 @@ object MedicalMateLogo {
 
     /** 심볼 36 + 워드마크. 139x36. */
     val Lockup = R.drawable.ic_logo_lockup
+
+    /**
+     * [Mark]의 왼쪽 위 조각. [MarkLower]와 겹쳐 놓으면 [Mark]와 같다.
+     *
+     * 신상정보 완료 화면(1b-4)의 모션이 두 조각을 각각 가로로 움직여서 나눠 뒀다. 한 장으로는
+     * 조각별 이동을 만들 수 없다. 정지 상태를 그릴 때는 [Mark]를 쓴다.
+     */
+    val MarkUpper = R.drawable.ic_logo_mark_upper
+
+    /** [Mark]의 오른쪽 아래 조각. [MarkUpper]와 짝이다. */
+    val MarkLower = R.drawable.ic_logo_mark_lower
 }

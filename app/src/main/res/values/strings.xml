@@ -21,6 +21,10 @@
     <string name="login_failed_kakao">카카오 로그인에 실패했어요. 다시 시도해주세요</string>
     <string name="login_failed_network">인터넷 연결을 확인해주세요</string>
     <string name="login_failed_server">로그인에 실패했어요. 잠시 후 다시 시도해주세요</string>
+    <!-- Figma 1b-4(676:2519) 신상정보 완료. -->
+    <string name="profile_complete_title">내 정보가 등록되었어요</string>
+    <string name="profile_complete_description">복용약 · 기저질환 · 알러지는 브리핑 카드에 자동으로 담겨요</string>
+
     <!-- Figma 1n-1(399:1339)·1n-2(399:1720)의 홈 문구. -->
     <string name="home_notification">알림</string>
     <string name="home_notification_unread">알림, 읽지 않은 알림 있음</string>
