@@ -6,6 +6,8 @@ import com.mist.medicalmate.auth.data.AuthRepository
 import com.mist.medicalmate.auth.data.AuthResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -108,10 +110,22 @@ constructor(private val authRepository: AuthRepository) : ViewModel() {
         mutableAccountAction.value = AccountActionState.Idle
     }
 
+    /**
+     * 복구를 시작하고, 최소 노출 시간이 지난 뒤에 결과를 반영한다.
+     *
+     * 복구와 대기를 동시에 돌린다. 그래서 걸리는 시간은 둘 중 긴 쪽이다. 순서대로 하면
+     * 복구가 느린 날에 스플래시가 [MIN_SPLASH_MILLIS]만큼 더 길어진다.
+     *
+     * 대기를 두는 이유는 저장된 토큰이 없을 때 복구가 즉시 끝나서 스플래시(1a-1)가 한 프레임만
+     * 스쳤다 사라지기 때문이다. 화면이 번쩍인 것으로 읽힌다.
+     */
     private fun restore() {
         viewModelScope.launch {
-            mutableUiState.value =
-                when (val result = authRepository.restoreSession()) {
+            val restored = async { authRepository.restoreSession() }
+            delay(MIN_SPLASH_MILLIS)
+
+            val next =
+                when (val result = restored.await()) {
                     is AuthResult.Success ->
                         SessionUiState.SignedIn(result.session.onboardingRequired)
 
@@ -119,6 +133,23 @@ constructor(private val authRepository: AuthRepository) : ViewModel() {
                     null, AuthResult.NetworkUnavailable, is AuthResult.Rejected ->
                         SessionUiState.SignedOut
                 }
+
+            // 기다리는 동안 화면이 이미 옮겨갔다면 복구 결과를 버린다. 대기를 두면서
+            // 생긴 창이다. 늦게 도착한 결과가 그 사이의 로그인이나 로그아웃을 덮으면
+            // 사용자가 방금 한 일이 되돌려진다.
+            if (mutableUiState.value == SessionUiState.Checking) {
+                mutableUiState.value = next
+            }
         }
+    }
+
+    private companion object {
+        /**
+         * 스플래시 최소 노출 시간.
+         *
+         * Figma에 값이 없어서 정한 값이다. 로고와 태그라인을 읽을 수 있는 하한이면서
+         * 진입을 기다리게 하지 않는 선으로 잡았다.
+         */
+        const val MIN_SPLASH_MILLIS = 800L
     }
 }

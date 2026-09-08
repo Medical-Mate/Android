@@ -7,6 +7,8 @@ import com.mist.medicalmate.core.network.ApiErrorCode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -32,6 +34,8 @@ class SessionViewModelTest {
     fun `저장된 토큰이 없으면 SignedOut이다`() = runTest {
         val viewModel = SessionViewModel(FakeAuthRepository(restoreResult = null))
 
+        advanceUntilIdle()
+
         assertEquals(SessionUiState.SignedOut, viewModel.uiState.value)
     }
 
@@ -43,6 +47,8 @@ class SessionViewModelTest {
                     restoreResult = AuthResult.Success(Session(onboardingRequired = false)),
                 ),
             )
+
+        advanceUntilIdle()
 
         assertEquals(SessionUiState.SignedIn(onboardingRequired = false), viewModel.uiState.value)
     }
@@ -60,6 +66,8 @@ class SessionViewModelTest {
                 ),
             )
 
+        advanceUntilIdle()
+
         assertEquals(SessionUiState.SignedOut, viewModel.uiState.value)
     }
 
@@ -67,6 +75,8 @@ class SessionViewModelTest {
     fun `오프라인이어도 로그인 화면으로 보낸다`() = runTest {
         val viewModel =
             SessionViewModel(FakeAuthRepository(restoreResult = AuthResult.NetworkUnavailable))
+
+        advanceUntilIdle()
 
         assertEquals(SessionUiState.SignedOut, viewModel.uiState.value)
     }
@@ -76,6 +86,8 @@ class SessionViewModelTest {
         val viewModel = SessionViewModel(FakeAuthRepository(restoreResult = null))
 
         viewModel.onSignedIn(onboardingRequired = true)
+
+        advanceUntilIdle()
 
         assertEquals(SessionUiState.SignedIn(onboardingRequired = true), viewModel.uiState.value)
     }
@@ -89,6 +101,8 @@ class SessionViewModelTest {
         val viewModel = SessionViewModel(repository)
 
         viewModel.logout()
+
+        advanceUntilIdle()
 
         assertEquals(SessionUiState.SignedOut, viewModel.uiState.value)
         assertEquals(AccountActionState.Idle, viewModel.accountAction.value)
@@ -106,6 +120,8 @@ class SessionViewModelTest {
 
         viewModel.withdraw()
 
+        advanceUntilIdle()
+
         assertEquals(SessionUiState.SignedOut, viewModel.uiState.value)
         assertEquals(AccountActionState.Idle, viewModel.accountAction.value)
     }
@@ -122,6 +138,8 @@ class SessionViewModelTest {
 
         viewModel.withdraw()
 
+        advanceUntilIdle()
+
         assertEquals(SessionUiState.SignedIn(onboardingRequired = false), viewModel.uiState.value)
         assertEquals(AccountActionState.WithdrawFailed, viewModel.accountAction.value)
     }
@@ -136,6 +154,8 @@ class SessionViewModelTest {
         val viewModel = SessionViewModel(repository)
 
         viewModel.withdraw()
+
+        advanceUntilIdle()
 
         assertEquals(SessionUiState.SignedIn(onboardingRequired = false), viewModel.uiState.value)
         assertEquals(AccountActionState.WithdrawFailed, viewModel.accountAction.value)
@@ -157,10 +177,31 @@ class SessionViewModelTest {
     }
 
     @Test
+    fun `최소 노출 시간이 지나기 전에는 Checking이다`() = runTest {
+        val viewModel = SessionViewModel(FakeAuthRepository(restoreResult = null))
+
+        advanceTimeBy(500)
+
+        assertEquals(SessionUiState.Checking, viewModel.uiState.value)
+    }
+
+    @Test
+    fun `복구가 늦게 끝나도 그 사이 옮겨간 상태를 덮지 않는다`() = runTest {
+        val viewModel = SessionViewModel(FakeAuthRepository(restoreResult = null))
+
+        viewModel.onSignedIn(onboardingRequired = false)
+        advanceUntilIdle()
+
+        assertEquals(SessionUiState.SignedIn(onboardingRequired = false), viewModel.uiState.value)
+    }
+
+    @Test
     fun `온보딩이 필요한 로그인은 그 표시를 들고 있다`() = runTest {
         val viewModel = SessionViewModel(FakeAuthRepository(restoreResult = null))
 
         viewModel.onSignedIn(onboardingRequired = true)
+
+        advanceUntilIdle()
 
         assertEquals(SessionUiState.SignedIn(onboardingRequired = true), viewModel.uiState.value)
     }
@@ -172,6 +213,8 @@ class SessionViewModelTest {
 
         viewModel.onOnboardingCompleted()
 
+        advanceUntilIdle()
+
         assertEquals(SessionUiState.SignedIn(onboardingRequired = false), viewModel.uiState.value)
     }
 
@@ -180,6 +223,8 @@ class SessionViewModelTest {
         val viewModel = SessionViewModel(FakeAuthRepository(restoreResult = null))
 
         viewModel.onOnboardingCompleted()
+
+        advanceUntilIdle()
 
         assertEquals(SessionUiState.SignedOut, viewModel.uiState.value)
     }
