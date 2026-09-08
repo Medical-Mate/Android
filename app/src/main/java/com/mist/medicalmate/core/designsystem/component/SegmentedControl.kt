@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.Surface
@@ -50,7 +50,7 @@ fun MedicalMateSegmentedControl(
         modifier =
         modifier
             .fillMaxWidth()
-            .height(MedicalMateSize.controlMd),
+            .heightIn(min = MedicalMateSize.controlMd),
     ) {
         Row(
             modifier = Modifier.padding(InsetPadding),

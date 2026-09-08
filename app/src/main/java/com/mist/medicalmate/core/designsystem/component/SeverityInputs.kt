@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -227,7 +227,7 @@ private fun ScaleCell(
         border = if (selected) BorderStroke(SelectedWidth, colors.borderPrimary) else null,
         modifier =
         modifier
-            .height(MedicalMateSize.controlMd)
+            .heightIn(min = MedicalMateSize.controlMd)
             .semantics { stateDescription = spoken },
     ) {
         Box(contentAlignment = Alignment.Center) {

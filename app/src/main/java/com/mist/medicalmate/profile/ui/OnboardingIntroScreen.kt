@@ -22,12 +22,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateLogo
 import com.mist.medicalmate.core.designsystem.MedicalMateRadius
+import com.mist.medicalmate.core.designsystem.MedicalMateScreenPreviews
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
@@ -158,13 +158,16 @@ private fun Steps() {
  *
  * 번호를 배지로 두는 것은 Figma가 배지 인스턴스를 쓰기 때문이다. 읽는 표시라서 칩이
  * 아니라 배지가 맞다.
+ *
+ * 번호를 위에 맞춘다. 좁은 화면이나 큰 글꼴에서 문구가 두 줄이 되면 가운데 정렬은 번호를
+ * 줄 사이로 내려보낸다. 몇 번째 단계인지가 첫 줄과 붙어 있어야 읽힌다.
  */
 @Composable
 private fun StepRow(number: Int, @StringRes textRes: Int) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.Top,
     ) {
         MedicalMateBadge(label = number.toString(), tone = MedicalMateBadgeTone.BRAND)
         Text(
@@ -212,7 +215,7 @@ private val IllustrationSymbolSize = 105.6.dp
 /** 심볼 판의 반경은 크기의 1/3이다. */
 private const val SYMBOL_RADIUS_DIVISOR = 3f
 
-@Preview(showBackground = true, name = "1a-2 온보딩", widthDp = 390, heightDp = 844)
+@MedicalMateScreenPreviews
 @Composable
 private fun OnboardingIntroScreenPreview() {
     MedicalMateTheme {
