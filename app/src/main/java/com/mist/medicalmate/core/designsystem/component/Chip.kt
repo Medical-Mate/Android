@@ -48,7 +48,12 @@ fun MedicalMateChip(
     enabled: Boolean = true,
 ) {
     val colors = MedicalMateTheme.colors
-    val container = if (selected && enabled) colors.bgPrimarySubtle else colors.bgSubtle
+    val container =
+        when {
+            selected && enabled -> colors.bgPrimarySubtle
+            enabled -> colors.bgSurface
+            else -> colors.bgSubtle
+        }
     val content =
         when {
             !enabled -> colors.fgDisabled
@@ -62,7 +67,12 @@ fun MedicalMateChip(
         shape = MedicalMateRadius.full,
         color = container,
         contentColor = content,
-        border = if (selected && enabled) BorderStroke(SelectedBorderWidth, colors.borderPrimary) else null,
+        border =
+        when {
+            selected && enabled -> BorderStroke(SelectedBorderWidth, colors.borderPrimary)
+            enabled -> BorderStroke(BorderWidth, colors.borderDefault)
+            else -> null
+        },
         modifier =
         modifier
             .heightIn(min = MedicalMateSize.controlSm)
@@ -92,3 +102,12 @@ fun MedicalMateChip(
 
 /** 문서 8.1이 지정한 선택 경계 두께다. */
 private val SelectedBorderWidth = 1.5.dp
+
+/**
+ * 고르지 않은 칩의 테두리.
+ *
+ * 마스터(`311:823`)의 기본 상태는 흰 면에 이 테두리다. 회색 채움은 눌린 상태에 쓰는 두
+ * 번째 칸이라, 기본을 회색 면으로 두면 여러 개를 늘어놓았을 때 고른 것과 아닌 것의 대비가
+ * 약해진다. 비활성만 회색 면으로 남긴다.
+ */
+private val BorderWidth = 1.dp
