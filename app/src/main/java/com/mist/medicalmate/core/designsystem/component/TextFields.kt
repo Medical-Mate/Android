@@ -6,6 +6,7 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -83,11 +84,22 @@ fun MedicalMateTextField(
         FieldSurface(
             style = style,
             minHeight = MedicalMateSize.controlLg,
-            // 오른쪽에 버튼이 붙으면 그 자리를 여백으로 두지 않는다. Figma의 Actions 슬롯이
-            // 필드 안쪽 끝에 4만 남기고 붙어 있다.
-            endPadding = if (trailing == null) MedicalMateSpace.s16 else MedicalMateSpace.s4,
+            contentPadding =
+            PaddingValues(
+                start = MedicalMateSpace.s20,
+                // 오른쪽에 버튼이 붙으면 그 자리를 여백으로 두지 않는다. Actions 슬롯이 필드
+                // 안쪽 끝에 4만 남기고 붙어 있다. 버튼이 없으면 좌우를 같게 둔다.
+                end = if (trailing == null) MedicalMateSpace.s20 else MedicalMateSpace.s4,
+                // 위아래 4는 48 버튼이 56 필드 안에 들어가고 남는 자리다.
+                top = MedicalMateSpace.s4,
+                bottom = MedicalMateSpace.s4,
+            ),
+            contentAlignment = Alignment.CenterStart,
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12),
+            ) {
                 FieldText(
                     value = value,
                     onValueChange = onValueChange,
@@ -133,7 +145,12 @@ fun MedicalMateTextArea(
             filled = value.isNotEmpty(),
         )
 
-    FieldSurface(style = style, minHeight = TextAreaMinHeight, modifier = modifier) {
+    FieldSurface(
+        style = style,
+        minHeight = TextAreaMinHeight,
+        contentPadding = TextAreaPadding,
+        modifier = modifier,
+    ) {
         FieldText(
             value = value,
             onValueChange = onValueChange,
@@ -170,8 +187,9 @@ private fun fieldStyle(enabled: Boolean, hasError: Boolean, focused: Boolean, fi
 private fun FieldSurface(
     style: FieldStyle,
     minHeight: Dp,
+    contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
-    endPadding: Dp = MedicalMateSpace.s16,
+    contentAlignment: Alignment = Alignment.TopStart,
     content: @Composable () -> Unit,
 ) {
     Surface(
@@ -184,12 +202,8 @@ private fun FieldSurface(
             modifier =
             Modifier
                 .heightIn(min = minHeight)
-                .padding(
-                    start = MedicalMateSpace.s16,
-                    end = endPadding,
-                    top = MedicalMateSpace.s14,
-                    bottom = MedicalMateSpace.s14,
-                ),
+                .padding(contentPadding),
+            contentAlignment = contentAlignment,
             content = { content() },
         )
     }
@@ -250,8 +264,14 @@ private fun SupportText(errorText: String?, helperText: String?) {
     )
 }
 
-/** 문서 8.2가 지정한 radius 14. Scale에 없는 값이라 Button M과 같은 상수를 쓴다. */
-private val FieldShape = MedicalMateRadius.buttonM
+/**
+ * Text Field v2의 radius 16.
+ *
+ * 문서 8.2는 14로 적혀 있고 Figma가 16으로 바뀌었다. 같은 개정에서 "56 높이 입력 = 16 ·
+ * 그 안 48 버튼 = 12"라는 동심원 규칙이 함께 들어왔다. 바깥에서 여백만큼 뺀 값이 안쪽
+ * 반경이 된다.
+ */
+private val FieldShape = MedicalMateRadius.md
 
 private val BorderWidth = 1.dp
 
@@ -259,3 +279,10 @@ private val BorderWidth = 1.dp
 private val FocusBorderWidth = 2.dp
 
 private val TextAreaMinHeight = 120.dp
+
+/** 자유 서술은 첫 줄이 위에 붙어야 해서 한 줄 입력과 여백이 다르다. */
+private val TextAreaPadding =
+    PaddingValues(
+        horizontal = MedicalMateSpace.s16,
+        vertical = MedicalMateSpace.s14,
+    )

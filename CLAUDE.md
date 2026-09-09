@@ -440,9 +440,9 @@ com.mist.medicalmate/
 | 네비게이션 | Navigation Compose 2.10.0 확정. 단일 `NavHost` + 타입 세이프 라우트. 목적지 12개 |
 | 화면 전환 | `MedicalMateNavHost`. `MainActivity`는 세션 확인 중 로딩만 담당 |
 | ViewModel 스코프 | 화면 ViewModel은 목적지 스코프. `SessionViewModel`만 Activity 스코프 |
-| 디자인 시스템 | DESIGN.md 1~7절 반영 완료. 시맨틱 41개, 타이포 15종, 토큰, 아이콘 45개, 로고 4개, Pretendard 4무게 |
+| 디자인 시스템 | DESIGN.md 1~7절 반영 완료. 시맨틱 41개, 타이포 15종, 토큰, 아이콘 46개(arrow-up 추가), 로고 4개, Pretendard 4무게. DESIGN.md 3.2는 Badge를 `Label/M`으로 적었지만 Figma 마스터는 `Label/S`다. 코드는 Figma를 따랐고 문서는 디자인 트랙 확인 필요 |
 | 컴포넌트(8절) | 43종 구현. Figma 마스터 대응은 `COMPONENT_MAP.md` |
-| 컴포넌트 v2 | Figma `06 · 추가`가 9종을 v2로 재등록. KV Row·Tab Bar는 이미 반영. Nav Bar 하단 경계, Text Field 규격, Badge `Label/S`, Ghost→Outline 교체는 미적용 |
+| 컴포넌트 v2 | Figma `06 · 추가`가 9종을 v2로 재등록. KV Row·Tab Bar·Nav Bar·Date Cell·Text Field·Segmented Control 반영 완료. Text Area의 Footer Row(카운터·마이크), Toast의 Timer, List Row의 Summary는 모두 기본 false라 미구현. Ghost→Outline은 구현된 화면에서 해당 지점이 여전히 텍스트형이라 적용 대상 없음(F·H 플로우에서 화면별로 확인) |
 | Elevation/Card | Figma가 2겹(y3 r10 8% + y1 r2 5%)으로 바뀜. 코드는 `Modifier.shadow` 한 겹 근사 |
 | Body Map | 미구현. 디자인 확정 대기(#51) |
 | Search Field | 미구현. Figma `06 · 추가` 섹션에 신규 3종으로 정식 등록됨(확정). DESIGN.md 8절에는 아직 항목 없음 |
