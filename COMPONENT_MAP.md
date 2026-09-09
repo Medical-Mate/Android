@@ -51,7 +51,6 @@ label은 `Compose`를 쓴다.
 | `Section Header` | `334:1156` | `MedicalMateSectionHeader` | `app/src/main/java/com/mist/medicalmate/core/designsystem/component/Rows.kt` |
 | `Segmented Control` | `334:1150` | `MedicalMateSegmentedControl` | `app/src/main/java/com/mist/medicalmate/core/designsystem/component/SegmentedControl.kt` |
 | `Severity Readout` | `333:1126` | `MedicalMateSeverityReadout` | `app/src/main/java/com/mist/medicalmate/core/designsystem/component/SeverityReadout.kt` |
-| `Severity Scale` | `331:1188` | `MedicalMateSeverityScale` | `app/src/main/java/com/mist/medicalmate/core/designsystem/component/SeverityInputs.kt` |
 | `Severity Select` | `295:898` | `MedicalMateSeveritySelect` | `app/src/main/java/com/mist/medicalmate/core/designsystem/component/SeverityInputs.kt` |
 | `Severity Slider` | `339:1293` | `MedicalMateSeveritySlider` | `app/src/main/java/com/mist/medicalmate/core/designsystem/component/SeverityInputs.kt` |
 | `Social Login Button` | `383:1302` | `MedicalMateSocialLoginButton` | `app/src/main/java/com/mist/medicalmate/core/designsystem/component/SocialLoginButton.kt` |

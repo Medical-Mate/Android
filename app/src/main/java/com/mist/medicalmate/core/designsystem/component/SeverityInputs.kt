@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -28,7 +27,6 @@ import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
-import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
@@ -170,68 +168,6 @@ internal fun SeverityLevelChip(severity: MedicalMateSeverity) {
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(text = severity.level.toString(), style = MedicalMateTheme.typography.labelM)
-        }
-    }
-}
-
-/**
- * DESIGN.md 8.2 `Severity Scale`.
- *
- * 슬라이더의 대안이다. 글자 배율이 크거나 drag가 어려울 때 쓴다(문서 8.2). 손이 떨리는
- * 환자에게 drag만 남기면 통증을 입력할 수 없다.
- *
- * 다섯 칸을 각각 눌러 고른다. 고른 칸은 채움 색과 테두리로 함께 표시하고, 아래에 낱말과
- * 상황 설명이 나온다.
- */
-@Composable
-fun MedicalMateSeverityScale(
-    severity: MedicalMateSeverity,
-    onSeverityChange: (MedicalMateSeverity) -> Unit,
-    modifier: Modifier = Modifier,
-    showNrs: Boolean = false,
-) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12),
-    ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8)) {
-            MedicalMateSeverity.entries.forEach { level ->
-                ScaleCell(
-                    level = level,
-                    selected = level == severity,
-                    onClick = { onSeverityChange(level) },
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-        SeverityReadoutCard(severity = severity, showNrs = showNrs)
-    }
-}
-
-@Composable
-private fun ScaleCell(
-    level: MedicalMateSeverity,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colors = MedicalMateTheme.colors
-    val label = stringResource(level.labelRes)
-    val spoken = stringResource(R.string.severity_level_content_description, level.level, label)
-
-    Surface(
-        onClick = onClick,
-        shape = MedicalMateRadius.sm,
-        color = if (selected) level.base else colors.bgSubtle,
-        contentColor = colors.fgDefault,
-        border = if (selected) BorderStroke(SelectedWidth, colors.borderPrimary) else null,
-        modifier =
-        modifier
-            .heightIn(min = MedicalMateSize.controlMd)
-            .semantics { stateDescription = spoken },
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(text = level.level.toString(), style = MedicalMateTheme.typography.bodyLStrong)
         }
     }
 }
