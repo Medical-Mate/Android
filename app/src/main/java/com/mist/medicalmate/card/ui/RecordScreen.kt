@@ -25,7 +25,6 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateBadge
-import com.mist.medicalmate.core.designsystem.component.MedicalMateBadgeTone
 import com.mist.medicalmate.core.designsystem.component.MedicalMateCard
 import com.mist.medicalmate.core.designsystem.component.MedicalMateEmptyState
 import com.mist.medicalmate.core.designsystem.component.MedicalMateEmptyStateType
@@ -151,7 +150,10 @@ private fun RecordRow(item: RecordItem, onClick: () -> Unit) {
                         style = MedicalMateTheme.typography.bodyLStrong,
                         color = MedicalMateTheme.colors.fgDefault,
                     )
-                    MedicalMateBadge(label = statusLabel(item.status), tone = statusTone(item.status))
+                    MedicalMateBadge(
+                        label = recordStatusLabel(item.status),
+                        tone = recordStatusTone(item.status),
+                    )
                 }
                 Text(
                     text = item.meta,
@@ -178,21 +180,6 @@ private fun RecordRow(item: RecordItem, onClick: () -> Unit) {
             )
         }
     }
-}
-
-@Composable
-private fun statusLabel(status: RecordItem.Status): String = stringResource(
-    when (status) {
-        RecordItem.Status.DRAFT -> R.string.record_status_draft
-        RecordItem.Status.BEFORE_VISIT -> R.string.record_status_before_visit
-        RecordItem.Status.CONFIRMED -> R.string.record_status_confirmed
-    },
-)
-
-private fun statusTone(status: RecordItem.Status): MedicalMateBadgeTone = when (status) {
-    RecordItem.Status.DRAFT -> MedicalMateBadgeTone.WARNING
-    RecordItem.Status.BEFORE_VISIT -> MedicalMateBadgeTone.BRAND
-    RecordItem.Status.CONFIRMED -> MedicalMateBadgeTone.SUCCESS
 }
 
 /** 1j-2. 빈 상태를 화면 위쪽에 둔다. Figma가 가운데가 아니라 1/4 지점에 놓았다. */

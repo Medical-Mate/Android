@@ -7,6 +7,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
@@ -20,9 +21,11 @@ import com.mist.medicalmate.calendar.ui.calendarDestination
 import com.mist.medicalmate.card.ui.BriefCardDestination
 import com.mist.medicalmate.card.ui.HandoffDestination
 import com.mist.medicalmate.card.ui.RecordDestination
+import com.mist.medicalmate.card.ui.RecordDetailDestination
 import com.mist.medicalmate.card.ui.briefCardDestination
 import com.mist.medicalmate.card.ui.handoffDestination
 import com.mist.medicalmate.card.ui.recordDestination
+import com.mist.medicalmate.card.ui.recordDetailDestination
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
 import com.mist.medicalmate.home.ui.AccountActionCallbacks
 import com.mist.medicalmate.home.ui.HomeDestination
@@ -102,11 +105,7 @@ internal fun MedicalMateNavHost(
             onCardClick = { cardId -> navController.navigate(BriefCardDestination(cardId)) },
             onTabSelect = navController::selectTab,
         )
-        recordDestination(
-            onItemClick = { cardId -> navController.navigate(BriefCardDestination(cardId)) },
-            onStartIntakeClick = { navController.navigate(IntakeDestination) },
-            onTabSelect = navController::selectTab,
-        )
+        recordDestinations(navController)
         calendarDestination(
             onDayOpen = { date -> navController.navigate(CalendarDayDestination(date.toString())) },
             onAddClick = { },
@@ -122,6 +121,24 @@ internal fun MedicalMateNavHost(
         navController = navController,
         session = session,
         onboardingCompleted = onboardingCompleted,
+    )
+}
+
+/**
+ * 기록 탭과 그 아래 화면.
+ *
+ * 목록에서 상세로, 상세의 "카드 열기"에서 브리핑 카드로 이어진다. 이 묶음만 따로 뺀 이유는
+ * [MedicalMateNavHost]의 길이다. 화면이 늘면 도메인별로 이렇게 나눈다.
+ */
+private fun NavGraphBuilder.recordDestinations(navController: NavHostController) {
+    recordDestination(
+        onItemClick = { recordId -> navController.navigate(RecordDetailDestination(recordId)) },
+        onStartIntakeClick = { navController.navigate(IntakeDestination) },
+        onTabSelect = navController::selectTab,
+    )
+    recordDetailDestination(
+        onBackClick = { navController.popBackStack() },
+        onBriefCardClick = { cardId -> navController.navigate(BriefCardDestination(cardId)) },
     )
 }
 
