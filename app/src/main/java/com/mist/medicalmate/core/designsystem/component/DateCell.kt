@@ -62,7 +62,7 @@ fun MedicalMateDateCell(
     Box(
         modifier =
         modifier
-            .size(CellSize)
+            .size(MedicalMateDateCellSize)
             .selectable(
                 selected = selected,
                 enabled = enabled,
@@ -136,10 +136,16 @@ private fun RecordDot(selected: Boolean) {
     )
 }
 
-/** 문서 8.2가 지정한 시각 크기. hit area는 그리드가 맡는다. */
-private val CellSize = 46.dp
+/**
+ * Figma 마스터의 시각 크기. hit area는 그리드가 맡는다.
+ *
+ * 360 재단에서 46에서 42로 줄었다. 한 주가 콘텐츠 폭 320을 일곱으로 나눠 45.7이라
+ * 46이면 칸을 넘친다. 격자의 빈 칸도 같은 값을 써야 요일이 어긋나지 않아 공개한다.
+ */
+val MedicalMateDateCellSize = 42.dp
 
 /** 문서 8.2의 "5px dot". */
 private val RecordDotSize = 5.dp
 
-private val TodayBorderWidth = 1.5.dp
+/** Date Cell v2가 더한 오늘 표시 링. 색만으로 상태를 구분하던 것을 테두리로 보강한다. */
+private val TodayBorderWidth = 1.dp

@@ -92,7 +92,8 @@ private fun rememberTooltipPositionProvider(): PopupPositionProvider {
 }
 
 /** 트리거와 말풍선 사이. */
-private val TooltipGap: Dp = 4.dp
+/** 아이콘 아래 꼬리까지의 간격. Figma의 툴팁 배치 규칙이 2를 지정한다. */
+private val TooltipGap: Dp = 2.dp
 
 /** 화면 끝에 남기는 여백. 본문 여백과 같다. */
 private val TooltipMargin: Dp = 20.dp

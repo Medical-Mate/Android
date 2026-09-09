@@ -28,7 +28,7 @@ object MedicalMateSpace {
  * DESIGN.md 4.3 크기와 레이아웃.
  *
  * `size/touch-min` 48은 접근성 기준이다. 시각 규격이 더 작은 컨트롤(32 Icon Button,
- * 46 Date Cell)은 hit area를 따로 넓혀 48을 맞춘다(DESIGN.md 9절, 11.4).
+ * 42 Date Cell)은 hit area를 따로 넓혀 48을 맞춘다(DESIGN.md 9절, 11.4).
  *
  * OS 상태바와 홈 인디케이터 높이는 여기 두지 않는다. 플랫폼 safe-area를 쓴다.
  * [safeBottom]은 Figma 컴포넌트 내부의 시각 여백이라 기기 inset과 중복 적용하지 않는다.
@@ -46,11 +46,11 @@ object MedicalMateSize {
     val mic: Dp = 88.dp
 
     /** 기준 화면 폭. 이 값으로 레이아웃을 고정하지 않는다. 거터를 유지하고 콘텐츠를 Fill한다. */
-    val screenWidth: Dp = 390.dp
+    val screenWidth: Dp = 360.dp
     val gutter: Dp = 20.dp
 
-    /** 390 기준 콘텐츠 폭. 모든 기기에서 강제하지 않는다(DESIGN.md 4.4). */
-    val contentWidth: Dp = 350.dp
+    /** 360 기준 콘텐츠 폭. 모든 기기에서 강제하지 않는다(DESIGN.md 4.4). */
+    val contentWidth: Dp = 320.dp
     val safeBottom: Dp = 24.dp
     val navBarHeight: Dp = 56.dp
 

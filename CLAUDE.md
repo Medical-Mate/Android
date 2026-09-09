@@ -442,8 +442,10 @@ com.mist.medicalmate/
 | ViewModel 스코프 | 화면 ViewModel은 목적지 스코프. `SessionViewModel`만 Activity 스코프 |
 | 디자인 시스템 | DESIGN.md 1~7절 반영 완료. 시맨틱 41개, 타이포 15종, 토큰, 아이콘 45개, 로고 4개, Pretendard 4무게 |
 | 컴포넌트(8절) | 43종 구현. Figma 마스터 대응은 `COMPONENT_MAP.md` |
+| 컴포넌트 v2 | Figma `06 · 추가`가 9종을 v2로 재등록. KV Row·Tab Bar는 이미 반영. Nav Bar 하단 경계, Text Field 규격, Badge `Label/S`, Ghost→Outline 교체는 미적용 |
+| Elevation/Card | Figma가 2겹(y3 r10 8% + y1 r2 5%)으로 바뀜. 코드는 `Modifier.shadow` 한 겹 근사 |
 | Body Map | 미구현. 디자인 확정 대기(#51) |
-| Search Field | 미구현. Figma에 마스터가 있으나 DESIGN.md 8절에 항목이 없어 확정 확인 필요 |
+| Search Field | 미구현. Figma `06 · 추가` 섹션에 신규 3종으로 정식 등록됨(확정). DESIGN.md 8절에는 아직 항목 없음 |
 | 로그인 화면(1o) | 카카오 버튼 + 서버 토큰 교환 구현 완료. 토큰 적용 완료 |
 | 홈 화면(1n) | Figma 1n-1·1n-2 반영. `HomeViewModel`이 픽스처를 노출. 서버 미연동 |
 | 진입 · 온보딩(1a) | 스플래시(1a-1)와 온보딩 인트로(1a-2) 구현 완료. 스플래시는 최소 2초 노출 |
@@ -460,7 +462,7 @@ com.mist.medicalmate/
 | 탈퇴 후 재가입 | 온보딩 기록을 지우지 않아 온보딩이 건너뛰어진다. 서버 `onboardingCompleted`가 정본이 되면 사라지는 문제 |
 | Apple · 전화번호 로그인 | 백엔드 미지원. `User` 엔티티 식별자가 `kakaoId` 단독 |
 | 카카오 말풍선 심볼 에셋 | 없음. 콘솔의 도구 > 리소스 다운로드에서 받아야 함 |
-| 디자인 캔버스 | 현재 시안 390dp. 360dp로 다시 잡기로 결정됨. 확정되면 화면 배치를 재작업한다. 그때까지는 현행 시안대로 구현한다 |
+| 디자인 캔버스 | 360dp 재단 완료(활성 화면 전부 360x812, 콘텐츠 320, 거터 20). 화면은 fill-width라 코드 영향은 토큰뿐이었다. 미착수 화면(1e-2·1f-2·1q-2·1l-1~3)은 아직 390 |
 | 소셜 로그인 버튼 규격 | DESIGN.md 8.2는 radius 16, 카카오 가이드는 12. 색은 가이드, 크기는 문서를 따름 |
 | `mipmap-*` 래스터 아이콘 | 템플릿 그대로. API 24~25에서 쓰인다. Android Studio Image Asset으로 교체 필요 |
 | 오픈소스 고지 화면 | 없음. Pretendard가 OFL이라 스토어 배포 시 필요 |
