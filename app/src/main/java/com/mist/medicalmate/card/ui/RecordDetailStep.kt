@@ -29,6 +29,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.ShadowTint
+import com.mist.medicalmate.core.designsystem.component.MedicalMateQuoteBlock
 
 /**
  * 타임라인 한 단계의 내용. Figma `735:3850`.
@@ -59,7 +60,7 @@ internal fun RecordStepBlock(step: RecordStep.Block, onActionClick: (RecordStepA
             color = MedicalMateTheme.colors.fgDefault,
         )
         step.items.forEach { item -> StepItemRow(item) }
-        step.quote?.let { StepQuote(it) }
+        step.quote?.let { MedicalMateQuoteBlock(label = it.label, text = it.text) }
         step.action?.let { action ->
             StepOpen(label = action.label, onClick = { onActionClick(action.target) })
         }
@@ -100,35 +101,6 @@ private fun itemValueColor(tone: RecordDetailItem.Tone): Color = when (tone) {
     RecordDetailItem.Tone.DEFAULT -> MedicalMateTheme.colors.fgDefault
     RecordDetailItem.Tone.WARNING -> MedicalMateTheme.colors.fgWarning
     RecordDetailItem.Tone.LINK -> MedicalMateTheme.colors.fgPrimary
-}
-
-/**
- * 환자가 말한 원문. Figma `735:3861`.
- *
- * 면 색을 `Source Quote`의 원문 블록과 같은 `bg/primary-subtle`로 둔다. 화면이 달라도
- * "이건 내가 한 말"이라는 신호가 같아야 한다(문서 9절).
- */
-@Composable
-private fun StepQuote(quote: RecordQuote) {
-    Column(
-        modifier =
-        Modifier
-            .fillMaxWidth()
-            .background(MedicalMateTheme.colors.bgPrimarySubtle, MedicalMateRadius.sm)
-            .padding(MedicalMateSpace.s12),
-        verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4),
-    ) {
-        Text(
-            text = quote.label,
-            style = MedicalMateTheme.typography.labelS,
-            color = MedicalMateTheme.colors.fgPrimary,
-        )
-        Text(
-            text = quote.text,
-            style = MedicalMateTheme.typography.bodyS,
-            color = MedicalMateTheme.colors.fgDefault,
-        )
-    }
 }
 
 /**

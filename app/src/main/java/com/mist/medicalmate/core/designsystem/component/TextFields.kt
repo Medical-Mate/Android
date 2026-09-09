@@ -22,9 +22,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
@@ -126,6 +129,10 @@ fun MedicalMateTextField(
  * 텍스트에 쓰지 말라고 한다.
  *
  * 글자 크기 확대에서 잘리지 않도록 고정 높이를 주지 않는다(문서 3절).
+ *
+ * [maxLength]를 주면 아래에 글자 수가 붙는다. Text Area v2가 더한 Footer Row이고, 같은
+ * 줄의 오른쪽에 마이크가 들어가는 변이는 기본값이 꺼짐이라 아직 두지 않았다. 넘겨도
+ * 입력을 막지는 않는다. 적다가 잘리면 무엇이 사라졌는지 알 수 없어서, 남은 양만 알린다.
  */
 @Composable
 fun MedicalMateTextArea(
@@ -134,6 +141,7 @@ fun MedicalMateTextArea(
     modifier: Modifier = Modifier,
     placeholder: String? = null,
     enabled: Boolean = true,
+    maxLength: Int? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val focused by interactionSource.collectIsFocusedAsState()
@@ -151,16 +159,42 @@ fun MedicalMateTextArea(
         contentPadding = TextAreaPadding,
         modifier = modifier,
     ) {
-        FieldText(
-            value = value,
-            onValueChange = onValueChange,
-            placeholder = placeholder,
-            enabled = enabled,
-            singleLine = false,
-            interactionSource = interactionSource,
-            keyboardType = KeyboardType.Text,
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8)) {
+            FieldText(
+                value = value,
+                onValueChange = onValueChange,
+                placeholder = placeholder,
+                enabled = enabled,
+                singleLine = false,
+                interactionSource = interactionSource,
+                keyboardType = KeyboardType.Text,
+            )
+            maxLength?.let { Counter(length = value.length, maxLength = it, enabled = enabled) }
+        }
     }
+}
+
+/**
+ * 글자 수.
+ *
+ * 오른쪽에 둔다. 마이크가 함께 들어오면 카운터가 왼쪽으로 가고 마이크가 그 자리에 붙는다.
+ * 한도를 넘으면 경고색으로 바뀐다. 막지 않으므로 색이 유일한 신호다.
+ */
+@Composable
+private fun Counter(length: Int, maxLength: Int, enabled: Boolean) {
+    val colors = MedicalMateTheme.colors
+    Text(
+        text = stringResource(R.string.text_area_counter, length, maxLength),
+        style = MedicalMateTheme.typography.bodyS,
+        color =
+        when {
+            !enabled -> colors.fgDisabled
+            length > maxLength -> colors.fgDanger
+            else -> colors.fgSubtle
+        },
+        textAlign = TextAlign.End,
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 private class FieldStyle(val container: Color, val border: BorderStroke?)

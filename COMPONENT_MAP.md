@@ -48,6 +48,7 @@ label은 `Compose`를 쓴다.
 | `Overlay Scrim` | `335:1189` | `MedicalMateOverlayScrim` | `app/src/main/java/com/mist/medicalmate/core/designsystem/component/OverlayScrim.kt` |
 | `Progress Indicator` | `334:1139` | `MedicalMateProgressIndicator` | `app/src/main/java/com/mist/medicalmate/core/designsystem/component/ProgressIndicator.kt` |
 | `Radio` | `311:858` | `MedicalMateRadio` | `app/src/main/java/com/mist/medicalmate/core/designsystem/component/Selection.kt` |
+| `Search Field` | `590:1307` | `MedicalMateSearchField` | `app/src/main/java/com/mist/medicalmate/core/designsystem/component/SearchField.kt` |
 | `Section Header` | `334:1156` | `MedicalMateSectionHeader` | `app/src/main/java/com/mist/medicalmate/core/designsystem/component/Rows.kt` |
 | `Segmented Control` | `334:1150` | `MedicalMateSegmentedControl` | `app/src/main/java/com/mist/medicalmate/core/designsystem/component/SegmentedControl.kt` |
 | `Severity Readout` | `333:1126` | `MedicalMateSeverityReadout` | `app/src/main/java/com/mist/medicalmate/core/designsystem/component/SeverityReadout.kt` |
@@ -70,7 +71,6 @@ label은 `Compose`를 쓴다.
 | Figma 마스터 | 노드 id | 상태 |
 | -- | -- | -- |
 | `Body Map` | `387:4164` | #51 — 디자인 확정 대기 |
-| `Search Field` | `590:1307` | 문서 8절 항목 없음. 확정 확인 필요 |
 
 ## 표를 다시 만드는 방법
 
