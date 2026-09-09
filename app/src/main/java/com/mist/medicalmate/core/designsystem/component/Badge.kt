@@ -77,11 +77,10 @@ fun MedicalMateBadge(
             modifier = Modifier.padding(horizontal = MedicalMateSpace.s8),
             contentAlignment = Alignment.Center,
         ) {
-            Text(text = label, style = MedicalMateTheme.typography.labelM)
+            Text(text = label, style = MedicalMateTheme.typography.labelS)
         }
     }
 }
 
-/** 문서 8.3이 지정한 높이. Scale에 없는 값이다. */
 /** 문서 8.3의 높이. 큰 글꼴에서는 글자에 맞춰 늘어난다. */
 private val BadgeHeight = 26.dp

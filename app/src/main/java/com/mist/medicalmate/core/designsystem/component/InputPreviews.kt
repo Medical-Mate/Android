@@ -90,11 +90,10 @@ private fun SeveritySliderAllPreview() {
     }
 }
 
-@Preview(showBackground = true, name = "Severity Scale / Select", widthDp = 390, heightDp = 700)
+@Preview(showBackground = true, name = "Severity Select", widthDp = 390, heightDp = 700)
 @Composable
-private fun SeverityAlternativesPreview() {
+private fun SeveritySelectPreview() {
     ComponentPreviewSurface(gap = MedicalMateSpace.s16) {
-        MedicalMateSeverityScale(severity = MedicalMateSeverity.LEVEL_2, onSeverityChange = {})
         MedicalMateSeveritySelect(severity = MedicalMateSeverity.LEVEL_4, onSeverityChange = {})
     }
 }

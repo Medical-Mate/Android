@@ -161,7 +161,11 @@ internal fun ChatInput(state: IntakeUiState, callbacks: IntakeCallbacks) {
                 onValueChange = callbacks.onDraftChange,
                 placeholder = stringResource(R.string.intake_chat_placeholder),
                 trailing = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Actions 슬롯. 버튼끼리는 4로 붙인다.
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4),
+                    ) {
                         MedicalMateIconButton(
                             onClick = callbacks.onVoiceClick,
                             icon = MedicalMateIcons.Mic,

@@ -47,7 +47,7 @@ fun CalendarDayScreen(state: CalendarDayUiState, callbacks: CalendarDayCallbacks
         modifier =
         modifier
             .fillMaxSize()
-            .background(MedicalMateTheme.colors.bgCanvas),
+            .background(MedicalMateTheme.colors.bgSurface),
     ) {
         MedicalMateNavBar(
             title = state.date.format(dayFormat),

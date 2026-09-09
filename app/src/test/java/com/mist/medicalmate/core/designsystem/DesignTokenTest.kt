@@ -164,9 +164,9 @@ class DesignTokenTest {
             assertEquals(48.dp, controlMd)
             assertEquals(56.dp, controlLg)
             assertEquals(88.dp, mic)
-            assertEquals(390.dp, screenWidth)
+            assertEquals(360.dp, screenWidth)
             assertEquals(20.dp, gutter)
-            assertEquals(350.dp, contentWidth)
+            assertEquals(320.dp, contentWidth)
             assertEquals(24.dp, safeBottom)
             assertEquals(56.dp, navBarHeight)
         }

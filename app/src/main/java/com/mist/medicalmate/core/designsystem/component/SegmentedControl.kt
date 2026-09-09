@@ -1,5 +1,6 @@
 package com.mist.medicalmate.core.designsystem.component
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -14,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
@@ -76,6 +78,9 @@ private fun Segment(label: String, selected: Boolean, onClick: () -> Unit, modif
         shape = MedicalMateRadius.sm,
         color = if (selected) colors.bgSurface else colors.bgSubtle,
         contentColor = if (selected) colors.fgDefault else colors.fgSubtle,
+        // Segmented Control v2가 더한 테두리. 흰 면만으로는 회색 트랙과의 대비가 3:1에
+        // 못 미쳐서 고른 칸의 경계가 보이지 않았다.
+        border = if (selected) BorderStroke(SelectedBorderWidth, colors.borderStrong) else null,
         modifier =
         modifier
             .fillMaxHeight()
@@ -94,6 +99,8 @@ private fun Segment(label: String, selected: Boolean, onClick: () -> Unit, modif
         }
     }
 }
+
+private val SelectedBorderWidth = 1.dp
 
 /** 문서 8.2의 inset padding 4. */
 private val InsetPadding = MedicalMateSpace.s4

@@ -128,7 +128,7 @@ MedicalMate/
 │       │   ├── MedicalMateApplication.kt  @HiltAndroidApp, KakaoSdk.init
 │       │   ├── core/
 │       │   │   ├── designsystem/          토큰, 타이포, 아이콘, 로고
-│       │   │   │   └── component/        8절 컴포넌트 43종
+│       │   │   │   └── component/        8절 컴포넌트 42종
 │       │   │   └── network/               Retrofit·OkHttp 설정, ApiResult
 │       │   ├── navigation/                단일 NavHost, 세션 경계 동기화, 하단 탭 이동
 │       │   ├── auth/  data/ ui/           1o 로그인, 1a-1 스플래시, 세션 복구
@@ -440,10 +440,12 @@ com.mist.medicalmate/
 | 네비게이션 | Navigation Compose 2.10.0 확정. 단일 `NavHost` + 타입 세이프 라우트. 목적지 12개 |
 | 화면 전환 | `MedicalMateNavHost`. `MainActivity`는 세션 확인 중 로딩만 담당 |
 | ViewModel 스코프 | 화면 ViewModel은 목적지 스코프. `SessionViewModel`만 Activity 스코프 |
-| 디자인 시스템 | DESIGN.md 1~7절 반영 완료. 시맨틱 41개, 타이포 15종, 토큰, 아이콘 45개, 로고 4개, Pretendard 4무게 |
-| 컴포넌트(8절) | 43종 구현. Figma 마스터 대응은 `COMPONENT_MAP.md` |
+| 디자인 시스템 | DESIGN.md 1~7절 반영 완료. 시맨틱 41개, 타이포 15종, 토큰, 아이콘 46개(arrow-up 추가), 로고 4개, Pretendard 4무게. DESIGN.md 3.2는 Badge를 `Label/M`으로 적었지만 Figma 마스터는 `Label/S`다. 코드는 Figma를 따랐고 문서는 디자인 트랙 확인 필요 |
+| 컴포넌트(8절) | 42종 구현. Figma 마스터 대응은 `COMPONENT_MAP.md`. `Severity Scale`은 Figma에서 마스터가 삭제돼 함께 지웠다 |
+| 컴포넌트 v2 | Figma `06 · 추가`가 9종을 v2로 재등록. KV Row·Tab Bar·Nav Bar·Date Cell·Text Field·Segmented Control 반영 완료. Text Area의 Footer Row(카운터·마이크), Toast의 Timer, List Row의 Summary는 모두 기본 false라 미구현. Ghost→Outline은 구현된 화면에서 해당 지점이 여전히 텍스트형이라 적용 대상 없음(F·H 플로우에서 화면별로 확인) |
+| Elevation/Card | Figma가 2겹(y3 r10 8% + y1 r2 5%)으로 바뀜. 코드는 `Modifier.shadow` 한 겹 근사 |
 | Body Map | 미구현. 디자인 확정 대기(#51) |
-| Search Field | 미구현. Figma에 마스터가 있으나 DESIGN.md 8절에 항목이 없어 확정 확인 필요 |
+| Search Field | 미구현. Figma `06 · 추가` 섹션에 신규 3종으로 정식 등록됨(확정). DESIGN.md 8절에는 아직 항목 없음 |
 | 로그인 화면(1o) | 카카오 버튼 + 서버 토큰 교환 구현 완료. 토큰 적용 완료 |
 | 홈 화면(1n) | Figma 1n-1·1n-2 반영. `HomeViewModel`이 픽스처를 노출. 서버 미연동 |
 | 진입 · 온보딩(1a) | 스플래시(1a-1)와 온보딩 인트로(1a-2) 구현 완료. 스플래시는 최소 2초 노출 |
@@ -460,7 +462,7 @@ com.mist.medicalmate/
 | 탈퇴 후 재가입 | 온보딩 기록을 지우지 않아 온보딩이 건너뛰어진다. 서버 `onboardingCompleted`가 정본이 되면 사라지는 문제 |
 | Apple · 전화번호 로그인 | 백엔드 미지원. `User` 엔티티 식별자가 `kakaoId` 단독 |
 | 카카오 말풍선 심볼 에셋 | 없음. 콘솔의 도구 > 리소스 다운로드에서 받아야 함 |
-| 디자인 캔버스 | 현재 시안 390dp. 360dp로 다시 잡기로 결정됨. 확정되면 화면 배치를 재작업한다. 그때까지는 현행 시안대로 구현한다 |
+| 디자인 캔버스 | 360dp 재단 완료(활성 화면 전부 360x812, 콘텐츠 320, 거터 20). 화면은 fill-width라 코드 영향은 토큰뿐이었다. 미착수 화면(1e-2·1f-2·1q-2·1l-1~3)은 아직 390 |
 | 소셜 로그인 버튼 규격 | DESIGN.md 8.2는 radius 16, 카카오 가이드는 12. 색은 가이드, 크기는 문서를 따름 |
 | `mipmap-*` 래스터 아이콘 | 템플릿 그대로. API 24~25에서 쓰인다. Android Studio Image Asset으로 교체 필요 |
 | 오픈소스 고지 화면 | 없음. Pretendard가 OFL이라 스토어 배포 시 필요 |

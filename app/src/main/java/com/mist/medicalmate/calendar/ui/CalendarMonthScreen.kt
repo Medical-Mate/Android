@@ -18,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
 import com.mist.medicalmate.core.designsystem.MedicalMateScreenPreviews
@@ -29,6 +28,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateBadge
 import com.mist.medicalmate.core.designsystem.component.MedicalMateBadgeTone
 import com.mist.medicalmate.core.designsystem.component.MedicalMateCard
 import com.mist.medicalmate.core.designsystem.component.MedicalMateDateCell
+import com.mist.medicalmate.core.designsystem.component.MedicalMateDateCellSize
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButtonStyle
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
@@ -65,7 +65,7 @@ fun CalendarMonthScreen(
         modifier =
         modifier
             .fillMaxSize()
-            .background(MedicalMateTheme.colors.bgCanvas),
+            .background(MedicalMateTheme.colors.bgSurface),
     ) {
         MedicalMateNavBar(
             title = stringResource(R.string.calendar_title),
@@ -191,7 +191,8 @@ private fun MonthGrid(state: CalendarUiState, onDayClick: (LocalDate) -> Unit) {
                                 onClick = { onDayClick(date) },
                             )
                         } else {
-                            Box(modifier = Modifier.size(EmptyCellSize))
+                            // 빈 칸도 자리를 차지해야 요일이 어긋나지 않는다.
+                            Box(modifier = Modifier.size(MedicalMateDateCellSize))
                         }
                     }
                 }
@@ -270,9 +271,6 @@ private const val DAYS_IN_WEEK = 7
 
 /** "9월 12일 (금)" 형식. 홈의 일정 줄과 같은 형식이다. */
 private val dayFormat = DateTimeFormatter.ofPattern("M월 d일 (E)")
-
-/** 빈 칸도 자리를 차지해야 요일이 어긋나지 않는다. 날짜 칸과 같은 크기다. */
-private val EmptyCellSize = 44.dp
 
 @MedicalMateScreenPreviews
 @Composable

@@ -35,7 +35,10 @@ private val MedicalMateColorScheme =
             onTertiary = fgOnPrimary,
             tertiaryContainer = bgPrimarySubtle,
             onTertiaryContainer = fgPrimary,
-            background = bgCanvas,
+            // 화면 바닥. Figma가 bg/canvas를 bg/surface로 전면 재바인딩해서 화면 바닥이
+            // 모두 흰색이 됐다. Scaffold가 이 슬롯을 컨테이너 색으로 쓰므로 화면이 자기
+            // 배경을 그리기 전 인셋 영역에 옛 회색이 남지 않게 여기도 함께 옮긴다.
+            background = bgSurface,
             onBackground = fgDefault,
             surface = bgSurface,
             onSurface = fgDefault,

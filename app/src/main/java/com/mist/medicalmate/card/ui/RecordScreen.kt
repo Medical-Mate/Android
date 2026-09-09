@@ -54,7 +54,7 @@ fun RecordScreen(
         modifier =
         modifier
             .fillMaxSize()
-            .background(MedicalMateTheme.colors.bgCanvas),
+            .background(MedicalMateTheme.colors.bgSurface),
     ) {
         MedicalMateNavBar(
             title = stringResource(R.string.record_title),
@@ -147,7 +147,7 @@ private fun RecordRow(item: RecordItem, onClick: () -> Unit) {
                 ) {
                     Text(
                         text = item.title,
-                        style = MedicalMateTheme.typography.bodyLStrong,
+                        style = MedicalMateTheme.typography.headingS,
                         color = MedicalMateTheme.colors.fgDefault,
                     )
                     MedicalMateBadge(
@@ -168,7 +168,7 @@ private fun RecordRow(item: RecordItem, onClick: () -> Unit) {
                 item.resumeLabel?.let {
                     Text(
                         text = it,
-                        style = MedicalMateTheme.typography.bodySStrong,
+                        style = MedicalMateTheme.typography.bodyS,
                         color = MedicalMateTheme.colors.fgWarning,
                     )
                 }

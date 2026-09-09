@@ -10,9 +10,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateGlass
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
@@ -63,7 +67,8 @@ fun MedicalMateNavBar(
         modifier
             .fillMaxWidth()
             .heightIn(min = MedicalMateSize.navBarHeight)
-            .background(background),
+            .background(background)
+            .bottomBorder(colors.borderSubtle),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(modifier = Modifier.width(MedicalMateSize.touchMin), contentAlignment = Alignment.Center) {
@@ -119,3 +124,19 @@ private fun LeadingSlot(leading: MedicalMateNavLeading, onClick: (() -> Unit)?) 
         )
     }
 }
+
+/**
+ * 하단 경계.
+ *
+ * Nav Bar v2가 더한 선이다. 스크롤할 때 크롬과 콘텐츠의 경계를 잡아준다. Glass 표면에서는
+ * 면이 반투명해서 선이 없으면 밑의 글이 바 안으로 흘러 들어온 것처럼 보인다.
+ *
+ * `Modifier.border`는 네 변을 다 두르므로 아래만 그린다.
+ */
+private fun Modifier.bottomBorder(color: Color): Modifier = this.drawBehind {
+    val stroke = BottomBorderWidth.toPx()
+    val y = size.height - stroke / 2f
+    drawLine(color = color, start = Offset(0f, y), end = Offset(size.width, y), strokeWidth = stroke)
+}
+
+private val BottomBorderWidth = 1.dp
