@@ -38,6 +38,14 @@ import com.mist.medicalmate.profile.ui.ProfileSetupDestination
 import com.mist.medicalmate.profile.ui.onboardingIntroDestination
 import com.mist.medicalmate.profile.ui.profileCompleteDestination
 import com.mist.medicalmate.profile.ui.profileSetupDestination
+import com.mist.medicalmate.visit.ui.HospitalPickDestination
+import com.mist.medicalmate.visit.ui.VisitNoteDestination
+import com.mist.medicalmate.visit.ui.VisitRecordDestination
+import com.mist.medicalmate.visit.ui.VisitSummaryDestination
+import com.mist.medicalmate.visit.ui.hospitalPickDestination
+import com.mist.medicalmate.visit.ui.visitNoteDestination
+import com.mist.medicalmate.visit.ui.visitRecordDestination
+import com.mist.medicalmate.visit.ui.visitSummaryDestination
 import kotlinx.coroutines.flow.drop
 
 /**
@@ -113,14 +121,44 @@ internal fun MedicalMateNavHost(
         )
         calendarDayDestination(
             onCardOpen = { cardId -> navController.navigate(BriefCardDestination(cardId)) },
+            onRecordAdd = { navController.navigate(HospitalPickDestination) },
             onExit = { navController.popBackStack() },
         )
+        visitDestinations(navController)
     }
 
     SessionBoundarySync(
         navController = navController,
         session = session,
         onboardingCompleted = onboardingCompleted,
+    )
+}
+
+/**
+ * 진료 후 기록 플로우. Figma 흐름은 `1m → 1p → 1q-1 → 1k`다.
+ *
+ * 캘린더 일자 화면의 "진료 후 기록하기"에서 들어온다. 진료가 끝난 날에 그 날짜를 열어
+ * 적는 것이 자연스러운 경로다.
+ *
+ * 마지막 화면에서 홈으로 나갈 때 백스택을 비운다. 저장이 끝난 흐름을 뒤로 가기로 다시
+ * 밟으면 같은 기록을 두 번 저장하게 된다.
+ */
+private fun NavGraphBuilder.visitDestinations(navController: NavHostController) {
+    hospitalPickDestination(
+        onPicked = { hospitalId -> navController.navigate(VisitNoteDestination(hospitalId)) },
+        onExit = { navController.popBackStack() },
+    )
+    visitNoteDestination(
+        onSaved = { navController.navigate(VisitRecordDestination(hospitalId = NEW_VISIT_ID)) },
+        onExit = { navController.popBackStack() },
+    )
+    visitRecordDestination(
+        onSaved = { navController.navigate(VisitSummaryDestination(visitId = NEW_VISIT_ID)) },
+        onExit = { navController.popBackStack() },
+    )
+    visitSummaryDestination(
+        onHome = { navController.resetTo(HomeDestination()) },
+        onExit = { navController.popBackStack() },
     )
 }
 
@@ -149,6 +187,13 @@ private fun NavGraphBuilder.recordDestinations(navController: NavHostController)
  * 카드 화면은 지금 id를 보지 않고 픽스처를 그린다.
  */
 private const val NEW_CARD_ID = "new"
+
+/**
+ * 방금 만든 방문의 임시 id.
+ *
+ * 메모를 저장하면 서버가 방문을 만들고 그 id를 준다. 그 호출이 아직 없어서 자리만 채운다.
+ */
+private const val NEW_VISIT_ID = "new"
 
 /**
  * 세션 상태가 가리키는 목적지.

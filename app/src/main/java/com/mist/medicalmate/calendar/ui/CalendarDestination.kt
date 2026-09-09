@@ -35,10 +35,19 @@ internal fun NavGraphBuilder.calendarDestination(
     }
 }
 
-internal fun NavGraphBuilder.calendarDayDestination(onCardOpen: (String) -> Unit, onExit: () -> Unit) {
+internal fun NavGraphBuilder.calendarDayDestination(
+    onCardOpen: (String) -> Unit,
+    onRecordAdd: () -> Unit,
+    onExit: () -> Unit,
+) {
     composable<CalendarDayDestination> { entry ->
         val date = LocalDate.parse(entry.toRoute<CalendarDayDestination>().date)
-        CalendarDayRoute(date = date, onCardOpen = onCardOpen, onExit = onExit)
+        CalendarDayRoute(
+            date = date,
+            onCardOpen = onCardOpen,
+            onRecordAdd = onRecordAdd,
+            onExit = onExit,
+        )
     }
 }
 
@@ -80,6 +89,7 @@ private fun CalendarMonthRoute(
 private fun CalendarDayRoute(
     date: LocalDate,
     onCardOpen: (String) -> Unit,
+    onRecordAdd: () -> Unit,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: CalendarViewModel = hiltViewModel(),
@@ -90,6 +100,7 @@ private fun CalendarDayRoute(
         CalendarDayCallbacks(
             onBackClick = onExit,
             onCardOpenClick = onCardOpen,
+            onRecordAddClick = onRecordAdd,
         ),
         modifier = modifier,
     )

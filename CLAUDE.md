@@ -128,7 +128,7 @@ MedicalMate/
 │       │   ├── MedicalMateApplication.kt  @HiltAndroidApp, KakaoSdk.init
 │       │   ├── core/
 │       │   │   ├── designsystem/          토큰, 타이포, 아이콘, 로고
-│       │   │   │   └── component/        8절 컴포넌트 42종
+│       │   │   │   └── component/        8절 컴포넌트 43종
 │       │   │   └── network/               Retrofit·OkHttp 설정, ApiResult
 │       │   ├── navigation/                단일 NavHost, 세션 경계 동기화, 하단 탭 이동
 │       │   ├── auth/  data/ ui/           1o 로그인, 1a-1 스플래시, 세션 복구
@@ -136,6 +136,7 @@ MedicalMate/
 │       │   ├── intake/  ui/               1l·1c·1d·1i 증상 정리
 │       │   ├── card/  ui/                 1e 브리핑 카드, 1f 진료실 화면, 1j 기록
 │       │   ├── calendar/  ui/             1r 캘린더
+│       │   ├── visit/  ui/                1m 병원 찾기, 1p 메모, 1q 진료 후 기록, 1k 정리
 │       │   └── home/  ui/                 1n 홈
 │       ├── test/                          JVM 유닛 테스트
 │       └── androidTest/                   계측 테스트 (CI에서 실행하지 않음)
@@ -291,10 +292,10 @@ com.mist.medicalmate/
 ├── auth/      ui/ data/    1o 로그인
 ├── home/      ui/ data/    1n 홈
 ├── profile/   ui/ data/    1a 1b 온보딩
-├── intake/    ui/ data/    1l 1c 1m 1d 문답
+├── intake/    ui/ data/    1l 1c 1d 1i 문답
 ├── card/      ui/ data/    1e 브리핑 카드
 ├── handoff/   ui/          1g 진료실 전달
-└── visit/     ui/ data/    1p 1q 사후 기록
+└── visit/     ui/ data/    1m 1p 1q 1k 사후 기록
 ```
 
 도메인 이름은 `Medical-Mate/Backend`의 패키지(`auth`, `profile`, `intake`, `card`,
@@ -432,26 +433,27 @@ com.mist.medicalmate/
 
 | 항목 | 상태 |
 | -- | -- |
-| 유닛 테스트 | `LoginViewModel` 13건, `SessionViewModel` 15건, `HomeViewModel` 9건, `IntakeViewModel` 12건, `BriefCardViewModel` 8건, `RecordDetailViewModel` 10건, `CalendarViewModel` 7건, `ProfileSetupViewModel` 7건, `HomeSchedule` 4건, 템플릿 1개 |
+| 유닛 테스트 | `LoginViewModel` 13건, `SessionViewModel` 15건, `HomeViewModel` 9건, `IntakeViewModel` 12건, `BriefCardViewModel` 8건, `RecordDetailViewModel` 10건, `HospitalPickViewModel` 10건, `VisitRecordViewModel` 11건, `VisitNoteViewModel` 6건, `CalendarViewModel` 7건, `ProfileSetupViewModel` 7건, `HomeSchedule` 4건, 템플릿 1개 |
 | 네비게이션 테스트 | 없음. `NavHost`는 계측 테스트가 필요하고 CI가 androidTest를 실행하지 않음 |
 | 아키텍처 패턴 | MVVM 확정. UseCase는 필요할 때만 |
 | DI | Hilt 확정 |
 | 패키지 구조 | 기능 우선 확정. 도메인명은 Backend와 일치 |
-| 네비게이션 | Navigation Compose 2.10.0 확정. 단일 `NavHost` + 타입 세이프 라우트. 목적지 12개 |
+| 네비게이션 | Navigation Compose 2.10.0 확정. 단일 `NavHost` + 타입 세이프 라우트. 목적지 16개 |
 | 화면 전환 | `MedicalMateNavHost`. `MainActivity`는 세션 확인 중 로딩만 담당 |
 | ViewModel 스코프 | 화면 ViewModel은 목적지 스코프. `SessionViewModel`만 Activity 스코프 |
 | 디자인 시스템 | DESIGN.md 1~7절 반영 완료. 시맨틱 41개, 타이포 15종, 토큰, 아이콘 46개(arrow-up 추가), 로고 4개, Pretendard 4무게. DESIGN.md 3.2는 Badge를 `Label/M`으로 적었지만 Figma 마스터는 `Label/S`다. 코드는 Figma를 따랐고 문서는 디자인 트랙 확인 필요 |
-| 컴포넌트(8절) | 42종 구현. Figma 마스터 대응은 `COMPONENT_MAP.md`. `Severity Scale`은 Figma에서 마스터가 삭제돼 함께 지웠다 |
+| 컴포넌트(8절) | 43종 구현. Figma 마스터 대응은 `COMPONENT_MAP.md`. `Severity Scale`은 Figma에서 마스터가 삭제돼 함께 지웠다 |
 | 컴포넌트 v2 | Figma `06 · 추가`가 9종을 v2로 재등록. KV Row·Tab Bar·Nav Bar·Date Cell·Text Field·Segmented Control 반영 완료. Text Area의 Footer Row(카운터·마이크), Toast의 Timer, List Row의 Summary는 모두 기본 false라 미구현. Ghost→Outline은 구현된 화면에서 해당 지점이 여전히 텍스트형이라 적용 대상 없음(F·H 플로우에서 화면별로 확인) |
 | Elevation/Card | Figma가 2겹(y3 r10 8% + y1 r2 5%)으로 바뀜. 코드는 `Modifier.shadow` 한 겹 근사 |
 | Body Map | 미구현. 디자인 확정 대기(#51) |
-| Search Field | 미구현. Figma `06 · 추가` 섹션에 신규 3종으로 정식 등록됨(확정). DESIGN.md 8절에는 아직 항목 없음 |
+| Search Field | 구현 완료(1m 병원 찾기에서 사용). DESIGN.md 8절에는 아직 항목이 없어 값은 Figma 마스터를 따랐다 |
 | 로그인 화면(1o) | 카카오 버튼 + 서버 토큰 교환 구현 완료. 토큰 적용 완료 |
 | 홈 화면(1n) | Figma 1n-1·1n-2 반영. `HomeViewModel`이 픽스처를 노출. 서버 미연동 |
 | 진입 · 온보딩(1a) | 스플래시(1a-1)와 온보딩 인트로(1a-2) 구현 완료. 스플래시는 최소 2초 노출 |
 | 신상정보 입력(1b) | 1b-1~1b-3 화면과 1b-4 완료 모션, 홈 등록 완료 토스트까지 구현. **서버 저장 미연동** |
 | 증상 정리(1c·1d·1i) | 네 단계 화면 구현. AI 응답과 음성 인식 미연동. 1단계 아픈 부위는 인체도 시안 대기로 버튼만 |
 | 브리핑 카드(1e·1f) | 카드 읽기·전체 수정·진료실 화면 구현. 카드 내용은 픽스처. AI 응답과 저장 미연동 |
+| 진료 후 기록(1m·1p·1q·1k) | 네 화면 구현. 병원 검색·메모·자동 분류·정리. 내용은 픽스처이고 AI 분류와 저장은 미연동. 캘린더 일자의 "진료 후 기록하기"에서 들어간다 |
 | 기록·캘린더(1j·1r) | 다섯 화면 구현. 목록에서 기록 상세(1j-3)로, 상세의 카드 열기에서 브리핑 카드로 이어짐. 목록·상세·일정은 픽스처. 할 일 체크와 일정 추가는 저장 미연동 |
 | 하단 탭 | 기록·홈·캘린더 세 탭 연결 완료. 내 정보는 탭이 아니라 홈 헤더 아바타로 진입(1s 미구현) |
 | 로그아웃 · 회원탈퇴 | 구현 완료. 홈 화면에 임시 진입점. 설정 화면 생기면 이동 |
