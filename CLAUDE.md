@@ -133,7 +133,7 @@ MedicalMate/
 │       │   ├── navigation/                단일 NavHost, 세션 경계 동기화, 하단 탭 이동
 │       │   ├── auth/  data/ ui/           1o 로그인, 1a-1 스플래시, 세션 복구
 │       │   ├── profile/  data/ ui/        1a-2 온보딩, 1b 신상정보, 1s 내 정보, 계정 동작
-│       │   ├── intake/  ui/               1l·1c·1d·1i 증상 정리
+│       │   ├── intake/  ui/               1l 인체도, 1c·1d·1i 증상 정리
 │       │   ├── card/  ui/                 1e 브리핑 카드, 1f 진료실 화면, 1j 기록
 │       │   ├── calendar/  ui/             1r 캘린더
 │       │   ├── visit/  ui/                1m 병원 찾기, 1p 메모, 1q 진료 후 기록, 1k 정리
@@ -439,7 +439,7 @@ com.mist.medicalmate/
 
 | 항목 | 상태 |
 | -- | -- |
-| 유닛 테스트 | `LoginViewModel` 13건, `SessionViewModel` 17건, `HomeViewModel` 9건, `IntakeViewModel` 12건, `BriefCardViewModel` 8건, `RecordDetailViewModel` 10건, `MyProfileViewModel` 5건, `HealthEditViewModel` 11건, `HospitalPickViewModel` 10건, `VisitRecordViewModel` 11건, `VisitNoteViewModel` 6건, `CalendarViewModel` 7건, `ProfileSetupViewModel` 7건, `HomeSchedule` 4건, `TokenAuthenticator` 7건, 템플릿 1개 |
+| 유닛 테스트 | `LoginViewModel` 13건, `SessionViewModel` 17건, `HomeViewModel` 9건, `IntakeViewModel` 18건, `BodyMapGeometry` 15건, `BodyMapLayout` 7건, `BriefCardViewModel` 8건, `RecordDetailViewModel` 10건, `MyProfileViewModel` 5건, `HealthEditViewModel` 11건, `HospitalPickViewModel` 10건, `VisitRecordViewModel` 11건, `VisitNoteViewModel` 6건, `CalendarViewModel` 7건, `ProfileSetupViewModel` 7건, `HomeSchedule` 4건, `TokenAuthenticator` 7건, 템플릿 1개 |
 | 네비게이션 테스트 | 없음. `NavHost`는 계측 테스트가 필요하고 CI가 androidTest를 실행하지 않음 |
 | 아키텍처 패턴 | MVVM 확정. UseCase는 필요할 때만 |
 | DI | Hilt 확정 |
@@ -451,13 +451,17 @@ com.mist.medicalmate/
 | 컴포넌트(8절) | 43종 구현. Figma 마스터 대응은 `COMPONENT_MAP.md`. `Severity Scale`은 Figma에서 마스터가 삭제돼 함께 지웠다 |
 | 컴포넌트 v2 | Figma `06 · 추가`가 9종을 v2로 재등록. KV Row·Tab Bar·Nav Bar·Date Cell·Text Field·Segmented Control 반영 완료. Text Area의 Footer Row(카운터·마이크), Toast의 Timer, List Row의 Summary는 모두 기본 false라 미구현. Ghost→Outline은 구현된 화면에서 해당 지점이 여전히 텍스트형이라 적용 대상 없음(F·H 플로우에서 화면별로 확인) |
 | Elevation/Card | Figma가 2겹(y3 r10 8% + y1 r2 5%)으로 바뀜. 코드는 `Modifier.shadow` 한 겹 근사 |
-| Body Map | 미구현. 디자인 확정 대기(#51) |
+| Body Map | 구현 완료(#51). `core/designsystem/component`가 아니라 `intake/ui`에 있다. 화면 하나에서만 쓰고 좌표표·이미지 9장이 딸려 있어서 디자인 시스템에 올리지 않았다 |
+| 인체도 좌표 | `BodyMapGeometry.kt`는 디자인 트랙의 `humanmap_coords.json`(schema 3.0)에서 생성한 파일이다. **손으로 고치지 않는다.** 좌표가 바뀌면 새 파일로 다시 생성한다 |
+| 인체도 표시 크기 | 48dp 조작 영역이 겹치지 않는 최소 크기를 좌표에서 계산한다(`BodyMapLayout.kt`). 전신 505dp, 확대 최대 505dp. 시안 값을 받아 적지 않은 이유는 좌표가 바뀌면 필요한 크기도 바뀌기 때문이다 |
+| 인체도 미해결 | 좌표표의 `SUR:041 허리 가운데`가 천골 위치(신장 58%)에 있다. 허리 옆(62%)과 같은 높이로 올려달라고 디자인 트랙에 넘겼다. 데이터만 교체하면 되는 건이다 |
 | Search Field | 구현 완료(1m 병원 찾기에서 사용). DESIGN.md 8절에는 아직 항목이 없어 값은 Figma 마스터를 따랐다 |
 | 로그인 화면(1o) | 카카오 버튼 + 서버 토큰 교환 구현 완료. 토큰 적용 완료 |
 | 홈 화면(1n) | Figma 1n-1·1n-2 반영. `HomeViewModel`이 픽스처를 노출. 서버 미연동 |
 | 진입 · 온보딩(1a) | 스플래시(1a-1)와 온보딩 인트로(1a-2) 구현 완료. 스플래시는 최소 2초 노출 |
 | 신상정보 입력(1b) | 1b-1~1b-3 화면과 1b-4 완료 모션, 홈 등록 완료 토스트까지 구현. **서버 저장 미연동** |
-| 증상 정리(1c·1d·1i) | 네 단계 화면 구현. AI 응답과 음성 인식 미연동. 1단계 아픈 부위는 인체도 시안 대기로 버튼만 |
+| 증상 정리(1l·1c·1d·1i) | 네 단계 화면 구현. AI 응답과 음성 인식 미연동 |
+| 아픈 부위(1l) | 인체도 구현 완료. 앞뒤 전환 · 앵커 9개 · 확대 후 구역 25개 · 팔·다리 좌우 반전 · 전신·피부 칩 · 진료과 안내 · 목록 대안. 부위 id는 AI 트랙의 온톨로지(`ANC:*` · `SUR:*`)를 쓰고 이름과 진료과는 `BodyMapOntologyFixture.kt`가 픽스처로 들고 있다. 서버 연동 시 그 파일만 지운다 |
 | 브리핑 카드(1e·1f) | 카드 읽기·전체 수정·진료실 화면 구현. 카드 내용은 픽스처. AI 응답과 저장 미연동 |
 | 진료 후 기록(1m·1p·1q·1k) | 네 화면 구현. 병원 검색·메모·자동 분류·정리. 내용은 픽스처이고 AI 분류와 저장은 미연동. 캘린더 일자의 "진료 후 기록하기"에서 들어간다 |
 | 기록·캘린더(1j·1r) | 다섯 화면 구현. 목록에서 기록 상세(1j-3)로, 상세의 카드 열기에서 브리핑 카드로 이어짐. 목록·상세·일정은 픽스처. 할 일 체크와 일정 추가는 저장 미연동 |
@@ -471,7 +475,7 @@ com.mist.medicalmate/
 | 탈퇴 후 재가입 | 온보딩 기록을 지우지 않아 온보딩이 건너뛰어진다. 서버 `onboardingCompleted`가 정본이 되면 사라지는 문제 |
 | Apple · 전화번호 로그인 | 백엔드 미지원. `User` 엔티티 식별자가 `kakaoId` 단독 |
 | 카카오 말풍선 심볼 에셋 | 없음. 콘솔의 도구 > 리소스 다운로드에서 받아야 함 |
-| 디자인 캔버스 | 360dp 재단 완료(활성 화면 전부 360x812, 콘텐츠 320, 거터 20). 화면은 fill-width라 코드 영향은 토큰뿐이었다. 미착수 화면(1e-2·1f-2·1q-2·1l-1~3)은 아직 390 |
+| 디자인 캔버스 | 360dp 재단 완료(활성 화면 전부 360x812, 콘텐츠 320, 거터 20). 화면은 fill-width라 코드 영향은 토큰뿐이었다. 미착수 화면(1e-2·1f-2·1q-2)은 아직 390. `1l-1`~`1l-3`도 390이지만 인체도는 좌표에서 크기를 계산해서 재단과 무관하다 |
 | 소셜 로그인 버튼 규격 | DESIGN.md 8.2는 radius 16, 카카오 가이드는 12. 색은 가이드, 크기는 문서를 따름 |
 | `mipmap-*` 래스터 아이콘 | 템플릿 그대로. API 24~25에서 쓰인다. Android Studio Image Asset으로 교체 필요 |
 | 오픈소스 고지 화면 | 없음. Pretendard가 OFL이라 스토어 배포 시 필요 |
