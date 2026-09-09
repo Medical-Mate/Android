@@ -25,7 +25,6 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNotice
-import com.mist.medicalmate.core.designsystem.component.MedicalMateSeverityReadout
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSeveritySlider
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTextField
 
@@ -86,8 +85,10 @@ internal fun BodyPartStep(state: IntakeUiState, modifier: Modifier = Modifier) {
 /**
  * 3단계 통증 강도. Figma 1d `402:1934`.
  *
- * 고른 값을 [MedicalMateSeverityReadout]이 낱말과 설명으로 되읽어준다. 슬라이더만 두면
- * 숫자 3이 무엇을 뜻하는지 알 수 없다.
+ * 판독 카드는 [MedicalMateSeveritySlider]가 안에 그린다. 고른 단계의 숫자와 낱말, 상황
+ * 설명이 거기 함께 나온다. 화면에서 [MedicalMateSeverityReadout]을 따로 얹지 않는다.
+ * 그것은 브리핑 카드에서 값을 보여주는 출력 전용이고(문서 8.3), 함께 두면 같은 수치가
+ * 두 곳에 나온다.
  *
  * 안내는 숫자가 어디에 쓰이는지 알려준다. NRS 등가를 카드에 함께 싣는 것은 의사가 읽는
  * 값이고, 환자는 낱말로 고르면 된다는 뜻이다.
@@ -109,7 +110,6 @@ internal fun SeverityStep(
             style = MedicalMateTheme.typography.bodyM,
             color = MedicalMateTheme.colors.fgSubtle,
         )
-        MedicalMateSeverityReadout(severity = state.severity)
         MedicalMateSeveritySlider(severity = state.severity, onSeverityChange = onSeverityChange)
         MedicalMateNotice(
             title = stringResource(R.string.intake_severity_notice_title),
