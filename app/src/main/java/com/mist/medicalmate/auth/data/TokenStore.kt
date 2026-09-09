@@ -10,7 +10,10 @@ import com.mist.medicalmate.core.network.AccessTokenProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 
 private val Context.authDataStore: DataStore<Preferences> by preferencesDataStore(name = "auth")
 
@@ -29,6 +32,20 @@ private val Context.authDataStore: DataStore<Preferences> by preferencesDataStor
 class TokenStore
 @Inject
 constructor(@ApplicationContext private val context: Context) : AccessTokenProvider {
+    /**
+     * 세션이 남아 있는지.
+     *
+     * refresh 토큰을 기준으로 본다. 액세스 토큰은 만료돼도 재발급으로 이어갈 수 있어서
+     * 세션이 끝난 것이 아니다.
+     *
+     * 흐름으로 내보내는 이유는 세션이 화면 밖에서도 끝날 수 있기 때문이다. 재발급이 거절되면
+     * `DefaultTokenRefresher`가 이 저장소를 지우는데, 그 자리는 OkHttp 스레드라 어느 화면이
+     * 떠 있는지 모른다.
+     */
+    fun hasSession(): Flow<Boolean> = context.authDataStore.data
+        .map { it[refreshTokenKey].isNullOrBlank().not() }
+        .distinctUntilChanged()
+
     suspend fun readRefreshToken(): String? = context.authDataStore.data
         .first()[refreshTokenKey]
 

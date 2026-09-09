@@ -56,6 +56,7 @@ constructor(private val authRepository: AuthRepository) : ViewModel() {
 
     init {
         restore()
+        observeSession()
     }
 
     fun onSignedIn(onboardingRequired: Boolean) {
@@ -108,6 +109,25 @@ constructor(private val authRepository: AuthRepository) : ViewModel() {
 
     fun onAccountActionFailureAcknowledged() {
         mutableAccountAction.value = AccountActionState.Idle
+    }
+
+    /**
+     * 세션이 화면 밖에서 끝나면 로그인 화면으로 보낸다.
+     *
+     * 토큰 재발급이 거절되면 저장소가 비워진다. 그 자리는 OkHttp 스레드라 화면을 옮길 수
+     * 없어서, 저장소가 비는 것을 신호로 삼는다.
+     *
+     * 로그인된 상태에서만 움직인다. 복구 중(Checking)에는 저장된 토큰이 없는 것이 정상이고,
+     * 이미 로그아웃된 상태라면 옮길 곳이 없다.
+     */
+    private fun observeSession() {
+        viewModelScope.launch {
+            authRepository.hasSession.collect { hasSession ->
+                if (!hasSession && mutableUiState.value is SessionUiState.SignedIn) {
+                    mutableUiState.value = SessionUiState.SignedOut
+                }
+            }
+        }
     }
 
     /**

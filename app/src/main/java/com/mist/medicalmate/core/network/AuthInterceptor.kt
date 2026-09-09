@@ -15,8 +15,8 @@ import okhttp3.Response
  * OkHttp 인터셉터는 블로킹 API라 [runBlocking]으로 DataStore를 읽는다. 인터셉터는
  * 이미 OkHttp의 백그라운드 스레드에서 도므로 메인 스레드를 막지 않는다.
  *
- * 401을 받았을 때 토큰을 재발급하는 `Authenticator`는 아직 없다. 만료된 토큰으로
- * 호출하면 그대로 401이 온다.
+ * 만료된 토큰으로 401이 오면 [TokenAuthenticator]가 재발급하고 이 헤더를 새 토큰으로
+ * 바꿔 다시 보낸다. 여기서는 저장된 값을 그대로 붙이는 일만 한다.
  */
 @Singleton
 class AuthInterceptor

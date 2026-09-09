@@ -6,6 +6,8 @@ import com.mist.medicalmate.auth.data.Session
 import com.mist.medicalmate.core.network.ApiErrorCode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -229,12 +231,44 @@ class SessionViewModelTest {
         assertEquals(SessionUiState.SignedOut, viewModel.uiState.value)
     }
 
+    @Test
+    fun `세션이 화면 밖에서 끝나면 로그인 화면으로 보낸다`() = runTest {
+        val repository = FakeAuthRepository(restoreResult = AuthResult.Success(Session(false)))
+        val viewModel = SessionViewModel(repository)
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value is SessionUiState.SignedIn)
+
+        repository.dropSession()
+        advanceUntilIdle()
+
+        assertEquals(SessionUiState.SignedOut, viewModel.uiState.value)
+    }
+
+    @Test
+    fun `복구 중에는 세션이 비어 있어도 상태를 바꾸지 않는다`() = runTest {
+        val repository = FakeAuthRepository(restoreResult = null)
+        val viewModel = SessionViewModel(repository)
+
+        repository.dropSession()
+
+        assertEquals(SessionUiState.Checking, viewModel.uiState.value)
+    }
+
     private class FakeAuthRepository(
         private val restoreResult: AuthResult?,
         private val withdrawResult: AuthResult = AuthResult.Success(Session(onboardingRequired = false)),
     ) : AuthRepository {
         var logoutCalled: Boolean = false
             private set
+
+        /** 세션이 화면 밖에서 끝나는 것을 흉내 내려면 값을 흘려 넣어야 한다. */
+        private val sessionFlow = MutableStateFlow(true)
+
+        override val hasSession: Flow<Boolean> = sessionFlow
+
+        fun dropSession() {
+            sessionFlow.value = false
+        }
 
         override suspend fun loginWithKakao(kakaoAccessToken: String): AuthResult =
             AuthResult.Success(Session(onboardingRequired = false))
