@@ -16,6 +16,16 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+/**
+ * 부위를 고르지 않으면 문답이 열리지 않는다. 문답 이후를 보는 시험은 이 헬퍼로 1단계를
+ * 지난다. 어느 부위를 고르는지는 그 시험들과 무관하다.
+ */
+private fun IntakeViewModel.openChatStep() {
+    bodyMap.onDotClick("ANC:004@CENTER")
+    bodyMap.onDotClick("SUR:031@RIGHT")
+    onNext()
+}
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class IntakeViewModelTest {
     @Before
@@ -37,22 +47,100 @@ class IntakeViewModelTest {
     }
 
     @Test
-    fun `아픈 부위를 지나면 부위가 정해지고 첫 마디가 붙는다`() {
+    fun `부위를 고르지 않으면 다음으로 가지 않는다`() {
         val viewModel = IntakeViewModel()
 
         viewModel.onNext()
 
+        assertEquals(IntakeStep.BODY_PART, viewModel.uiState.value.step)
+        assertFalse(viewModel.uiState.value.canLeaveBodyPart)
+    }
+
+    @Test
+    fun `앵커만 짚으면 구역이 남아 아직 넘어갈 수 없다`() {
+        val viewModel = IntakeViewModel()
+
+        viewModel.bodyMap.onDotClick("ANC:004@CENTER")
+
+        val state = viewModel.uiState.value
+        assertTrue(state.bodyMap.pickingZone)
+        assertFalse(state.canLeaveBodyPart)
+        assertEquals(IntakeStep.BODY_PART, state.step)
+    }
+
+    @Test
+    fun `구역까지 고르면 부위가 정해지고 첫 마디에 그 이름이 들어간다`() {
+        val viewModel = IntakeViewModel()
+
+        viewModel.bodyMap.onDotClick("ANC:014@LEFT")
+        viewModel.bodyMap.onDotClick("SUR:091@LEFT")
+        viewModel.onNext()
+
         val state = viewModel.uiState.value
         assertEquals(IntakeStep.SYMPTOM_CHAT, state.step)
-        assertEquals("복부", state.bodyPart)
+        assertEquals("왼쪽 무릎", state.bodyPart)
         assertEquals(1, state.messages.size)
         assertEquals(IntakeMessage.Sender.AI, state.messages.first().sender)
+        assertTrue(state.messages.first().text.startsWith("왼쪽 무릎이 불편하시군요"))
+    }
+
+    @Test
+    fun `전신과 피부는 구역이 없어 칩만 누르면 정해진다`() {
+        val viewModel = IntakeViewModel()
+
+        viewModel.bodyMap.onSideAnchorClick("ANC:011")
+
+        assertTrue(viewModel.uiState.value.canLeaveBodyPart)
+
+        viewModel.onNext()
+
+        assertEquals("피부", viewModel.uiState.value.bodyPart)
+    }
+
+    @Test
+    fun `구역 단계에서 뒤로 가면 앵커 선택으로 돌아간다`() {
+        val viewModel = IntakeViewModel()
+        viewModel.bodyMap.onDotClick("ANC:001@CENTER")
+
+        viewModel.onBack()
+
+        val state = viewModel.uiState.value
+        assertEquals(IntakeStep.BODY_PART, state.step)
+        assertEquals(null, state.bodyMap.selection)
+        assertFalse(state.canGoBack)
+    }
+
+    @Test
+    fun `앞뒤를 바꿔도 고른 부위는 남는다`() {
+        val viewModel = IntakeViewModel()
+        viewModel.bodyMap.onSideAnchorClick("ANC:010")
+
+        viewModel.bodyMap.onViewChange(BodyMapView.BACK)
+
+        val state = viewModel.uiState.value
+        assertEquals(BodyMapView.BACK, state.bodyMap.view)
+        assertEquals("ANC:010", state.bodyMap.selection?.anchorId)
+    }
+
+    @Test
+    fun `목록과 인체도를 오가도 고른 부위는 남는다`() {
+        val viewModel = IntakeViewModel()
+        viewModel.bodyMap.onPartSelect(BodyMapSelection("ANC:003", "SUR:022", BodyMapSide.RIGHT))
+
+        viewModel.bodyMap.onListModeToggle()
+
+        assertTrue(viewModel.uiState.value.bodyMap.byList)
+        assertEquals("SUR:022", viewModel.uiState.value.bodyMap.selection?.zoneId)
+
+        viewModel.bodyMap.onListModeToggle()
+
+        assertFalse(viewModel.uiState.value.bodyMap.byList)
     }
 
     @Test
     fun `보내면 환자 마디가 붙고 기다린 뒤 AI가 답한다`() = runTest {
         val viewModel = IntakeViewModel()
-        viewModel.onNext()
+        viewModel.openChatStep()
 
         viewModel.onDraftChange("한 3주쯤 됐어요")
         viewModel.onSend()
@@ -72,7 +160,7 @@ class IntakeViewModelTest {
     @Test
     fun `빈 글은 보내지지 않는다`() {
         val viewModel = IntakeViewModel()
-        viewModel.onNext()
+        viewModel.openChatStep()
 
         viewModel.onDraftChange("   ")
         viewModel.onSend()
@@ -84,7 +172,7 @@ class IntakeViewModelTest {
     @Test
     fun `물어볼 것이 남지 않으면 문답이 끝난 것으로 표시된다`() = runTest {
         val viewModel = IntakeViewModel()
-        viewModel.onNext()
+        viewModel.openChatStep()
 
         repeat(4) {
             viewModel.onDraftChange("답")
@@ -159,7 +247,7 @@ class IntakeViewModelTest {
     fun `네 단계를 지나면 흐름이 끝난다`() {
         val viewModel = IntakeViewModel()
 
-        viewModel.onNext()
+        viewModel.openChatStep()
         viewModel.onNext()
         assertEquals(IntakeStep.SEVERITY, viewModel.uiState.value.step)
         viewModel.onNext()
@@ -174,7 +262,7 @@ class IntakeViewModelTest {
     @Test
     fun `뒤로 가면 앞 단계로 돌아가고 답이 남아 있다`() {
         val viewModel = IntakeViewModel()
-        viewModel.onNext()
+        viewModel.openChatStep()
         viewModel.onNext()
         viewModel.onSeverityChange(MedicalMateSeverity.LEVEL_2)
 

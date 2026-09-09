@@ -36,7 +36,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateTextField
 
 /** 단계 본문의 공통 껍데기. 여백과 간격, 스크롤이 네 단계에서 같다. */
 @Composable
-private fun StepContent(step: IntakeStep, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+internal fun StepContent(step: IntakeStep, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Column(
         modifier =
         modifier
@@ -52,33 +52,6 @@ private fun StepContent(step: IntakeStep, modifier: Modifier = Modifier, content
     ) {
         IntakeProgress(step)
         content()
-    }
-}
-
-/**
- * 1단계 아픈 부위. **인체도 시안이 아직 없다.**
- *
- * Figma의 1l-1~1l-3은 섹션 밖에 있고 Body Map 컴포넌트가 확정 대기(#51)다. 그림 없이
- * 대신할 만한 조작을 지어내지 않고, 무엇이 준비 중인지 적고 다음으로 넘어가는 버튼만 둔다.
- * 문답이 "짚은 부위"를 전제로 시작하므로 부위는 임시 값으로 채운다.
- */
-@Composable
-internal fun BodyPartStep(state: IntakeUiState, modifier: Modifier = Modifier) {
-    StepContent(step = state.step, modifier = modifier) {
-        Text(
-            text = stringResource(R.string.intake_body_part_question),
-            style = MedicalMateTheme.typography.headingL,
-            color = MedicalMateTheme.colors.fgDefault,
-        )
-        Text(
-            text = stringResource(R.string.intake_body_part_description),
-            style = MedicalMateTheme.typography.bodyM,
-            color = MedicalMateTheme.colors.fgSubtle,
-        )
-        MedicalMateNotice(
-            title = stringResource(R.string.intake_body_part_pending_title),
-            body = stringResource(R.string.intake_body_part_pending_body),
-        )
     }
 }
 

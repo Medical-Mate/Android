@@ -6,8 +6,8 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
 /**
  * 증상 정리의 네 단계. Figma의 진행 표시가 `증상 문답 n / 4`다.
  *
- * 1단계 아픈 부위는 인체도 시안이 아직 없다. 자리를 비워 두는 대신 단계로 남긴 이유는
- * 진행 표시의 분모가 4이고, 문답이 "짚은 부위"를 전제로 시작하기 때문이다.
+ * 1단계 아픈 부위는 인체도다(1l-1·1l-2·1l-3). 앵커를 짚고 구역까지 고르면 다음으로
+ * 넘어간다. 문답이 "짚은 부위"를 전제로 시작하므로 이 단계를 건너뛸 수 없다.
  */
 enum class IntakeStep {
     BODY_PART,
@@ -49,6 +49,7 @@ enum class IntakeInputMode { TEXT, VOICE }
 data class IntakeUiState(
     val step: IntakeStep = IntakeStep.BODY_PART,
     val bodyPart: String? = null,
+    val bodyMap: BodyMapUiState = BodyMapUiState(),
     val messages: List<IntakeMessage> = emptyList(),
     val draft: String = "",
     val inputMode: IntakeInputMode = IntakeInputMode.TEXT,
@@ -60,8 +61,17 @@ data class IntakeUiState(
     val chatFinished: Boolean = false,
     val completed: Boolean = false,
 ) {
-    /** 첫 단계에서 뒤로 가면 흐름을 벗어난다. 그 판단은 호출자가 한다. */
-    val canGoBack: Boolean get() = step != IntakeStep.entries.first()
+    /**
+     * 첫 단계에서 뒤로 가면 흐름을 벗어난다. 그 판단은 호출자가 한다.
+     *
+     * 인체도의 구역 단계는 화면이 바뀌지 않고 같은 단계 안에서 깊어진다. 그래서 앵커를
+     * 고른 상태에서 뒤로 가면 흐름을 벗어나는 대신 앵커 선택으로 돌아간다.
+     */
+    val canGoBack: Boolean
+        get() = step != IntakeStep.entries.first() || bodyMap.selection != null
+
+    /** 부위를 다 고르기 전에는 다음으로 갈 수 없다. */
+    val canLeaveBodyPart: Boolean get() = bodyMap.selection?.isComplete == true
 
     /** 보낼 것이 있는지. 빈 글이나 공백만 보내면 문답이 헛돈다. */
     val canSend: Boolean get() = draft.isNotBlank() && !awaitingReply

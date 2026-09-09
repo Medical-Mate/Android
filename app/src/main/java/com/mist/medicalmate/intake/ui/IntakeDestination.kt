@@ -56,6 +56,12 @@ private fun IntakeRoute(
         IntakeCallbacks(
             onBackClick = { if (state.canGoBack) viewModel.onBack() else onExit() },
             onNextClick = viewModel::onNext,
+            onBodyViewChange = viewModel.bodyMap::onViewChange,
+            onBodyDotClick = viewModel.bodyMap::onDotClick,
+            onBodySideAnchorClick = viewModel.bodyMap::onSideAnchorClick,
+            onBodyPartSelect = viewModel.bodyMap::onPartSelect,
+            onBodyAnchorReset = viewModel.bodyMap::onAnchorReset,
+            onBodyListModeToggle = viewModel.bodyMap::onListModeToggle,
             onDraftChange = viewModel::onDraftChange,
             onSendClick = viewModel::onSend,
             onVoiceClick = { viewModel.onInputModeChange(IntakeInputMode.VOICE) },

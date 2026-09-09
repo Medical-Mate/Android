@@ -46,7 +46,7 @@ fun IntakeScreen(state: IntakeUiState, callbacks: IntakeCallbacks, modifier: Mod
         )
         Box(modifier = Modifier.weight(1f)) {
             when (state.step) {
-                IntakeStep.BODY_PART -> BodyPartStep(state = state)
+                IntakeStep.BODY_PART -> BodyPartStep(state = state, callbacks = callbacks)
                 IntakeStep.SYMPTOM_CHAT -> ChatStep(state = state)
                 IntakeStep.SEVERITY ->
                     SeverityStep(state = state, onSeverityChange = callbacks.onSeverityChange)
@@ -67,6 +67,12 @@ fun IntakeScreen(state: IntakeUiState, callbacks: IntakeCallbacks, modifier: Mod
 data class IntakeCallbacks(
     val onBackClick: () -> Unit = {},
     val onNextClick: () -> Unit = {},
+    val onBodyViewChange: (BodyMapView) -> Unit = {},
+    val onBodyDotClick: (String) -> Unit = {},
+    val onBodySideAnchorClick: (String) -> Unit = {},
+    val onBodyPartSelect: (BodyMapSelection) -> Unit = {},
+    val onBodyAnchorReset: () -> Unit = {},
+    val onBodyListModeToggle: () -> Unit = {},
     val onDraftChange: (String) -> Unit = {},
     val onSendClick: () -> Unit = {},
     val onVoiceClick: () -> Unit = {},
@@ -130,22 +136,28 @@ private fun IntakeFooter(state: IntakeUiState, callbacks: IntakeCallbacks) {
             ),
         verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12),
     ) {
-        if (state.step == IntakeStep.SYMPTOM_CHAT) {
-            if (state.chatFinished) {
-                NextButton(onClick = callbacks.onNextClick)
+        when (state.step) {
+            IntakeStep.SYMPTOM_CHAT -> {
+                if (state.chatFinished) {
+                    NextButton(onClick = callbacks.onNextClick)
+                }
+                ChatInput(state = state, callbacks = callbacks)
             }
-            ChatInput(state = state, callbacks = callbacks)
-        } else {
-            NextButton(onClick = callbacks.onNextClick)
+
+            IntakeStep.BODY_PART ->
+                NextButton(onClick = callbacks.onNextClick, enabled = state.canLeaveBodyPart)
+
+            else -> NextButton(onClick = callbacks.onNextClick)
         }
     }
 }
 
 @Composable
-private fun NextButton(onClick: () -> Unit) {
+private fun NextButton(onClick: () -> Unit, enabled: Boolean = true) {
     MedicalMateButton(
         onClick = onClick,
         label = stringResource(R.string.intake_next),
+        enabled = enabled,
         modifier = Modifier.fillMaxWidth(),
     )
 }
@@ -191,10 +203,37 @@ private fun IntakeQuestionsPreview() {
 
 @MedicalMateScreenPreviews
 @Composable
-private fun IntakeBodyPartPreview() {
+private fun IntakeBodyAnchorPreview() {
     MedicalMateTheme {
         IntakeScreen(
             state = IntakeUiState(step = IntakeStep.BODY_PART),
+            callbacks = IntakeCallbacks(),
+        )
+    }
+}
+
+/** 무릎을 짚기 직전. 다리 앵커를 왼쪽으로 골라 확대한 상태다. */
+@MedicalMateScreenPreviews
+@Composable
+private fun IntakeBodyZonePreview() {
+    MedicalMateTheme {
+        IntakeScreen(
+            state =
+            IntakeUiState(
+                step = IntakeStep.BODY_PART,
+                bodyMap = BodyMapUiState(selection = BodyMapSelection("ANC:014", side = BodyMapSide.LEFT)),
+            ),
+            callbacks = IntakeCallbacks(),
+        )
+    }
+}
+
+@MedicalMateScreenPreviews
+@Composable
+private fun IntakeBodyListPreview() {
+    MedicalMateTheme {
+        IntakeScreen(
+            state = IntakeUiState(step = IntakeStep.BODY_PART, bodyMap = BodyMapUiState(byList = true)),
             callbacks = IntakeCallbacks(),
         )
     }
