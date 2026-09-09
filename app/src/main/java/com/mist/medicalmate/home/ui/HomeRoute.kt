@@ -29,7 +29,6 @@ import java.time.LocalDate
 fun HomeRoute(
     modifier: Modifier = Modifier,
     callbacks: HomeCallbacks = HomeCallbacks(),
-    accountActions: AccountActionCallbacks = AccountActionCallbacks(),
     justRegistered: Boolean = false,
     onTabSelect: (MedicalMateTab) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
@@ -52,7 +51,6 @@ fun HomeRoute(
         today = today,
         callbacks = callbacks.copy(onRetryClick = viewModel::refresh),
         modifier = modifier,
-        accountActions = accountActions,
         registeredToastVisible = toastVisible,
         onTabSelect = onTabSelect,
     )

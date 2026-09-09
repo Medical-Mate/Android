@@ -132,7 +132,7 @@ MedicalMate/
 │       │   │   └── network/               Retrofit·OkHttp 설정, ApiResult
 │       │   ├── navigation/                단일 NavHost, 세션 경계 동기화, 하단 탭 이동
 │       │   ├── auth/  data/ ui/           1o 로그인, 1a-1 스플래시, 세션 복구
-│       │   ├── profile/  data/ ui/        1a-2 온보딩, 1b 신상정보, 온보딩 노출 기록
+│       │   ├── profile/  data/ ui/        1a-2 온보딩, 1b 신상정보, 1s 내 정보, 계정 동작
 │       │   ├── intake/  ui/               1l·1c·1d·1i 증상 정리
 │       │   ├── card/  ui/                 1e 브리핑 카드, 1f 진료실 화면, 1j 기록
 │       │   ├── calendar/  ui/             1r 캘린더
@@ -433,12 +433,12 @@ com.mist.medicalmate/
 
 | 항목 | 상태 |
 | -- | -- |
-| 유닛 테스트 | `LoginViewModel` 13건, `SessionViewModel` 15건, `HomeViewModel` 9건, `IntakeViewModel` 12건, `BriefCardViewModel` 8건, `RecordDetailViewModel` 10건, `HospitalPickViewModel` 10건, `VisitRecordViewModel` 11건, `VisitNoteViewModel` 6건, `CalendarViewModel` 7건, `ProfileSetupViewModel` 7건, `HomeSchedule` 4건, 템플릿 1개 |
+| 유닛 테스트 | `LoginViewModel` 13건, `SessionViewModel` 15건, `HomeViewModel` 9건, `IntakeViewModel` 12건, `BriefCardViewModel` 8건, `RecordDetailViewModel` 10건, `MyProfileViewModel` 5건, `HealthEditViewModel` 11건, `HospitalPickViewModel` 10건, `VisitRecordViewModel` 11건, `VisitNoteViewModel` 6건, `CalendarViewModel` 7건, `ProfileSetupViewModel` 7건, `HomeSchedule` 4건, 템플릿 1개 |
 | 네비게이션 테스트 | 없음. `NavHost`는 계측 테스트가 필요하고 CI가 androidTest를 실행하지 않음 |
 | 아키텍처 패턴 | MVVM 확정. UseCase는 필요할 때만 |
 | DI | Hilt 확정 |
 | 패키지 구조 | 기능 우선 확정. 도메인명은 Backend와 일치 |
-| 네비게이션 | Navigation Compose 2.10.0 확정. 단일 `NavHost` + 타입 세이프 라우트. 목적지 16개 |
+| 네비게이션 | Navigation Compose 2.10.0 확정. 단일 `NavHost` + 타입 세이프 라우트. 목적지 18개 |
 | 화면 전환 | `MedicalMateNavHost`. `MainActivity`는 세션 확인 중 로딩만 담당 |
 | ViewModel 스코프 | 화면 ViewModel은 목적지 스코프. `SessionViewModel`만 Activity 스코프 |
 | 디자인 시스템 | DESIGN.md 1~7절 반영 완료. 시맨틱 41개, 타이포 15종, 토큰, 아이콘 46개(arrow-up 추가), 로고 4개, Pretendard 4무게. DESIGN.md 3.2는 Badge를 `Label/M`으로 적었지만 Figma 마스터는 `Label/S`다. 코드는 Figma를 따랐고 문서는 디자인 트랙 확인 필요 |
@@ -455,8 +455,9 @@ com.mist.medicalmate/
 | 브리핑 카드(1e·1f) | 카드 읽기·전체 수정·진료실 화면 구현. 카드 내용은 픽스처. AI 응답과 저장 미연동 |
 | 진료 후 기록(1m·1p·1q·1k) | 네 화면 구현. 병원 검색·메모·자동 분류·정리. 내용은 픽스처이고 AI 분류와 저장은 미연동. 캘린더 일자의 "진료 후 기록하기"에서 들어간다 |
 | 기록·캘린더(1j·1r) | 다섯 화면 구현. 목록에서 기록 상세(1j-3)로, 상세의 카드 열기에서 브리핑 카드로 이어짐. 목록·상세·일정은 픽스처. 할 일 체크와 일정 추가는 저장 미연동 |
-| 하단 탭 | 기록·홈·캘린더 세 탭 연결 완료. 내 정보는 탭이 아니라 홈 헤더 아바타로 진입(1s 미구현) |
-| 로그아웃 · 회원탈퇴 | 구현 완료. 홈 화면에 임시 진입점. 설정 화면 생기면 이동 |
+| 하단 탭 | 기록·홈·캘린더 세 탭 연결 완료. 내 정보는 탭이 아니라 홈 헤더 아바타로 진입 |
+| 내 정보(1s) | 두 화면 구현. 프로필·건강 요약·설정 토글·로그아웃. 내용은 픽스처이고 설정과 건강 정보 저장은 미연동 |
+| 로그아웃 · 회원탈퇴 | 구현 완료. 1s-1 하단으로 옮김. 회원탈퇴는 시안에 자리가 없어 로그아웃 아래 텍스트로 뒀다 |
 | 계정 전환 시 이전 데이터 | 해결. 로그아웃 시 홈 엔트리가 pop되면서 `HomeViewModel`도 정리됨 |
 | 401 재발급 Authenticator | 미도입. 만료된 토큰으로 로그아웃·탈퇴하면 서버 호출이 401 |
 | 토큰 암호화 | 미적용. DataStore 평문. 백업 차단으로 샌드박스 밖 유출만 막음 |

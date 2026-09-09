@@ -208,8 +208,11 @@ fun MedicalMateToggle(
             SwitchDefaults.colors(
                 checkedThumbColor = colors.fgOnPrimary,
                 checkedTrackColor = colors.bgPrimary,
+                // 꺼진 트랙은 `border/strong`을 면으로 쓴다. Figma의 Toggle 마스터가 쓰는
+                // 토큰이 흰색·`border/strong`·`bg/primary` 셋뿐이다. 옅은 면에 테두리를
+                // 두르면 꺼진 것과 비활성이 구분되지 않는다.
                 uncheckedThumbColor = colors.bgSurface,
-                uncheckedTrackColor = colors.bgSubtle,
+                uncheckedTrackColor = colors.borderStrong,
                 uncheckedBorderColor = colors.borderStrong,
             ),
         )

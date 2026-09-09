@@ -179,6 +179,28 @@
 
     <string name="profile_setup_medications_question">지금 드시는 약이 있나요?</string>
     <string name="profile_setup_medications_description">처방약, 영양제, 한약 모두 포함해요. 여러 개 골라도 돼요.</string>
+    <string name="profile_setup_medications_label">복용 중인 약</string>
+    <string name="profile_setup_conditions_label">기저질환</string>
+    <string name="profile_setup_allergies_label">알러지</string>
+    <string name="my_profile_title">내 정보</string>
+    <string name="my_profile_health">건강 정보</string>
+    <string name="my_profile_health_edit">수정</string>
+    <string name="my_profile_health_medications">복용약</string>
+    <string name="my_profile_health_conditions">기저질환</string>
+    <string name="my_profile_health_allergies">알러지</string>
+    <string name="my_profile_settings">설정</string>
+    <string name="my_profile_setting_visit_reminder">진료 하루 전 알림</string>
+    <string name="my_profile_setting_card_auto_save">브리핑 카드 자동 저장</string>
+    <string name="my_profile_setting_handoff_brightness">진료실 화면 밝기 최대</string>
+    <string name="health_edit_title">건강 정보 수정</string>
+    <string name="health_edit_notice_title">바꾸면 다음 브리핑 카드부터 반영돼요</string>
+    <string name="health_edit_notice_body">이미 만든 카드는 그대로 남고,
+새로 만드는 카드에 적용됩니다.</string>
+    <string name="health_edit_add">+ 직접 추가</string>
+    <string name="health_edit_add_placeholder">직접 적어주세요</string>
+    <string name="health_edit_add_submit">추가</string>
+    <string name="health_edit_save">저장하기</string>
+    <string name="health_edit_cancel">취소</string>
     <string-array name="profile_setup_medications_options">
         <item>혈압약</item>
         <item>당뇨약</item>
@@ -262,7 +284,6 @@
     <string name="home_retry">다시 시도</string>
 
     <!-- 개발용 임시 진입점. 설정 화면이 생기면 옮긴다. -->
-    <string name="account_section">계정 (임시)</string>
     <string name="account_logout">로그아웃</string>
     <string name="account_withdraw">회원탈퇴</string>
     <string name="account_withdraw_confirm_title">정말 탈퇴하시겠어요?</string>

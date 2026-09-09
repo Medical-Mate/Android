@@ -19,10 +19,10 @@ import com.mist.medicalmate.auth.ui.SessionUiState
 import com.mist.medicalmate.auth.ui.SessionViewModel
 import com.mist.medicalmate.auth.ui.SplashScreen
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
-import com.mist.medicalmate.home.ui.AccountActionCallbacks
-import com.mist.medicalmate.home.ui.WithdrawFailedDialog
 import com.mist.medicalmate.navigation.MedicalMateNavHost
+import com.mist.medicalmate.profile.ui.AccountActionCallbacks
 import com.mist.medicalmate.profile.ui.OnboardingGateViewModel
+import com.mist.medicalmate.profile.ui.WithdrawFailedDialog
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
