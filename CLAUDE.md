@@ -214,6 +214,12 @@ API 실패는 예외가 아니라 값으로 다룹니다. `apiCall()`이
 `TooGenericExceptionCaught`·`SwallowedException`이 그 지점을 잡습니다. 설정을 완화하는
 대신 결과 타입을 쓰세요.
 
+토큰 재발급은 인증을 붙이지 않는 경로로 나갑니다. `@AuthFree`로 표시한 `OkHttpClient`와
+`Retrofit`이 따로 있고 인터셉터도 Authenticator도 달지 않습니다. 같은 클라이언트를 쓰면
+재발급 호출이 만료된 헤더를 달고 나가고, 그 401이 다시 재발급을 부릅니다. 조립 순서도
+막힙니다. `OkHttpClient`가 `TokenAuthenticator`를 받고 그것이 재발급 API를 받는데 그 API를
+같은 `Retrofit`에서 만들면 순환입니다.
+
 직렬화 실패 같은 계약 위반은 잡지 않습니다. `apiCall()`은 `HttpException`과 `IOException`만
 잡습니다. 서버와 클라이언트의 계약이 어긋난 것을 "다시 시도해주세요"로 감추면 원인을 찾을
 수 없게 됩니다.
@@ -433,7 +439,7 @@ com.mist.medicalmate/
 
 | 항목 | 상태 |
 | -- | -- |
-| 유닛 테스트 | `LoginViewModel` 13건, `SessionViewModel` 15건, `HomeViewModel` 9건, `IntakeViewModel` 12건, `BriefCardViewModel` 8건, `RecordDetailViewModel` 10건, `MyProfileViewModel` 5건, `HealthEditViewModel` 11건, `HospitalPickViewModel` 10건, `VisitRecordViewModel` 11건, `VisitNoteViewModel` 6건, `CalendarViewModel` 7건, `ProfileSetupViewModel` 7건, `HomeSchedule` 4건, 템플릿 1개 |
+| 유닛 테스트 | `LoginViewModel` 13건, `SessionViewModel` 17건, `HomeViewModel` 9건, `IntakeViewModel` 12건, `BriefCardViewModel` 8건, `RecordDetailViewModel` 10건, `MyProfileViewModel` 5건, `HealthEditViewModel` 11건, `HospitalPickViewModel` 10건, `VisitRecordViewModel` 11건, `VisitNoteViewModel` 6건, `CalendarViewModel` 7건, `ProfileSetupViewModel` 7건, `HomeSchedule` 4건, `TokenAuthenticator` 7건, 템플릿 1개 |
 | 네비게이션 테스트 | 없음. `NavHost`는 계측 테스트가 필요하고 CI가 androidTest를 실행하지 않음 |
 | 아키텍처 패턴 | MVVM 확정. UseCase는 필요할 때만 |
 | DI | Hilt 확정 |
@@ -459,7 +465,7 @@ com.mist.medicalmate/
 | 내 정보(1s) | 두 화면 구현. 프로필·건강 요약·설정 토글·로그아웃. 내용은 픽스처이고 설정과 건강 정보 저장은 미연동 |
 | 로그아웃 · 회원탈퇴 | 구현 완료. 1s-1 하단으로 옮김. 회원탈퇴는 시안에 자리가 없어 로그아웃 아래 텍스트로 뒀다 |
 | 계정 전환 시 이전 데이터 | 해결. 로그아웃 시 홈 엔트리가 pop되면서 `HomeViewModel`도 정리됨 |
-| 401 재발급 Authenticator | 미도입. 만료된 토큰으로 로그아웃·탈퇴하면 서버 호출이 401 |
+| 401 재발급 Authenticator | 도입 완료. `TokenAuthenticator`가 401을 받으면 refresh 토큰으로 재발급하고 원래 요청을 한 번 더 보낸다. 재발급 호출은 인터셉터·Authenticator가 없는 `@AuthFree` 클라이언트로 나간다. 재발급이 거절되면 토큰을 지우고 `TokenStore.hasSession`이 false를 흘려 `SessionViewModel`이 로그인 화면으로 보낸다 |
 | 토큰 암호화 | 미적용. DataStore 평문. 백업 차단으로 샌드박스 밖 유출만 막음 |
 | 온보딩 노출 판단 | 서버 `onboardingRequired`와 로컬 `OnboardingStore`를 함께 본다. `refresh` 응답은 항상 false이고, 프로필을 서버에 저장하기 전까지 로그인 응답은 계속 true라 한쪽만으로는 안 된다 |
 | 탈퇴 후 재가입 | 온보딩 기록을 지우지 않아 온보딩이 건너뛰어진다. 서버 `onboardingCompleted`가 정본이 되면 사라지는 문제 |

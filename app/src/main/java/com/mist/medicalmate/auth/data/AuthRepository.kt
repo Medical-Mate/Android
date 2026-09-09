@@ -5,6 +5,7 @@ import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.core.network.apiCall
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 
@@ -31,6 +32,15 @@ sealed interface AuthResult {
 }
 
 interface AuthRepository {
+    /**
+     * 세션이 남아 있는지.
+     *
+     * 화면 밖에서 세션이 끝나는 경로가 있어서 흐름으로 준다. 토큰 재발급이 거절되면
+     * 저장소가 비워지고 이 값이 false가 된다. 그때 로그인 화면으로 보내는 판단은
+     * `SessionViewModel`이 한다.
+     */
+    val hasSession: Flow<Boolean>
+
     /** 카카오 액세스 토큰을 서버 JWT로 교환하고 저장한다. */
     suspend fun loginWithKakao(kakaoAccessToken: String): AuthResult
 
@@ -67,6 +77,8 @@ constructor(
     private val kakaoLoginClient: KakaoLoginClient,
     private val json: Json,
 ) : AuthRepository {
+    override val hasSession: Flow<Boolean> = tokenStore.hasSession()
+
     override suspend fun loginWithKakao(kakaoAccessToken: String): AuthResult =
         apiCall(json) { api.loginWithKakao(KakaoLoginRequest(kakaoAccessToken)) }
             .toAuthResult()

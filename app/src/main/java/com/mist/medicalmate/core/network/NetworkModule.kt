@@ -27,23 +27,44 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(authInterceptor: AuthInterceptor): OkHttpClient = OkHttpClient
-        .Builder()
-        .addInterceptor(authInterceptor)
-        .addInterceptor(loggingInterceptor())
-        // Render 무료 티어는 인스턴스가 잠들어 첫 요청이 수십 초 걸린다.
-        .connectTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-        .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-        .build()
+    fun provideOkHttpClient(authInterceptor: AuthInterceptor, tokenAuthenticator: TokenAuthenticator): OkHttpClient =
+        baseClientBuilder()
+            .addInterceptor(authInterceptor)
+            .authenticator(tokenAuthenticator)
+            .build()
+
+    /**
+     * 인증을 붙이지 않는 클라이언트. 토큰 재발급이 쓴다.
+     *
+     * 인터셉터도 Authenticator도 없다. 이유는 [AuthFree]에 적었다.
+     */
+    @Provides
+    @Singleton
+    @AuthFree
+    fun provideAuthFreeOkHttpClient(): OkHttpClient = baseClientBuilder().build()
 
     @Provides
     @Singleton
-    fun provideRetrofit(client: OkHttpClient, json: Json): Retrofit = Retrofit
+    fun provideRetrofit(client: OkHttpClient, json: Json): Retrofit = retrofit(client, json)
+
+    @Provides
+    @Singleton
+    @AuthFree
+    fun provideAuthFreeRetrofit(@AuthFree client: OkHttpClient, json: Json): Retrofit = retrofit(client, json)
+
+    private fun retrofit(client: OkHttpClient, json: Json): Retrofit = Retrofit
         .Builder()
         .baseUrl(BuildConfig.BACKEND_BASE_URL)
         .client(client)
         .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
         .build()
+
+    private fun baseClientBuilder(): OkHttpClient.Builder = OkHttpClient
+        .Builder()
+        .addInterceptor(loggingInterceptor())
+        // Render 무료 티어는 인스턴스가 잠들어 첫 요청이 수십 초 걸린다.
+        .connectTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
 
     /**
      * 본문을 절대 찍지 않는다. 증상·복용약·기저질환·알레르기가 요청 본문에 실리고,

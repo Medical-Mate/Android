@@ -7,6 +7,8 @@ import com.mist.medicalmate.auth.data.Session
 import com.mist.medicalmate.core.network.ApiErrorCode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -165,6 +167,8 @@ class LoginViewModelTest {
     ) : AuthRepository {
         var lastKakaoAccessToken: String? = null
             private set
+
+        override val hasSession: Flow<Boolean> = flowOf(false)
 
         override suspend fun loginWithKakao(kakaoAccessToken: String): AuthResult {
             lastKakaoAccessToken = kakaoAccessToken
