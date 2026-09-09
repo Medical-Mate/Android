@@ -27,14 +27,18 @@ import com.mist.medicalmate.card.ui.handoffDestination
 import com.mist.medicalmate.card.ui.recordDestination
 import com.mist.medicalmate.card.ui.recordDetailDestination
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
-import com.mist.medicalmate.home.ui.AccountActionCallbacks
 import com.mist.medicalmate.home.ui.HomeDestination
 import com.mist.medicalmate.home.ui.homeDestination
 import com.mist.medicalmate.intake.ui.IntakeDestination
 import com.mist.medicalmate.intake.ui.intakeDestination
+import com.mist.medicalmate.profile.ui.AccountActionCallbacks
+import com.mist.medicalmate.profile.ui.HealthEditDestination
+import com.mist.medicalmate.profile.ui.MyProfileDestination
 import com.mist.medicalmate.profile.ui.OnboardingIntroDestination
 import com.mist.medicalmate.profile.ui.ProfileCompleteDestination
 import com.mist.medicalmate.profile.ui.ProfileSetupDestination
+import com.mist.medicalmate.profile.ui.healthEditDestination
+import com.mist.medicalmate.profile.ui.myProfileDestination
 import com.mist.medicalmate.profile.ui.onboardingIntroDestination
 import com.mist.medicalmate.profile.ui.profileCompleteDestination
 import com.mist.medicalmate.profile.ui.profileSetupDestination
@@ -108,12 +112,13 @@ internal fun MedicalMateNavHost(
         )
         handoffDestination(onDone = { navController.popBackStack() })
         homeDestination(
-            accountActions = accountActions,
             onStartIntakeClick = { navController.navigate(IntakeDestination) },
             onCardClick = { cardId -> navController.navigate(BriefCardDestination(cardId)) },
+            onProfileClick = { navController.navigate(MyProfileDestination) },
             onTabSelect = navController::selectTab,
         )
         recordDestinations(navController)
+        profileDestinations(navController = navController, accountActions = accountActions)
         calendarDestination(
             onDayOpen = { date -> navController.navigate(CalendarDayDestination(date.toString())) },
             onAddClick = { },
@@ -131,6 +136,29 @@ internal fun MedicalMateNavHost(
         navController = navController,
         session = session,
         onboardingCompleted = onboardingCompleted,
+    )
+}
+
+/**
+ * 내 정보와 건강 정보 수정. Figma 흐름은 `1s-1 → 1s-2`다.
+ *
+ * 홈 헤더의 아바타에서 들어온다. 하단 탭이 세 개로 확정돼서 내 정보는 탭이 아니다.
+ *
+ * 계정 동작(로그아웃·회원탈퇴)이 여기로 내려온다. 홈에 임시로 붙어 있던 것이고 1s-1이
+ * 그 자리다. 수행은 `SessionViewModel`이 하고 `MainActivity`가 연결한다.
+ */
+private fun NavGraphBuilder.profileDestinations(
+    navController: NavHostController,
+    accountActions: AccountActionCallbacks,
+) {
+    myProfileDestination(
+        accountActions = accountActions,
+        onHealthEdit = { navController.navigate(HealthEditDestination) },
+        onExit = { navController.popBackStack() },
+    )
+    healthEditDestination(
+        onSaved = { navController.popBackStack() },
+        onExit = { navController.popBackStack() },
     )
 }
 

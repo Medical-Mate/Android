@@ -13,25 +13,32 @@ import com.mist.medicalmate.R
  *
  * 문구를 여기에 리소스 id로 들고 있는 이유는 단계마다 어떤 문구가 붙는지가 이 목록에서
  * 한눈에 보이기 때문이다. 화면 안에서 `when`으로 갈라 쓰면 단계를 늘릴 때 빠뜨린다.
+ *
+ * [labelRes]는 건강 정보 수정(1s-2)에서 쓰는 짧은 이름이다. 그 화면은 세 갈래를 한 번에
+ * 보여줘서 질문 문장이 아니라 이름이 붙는다.
  */
 enum class ProfileSetupStep(
     @StringRes val questionRes: Int,
     @StringRes val descriptionRes: Int,
+    @StringRes val labelRes: Int,
     @ArrayRes val optionsRes: Int,
 ) {
     MEDICATIONS(
         questionRes = R.string.profile_setup_medications_question,
         descriptionRes = R.string.profile_setup_medications_description,
+        labelRes = R.string.profile_setup_medications_label,
         optionsRes = R.array.profile_setup_medications_options,
     ),
     CONDITIONS(
         questionRes = R.string.profile_setup_conditions_question,
         descriptionRes = R.string.profile_setup_conditions_description,
+        labelRes = R.string.profile_setup_conditions_label,
         optionsRes = R.array.profile_setup_conditions_options,
     ),
     ALLERGIES(
         questionRes = R.string.profile_setup_allergies_question,
         descriptionRes = R.string.profile_setup_allergies_description,
+        labelRes = R.string.profile_setup_allergies_label,
         optionsRes = R.array.profile_setup_allergies_options,
     ),
     ;

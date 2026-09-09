@@ -51,7 +51,6 @@ fun HomeScreen(
     today: LocalDate,
     callbacks: HomeCallbacks,
     modifier: Modifier = Modifier,
-    accountActions: AccountActionCallbacks = AccountActionCallbacks(),
     registeredToastVisible: Boolean = false,
     onTabSelect: (MedicalMateTab) -> Unit = {},
 ) {
@@ -60,7 +59,6 @@ fun HomeScreen(
             state = state,
             today = today,
             callbacks = callbacks,
-            accountActions = accountActions,
             registeredToastVisible = registeredToastVisible,
             modifier = Modifier.weight(1f),
         )
@@ -74,7 +72,6 @@ private fun HomeBody(
     state: HomeUiState,
     today: LocalDate,
     callbacks: HomeCallbacks,
-    accountActions: AccountActionCallbacks,
     registeredToastVisible: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -87,7 +84,6 @@ private fun HomeBody(
                     content = state,
                     today = today,
                     callbacks = callbacks,
-                    accountActions = accountActions,
                 )
         }
         if (registeredToastVisible) {
@@ -139,22 +135,6 @@ data class HomeCallbacks(
     val onRetryClick: () -> Unit = {},
 )
 
-/**
- * 계정 관련 임시 동작. Figma에 없는 개발용 진입점이라 한 덩어리로 묶어 기본값을 준다.
- * 설정 화면이 생기면 이 파라미터는 사라진다.
- *
- * 지금 지우면 로그아웃할 방법이 없어진다. 헤더의 아바타가 프로필로 가야 하는데 그 화면이
- * 아직 없다.
- *
- * 홈이 `auth` 도메인을 직접 참조하지 않도록 콜백만 받는다. 실제 수행은
- * `SessionViewModel`이 하고 `MainActivity`가 연결한다.
- */
-data class AccountActionCallbacks(
-    val enabled: Boolean = true,
-    val onLogoutClick: () -> Unit = {},
-    val onWithdrawClick: () -> Unit = {},
-)
-
 @Composable
 private fun LoadingContent(modifier: Modifier = Modifier) {
     Column(
@@ -191,7 +171,6 @@ private fun HomeContent(
     content: HomeUiState.Content,
     today: LocalDate,
     callbacks: HomeCallbacks,
-    accountActions: AccountActionCallbacks,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -222,14 +201,6 @@ private fun HomeContent(
 
         savedCardsSection(content = content, callbacks = callbacks)
         upcomingSection(content = content, today = today, callbacks = callbacks)
-
-        item {
-            AccountActions(
-                enabled = accountActions.enabled,
-                onLogoutClick = accountActions.onLogoutClick,
-                onWithdrawClick = accountActions.onWithdrawClick,
-            )
-        }
     }
 }
 

@@ -24,21 +24,21 @@ internal data class HomeDestination(val justRegistered: Boolean = false)
  * 저장된 진행 상태를 불러와야 하는데 그 저장이 아직 없어서 지금은 같은 곳으로 간다(#69).
  */
 internal fun NavGraphBuilder.homeDestination(
-    accountActions: AccountActionCallbacks,
     onStartIntakeClick: () -> Unit,
     onCardClick: (String) -> Unit,
+    onProfileClick: () -> Unit,
     onTabSelect: (MedicalMateTab) -> Unit,
 ) {
     composable<HomeDestination> { entry ->
         val destination = entry.toRoute<HomeDestination>()
         HomeRoute(
-            accountActions = accountActions,
             justRegistered = destination.justRegistered,
             callbacks =
             HomeCallbacks(
                 onStartIntakeClick = onStartIntakeClick,
                 onResumeClick = onStartIntakeClick,
                 onSavedCardClick = onCardClick,
+                onProfileClick = onProfileClick,
             ),
             onTabSelect = onTabSelect,
         )
