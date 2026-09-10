@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -83,8 +84,11 @@ fun MedicalMateNavBar(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
+        // 액션 자리는 폭을 고정하지 않고 하한만 준다. 48로 묶으면 `편집`처럼 두 글자짜리
+        // 텍스트 액션이 두 줄로 감긴다. 아이콘 액션은 이미 48보다 작아서 하한이 자리를
+        // 지킨다. 제목은 남은 폭의 가운데라 텍스트 액션이 길면 살짝 왼쪽으로 밀린다.
         Box(
-            modifier = Modifier.width(MedicalMateSize.touchMin),
+            modifier = Modifier.widthIn(min = MedicalMateSize.touchMin),
             contentAlignment = Alignment.Center,
         ) {
             if (actionLabel != null && onActionClick != null) {
