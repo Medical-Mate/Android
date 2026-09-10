@@ -12,8 +12,8 @@ import kotlinx.coroutines.flow.asStateFlow
  *
  * 내용이 픽스처다. AI 연동에서는 [load]가 메모를 보내고 나눈 결과를 받는다.
  *
- * 수정은 [VisitRecordUiState.Content.drafts]에 담는다. 원본을 바로 고치면 취소했을 때
- * 되돌릴 것이 없다. 저장하면 초안을 원본으로 옮긴다.
+ * 편집은 [VisitRecordDraft]에 담는다. 원본을 바로 고치면 취소했을 때 되돌릴 것이 없다.
+ * 확인하면 사본을 원본으로 옮긴다. 사본을 고치는 조작은 [editActions]에 있다.
  */
 @HiltViewModel
 class VisitRecordViewModel
@@ -22,21 +22,39 @@ constructor() : ViewModel() {
     private val mutableUiState = MutableStateFlow<VisitRecordUiState>(VisitRecordUiState.Loading)
     val uiState: StateFlow<VisitRecordUiState> = mutableUiState.asStateFlow()
 
+    /** 편집 모드가 아니면 아무것도 하지 않는다. 사본이 없는데 고칠 수는 없다. */
+    val editActions =
+        VisitRecordEditActions { change ->
+            update { content ->
+                val draft = content.draft ?: return@update content
+                content.copy(draft = change(draft))
+            }
+        }
+
     fun load() {
         mutableUiState.value = VisitRecordUiState.Content(record = previewVisitRecord)
     }
 
+    /** Nav 우측 `편집`. 카드 안의 모든 값을 한 번에 연다. */
     fun onEditClick() {
-        update { it.copy(editing = true, drafts = it.record.items.map { item -> item.value }) }
+        update { it.copy(draft = VisitRecordDraft.of(it.record)) }
     }
 
-    fun onDraftChange(index: Int, value: String) {
+    /**
+     * Nav 우측 `확인`. 사본을 원본으로 옮기고 편집 모드를 닫는다.
+     *
+     * 서버 저장은 아직 없다. AI 분류 결과를 저장하는 API를 붙이면 여기서 호출한다.
+     */
+    fun onEditDoneClick() {
         update { content ->
-            val drafts = content.drafts.toMutableList()
-            if (index !in drafts.indices) return@update content
-            drafts[index] = value
-            content.copy(drafts = drafts)
+            val draft = content.draft ?: return@update content
+            content.copy(record = content.record.copy(items = draft.items), draft = null)
         }
+    }
+
+    /** Nav 우측 `취소`. 사본을 버리고 원래 값으로 돌아간다. */
+    fun onCancelClick() {
+        update { it.copy(draft = null) }
     }
 
     fun onScheduleChange(checked: Boolean) {
@@ -44,24 +62,32 @@ constructor() : ViewModel() {
     }
 
     /**
-     * 초안을 원본으로 옮긴다.
+     * 읽는 중의 저장하기. 화면을 나가는 조작이고 나가는 판단은 그래프가 한다.
      *
-     * 읽는 중에 눌렸으면 옮길 것이 없다. 그때 저장하기는 화면을 나가는 조작이고, 나가는
-     * 판단은 그래프가 한다.
+     * 편집 중에는 하단에 이 버튼이 없다. 그 자리가 삭제이고 사본을 옮기는 것은 `확인`이 한다.
      */
-    fun onSaveClick() {
-        update { content ->
-            if (!content.editing) return@update content
-            val items =
-                content.record.items.mapIndexed { index, item ->
-                    item.copy(value = content.drafts.getOrNull(index) ?: item.value)
-                }
-            content.copy(record = content.record.copy(items = items), editing = false, drafts = emptyList())
-        }
+    fun onSaveClick() = Unit
+
+    /**
+     * 하단 `진료 후 기록 삭제`. 대화상자를 띄우는 것까지만 한다.
+     *
+     * 개체를 통째로 지우는 것이라 문서가 확인을 필수로 둔다. 원문 메모까지 사라지는 자리다.
+     */
+    fun onDeleteClick() {
+        update { it.copy(deleteRequested = true) }
     }
 
-    fun onCancelClick() {
-        update { it.copy(editing = false, drafts = emptyList()) }
+    fun onDeleteDismiss() {
+        update { it.copy(deleteRequested = false) }
+    }
+
+    /**
+     * 대화상자의 `삭제`. 화면을 떠나는 것은 호출자가 한다.
+     *
+     * 서버 삭제는 아직 없다. 지금은 대화상자를 닫고 편집 모드를 내린다.
+     */
+    fun onDeleteConfirm() {
+        update { it.copy(deleteRequested = false, draft = null) }
     }
 
     private fun update(transform: (VisitRecordUiState.Content) -> VisitRecordUiState.Content) {

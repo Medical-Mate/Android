@@ -42,6 +42,54 @@ enum class MedicalMateKvRowType {
 }
 
 /**
+ * 행에 삭제 ×를 붙이는 방법. 동작과 접근성 이름을 함께 받는다.
+ *
+ * 둘을 따로 받으면 이름 없이 버튼만 켜는 호출이 가능해진다. 아이콘 하나뿐인 버튼은 이름이
+ * 없으면 스크린 리더에서 무엇을 지우는지 알 수 없다.
+ *
+ * [MedicalMateTodoRow]와 [MedicalMateEditingKvRow]가 함께 쓴다.
+ */
+data class MedicalMateRowDelete(val contentDescription: String, val onClick: () -> Unit)
+
+/**
+ * 편집 모드의 KV 행. 값 오른쪽에 삭제 ×가 붙는다.
+ *
+ * 브리핑 카드(1e-1-E)와 진료 후 기록(1q-1-E)이 같은 모양을 쓴다. 두 화면이 각자 조립하면
+ * ×의 크기나 값 폭이 갈린다.
+ *
+ * ×를 [MedicalMateKvRow] 안에 넣지 않는다. 그 컴포넌트는 키 열을 72로 고정해 값의 정렬을
+ * 맞추는 것이 일이고, 오른쪽에 버튼이 들어가면 값 폭이 행마다 달라진다. 그래서 행을 감싸서
+ * 바깥에 둔다. 값의 밑줄은 그만큼 짧아지고, 시안도 그렇게 그려져 있다.
+ *
+ * ×는 S 크기(32 상자 · 18 아이콘)다. 문서가 항목 안의 삭제를 S로, 화면·필드 단위 삭제를
+ * L로 못박았다. 크기 차이가 곧 위계다.
+ */
+@Composable
+fun MedicalMateEditingKvRow(
+    key: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    delete: MedicalMateRowDelete,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        MedicalMateKvRow(
+            key = key,
+            value = value,
+            type = MedicalMateKvRowType.EDITING,
+            onValueChange = onValueChange,
+            modifier = Modifier.weight(1f),
+        )
+        MedicalMateIconButton(
+            onClick = delete.onClick,
+            icon = MedicalMateIcons.Close,
+            contentDescription = delete.contentDescription,
+            size = MedicalMateIconButtonSize.S,
+        )
+    }
+}
+
+/**
  * DESIGN.md의 `KV Row`.
  *
  * 의사가 훑어보는 자리다. key 열을 72로 고정해서 값이 세로로 정렬된다. 정렬이 깨지면
