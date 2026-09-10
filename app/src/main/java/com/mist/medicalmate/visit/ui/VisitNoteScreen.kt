@@ -2,8 +2,8 @@ package com.mist.medicalmate.visit.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,13 +34,17 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateTextArea
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTooltip
 
 /**
- * 와이어프레임 1p. Figma `405:1926`.
+ * 와이어프레임 1p. Figma `1185:12667`.
  *
  * 진료실에서 들은 말을 정리하지 않고 그대로 받는다. 형식을 물으면 기억이 먼저 흐려진다.
  * 나누는 일은 다음 화면에서 AI가 한다.
  *
  * "AI로 정리하기"는 지금 넘어가는 조작이 아니라 적은 것을 다듬는 조작이다. 옆의 툴팁이
  * 무엇을 하는지 알린다. 저장하기를 누르면 분류 결과(1q-1)로 간다.
+ *
+ * 마이크는 본문 흐름이 아니라 우하단에 뜬다. 적는 도중 어디까지 썼든 손이 닿는 자리에
+ * 있어야 하는 조작인데, 본문 끝에 두면 스크롤을 내려야 나온다. 캘린더의 일정 추가와 같은
+ * 배치다.
  */
 @Composable
 fun VisitNoteScreen(state: VisitNoteUiState, callbacks: VisitNoteCallbacks, modifier: Modifier = Modifier) {
@@ -55,7 +59,19 @@ fun VisitNoteScreen(state: VisitNoteUiState, callbacks: VisitNoteCallbacks, modi
             onLeadingClick = callbacks.onBackClick,
             surface = MedicalMateSurfaceStyle.GLASS,
         )
-        NoteContent(state = state, callbacks = callbacks)
+        Box(modifier = Modifier.weight(1f)) {
+            NoteContent(state = state, callbacks = callbacks)
+            MedicalMateIconButton(
+                onClick = callbacks.onVoiceClick,
+                icon = MedicalMateIcons.Mic,
+                contentDescription = stringResource(R.string.visit_note_voice),
+                style = MedicalMateIconButtonStyle.SOLID,
+                modifier =
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(MedicalMateSize.gutter),
+            )
+        }
         MedicalMateBottomCtaBar {
             MedicalMateButton(
                 label = stringResource(R.string.visit_note_save),
@@ -77,12 +93,11 @@ data class VisitNoteCallbacks(
 )
 
 @Composable
-private fun ColumnScope.NoteContent(state: VisitNoteUiState, callbacks: VisitNoteCallbacks) {
+private fun NoteContent(state: VisitNoteUiState, callbacks: VisitNoteCallbacks) {
     Column(
         modifier =
         Modifier
-            .fillMaxWidth()
-            .weight(1f)
+            .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = MedicalMateSize.gutter, vertical = MedicalMateSpace.s12),
         verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s16),
@@ -97,7 +112,6 @@ private fun ColumnScope.NoteContent(state: VisitNoteUiState, callbacks: VisitNot
             maxLength = NOTE_MAX_LENGTH,
         )
         OrganizeRow(state = state, onOrganizeClick = callbacks.onOrganizeClick)
-        VoiceHint(onVoiceClick = callbacks.onVoiceClick)
     }
 }
 
@@ -162,28 +176,6 @@ private fun OrganizeRow(state: VisitNoteUiState, onOrganizeClick: () -> Unit) {
         MedicalMateTooltip(
             text = stringResource(R.string.visit_note_organize_tooltip),
             contentDescription = stringResource(R.string.visit_note_organize_tooltip_label),
-        )
-    }
-}
-
-/** 음성 안내. 지금은 알림만 하고, 음성 인식은 마지막에 붙인다. */
-@Composable
-private fun VoiceHint(onVoiceClick: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s10),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        MedicalMateIconButton(
-            onClick = onVoiceClick,
-            icon = MedicalMateIcons.Mic,
-            contentDescription = stringResource(R.string.visit_note_voice),
-            style = MedicalMateIconButtonStyle.TONAL,
-        )
-        Text(
-            text = stringResource(R.string.visit_note_voice_hint),
-            style = MedicalMateTheme.typography.bodyM,
-            color = MedicalMateTheme.colors.fgSubtle,
         )
     }
 }

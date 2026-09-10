@@ -52,6 +52,57 @@ class CalendarViewModelTest {
     }
 
     @Test
+    fun `카드만 쓴 날을 고르면 시트가 뜬다`() {
+        val viewModel = CalendarViewModel()
+
+        viewModel.onDaySelect(LocalDate.of(2026, 9, 4))
+
+        val state = viewModel.uiState.value
+        assertEquals(emptyList<CalendarSchedule>(), state.schedules)
+        assertEquals("card-1", state.cardSheet?.id)
+    }
+
+    @Test
+    fun `일정이 있는 날은 시트를 띄우지 않는다`() {
+        val viewModel = CalendarViewModel()
+
+        viewModel.onDaySelect(LocalDate.of(2026, 9, 12))
+
+        assertTrue(viewModel.uiState.value.schedules.isNotEmpty())
+        assertNull(viewModel.uiState.value.cardSheet)
+    }
+
+    @Test
+    fun `카드도 일정도 없는 날은 시트를 띄우지 않는다`() {
+        val viewModel = CalendarViewModel()
+
+        viewModel.onDaySelect(LocalDate.of(2026, 9, 13))
+
+        assertNull(viewModel.uiState.value.cardSheet)
+    }
+
+    @Test
+    fun `시트를 닫으면 고른 날은 그대로 둔다`() {
+        val viewModel = CalendarViewModel()
+        viewModel.onDaySelect(LocalDate.of(2026, 9, 4))
+
+        viewModel.onCardSheetDismiss()
+
+        assertNull(viewModel.uiState.value.cardSheet)
+        assertEquals(LocalDate.of(2026, 9, 4), viewModel.uiState.value.selected)
+    }
+
+    @Test
+    fun `다른 날로 옮기면 앞서 뜬 시트가 닫힌다`() {
+        val viewModel = CalendarViewModel()
+        viewModel.onDaySelect(LocalDate.of(2026, 9, 4))
+
+        viewModel.onDaySelect(LocalDate.of(2026, 9, 13))
+
+        assertNull(viewModel.uiState.value.cardSheet)
+    }
+
+    @Test
     fun `진료 예정일의 일자 화면에는 일정과 카드와 할 일이 있다`() {
         val day = CalendarViewModel().dayState(LocalDate.of(2026, 9, 12))
 

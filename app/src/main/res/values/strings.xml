@@ -57,7 +57,6 @@
     <string name="visit_note_organize_tooltip">적은 내용을 소견·검사·약·재방문으로 나눠드려요</string>
     <string name="visit_note_organize_tooltip_label">AI 정리 설명</string>
     <string name="visit_note_voice">음성으로 적기</string>
-    <string name="visit_note_voice_hint">말로 이어서 적을 수도 있어요</string>
     <string name="visit_note_save">저장하기</string>
     <string name="visit_record_title">진료 후 기록</string>
     <string name="visit_record_card_title">진료 후 기록</string>
@@ -84,6 +83,8 @@
     <string name="visit_summary_notice_body">다음 진료 때 이 내용을 이어서 정리할 수 있어요.</string>
     <string name="visit_summary_compare">이번 진료와 지난 진료</string>
     <string name="visit_summary_hospital">진료받은 병원</string>
+    <string name="visit_summary_chip_visit">%1$s 진료</string>
+    <string name="visit_summary_chip_revisit">%1$s 재방문</string>
     <string name="visit_summary_home">홈으로</string>
     <string name="record_detail_title">기록 상세</string>
     <string name="record_detail_failed_title">기록을 불러오지 못했어요</string>
@@ -109,16 +110,16 @@
         <item>토</item>
     </string-array>
     <string name="calendar_day_empty">이 날은 일정이 없어요</string>
+    <!-- 1r-1-S 카드만 있는 날 시트. -->
+    <string name="calendar_card_sheet_section">작성한 브리핑 카드</string>
+    <string name="calendar_card_sheet_hint">이 카드를 가져갈 일정을 만들 수 있어요</string>
+    <string name="calendar_card_sheet_schedule">이 카드로 일정 만들기</string>
 
     <string name="calendar_day_schedule">이 날 일정</string>
-    <string name="calendar_day_schedule_edit">수정</string>
     <string name="calendar_day_dday">D-%1$d</string>
     <string name="calendar_day_card">가져갈 브리핑 카드</string>
-    <string name="calendar_day_card_open">열기</string>
     <string name="calendar_day_todo">진료 전 할 일</string>
-    <string name="calendar_day_todo_add">추가</string>
     <string name="calendar_day_record">이 날 기록</string>
-    <string name="calendar_day_record_add">추가</string>
     <string name="calendar_day_record_empty_title">아직 진료 전이에요</string>
     <string name="calendar_day_record_empty_description">진료가 끝나면 들은 내용을 여기에 기록할 수 있어요</string>
     <string name="calendar_day_record_empty_action">진료 후 기록하기</string>

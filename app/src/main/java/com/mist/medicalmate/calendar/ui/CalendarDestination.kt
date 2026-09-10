@@ -27,11 +27,17 @@ internal data class CalendarDayDestination(val date: String)
 
 internal fun NavGraphBuilder.calendarDestination(
     onDayOpen: (LocalDate) -> Unit,
+    onCardOpen: (String) -> Unit,
     onAddClick: () -> Unit,
     onTabSelect: (MedicalMateTab) -> Unit,
 ) {
     composable<CalendarDestination> {
-        CalendarMonthRoute(onDayOpen = onDayOpen, onAddClick = onAddClick, onTabSelect = onTabSelect)
+        CalendarMonthRoute(
+            onDayOpen = onDayOpen,
+            onCardOpen = onCardOpen,
+            onAddClick = onAddClick,
+            onTabSelect = onTabSelect,
+        )
     }
 }
 
@@ -56,10 +62,14 @@ internal fun NavGraphBuilder.calendarDayDestination(
  *
  * 날을 고르는 것은 화면 안의 일이고, 일정을 누르는 것은 목적지 이동이다. 그래서 날 선택은
  * ViewModel이 받고 일정 클릭은 [onDayOpen]으로 넘긴다.
+ *
+ * 카드만 있는 날의 시트도 화면 안의 상태라 여닫는 것은 ViewModel이 받는다. 그 안에서 카드를
+ * 누르면 브리핑 카드로 나가므로 [onCardOpen]만 목적지로 올린다.
  */
 @Composable
 private fun CalendarMonthRoute(
     onDayOpen: (LocalDate) -> Unit,
+    onCardOpen: (String) -> Unit,
     onAddClick: () -> Unit,
     onTabSelect: (MedicalMateTab) -> Unit,
     modifier: Modifier = Modifier,
@@ -73,6 +83,8 @@ private fun CalendarMonthRoute(
         onNextMonthClick = viewModel::onNextMonth,
         onDayClick = viewModel::onDaySelect,
         onScheduleClick = { onDayOpen(state.selected) },
+        onCardOpenClick = onCardOpen,
+        onCardSheetDismiss = viewModel::onCardSheetDismiss,
         onAddClick = onAddClick,
         onTabSelect = onTabSelect,
         modifier = modifier,

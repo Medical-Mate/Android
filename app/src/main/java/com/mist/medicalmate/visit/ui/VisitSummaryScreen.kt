@@ -2,41 +2,31 @@ package com.mist.medicalmate.visit.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.R
-import com.mist.medicalmate.core.designsystem.MedicalMateElevation
-import com.mist.medicalmate.core.designsystem.MedicalMateIcons
-import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateScreenPreviews
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
-import com.mist.medicalmate.core.designsystem.ShadowTint
 import com.mist.medicalmate.core.designsystem.component.MedicalMateBottomCtaBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateCard
 import com.mist.medicalmate.core.designsystem.component.MedicalMateCardEmphasis
+import com.mist.medicalmate.core.designsystem.component.MedicalMateHospitalCard
+import com.mist.medicalmate.core.designsystem.component.MedicalMateHospitalChip
+import com.mist.medicalmate.core.designsystem.component.MedicalMateHospitalChipTone
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNotice
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNoticeTone
@@ -103,7 +93,35 @@ private fun ColumnScope.SummaryContent(state: VisitSummaryUiState) {
             }
         }
         MedicalMateSectionHeader(title = stringResource(R.string.visit_summary_hospital))
-        HospitalCard(state.hospital)
+        MedicalMateHospitalCard(
+            name = state.hospital.name,
+            address = state.hospital.address,
+            chips = visitChips(state.hospital),
+        )
+    }
+}
+
+/**
+ * 카드 아래 날짜 칩.
+ *
+ * 진료일은 지난 것, 재방문일은 예정된 것이라 색이 다르다. 색만으로 나누지 않도록 글자도
+ * "진료"와 "재방문"으로 다르게 붙인다. 다시 갈 날을 정하지 않았으면 칩이 하나다.
+ */
+@Composable
+private fun visitChips(hospital: HospitalSummary): List<MedicalMateHospitalChip> = buildList {
+    add(
+        MedicalMateHospitalChip(
+            label = stringResource(R.string.visit_summary_chip_visit, hospital.visitDate),
+            tone = MedicalMateHospitalChipTone.PAST,
+        ),
+    )
+    hospital.revisitDate?.let { date ->
+        add(
+            MedicalMateHospitalChip(
+                label = stringResource(R.string.visit_summary_chip_revisit, date),
+                tone = MedicalMateHospitalChipTone.PLANNED,
+            ),
+        )
     }
 }
 
@@ -133,78 +151,6 @@ private fun RowScope.CompareCard(card: VisitCompareCard, emphasis: MedicalMateCa
         )
     }
 }
-
-/**
- * 병원 카드. Figma `640:3914`.
- *
- * 시안의 위쪽은 병원 사진이다. 서버에서 올 이미지라 자리만 잡고 아이콘을 둔다. 사진이
- * 없는 병원도 있어서 이 자리는 어차피 대체 표시가 필요하다. 자리 색은 시안이 사진 위에
- * 깔아 둔 `bg/primary-faint`를 그대로 쓴다.
- *
- * `Card` 컴포넌트를 쓰지 않는다. 사진이 카드 끝까지 닿아야 해서 안쪽 여백을 줄 수 없다.
- * 층은 같은 `Elevation/Card`로 준다.
- */
-@Composable
-private fun HospitalCard(hospital: HospitalSummary) {
-    Surface(
-        shape = MedicalMateRadius.lg,
-        color = MedicalMateTheme.colors.bgSurface,
-        contentColor = MedicalMateTheme.colors.fgDefault,
-        modifier =
-        Modifier
-            .fillMaxWidth()
-            .shadow(
-                elevation = MedicalMateElevation.card,
-                shape = MedicalMateRadius.lg,
-                ambientColor = ShadowTint,
-                spotColor = ShadowTint,
-            ),
-    ) {
-        Column {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(HospitalImageHeight)
-                    .background(MedicalMateTheme.colors.bgPrimaryFaint),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    painter = painterResource(MedicalMateIcons.Hospital),
-                    contentDescription = null,
-                    tint = MedicalMateTheme.colors.fgMuted,
-                    modifier = Modifier.size(HospitalIconSize),
-                )
-            }
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(MedicalMateSpace.s16),
-                verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4),
-            ) {
-                Text(
-                    text = hospital.name,
-                    style = MedicalMateTheme.typography.headingS,
-                    color = MedicalMateTheme.colors.fgDefault,
-                )
-                Text(
-                    text = hospital.address,
-                    style = MedicalMateTheme.typography.bodyS,
-                    color = MedicalMateTheme.colors.fgSubtle,
-                )
-                Text(
-                    text = hospital.visitLine,
-                    style = MedicalMateTheme.typography.labelM,
-                    color = MedicalMateTheme.colors.fgDefault,
-                )
-            }
-        }
-    }
-}
-
-/** 시안의 사진 자리. 콘텐츠 폭 320에 높이 121이다. */
-private val HospitalImageHeight = 121.dp
-
-private val HospitalIconSize = 40.dp
 
 @MedicalMateScreenPreviews
 @Composable

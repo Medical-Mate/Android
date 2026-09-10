@@ -153,5 +153,16 @@ data class VisitSummaryUiState(
 /** 비교 카드 한 장. "지난 진료 · 8.21 / 두통 · 어지러움 / 진통제 처방 · 경과 관찰" */
 data class VisitCompareCard(val label: String, val title: String, val detail: String)
 
-/** [visitLine]은 "2026.09.12 진료 · 다음 방문 09.26"처럼 언제 받고 언제 다시 가는지다. */
-data class HospitalSummary(val name: String, val address: String, val visitLine: String)
+/**
+ * 진료받은 병원.
+ *
+ * [visitDate]와 [revisitDate]는 "09.12"처럼 월·일만 담는다. 카드가 두 날짜를 칩 두 개로
+ * 나눠 보여주고 "진료"·"재방문"은 문자열 리소스에서 붙인다. 다시 갈 날을 정하지 않았으면
+ * [revisitDate]가 null이고 칩도 하나만 나온다.
+ */
+data class HospitalSummary(
+    val name: String,
+    val address: String,
+    val visitDate: String,
+    val revisitDate: String? = null,
+)

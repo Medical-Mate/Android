@@ -62,7 +62,7 @@ fun CalendarDayScreen(state: CalendarDayUiState, callbacks: CalendarDayCallbacks
                 .padding(horizontal = MedicalMateSize.gutter, vertical = MedicalMateSpace.s12),
             verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8),
         ) {
-            ScheduleSection(state = state, callbacks = callbacks)
+            ScheduleSection(state = state)
             CardSection(state = state, callbacks = callbacks)
             TodoSection(state = state, callbacks = callbacks)
             RecordSection(state = state, callbacks = callbacks)
@@ -73,27 +73,21 @@ fun CalendarDayScreen(state: CalendarDayUiState, callbacks: CalendarDayCallbacks
 /**
  * 일자 화면에서 나가는 길들.
  *
- * 파라미터로 하나씩 받으면 일곱 개가 된다. 덩어리마다 하나씩 있어서 한 덩어리로 묶었다.
+ * 파라미터로 하나씩 받으면 넷이 된다. 덩어리마다 하나씩 있어서 한 덩어리로 묶었다.
  */
 data class CalendarDayCallbacks(
     val onBackClick: () -> Unit = {},
-    val onScheduleEditClick: () -> Unit = {},
     val onCardOpenClick: (String) -> Unit = {},
     val onTodoToggle: (String, Boolean) -> Unit = { _, _ -> },
-    val onTodoAddClick: () -> Unit = {},
     val onRecordAddClick: () -> Unit = {},
 )
 
 /** 이 날 일정. 옅은 브랜드 면에 D-day와 제목, 시간·의사·가져갈 것을 담는다. */
 @Composable
-private fun ColumnScope.ScheduleSection(state: CalendarDayUiState, callbacks: CalendarDayCallbacks) {
+private fun ColumnScope.ScheduleSection(state: CalendarDayUiState) {
     val schedule = state.schedule ?: return
 
-    MedicalMateSectionHeader(
-        title = stringResource(R.string.calendar_day_schedule),
-        actionLabel = stringResource(R.string.calendar_day_schedule_edit),
-        onActionClick = callbacks.onScheduleEditClick,
-    )
+    MedicalMateSectionHeader(title = stringResource(R.string.calendar_day_schedule))
     Column(
         modifier =
         Modifier
@@ -122,16 +116,12 @@ private fun ColumnScope.ScheduleSection(state: CalendarDayUiState, callbacks: Ca
     }
 }
 
-/** 가져갈 브리핑 카드. 눌러서 카드로 들어간다. */
+/** 가져갈 브리핑 카드. 줄 자체가 카드로 들어가는 이동이라 헤더에 액션을 두지 않는다. */
 @Composable
 private fun ColumnScope.CardSection(state: CalendarDayUiState, callbacks: CalendarDayCallbacks) {
     val card = state.card ?: return
 
-    MedicalMateSectionHeader(
-        title = stringResource(R.string.calendar_day_card),
-        actionLabel = stringResource(R.string.calendar_day_card_open),
-        onActionClick = { callbacks.onCardOpenClick(card.id) },
-    )
+    MedicalMateSectionHeader(title = stringResource(R.string.calendar_day_card))
     MedicalMateListRow(
         title = card.title,
         meta = card.meta,
@@ -142,16 +132,16 @@ private fun ColumnScope.CardSection(state: CalendarDayUiState, callbacks: Calend
     )
 }
 
-/** 진료 전 할 일. 체크는 그 자리에서 켜고 끈다. */
+/**
+ * 진료 전 할 일. 체크는 그 자리에서 켜고 끈다.
+ *
+ * 추가와 삭제는 이 상태에 없다. 시안이 둘 다 편집 상태(1r-2-E)에만 두었다.
+ */
 @Composable
 private fun ColumnScope.TodoSection(state: CalendarDayUiState, callbacks: CalendarDayCallbacks) {
     if (state.todos.isEmpty()) return
 
-    MedicalMateSectionHeader(
-        title = stringResource(R.string.calendar_day_todo),
-        actionLabel = stringResource(R.string.calendar_day_todo_add),
-        onActionClick = callbacks.onTodoAddClick,
-    )
+    MedicalMateSectionHeader(title = stringResource(R.string.calendar_day_todo))
     state.todos.forEach { todo ->
         MedicalMateCheckbox(
             checked = todo.done,
@@ -168,11 +158,7 @@ private fun ColumnScope.TodoSection(state: CalendarDayUiState, callbacks: Calend
  */
 @Composable
 private fun ColumnScope.RecordSection(state: CalendarDayUiState, callbacks: CalendarDayCallbacks) {
-    MedicalMateSectionHeader(
-        title = stringResource(R.string.calendar_day_record),
-        actionLabel = stringResource(R.string.calendar_day_record_add),
-        onActionClick = callbacks.onRecordAddClick,
-    )
+    MedicalMateSectionHeader(title = stringResource(R.string.calendar_day_record))
     val record = state.record
     if (record == null) {
         Column(
