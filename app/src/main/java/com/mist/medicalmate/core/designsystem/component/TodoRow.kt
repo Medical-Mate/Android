@@ -8,14 +8,6 @@ import androidx.compose.ui.Modifier
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
 
 /**
- * 삭제 ×를 붙이는 방법. 동작과 접근성 이름을 함께 받는다.
- *
- * 둘을 따로 받으면 이름 없이 버튼만 켜는 호출이 가능해진다. 아이콘 하나뿐인 버튼은 이름이
- * 없으면 스크린 리더에서 무엇을 지우는지 알 수 없다.
- */
-data class MedicalMateRowDelete(val contentDescription: String, val onClick: () -> Unit)
-
-/**
  * Figma `Todo Row`(`1129:9197`) 320x54.
  *
  * 진료 전 할 일 한 줄이다. 체크박스와 할 일, 그리고 편집 모드의 삭제 ×로 이뤄진다.

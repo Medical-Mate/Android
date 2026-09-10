@@ -12,7 +12,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.mist.medicalmate.R
-import com.mist.medicalmate.core.designsystem.MedicalMateIcons
 import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
@@ -22,12 +21,12 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateCallout
 import com.mist.medicalmate.core.designsystem.component.MedicalMateCalloutEdit
 import com.mist.medicalmate.core.designsystem.component.MedicalMateCard
 import com.mist.medicalmate.core.designsystem.component.MedicalMateDivider
-import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButton
-import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButtonSize
+import com.mist.medicalmate.core.designsystem.component.MedicalMateEditingKvRow
 import com.mist.medicalmate.core.designsystem.component.MedicalMateKvRow
 import com.mist.medicalmate.core.designsystem.component.MedicalMateKvRowType
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNotice
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNoticeTone
+import com.mist.medicalmate.core.designsystem.component.MedicalMateRowDelete
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSeverityReadout
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTooltip
 
@@ -74,12 +73,7 @@ internal fun BriefCardBlock(
     }
 }
 
-/**
- * 항목 한 줄. 편집 중이면 오른쪽에 ×가 붙는다.
- *
- * ×를 `KV Row` 안에 넣지 않는다. 그 컴포넌트는 키 열을 72로 고정해 값의 정렬을 맞추는 것이
- * 일이고, 오른쪽에 버튼이 들어가면 값 폭이 행마다 달라진다. 그래서 행을 감싸서 바깥에 둔다.
- */
+/** 항목 한 줄. 편집 중이면 오른쪽에 ×가 붙는다. */
 @Composable
 private fun KvLine(
     item: BriefCardItem,
@@ -96,21 +90,16 @@ private fun KvLine(
         )
         return
     }
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        MedicalMateKvRow(
-            key = item.key,
-            value = item.value,
-            type = kvRowType(item = item, editing = editing),
-            onValueChange = onValueChange,
-            modifier = Modifier.weight(1f),
-        )
-        MedicalMateIconButton(
-            onClick = onDeleteClick,
-            icon = MedicalMateIcons.Close,
+    MedicalMateEditingKvRow(
+        key = item.key,
+        value = item.value,
+        onValueChange = onValueChange,
+        delete =
+        MedicalMateRowDelete(
             contentDescription = stringResource(R.string.brief_card_item_delete, item.key),
-            size = MedicalMateIconButtonSize.S,
-        )
-    }
+            onClick = onDeleteClick,
+        ),
+    )
 }
 
 /**
