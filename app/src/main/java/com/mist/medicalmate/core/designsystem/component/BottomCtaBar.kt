@@ -1,6 +1,7 @@
 package com.mist.medicalmate.core.designsystem.component
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,7 +17,11 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
  * DESIGN.md의 `Bottom CTA Bar`.
  *
  * 한 손으로 누를 주 액션을 화면 아래에 고정한다. 높이 92는 위 여백 12 + L 버튼 56 +
- * 아래 안전 여백 24다. [content]에는 높이 56 버튼 하나를 넣는 것을 전제한다.
+ * 아래 안전 여백 24다.
+ *
+ * **자식이 둘 이상이면 10씩 벌린다.** 전에는 간격이 없어서 버튼 둘이나 체크박스와 버튼이
+ * 맞붙었다. 1c-5의 두 버튼이 시안에서 10 떨어져 있고(78 − 12 − 56), 하단에 나란히 놓이는
+ * 것들이 붙어 있어야 할 이유가 없다. 자식이 하나면 이 값은 보이지 않는다.
  *
  * **기본값이 [MedicalMateSurfaceStyle.OPAQUE]다.** 문서의 고도 규칙은 스크롤 콘텐츠 위에
  * Glass를 쓰라고 하는데, 지금 구현에서 블러가 걸리지 않는다. compose-ui 1.10.5에는 뒤
@@ -55,6 +60,7 @@ fun MedicalMateBottomCtaBar(
                 end = MedicalMateSize.gutter,
                 bottom = MedicalMateSize.safeBottom,
             ),
+        verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s10),
         content = content,
     )
 }
