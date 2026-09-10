@@ -7,12 +7,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
@@ -33,8 +35,31 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
  * 제목 문구는 파라미터로 받는다. 제품 카피를 디자인 시스템이 들고 있으면 문구를 바꿀 때
  * 공용 계층을 고쳐야 한다.
  */
+/**
+ * 질문을 고치는 조작. `Callout` 마스터의 `Editing` variant에 대응한다.
+ *
+ * 셋을 한 값으로 묶는다. 따로 받으면 지우기만 되고 고치지는 못하는 반쪽 편집 모드를 만들 수
+ * 있다. 세 조작이 한 상태에 함께 붙는다.
+ *
+ * [addLabel]과 [deleteContentDescription]을 받는 이유는 제품 카피를 디자인 시스템이 들고
+ * 있지 않기 때문이다. `%1$d`에 질문 번호가 들어간다.
+ */
+data class MedicalMateCalloutEdit(
+    val addLabel: String,
+    val deleteContentDescription: (Int) -> String,
+    val placeholder: String,
+    val onQuestionChange: (Int, String) -> Unit,
+    val onQuestionDelete: (Int) -> Unit,
+    val onQuestionAdd: () -> Unit,
+)
+
 @Composable
-fun MedicalMateCallout(title: String, questions: List<String>, modifier: Modifier = Modifier) {
+fun MedicalMateCallout(
+    title: String,
+    questions: List<String>,
+    modifier: Modifier = Modifier,
+    edit: MedicalMateCalloutEdit? = null,
+) {
     Surface(
         shape = MedicalMateRadius.lg,
         color = MedicalMateTheme.colors.bgPrimarySubtle,
@@ -62,14 +87,17 @@ fun MedicalMateCallout(title: String, questions: List<String>, modifier: Modifie
                 )
             }
             questions.forEachIndexed { index, question ->
-                QuestionPill(number = index + 1, question = question)
+                QuestionPill(number = index + 1, question = question, index = index, edit = edit)
+            }
+            if (edit != null) {
+                MedicalMateAddRow(label = edit.addLabel, onClick = edit.onQuestionAdd)
             }
         }
     }
 }
 
 @Composable
-private fun QuestionPill(number: Int, question: String) {
+private fun QuestionPill(number: Int, question: String, index: Int, edit: MedicalMateCalloutEdit?) {
     Surface(
         shape = MedicalMateRadius.sm,
         // 문서의 컴포넌트 규격이 지정한 흰색 75%다. 뒤의 브랜드 tint가 살짝 배어 나온다.
@@ -92,8 +120,59 @@ private fun QuestionPill(number: Int, question: String) {
                     Text(text = number.toString(), style = MedicalMateTheme.typography.labelM)
                 }
             }
-            Text(text = question, style = MedicalMateTheme.typography.bodyM)
+            if (edit == null) {
+                Text(text = question, style = MedicalMateTheme.typography.bodyM)
+            } else {
+                QuestionField(
+                    value = question,
+                    placeholder = edit.placeholder,
+                    onValueChange = { edit.onQuestionChange(index, it) },
+                    modifier = Modifier.weight(1f),
+                )
+                MedicalMateIconButton(
+                    onClick = { edit.onQuestionDelete(index) },
+                    icon = MedicalMateIcons.Close,
+                    contentDescription = edit.deleteContentDescription(number),
+                    style = MedicalMateIconButtonStyle.GHOST,
+                    size = MedicalMateIconButtonSize.S,
+                )
+            }
         }
+    }
+}
+
+/**
+ * 고칠 수 있는 질문 칸.
+ *
+ * `Text Field`를 쓰지 않는다. 면을 채우고 테두리를 두르면 pill 안에 또 하나의 필드가 생겨
+ * 번호와 글자의 정렬이 어긋난다. `KV Row`의 편집 값과 같은 방식이다.
+ *
+ * 빈 질문에는 안내 문구를 겹쳐 둔다. `+ 질문 추가`가 빈 항목을 만들기 때문에 처음에는
+ * 반드시 빈 칸이 하나 있고, 그 칸이 무엇을 적는 자리인지 알려야 한다.
+ */
+@Composable
+private fun QuestionField(
+    value: String,
+    placeholder: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val style = MedicalMateTheme.typography.bodyM.copy(color = MedicalMateTheme.colors.fgDefault)
+    Box(modifier = modifier) {
+        if (value.isEmpty()) {
+            Text(
+                text = placeholder,
+                style = MedicalMateTheme.typography.bodyM,
+                color = MedicalMateTheme.colors.fgSubtle,
+            )
+        }
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            textStyle = style,
+            cursorBrush = SolidColor(MedicalMateTheme.colors.borderFocus),
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 

@@ -19,9 +19,11 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateBadge
 import com.mist.medicalmate.core.designsystem.component.MedicalMateBadgeTone
 import com.mist.medicalmate.core.designsystem.component.MedicalMateCallout
+import com.mist.medicalmate.core.designsystem.component.MedicalMateCalloutEdit
 import com.mist.medicalmate.core.designsystem.component.MedicalMateCard
 import com.mist.medicalmate.core.designsystem.component.MedicalMateDivider
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButton
+import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButtonSize
 import com.mist.medicalmate.core.designsystem.component.MedicalMateKvRow
 import com.mist.medicalmate.core.designsystem.component.MedicalMateKvRowType
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNotice
@@ -38,33 +40,76 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateTooltip
  * [onEditClick]이 없으면 수정 연필을 그리지 않는다. 진료실 화면에서 의사가 환자의 카드를
  * 고칠 일이 없다.
  *
- * [editing]이면 값들이 입력 상태로 열린다. 항목별이 아니라 카드 전체가 한 번에 열린다.
+ * [items]를 따로 받는다. 편집 중에는 카드가 아니라 사본의 항목을 그려야 하고, 사본에서는
+ * 항목이 지워질 수 있어 [card]의 목록과 길이가 다르다.
+ *
+ * [onItemDeleteClick]을 주면 항목마다 ×가 붙는다. 편집 모드의 1e-1-E다. 문서가 항목 안의
+ * ×를 S 크기(32 상자 · 18 아이콘)로 못박았다. 화면 단위 액션과 크기로 구분된다.
  */
 @Composable
 internal fun BriefCardBlock(
     card: BriefCard,
     modifier: Modifier = Modifier,
+    items: List<BriefCardItem> = card.items,
     editing: Boolean = false,
-    draftAt: (Int) -> String = { card.items[it].value },
-    onDraftChange: (Int, String) -> Unit = { _, _ -> },
-    onEditClick: (() -> Unit)? = null,
+    onItemValueChange: (Int, String) -> Unit = { _, _ -> },
+    onItemDeleteClick: ((Int) -> Unit)? = null,
     showAiCaption: Boolean = true,
 ) {
     MedicalMateCard(modifier = modifier) {
-        CardHead(card = card, onEditClick = onEditClick)
+        CardHead(card = card)
         MedicalMateDivider()
-        card.items.forEachIndexed { index, item ->
-            MedicalMateKvRow(
-                key = item.key,
-                value = if (editing) draftAt(index) else item.value,
-                type = kvRowType(item = item, editing = editing),
-                onValueChange = { onDraftChange(index, it) },
+        items.forEachIndexed { index, item ->
+            KvLine(
+                item = item,
+                editing = editing,
+                onValueChange = { onItemValueChange(index, it) },
+                onDeleteClick = onItemDeleteClick?.let { delete -> { delete(index) } },
             )
         }
         card.severity?.let { MedicalMateSeverityReadout(severity = it) }
         if (showAiCaption && !editing) {
             AiCaption()
         }
+    }
+}
+
+/**
+ * 항목 한 줄. 편집 중이면 오른쪽에 ×가 붙는다.
+ *
+ * ×를 `KV Row` 안에 넣지 않는다. 그 컴포넌트는 키 열을 72로 고정해 값의 정렬을 맞추는 것이
+ * 일이고, 오른쪽에 버튼이 들어가면 값 폭이 행마다 달라진다. 그래서 행을 감싸서 바깥에 둔다.
+ */
+@Composable
+private fun KvLine(
+    item: BriefCardItem,
+    editing: Boolean,
+    onValueChange: (String) -> Unit,
+    onDeleteClick: (() -> Unit)?,
+) {
+    if (onDeleteClick == null) {
+        MedicalMateKvRow(
+            key = item.key,
+            value = item.value,
+            type = kvRowType(item = item, editing = editing),
+            onValueChange = onValueChange,
+        )
+        return
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        MedicalMateKvRow(
+            key = item.key,
+            value = item.value,
+            type = kvRowType(item = item, editing = editing),
+            onValueChange = onValueChange,
+            modifier = Modifier.weight(1f),
+        )
+        MedicalMateIconButton(
+            onClick = onDeleteClick,
+            icon = MedicalMateIcons.Close,
+            contentDescription = stringResource(R.string.brief_card_item_delete, item.key),
+            size = MedicalMateIconButtonSize.S,
+        )
     }
 }
 
@@ -79,9 +124,15 @@ private fun kvRowType(item: BriefCardItem, editing: Boolean): MedicalMateKvRowTy
     else -> MedicalMateKvRowType.DEFAULT
 }
 
-/** 제목·상태 배지·환자 줄과 수정 연필. Figma `596:3160`. */
+/**
+ * 제목·상태 배지·환자 줄. Figma `596:3160`.
+ *
+ * 편집 진입은 여기 없다. 카드 안 연필에서 Nav 우측 `편집`으로 옮겼다. 문서의 CRUD 규칙이
+ * 편집 상태를 Nav 한 자리에서 `편집 → 취소 → 확인`으로 바꾸기로 정했고, 카드 안에 연필을
+ * 남기면 진입이 두 곳이 된다.
+ */
 @Composable
-private fun CardHead(card: BriefCard, onEditClick: (() -> Unit)?) {
+private fun CardHead(card: BriefCard) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8),
@@ -107,13 +158,6 @@ private fun CardHead(card: BriefCard, onEditClick: (() -> Unit)?) {
                 text = card.patientLine,
                 style = MedicalMateTheme.typography.bodyS,
                 color = MedicalMateTheme.colors.fgSubtle,
-            )
-        }
-        onEditClick?.let {
-            MedicalMateIconButton(
-                onClick = it,
-                icon = MedicalMateIcons.Edit,
-                contentDescription = stringResource(R.string.brief_card_edit),
             )
         }
     }
@@ -179,15 +223,25 @@ internal fun AllergyNotice(allergies: List<String>, modifier: Modifier = Modifie
     )
 }
 
-/** 환자가 묻고 싶어 하는 것. Figma `293:657`. 적어둔 질문이 없으면 두지 않는다. */
+/**
+ * 환자가 묻고 싶어 하는 것. Figma `293:657`.
+ *
+ * 읽을 때 질문이 없으면 두지 않는다. 편집 중에는 비어 있어도 둔다. `+ 질문 추가`가 그 안에
+ * 있어서 감추면 질문을 하나도 안 적은 사람이 더할 방법을 잃는다.
+ */
 @Composable
-internal fun QuestionsCallout(questions: List<String>, modifier: Modifier = Modifier) {
-    if (questions.isEmpty()) return
+internal fun QuestionsCallout(
+    questions: List<String>,
+    modifier: Modifier = Modifier,
+    edit: MedicalMateCalloutEdit? = null,
+) {
+    if (questions.isEmpty() && edit == null) return
 
     MedicalMateCallout(
         title = stringResource(R.string.brief_card_questions),
         questions = questions,
         modifier = modifier,
+        edit = edit,
     )
 }
 

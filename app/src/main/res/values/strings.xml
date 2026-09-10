@@ -112,7 +112,9 @@
     <string name="brief_card_title">브리핑 카드</string>
     <string name="brief_card_status_before_visit">진료 전</string>
     <string name="brief_card_status_confirmed">진료 완료</string>
-    <string name="brief_card_edit">카드 전체 수정</string>
+    <!-- Nav 우측 액션. 문서의 CRUD 규칙이 한 자리에서 이름만 바꾼다. -->
+    <string name="brief_card_edit">편집</string>
+    <string name="brief_card_edit_done">확인</string>
     <string name="brief_card_ai_caption">AI가 말씀하신 내용을 정리했어요</string>
     <string name="brief_card_ai_tooltip">문답에서 답한 말을 항목으로 나눠 담았어요</string>
     <string name="brief_card_ai_tooltip_open">AI가 어떻게 정리했는지 보기</string>
@@ -125,6 +127,15 @@
     <string name="brief_card_failed_title">카드를 불러오지 못했어요</string>
     <string name="brief_card_failed_description">인터넷 연결을 확인하고 다시 시도해주세요</string>
     <string name="brief_card_retry">다시 시도</string>
+    <string name="brief_card_hospital_section">진료받을 병원</string>
+    <string name="brief_card_item_delete">%1$s 항목 삭제</string>
+    <string name="brief_card_question_add">질문 추가</string>
+    <string name="brief_card_question_delete">%1$d번 질문 삭제</string>
+    <string name="brief_card_question_placeholder">물어볼 것을 적어주세요</string>
+    <string name="brief_card_delete">브리핑 카드 삭제</string>
+    <string name="brief_card_delete_title">이 브리핑 카드를 삭제할까요?</string>
+    <string name="brief_card_delete_body">연결된 진료 기록은 남고 카드만 사라져요.</string>
+    <string name="brief_card_delete_confirm">삭제</string>
 
     <string name="handoff_title">진료실 화면</string>
     <string name="handoff_header">환자가 진료 전에 정리한 내용입니다</string>

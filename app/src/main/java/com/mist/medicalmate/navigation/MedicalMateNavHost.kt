@@ -99,6 +99,8 @@ internal fun MedicalMateNavHost(
         )
         briefCardDestination(
             onSaved = { navController.resetTo(HomeDestination()) },
+            // 지운 카드의 화면에 남을 수 없다. 저장과 같은 자리로 나간다.
+            onDeleted = { navController.resetTo(HomeDestination()) },
             onHandoff = { cardId -> navController.navigate(HandoffDestination(cardId)) },
             onExit = { navController.popBackStack() },
         )
