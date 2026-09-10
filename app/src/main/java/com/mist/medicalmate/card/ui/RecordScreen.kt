@@ -160,11 +160,13 @@ private fun RecordRow(item: RecordItem, onClick: () -> Unit) {
                     style = MedicalMateTheme.typography.bodyS,
                     color = MedicalMateTheme.colors.fgSubtle,
                 )
-                Text(
-                    text = item.detail,
-                    style = MedicalMateTheme.typography.bodyS,
-                    color = MedicalMateTheme.colors.fgSubtle,
-                )
+                item.detail?.let {
+                    Text(
+                        text = it,
+                        style = MedicalMateTheme.typography.bodyS,
+                        color = MedicalMateTheme.colors.fgSubtle,
+                    )
+                }
                 item.resumeLabel?.let {
                     Text(
                         text = it,
