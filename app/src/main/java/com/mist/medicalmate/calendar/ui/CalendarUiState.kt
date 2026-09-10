@@ -13,6 +13,9 @@ import java.time.YearMonth
  *
  * [selected]와 [today]를 나눠 갖는다. 오늘은 옅은 테두리, 고른 날은 채움이라 표시가 다르고,
  * 오늘이 아닌 날을 골라 볼 수 있어야 한다.
+ *
+ * [cardSheet]가 있으면 카드만 있는 날 시트(1r-1-S `1226:4669`)가 떠 있다. 일정이 있는
+ * 날은 일자 화면으로 넘어가고, 카드만 쓴 날은 갈 화면이 없어서 그 자리에서 시트로 보여준다.
  */
 data class CalendarUiState(
     val month: YearMonth,
@@ -21,6 +24,7 @@ data class CalendarUiState(
     val recordDays: Set<Int> = emptySet(),
     val plannedDays: Set<Int> = emptySet(),
     val schedules: List<CalendarSchedule> = emptyList(),
+    val cardSheet: DayCard? = null,
 )
 
 /**

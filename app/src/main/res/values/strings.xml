@@ -110,6 +110,10 @@
         <item>토</item>
     </string-array>
     <string name="calendar_day_empty">이 날은 일정이 없어요</string>
+    <!-- 1r-1-S 카드만 있는 날 시트. -->
+    <string name="calendar_card_sheet_section">작성한 브리핑 카드</string>
+    <string name="calendar_card_sheet_hint">이 카드를 가져갈 일정을 만들 수 있어요</string>
+    <string name="calendar_card_sheet_schedule">이 카드로 일정 만들기</string>
 
     <string name="calendar_day_schedule">이 날 일정</string>
     <string name="calendar_day_dday">D-%1$d</string>

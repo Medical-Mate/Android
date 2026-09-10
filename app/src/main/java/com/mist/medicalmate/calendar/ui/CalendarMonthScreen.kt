@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,14 +33,19 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateBadge
 import com.mist.medicalmate.core.designsystem.component.MedicalMateBadgeTone
+import com.mist.medicalmate.core.designsystem.component.MedicalMateBottomSheet
+import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateCard
 import com.mist.medicalmate.core.designsystem.component.MedicalMateDateCell
 import com.mist.medicalmate.core.designsystem.component.MedicalMateDateCellSize
 import com.mist.medicalmate.core.designsystem.component.MedicalMateDateMarker
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButtonStyle
+import com.mist.medicalmate.core.designsystem.component.MedicalMateListRow
+import com.mist.medicalmate.core.designsystem.component.MedicalMateListRowType
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavLeading
+import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTabBar
 import java.time.LocalDate
@@ -64,6 +70,8 @@ fun CalendarMonthScreen(
     onNextMonthClick: () -> Unit,
     onDayClick: (LocalDate) -> Unit,
     onScheduleClick: (String) -> Unit,
+    onCardOpenClick: (String) -> Unit,
+    onCardSheetDismiss: () -> Unit,
     onAddClick: () -> Unit,
     onTabSelect: (MedicalMateTab) -> Unit,
     modifier: Modifier = Modifier,
@@ -98,6 +106,69 @@ fun CalendarMonthScreen(
             )
         }
         MedicalMateTabBar(selected = MedicalMateTab.CALENDAR, onSelect = onTabSelect)
+    }
+
+    state.cardSheet?.let { card ->
+        CardSheet(
+            date = state.selected,
+            card = card,
+            onCardOpenClick = onCardOpenClick,
+            onScheduleClick = onAddClick,
+            onDismissRequest = onCardSheetDismiss,
+        )
+    }
+}
+
+/**
+ * 카드만 있는 날 시트. Figma 1r-1-S `1226:4669`.
+ *
+ * 일정이 없고 카드만 쓴 날을 눌렀을 때 뜬다. 갈 화면이 없는 날이라 그 자리에서 무엇이
+ * 있는지 보여주고, 일정을 만들면 그때부터 일자 화면이 열린다.
+ *
+ * 날짜와 섹션 머리와 줄을 한 `Column`으로 묶는다. 시트가 자식 사이에 12를 두는데 시안은
+ * 이 셋을 붙여 두고 `Section Header`의 안쪽 여백으로만 띄운다.
+ *
+ * 일정 만들기는 캘린더의 + 버튼과 같은 곳으로 간다. 그 화면(1r-4)이 아직 없어서 둘 다
+ * 목적지가 비어 있다.
+ *
+ * `ModalBottomSheet`이 실험 API라 [MedicalMateBottomSheet]의 기본 `sheetState`도 그 타입을
+ * 드러낸다. 컴포넌트 쪽과 같은 이유로 호출부에도 붙인다.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CardSheet(
+    date: LocalDate,
+    card: DayCard,
+    onCardOpenClick: (String) -> Unit,
+    onScheduleClick: () -> Unit,
+    onDismissRequest: () -> Unit,
+) {
+    MedicalMateBottomSheet(onDismissRequest = onDismissRequest) {
+        Column {
+            Text(
+                text = date.format(dayFormat),
+                style = MedicalMateTheme.typography.headingS,
+                color = MedicalMateTheme.colors.fgDefault,
+            )
+            MedicalMateSectionHeader(title = stringResource(R.string.calendar_card_sheet_section))
+            MedicalMateListRow(
+                title = card.title,
+                meta = card.meta,
+                badge = card.status,
+                type = MedicalMateListRowType.BADGE,
+                onClick = { onCardOpenClick(card.id) },
+            )
+        }
+        Text(
+            text = stringResource(R.string.calendar_card_sheet_hint),
+            style = MedicalMateTheme.typography.bodyS,
+            color = MedicalMateTheme.colors.fgSubtle,
+        )
+        MedicalMateButton(
+            label = stringResource(R.string.calendar_card_sheet_schedule),
+            onClick = onScheduleClick,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
@@ -357,6 +428,8 @@ private fun CalendarMonthScreenPreview() {
             onNextMonthClick = {},
             onDayClick = {},
             onScheduleClick = {},
+            onCardOpenClick = {},
+            onCardSheetDismiss = {},
             onAddClick = {},
             onTabSelect = {},
         )

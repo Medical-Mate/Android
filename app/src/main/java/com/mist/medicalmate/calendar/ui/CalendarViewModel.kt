@@ -35,11 +35,26 @@ constructor() : ViewModel() {
         mutableUiState.update { it.copy(month = it.month.plusMonths(1)) }
     }
 
-    /** 날을 골랐다. 그 날의 일정만 남긴다. */
+    /**
+     * 날을 골랐다. 그 날의 일정만 남긴다.
+     *
+     * 일정이 없고 카드만 쓴 날이면 시트를 함께 띄운다. 그런 날은 일자 화면으로 넘어갈
+     * 것이 없는데, 쓴 카드가 있다는 것은 알려야 한다.
+     */
     fun onDaySelect(date: LocalDate) {
         mutableUiState.update { state ->
-            state.copy(selected = date, schedules = schedulesOn(date, state.today))
+            val schedules = schedulesOn(date, state.today)
+            state.copy(
+                selected = date,
+                schedules = schedules,
+                cardSheet = if (schedules.isEmpty()) cardOn(date) else null,
+            )
         }
+    }
+
+    /** 시트를 닫았다. */
+    fun onCardSheetDismiss() {
+        mutableUiState.update { it.copy(cardSheet = null) }
     }
 
     /** 고른 날의 일자 화면 상태. 목적지가 열릴 때 화면이 받는다. */
@@ -57,6 +72,9 @@ constructor() : ViewModel() {
         /** Figma가 그린 진료 예정일. */
         val VisitDate: LocalDate = LocalDate.of(2026, 9, 12)
 
+        /** Figma가 그린 카드 작성일. 1r-1-S가 이 날의 시트다. */
+        val CardDate: LocalDate = LocalDate.of(2026, 9, 4)
+
         /** 기록이 있는 날. 9월 4일에 브리핑 카드를 썼다. */
         val RecordDays = setOf(4)
 
@@ -68,7 +86,7 @@ constructor() : ViewModel() {
                 id = "card-1",
                 title = "복부 통증 · 3주",
                 status = "진료 전",
-                meta = "2026.09.04 작성 · 5문항",
+                meta = "2026.09.04 작성 · 5항목",
             )
 
         val fixtureTodos =
@@ -89,6 +107,9 @@ constructor() : ViewModel() {
                 schedules = schedulesOn(VisitDate, today),
             )
         }
+
+        /** 그 날에 걸린 카드. 쓴 날과 가져갈 날 양쪽에서 같은 카드가 나온다. */
+        fun cardOn(date: LocalDate): DayCard? = if (date == CardDate || date == VisitDate) fixtureCard else null
 
         fun schedulesOn(date: LocalDate, today: LocalDate): List<CalendarSchedule> = if (date != VisitDate) {
             emptyList()
@@ -136,7 +157,7 @@ internal val previewCalendarDayState =
             id = "card-1",
             title = "복부 통증 · 3주",
             status = "진료 전",
-            meta = "2026.09.04 작성 · 5문항",
+            meta = "2026.09.04 작성 · 5항목",
         ),
         todos =
         listOf(

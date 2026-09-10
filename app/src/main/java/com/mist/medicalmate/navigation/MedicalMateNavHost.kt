@@ -121,6 +121,7 @@ internal fun MedicalMateNavHost(
         profileDestinations(navController = navController, accountActions = accountActions)
         calendarDestination(
             onDayOpen = { date -> navController.navigate(CalendarDayDestination(date.toString())) },
+            onCardOpen = { cardId -> navController.navigate(BriefCardDestination(cardId)) },
             onAddClick = { },
             onTabSelect = navController::selectTab,
         )
