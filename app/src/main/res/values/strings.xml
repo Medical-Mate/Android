@@ -57,7 +57,6 @@
     <string name="visit_note_organize_tooltip">적은 내용을 소견·검사·약·재방문으로 나눠드려요</string>
     <string name="visit_note_organize_tooltip_label">AI 정리 설명</string>
     <string name="visit_note_voice">음성으로 적기</string>
-    <string name="visit_note_voice_hint">말로 이어서 적을 수도 있어요</string>
     <string name="visit_note_save">저장하기</string>
     <string name="visit_record_title">진료 후 기록</string>
     <string name="visit_record_card_title">진료 후 기록</string>
