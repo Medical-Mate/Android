@@ -62,8 +62,10 @@ object NetworkModule {
     private fun baseClientBuilder(): OkHttpClient.Builder = OkHttpClient
         .Builder()
         .addInterceptor(loggingInterceptor())
-        // Render 무료 티어는 인스턴스가 잠들어 첫 요청이 수십 초 걸린다.
-        .connectTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        // Render 무료 티어는 인스턴스가 잠들어 첫 요청의 **응답**이 수십 초 걸린다.
+        // 연결 자체는 그와 무관하게 빨리 되거나 안 된다. 연결을 60초 기다리면 비행기
+        // 모드나 잘못된 주소 같은 경우에 앱이 그만큼 멈춘 것처럼 보인다.
+        .connectTimeout(CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
 
     /**
@@ -80,5 +82,9 @@ object NetworkModule {
             }
     }
 
+    /** 응답을 기다리는 시간. 잠든 인스턴스가 깨는 데 걸리는 시간을 감당해야 한다. */
     private const val READ_TIMEOUT_SECONDS = 60L
+
+    /** 연결을 기다리는 시간. 연결은 되거나 안 되거나이고 오래 걸릴 이유가 없다. */
+    private const val CONNECT_TIMEOUT_SECONDS = 10L
 }

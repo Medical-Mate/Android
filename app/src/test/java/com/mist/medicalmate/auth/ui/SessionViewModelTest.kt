@@ -6,6 +6,7 @@ import com.mist.medicalmate.auth.data.Session
 import com.mist.medicalmate.core.network.ApiErrorCode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -56,6 +57,93 @@ class SessionViewModelTest {
     }
 
     @Test
+    fun `복구가 상한을 넘기면 기다리지 않고 저장된 토큰으로 들어간다`() = runTest {
+        // 읽기 제한(60초)까지 응답이 오지 않는 상황
+        val viewModel =
+            SessionViewModel(
+                FakeAuthRepository(
+                    restoreResult = AuthResult.Success(Session(onboardingRequired = false)),
+                    restoreDelayMillis = 60_000L,
+                ),
+            )
+
+        advanceTimeBy(SessionViewModel.MAX_SPLASH_MILLIS + 1)
+
+        assertEquals(SessionUiState.SignedIn(onboardingRequired = false), viewModel.uiState.value)
+    }
+
+    @Test
+    fun `상한 전에는 스플래시를 유지한다`() = runTest {
+        val viewModel =
+            SessionViewModel(
+                FakeAuthRepository(
+                    restoreResult = AuthResult.Success(Session(onboardingRequired = false)),
+                    restoreDelayMillis = 60_000L,
+                ),
+            )
+
+        advanceTimeBy(SessionViewModel.MAX_SPLASH_MILLIS - 1)
+
+        assertEquals(SessionUiState.Checking, viewModel.uiState.value)
+    }
+
+    @Test
+    fun `상한 안에 늦게 도착한 복구는 반영된다`() = runTest {
+        val viewModel =
+            SessionViewModel(
+                FakeAuthRepository(
+                    restoreResult = AuthResult.Success(Session(onboardingRequired = true)),
+                    restoreDelayMillis = SessionViewModel.MAX_SPLASH_MILLIS - 1,
+                ),
+            )
+
+        advanceUntilIdle()
+
+        assertEquals(SessionUiState.SignedIn(onboardingRequired = true), viewModel.uiState.value)
+    }
+
+    @Test
+    fun `상한을 넘긴 뒤 도착한 성공은 화면을 흔들지 않는다`() = runTest {
+        val viewModel =
+            SessionViewModel(
+                FakeAuthRepository(
+                    restoreResult = AuthResult.Success(Session(onboardingRequired = true)),
+                    restoreDelayMillis = 30_000L,
+                ),
+            )
+
+        advanceTimeBy(SessionViewModel.MAX_SPLASH_MILLIS + 1)
+        assertEquals(SessionUiState.SignedIn(onboardingRequired = false), viewModel.uiState.value)
+
+        advanceUntilIdle()
+
+        // 늦게 온 결과로 화면을 다시 옮기지 않는다. 이미 홈을 보고 있는 사람을
+        // 온보딩으로 끌어가면 그 사이에 한 일과 부딪힌다.
+        assertEquals(SessionUiState.SignedIn(onboardingRequired = false), viewModel.uiState.value)
+    }
+
+    @Test
+    fun `상한을 넘긴 뒤 도착한 거절은 로그인 화면으로 보낸다`() = runTest {
+        val viewModel =
+            SessionViewModel(
+                FakeAuthRepository(
+                    restoreResult =
+                    AuthResult.Rejected(code = ApiErrorCode.UNAUTHORIZED, requestId = "req_test"),
+                    restoreDelayMillis = 30_000L,
+                ),
+            )
+
+        advanceTimeBy(SessionViewModel.MAX_SPLASH_MILLIS + 1)
+        assertEquals(SessionUiState.SignedIn(onboardingRequired = false), viewModel.uiState.value)
+
+        advanceUntilIdle()
+
+        // 상한을 넘겨 먼저 들여보냈더라도 거절이 도착하면 밀어내야 한다. 저장소가
+        // 토큰을 지우고 그것이 hasSession으로 흘러온다.
+        assertEquals(SessionUiState.SignedOut, viewModel.uiState.value)
+    }
+
+    @Test
     fun `토큰이 거절되면 SignedOut이다`() = runTest {
         val viewModel =
             SessionViewModel(
@@ -74,13 +162,15 @@ class SessionViewModelTest {
     }
 
     @Test
-    fun `오프라인이어도 로그인 화면으로 보낸다`() = runTest {
+    fun `오프라인이면 저장된 토큰으로 들어간다`() = runTest {
+        // 서버에 못 물어본 것은 로그아웃이 아니다. 연결이 없으면 다시 로그인도 못 하므로
+        // 로그인 화면으로 보내는 것은 길이 아니다.
         val viewModel =
             SessionViewModel(FakeAuthRepository(restoreResult = AuthResult.NetworkUnavailable))
 
         advanceUntilIdle()
 
-        assertEquals(SessionUiState.SignedOut, viewModel.uiState.value)
+        assertEquals(SessionUiState.SignedIn(onboardingRequired = false), viewModel.uiState.value)
     }
 
     @Test
@@ -257,6 +347,8 @@ class SessionViewModelTest {
     private class FakeAuthRepository(
         private val restoreResult: AuthResult?,
         private val withdrawResult: AuthResult = AuthResult.Success(Session(onboardingRequired = false)),
+        /** 서버가 잠들어 응답이 늦는 상황을 흉내 낸다. */
+        private val restoreDelayMillis: Long = 0L,
     ) : AuthRepository {
         var logoutCalled: Boolean = false
             private set
@@ -273,7 +365,15 @@ class SessionViewModelTest {
         override suspend fun loginWithKakao(kakaoAccessToken: String): AuthResult =
             AuthResult.Success(Session(onboardingRequired = false))
 
-        override suspend fun restoreSession(): AuthResult? = restoreResult
+        override suspend fun restoreSession(): AuthResult? {
+            if (restoreDelayMillis > 0) delay(restoreDelayMillis)
+            // 진짜 저장소는 서버가 토큰을 거절하면 지운다(`DefaultAuthRepository`). 그것이
+            // hasSession으로 흘러 화면을 옮기므로 여기서도 같이 지운다.
+            if (restoreResult is AuthResult.Rejected && restoreResult.code == ApiErrorCode.UNAUTHORIZED) {
+                dropSession()
+            }
+            return restoreResult
+        }
 
         override suspend fun logout() {
             logoutCalled = true

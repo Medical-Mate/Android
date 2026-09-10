@@ -439,7 +439,7 @@ com.mist.medicalmate/
 
 | 항목 | 상태 |
 | -- | -- |
-| 유닛 테스트 | `LoginViewModel` 13건, `SessionViewModel` 17건, `HomeViewModel` 9건, `IntakeViewModel` 27건, `BodyMapGeometry` 17건, `BodyMapLayout` 10건, `BriefCardViewModel` 8건, `RecordDetailViewModel` 10건, `MyProfileViewModel` 5건, `HealthEditViewModel` 11건, `HospitalPickViewModel` 10건, `VisitRecordViewModel` 11건, `VisitNoteViewModel` 6건, `CalendarViewModel` 7건, `ProfileSetupViewModel` 7건, `HomeSchedule` 4건, `TokenAuthenticator` 7건, 템플릿 1개 |
+| 유닛 테스트 | `LoginViewModel` 13건, `SessionViewModel` 22건, `HomeViewModel` 9건, `IntakeViewModel` 27건, `BodyMapGeometry` 17건, `BodyMapLayout` 10건, `BriefCardViewModel` 8건, `RecordDetailViewModel` 10건, `MyProfileViewModel` 5건, `HealthEditViewModel` 11건, `HospitalPickViewModel` 10건, `VisitRecordViewModel` 11건, `VisitNoteViewModel` 6건, `CalendarViewModel` 7건, `ProfileSetupViewModel` 7건, `HomeSchedule` 4건, `TokenAuthenticator` 7건, 템플릿 1개 |
 | 네비게이션 테스트 | 없음. `NavHost`는 계측 테스트가 필요하고 CI가 androidTest를 실행하지 않음 |
 | 아키텍처 패턴 | MVVM 확정. UseCase는 필요할 때만 |
 | DI | Hilt 확정 |
@@ -458,7 +458,7 @@ com.mist.medicalmate/
 | Search Field | 구현 완료(1m 병원 찾기에서 사용). DESIGN.md 8절에는 아직 항목이 없어 값은 Figma 마스터를 따랐다 |
 | 로그인 화면(1o) | 카카오 버튼 + 서버 토큰 교환 구현 완료. 토큰 적용 완료 |
 | 홈 화면(1n) | Figma 1n-1·1n-2 반영. `HomeViewModel`이 픽스처를 노출. 서버 미연동 |
-| 진입 · 온보딩(1a) | 스플래시(1a-1)와 온보딩 인트로(1a-2) 구현 완료. 스플래시는 최소 2초 노출 |
+| 진입 · 온보딩(1a) | 스플래시(1a-1)와 온보딩 인트로(1a-2) 구현 완료. 스플래시는 최소 2초 노출, 세션 복구를 기다리는 상한은 6초. 상한을 넘기거나 연결이 없으면 저장된 토큰을 믿고 들어간다. 서버가 거절해야 로그인 화면으로 보낸다 |
 | 신상정보 입력(1b) | 1b-1~1b-3 화면과 1b-4 완료 모션, 홈 등록 완료 토스트까지 구현. **서버 저장 미연동** |
 | 증상 정리(1l·1c·1d·1i) | 네 단계 화면 구현. AI 응답과 음성 인식 미연동 |
 | 아픈 부위(1l) | 인체도 구현 완료. 앞뒤 전환 · 앵커 9개 · 확대 후 구역 25개 · 팔·다리 좌우 반전 · 전신·피부 칩 · 진료과 안내 · 목록 대안. 부위 id는 AI 트랙의 온톨로지(`ANC:*` · `SUR:*`)를 쓰고 이름과 진료과는 `BodyMapOntologyFixture.kt`가 픽스처로 들고 있다. 서버 연동 시 그 파일만 지운다 |
