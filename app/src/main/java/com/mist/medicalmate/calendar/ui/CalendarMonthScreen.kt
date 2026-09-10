@@ -14,10 +14,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -264,6 +266,13 @@ private val LegendDotSize = 5.dp
 private val LegendRingWidth = 1.dp
 
 /** 고른 날과 그 날의 일정. 일정이 없으면 없다고 적는다. */
+/**
+ * 고른 날의 일정.
+ *
+ * 시안(`406:2310`)은 이 자리에 `List Row`를 쓰는데 그 컴포넌트는 제목과 메타 한 줄까지다.
+ * 이 줄은 제목 옆에 D-day 배지가 붙고 메타가 따로 있어서 1j-1의 기록 줄과 같은 이유로
+ * 카드로 짠다. 오른쪽 이동 표시는 `List Row`와 같게 둔다.
+ */
 @Composable
 private fun ColumnScope.SelectedDay(state: CalendarUiState, onScheduleClick: (String) -> Unit) {
     Text(
@@ -313,6 +322,11 @@ private fun ColumnScope.SelectedDay(state: CalendarUiState, onScheduleClick: (St
                         color = MedicalMateTheme.colors.fgSubtle,
                     )
                 }
+                Icon(
+                    painter = painterResource(MedicalMateIcons.ChevronRight),
+                    contentDescription = null,
+                    tint = MedicalMateTheme.colors.fgMuted,
+                )
             }
         }
     }
