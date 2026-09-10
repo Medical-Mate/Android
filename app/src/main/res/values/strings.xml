@@ -124,6 +124,30 @@
     <string name="calendar_day_record_empty_description">진료가 끝나면 들은 내용을 여기에 기록할 수 있어요</string>
     <string name="calendar_day_record_empty_action">진료 후 기록하기</string>
 
+    <!-- Figma 1r-4(1062:3031) 일정 추가. -->
+    <string name="schedule_add_title">일정 추가</string>
+    <string name="schedule_add_hospital">병원</string>
+    <string name="schedule_add_hospital_placeholder">진료받을 병원을 찾아주세요</string>
+    <string name="schedule_add_datetime">날짜 · 시간</string>
+    <string name="schedule_add_date_placeholder">날짜</string>
+    <string name="schedule_add_time_placeholder">시간</string>
+    <string name="schedule_add_cards">가져갈 브리핑 카드</string>
+    <string name="schedule_add_cards_none">선택 안 함</string>
+    <string name="schedule_add_cards_count">%1$d개</string>
+    <string name="schedule_add_card_new">새 카드 만들기</string>
+    <string name="schedule_add_todo">진료 전 할 일</string>
+    <string name="schedule_add_todo_add">할 일 추가</string>
+    <!-- 시안에는 없는 문구다. 빈 줄에 아무 안내가 없으면 무엇을 적는 자리인지 알 수 없다. -->
+    <string name="schedule_add_todo_placeholder">챙길 것을 적어주세요</string>
+    <string name="schedule_add_todo_delete">%1$s 삭제</string>
+    <string name="schedule_add_save">저장하기</string>
+    <string name="schedule_add_date_sheet">날짜 선택</string>
+    <string name="schedule_add_time_sheet">시간 선택</string>
+    <string name="schedule_add_sheet_confirm">확인</string>
+    <string name="schedule_add_time_am">오전</string>
+    <string name="schedule_add_time_pm">오후</string>
+    <string name="schedule_add_time_value">%1$s %2$d:%3$02d</string>
+
     <!-- Figma 1e-1(404:1679)·1e-1-E(597:4804)·1f-1(404:1835) 브리핑 카드. -->
     <!-- 1c-5 증상 정리 완료. 문답과 카드 사이의 갈림길. -->
     <string name="intake_done_title">증상 정리가 끝났어요</string>

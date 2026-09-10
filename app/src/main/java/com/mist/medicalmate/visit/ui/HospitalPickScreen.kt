@@ -58,7 +58,12 @@ fun HospitalPickScreen(
     modifier: Modifier = Modifier,
     onSkipClick: (() -> Unit)? = null,
 ) {
-    val before = state.purpose == HospitalPickPurpose.BEFORE_VISIT
+    // CTA만 목적마다 다르다. 1m-B는 카드로 이어지고, 일정 추가는 필드를 채우고 돌아간다.
+    val submitLabel =
+        when (state.purpose) {
+            HospitalPickPurpose.AFTER_VISIT, HospitalPickPurpose.SCHEDULE -> R.string.hospital_pick_submit
+            HospitalPickPurpose.BEFORE_VISIT -> R.string.hospital_pick_submit_before
+        }
     Column(
         modifier =
         modifier
@@ -79,10 +84,7 @@ fun HospitalPickScreen(
         )
         MedicalMateBottomCtaBar {
             MedicalMateButton(
-                label =
-                stringResource(
-                    if (before) R.string.hospital_pick_submit_before else R.string.hospital_pick_submit,
-                ),
+                label = stringResource(submitLabel),
                 onClick = onSubmitClick,
                 enabled = state.canSubmit,
                 modifier = Modifier.fillMaxWidth(),
@@ -97,7 +99,7 @@ private fun ColumnScope.PickContent(
     onQueryChange: (String) -> Unit,
     onHospitalClick: (String) -> Unit,
 ) {
-    val before = state.purpose == HospitalPickPurpose.BEFORE_VISIT
+    val before = state.purpose.beforeVisit
     Column(
         modifier =
         Modifier

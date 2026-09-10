@@ -37,12 +37,17 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
  * `border/default`는 흰 배경에서 그 기준에 못 미친다.
  *
  * [Role.Checkbox]를 주면 스크린 리더가 선택 여부를 함께 읽는다.
+ *
+ * [label]에 null을 주면 상자만 그리고 행이 폭을 차지하지 않는다. 글자 자리에 입력이 들어가는
+ * 경우(할 일을 적는 중인 [MedicalMateTodoRow])에 쓴다. 그때는 행 전체를 hit area로 삼을 수
+ * 없다. 글자를 눌렀을 때 커서가 아니라 체크가 바뀌면 적을 수 없다. 대신 호출자가 옆 입력의
+ * 높이를 48 이상으로 맞춘다.
  */
 @Composable
 fun MedicalMateCheckbox(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    label: String,
+    label: String?,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
@@ -51,7 +56,7 @@ fun MedicalMateCheckbox(
     Row(
         modifier =
         modifier
-            .fillMaxWidth()
+            .then(if (label == null) Modifier else Modifier.fillMaxWidth())
             .heightIn(min = SelectionRowHeight)
             .toggleable(
                 value = checked,
@@ -93,11 +98,13 @@ fun MedicalMateCheckbox(
                 )
             }
         }
-        Text(
-            text = label,
-            style = MedicalMateTheme.typography.bodyL,
-            color = if (enabled) colors.fgDefault else colors.fgDisabled,
-        )
+        if (label != null) {
+            Text(
+                text = label,
+                style = MedicalMateTheme.typography.bodyL,
+                color = if (enabled) colors.fgDefault else colors.fgDisabled,
+            )
+        }
     }
 }
 

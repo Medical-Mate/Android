@@ -24,12 +24,16 @@ import androidx.annotation.Keep
  * [BEFORE_VISIT]은 1m-B다. 증상 정리를 마치고 진료받을 병원을 미리 찾는다. 건너뛸 수 있다.
  * 병원은 진료 후에도 등록할 수 있어서 여기서 반드시 정해야 하는 값이 아니다.
  *
+ * [SCHEDULE]은 일정 추가(1r-4)의 병원 필드에서 온 것이다. 문구와 CTA는 [BEFORE_VISIT]과
+ * 같고 돌아가는 자리만 다르다. 고른 병원이 카드가 아니라 만들던 일정으로 간다.
+ *
  * 화면을 두 개로 만들지 않는다. 검색과 목록과 선택이 같고 문구와 CTA만 다르다.
  */
 @Keep
 enum class HospitalPickPurpose {
     AFTER_VISIT,
     BEFORE_VISIT,
+    SCHEDULE,
 }
 
 data class HospitalPickUiState(
@@ -47,8 +51,17 @@ data class HospitalPickUiState(
      * 진료 전(1m-B)에는 고르지 않아도 넘어간다. 시안이 아무것도 고르지 않은 상태에서도 CTA를
      * 살려 뒀고, 옆의 `건너뛰기`와 같은 곳으로 간다. 병원은 진료 후에도 등록할 수 있다.
      */
-    val canSubmit: Boolean = selectedId != null || purpose == HospitalPickPurpose.BEFORE_VISIT
+    val canSubmit: Boolean = selectedId != null || purpose != HospitalPickPurpose.AFTER_VISIT
 }
+
+/**
+ * 아직 진료를 받지 않은 병원을 찾는 자리인지.
+ *
+ * 1m-B와 일정 추가가 여기 해당한다. 둘은 문구가 같고 시작이 빈 목록이다. 1m은 진료를
+ * 받고 온 것이라 목록을 먼저 보여준다.
+ */
+internal val HospitalPickPurpose.beforeVisit: Boolean
+    get() = this != HospitalPickPurpose.AFTER_VISIT
 
 /** 검색 결과 한 곳. 이름으로 찾으면 주소가 함께 등록된다. */
 data class Hospital(val id: String, val name: String, val address: String)
