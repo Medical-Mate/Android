@@ -18,8 +18,15 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateRadius
-import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
+
+/**
+ * 날짜 아래 표시의 뜻.
+ *
+ * [RECORD]는 그 날 기록이 있다는 사실, [PLANNED]는 앞으로의 일정이다. 캘린더 범례가
+ * `기록 있음` · `예정`으로 둘을 나눠 적는다.
+ */
+enum class MedicalMateDateMarker { NONE, RECORD, PLANNED }
 
 /**
  * DESIGN.md 8.2 `Date Cell`.
@@ -27,10 +34,12 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
  * 7열 캘린더의 한 칸이다. 시각 규격은 46x46이다.
  *
  * 세 가지가 서로 다른 뜻이라 표시 방법도 다르다(문서 8.2).
- * [hasRecord]는 그 날 기록이 있다는 사실이라 5 점으로 알린다.
- * [isToday]는 오늘이라는 상태라 테두리로 알린다.
+ * [marker]는 그 날 기록이 있거나 일정이 있다는 사실이라 5 점으로 알린다.
+ * [isToday]는 오늘이라는 상태라 **옅은 면과 테두리**로 알린다. 채움이 아니다.
  * [selected]는 사용자가 고른 칸이라 채움으로 알린다.
  * 셋이 겹칠 수 있어 한 칸에 함께 나타난다.
+ *
+ * 칸은 원이 아니라 반경 13의 둥근 사각형이다(마스터 `335:1188`).
  *
  * 46은 접근성 기준 48보다 작다. 문서 11.4에 따라 hit area는 48을 맞춰야 하는데, 7열
  * 캘린더에서 칸마다 48을 넣으면 390 폭에 들어가지 않는다. 그래서 이 컴포넌트는 시각
@@ -47,11 +56,11 @@ fun MedicalMateDateCell(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     isToday: Boolean = false,
-    hasRecord: Boolean = false,
+    marker: MedicalMateDateMarker = MedicalMateDateMarker.NONE,
     enabled: Boolean = true,
 ) {
     val colors = MedicalMateTheme.colors
-    val spoken = dateCellDescription(day = day, isToday = isToday, hasRecord = hasRecord)
+    val spoken = dateCellDescription(day = day, isToday = isToday, marker = marker)
     val content =
         when {
             !enabled -> colors.fgDisabled
@@ -70,39 +79,54 @@ fun MedicalMateDateCell(
                 onClick = onClick,
             )
             .clearAndSetSemantics { contentDescription = spoken }
-            .background(
-                color = if (selected && enabled) colors.bgPrimary else colors.bgSurface,
-                shape = MedicalMateRadius.full,
-            )
+            .background(color = cellBackground(selected, isToday, enabled), shape = MedicalMateRadius.dateCell)
             .then(todayBorder(isToday = isToday, selected = selected, enabled = enabled)),
         contentAlignment = Alignment.Center,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s2),
+            verticalArrangement = Arrangement.spacedBy(DotGap),
         ) {
             Text(
                 text = day.toString(),
-                style = MedicalMateTheme.typography.bodyM,
+                style = MedicalMateTheme.typography.bodyMStrong,
                 color = content,
             )
-            if (hasRecord) {
-                RecordDot(selected = selected)
+            if (marker != MedicalMateDateMarker.NONE) {
+                DayMarker(marker = marker, selected = selected)
             }
         }
     }
 }
 
-/** 날짜와 상태를 한 번에 읽는다. 점만 두면 스크린 리더에 기록 유무가 전달되지 않는다. */
+/** 날짜와 상태를 한 번에 읽는다. 점만 두면 스크린 리더에 표시의 뜻이 전달되지 않는다. */
 @Composable
-private fun dateCellDescription(day: Int, isToday: Boolean, hasRecord: Boolean): String {
-    val recordLabel = stringResource(R.string.date_cell_has_record)
+private fun dateCellDescription(day: Int, isToday: Boolean, marker: MedicalMateDateMarker): String {
     val todayLabel = stringResource(R.string.date_cell_today)
+    val markerLabel =
+        when (marker) {
+            MedicalMateDateMarker.NONE -> null
+            MedicalMateDateMarker.RECORD -> stringResource(R.string.date_cell_has_record)
+            MedicalMateDateMarker.PLANNED -> stringResource(R.string.date_cell_planned)
+        }
     return buildString {
         append(day)
         if (isToday) append(", $todayLabel")
-        if (hasRecord) append(", $recordLabel")
+        markerLabel?.let { append(", $it") }
     }
+}
+
+/**
+ * 칸의 면.
+ *
+ * 오늘은 채움이 아니라 **옅은 면**이다. 마스터 설명이 "오늘은 상태이지 선택이 아니다"라고
+ * 적어 둔 구분이고, 채움을 주면 고른 칸과 헷갈린다.
+ */
+@Composable
+private fun cellBackground(selected: Boolean, isToday: Boolean, enabled: Boolean) = when {
+    selected && enabled -> MedicalMateTheme.colors.bgPrimary
+    isToday && enabled -> MedicalMateTheme.colors.bgPrimaryFaint
+    else -> MedicalMateTheme.colors.bgSurface
 }
 
 /** 오늘 표시는 고른 칸에서 생략한다. 채움이 이미 그 칸을 가리킨다. */
@@ -112,26 +136,34 @@ private fun todayBorder(isToday: Boolean, selected: Boolean, enabled: Boolean): 
         Modifier.border(
             width = TodayBorderWidth,
             color = MedicalMateTheme.colors.borderPrimary,
-            shape = MedicalMateRadius.full,
+            shape = MedicalMateRadius.dateCell,
         )
     } else {
         Modifier
     }
 
+/**
+ * 날짜 아래 표시.
+ *
+ * 기록은 **채운 점**, 예정은 **빈 원**이다. 둘을 색으로만 가르면 캘린더에서 지난 기록과
+ * 앞으로의 일정이 구별되지 않는다.
+ *
+ * 예정의 빈 원은 Date Cell 마스터에 없다. 시안 `1r-1`이 그렇게 쓰고 범례까지 두고 있어서
+ * 화면을 따랐고, variant 추가는 디자인 트랙에 넘겼다.
+ */
 @Composable
-private fun RecordDot(selected: Boolean) {
+private fun DayMarker(marker: MedicalMateDateMarker, selected: Boolean) {
+    val tint = if (selected) MedicalMateTheme.colors.fgOnPrimary else MedicalMateTheme.colors.bgPrimary
     Box(
         modifier =
         Modifier
             .size(RecordDotSize)
-            .background(
-                color =
-                if (selected) {
-                    MedicalMateTheme.colors.fgOnPrimary
+            .then(
+                if (marker == MedicalMateDateMarker.PLANNED) {
+                    Modifier.border(width = PlannedRingWidth, color = tint, shape = MedicalMateRadius.full)
                 } else {
-                    MedicalMateTheme.colors.bgPrimary
+                    Modifier.background(color = tint, shape = MedicalMateRadius.full)
                 },
-                shape = MedicalMateRadius.full,
             ),
     )
 }
@@ -149,3 +181,9 @@ private val RecordDotSize = 5.dp
 
 /** Date Cell v2가 더한 오늘 표시 링. 색만으로 상태를 구분하던 것을 테두리로 보강한다. */
 private val TodayBorderWidth = 1.dp
+
+/** 마스터의 숫자와 점 사이 `gap-[3px]`. 4.1 간격 토큰에 없는 값이다. */
+private val DotGap = 3.dp
+
+/** 빈 원의 테두리. 5px 안에서 채움과 구별되려면 이보다 두꺼울 수 없다. */
+private val PlannedRingWidth = 1.dp

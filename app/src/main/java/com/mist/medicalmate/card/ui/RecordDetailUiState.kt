@@ -3,12 +3,17 @@ package com.mist.medicalmate.card.ui
 /**
  * 기록 상세의 상태. Figma 1j-3 `735:3829`.
  *
- * 한 진료의 전체 흐름을 시간순으로 보여준다. 증상을 정리하고, 카드를 만들어 진료실에서
- * 보여주고, 진료 후 들은 것을 적고, 재방문이 잡힌다. 그 네 가지가 한 화면에 이어져 있어야
- * 무엇이 어떻게 흘러왔는지 읽힌다.
+ * 한 진료의 전체 흐름을 보여준다. 카드를 만들어 진료실에서 보여주고, 진료 후 들은 것을
+ * 적고, 재방문이 잡힌다. 그것이 한 화면에 이어져 있어야 무엇이 어떻게 흘러왔는지 읽힌다.
  *
- * 재방문 뒤에 만든 카드와 기록도 같은 타임라인에 이어 붙는다. 그래서 [steps]가 목록이고
- * 단계 종류가 고정되어 있지 않다.
+ * **최신 날짜가 위다.** 재방문 뒤에 만든 카드와 기록이 같은 타임라인에 계속 쌓이므로,
+ * 오래된 것이 위에 있으면 방금 있었던 일을 보려고 매번 끝까지 내려야 한다.
+ *
+ * 증상 정리 단계는 넣지 않는다. 문답에서 답한 내용은 브리핑 카드에 담기므로 카드 위에 같은
+ * 값을 한 번 더 보여주는 자리가 된다.
+ *
+ * 재방문 뒤에 만든 카드와 기록도 같은 타임라인에 이어 붙는다. 그래서 [RecordDetail.steps]가
+ * 목록이고 단계 종류가 고정되어 있지 않다.
  */
 sealed interface RecordDetailUiState {
     data object Loading : RecordDetailUiState
@@ -23,6 +28,9 @@ sealed interface RecordDetailUiState {
  *
  * [clinicLine]은 "서울OO병원 내과 · 09.12 진료"처럼 어디서 언제 받았는지다. 진료 전이면
  * 병원이 없을 수 있어 화면이 아니라 데이터가 문장을 만든다.
+ *
+ * [steps]는 **최신순으로 온다.** 화면이 받은 순서대로 그린다. `at`이 "09.04 작성 · 09.12
+ * 진료실에서 보여줌"처럼 기간을 담는 표시 문자열이라 화면에서 날짜로 정렬할 수 없다.
  */
 data class RecordDetail(
     val id: String,
@@ -52,7 +60,13 @@ sealed interface RecordStep {
     ) : RecordStep
 
     /** 아직 오지 않은 단계. 점선 블록으로 그려진다. */
-    data class Pending(override val at: String, val message: String) : RecordStep
+    /**
+     * 아직 오지 않은 단계.
+     *
+     * [detail]은 있을 때만 둘째 줄로 나온다. 재방문이 잡힌 경우에는 날짜와 시간이 있고,
+     * 병원이 정해지지 않은 경우에는 알릴 값이 없다.
+     */
+    data class Pending(override val at: String, val message: String, val detail: String? = null) : RecordStep
 }
 
 /**

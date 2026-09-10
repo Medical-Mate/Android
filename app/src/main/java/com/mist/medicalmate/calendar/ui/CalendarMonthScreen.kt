@@ -1,6 +1,8 @@
 package com.mist.medicalmate.calendar.ui
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,8 +20,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
+import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateScreenPreviews
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
@@ -29,6 +33,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateBadgeTone
 import com.mist.medicalmate.core.designsystem.component.MedicalMateCard
 import com.mist.medicalmate.core.designsystem.component.MedicalMateDateCell
 import com.mist.medicalmate.core.designsystem.component.MedicalMateDateCellSize
+import com.mist.medicalmate.core.designsystem.component.MedicalMateDateMarker
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButtonStyle
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
@@ -187,7 +192,7 @@ private fun MonthGrid(state: CalendarUiState, onDayClick: (LocalDate) -> Unit) {
                                 day = current,
                                 selected = date == state.selected,
                                 isToday = date == state.today,
-                                hasRecord = current in state.markedDays,
+                                marker = state.markerOn(current),
                                 onClick = { onDayClick(date) },
                             )
                         } else {
@@ -199,8 +204,64 @@ private fun MonthGrid(state: CalendarUiState, onDayClick: (LocalDate) -> Unit) {
             }
             day += DAYS_IN_WEEK
         }
+        MonthLegend()
     }
 }
+
+/**
+ * 범례. 채운 점과 빈 원이 각각 무엇인지 적는다.
+ *
+ * 두 표시가 5px이라 모양 차이만으로는 처음 보는 사람이 알 수 없다. 시안이 격자와 같은
+ * 판 안에 두었다.
+ */
+@Composable
+private fun MonthLegend() {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = MedicalMateSpace.s8),
+        horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        LegendItem(marker = MedicalMateDateMarker.RECORD, labelRes = R.string.calendar_legend_record)
+        LegendItem(marker = MedicalMateDateMarker.PLANNED, labelRes = R.string.calendar_legend_planned)
+    }
+}
+
+@Composable
+private fun LegendItem(marker: MedicalMateDateMarker, @StringRes labelRes: Int) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier =
+            Modifier
+                .size(LegendDotSize)
+                .then(
+                    if (marker == MedicalMateDateMarker.PLANNED) {
+                        Modifier.border(
+                            width = LegendRingWidth,
+                            color = MedicalMateTheme.colors.bgPrimary,
+                            shape = MedicalMateRadius.full,
+                        )
+                    } else {
+                        Modifier.background(
+                            color = MedicalMateTheme.colors.bgPrimary,
+                            shape = MedicalMateRadius.full,
+                        )
+                    },
+                ),
+        )
+        Text(
+            text = stringResource(labelRes),
+            style = MedicalMateTheme.typography.labelS,
+            color = MedicalMateTheme.colors.fgSubtle,
+        )
+    }
+}
+
+/** 날짜 칸의 표시와 같은 크기여야 같은 것으로 읽힌다. */
+private val LegendDotSize = 5.dp
+private val LegendRingWidth = 1.dp
 
 /** 고른 날과 그 날의 일정. 일정이 없으면 없다고 적는다. */
 @Composable

@@ -41,6 +41,14 @@ object MedicalMateRadius {
     /** M Button 전용. 4.2 Scale에 없는 중간값이다. */
     val buttonM: RoundedCornerShape = RoundedCornerShape(14.dp)
 
+    /**
+     * Date Cell 전용. 4.2 Scale에 없는 값이다.
+     *
+     * 마스터(`335:1188`)가 42 칸에 13을 쓴다. 원(21)이 아니라 둥근 사각형이고, `sm`(12)이나
+     * `buttonM`(14)으로 바꾸면 한 주 일곱 칸이 나란히 놓일 때 차이가 눈에 띈다.
+     */
+    val dateCell: RoundedCornerShape = RoundedCornerShape(13.dp)
+
     /** Bottom Sheet. 위쪽 두 각만 28. */
     val sheetTop: RoundedCornerShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
 }

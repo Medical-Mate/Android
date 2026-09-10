@@ -13,15 +13,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.core.designsystem.MedicalMateElevation
@@ -29,6 +22,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.ShadowTint
+import com.mist.medicalmate.core.designsystem.component.MedicalMateNotice
 import com.mist.medicalmate.core.designsystem.component.MedicalMateQuoteBlock
 
 /**
@@ -130,55 +124,18 @@ private fun StepOpen(label: String, onClick: () -> Unit) {
 }
 
 /**
- * 아직 오지 않은 단계. Figma `735:3910`.
+ * 아직 오지 않은 단계.
  *
- * 점선으로 두어 채워질 자리임을 알린다. `Modifier.border`는 점선을 못 그려서 직접 그린다.
+ * 점선 테두리로 그리던 것을 [MedicalMateNotice]로 바꿨다. 시안 `1j-3`이 여기에 ⓘ 아이콘이
+ * 있는 옅은 브랜드 면을 쓴다. 앞으로 올 일을 알리는 자리라 통증 강도 화면의 안내와 같은
+ * 컴포넌트이고, 점선은 "입력할 자리"로 읽혀 뜻이 달랐다.
  */
 @Composable
 internal fun RecordStepPending(step: RecordStep.Pending) {
-    val borderColor = MedicalMateTheme.colors.borderStrong
-    Box(
-        modifier =
-        Modifier
-            .fillMaxWidth()
-            .drawBehind { drawDashedBorder(borderColor) }
-            .padding(MedicalMateSpace.s16),
-    ) {
-        Text(
-            text = step.message,
-            style = MedicalMateTheme.typography.bodyS,
-            color = MedicalMateTheme.colors.fgSubtle,
-        )
-    }
-}
-
-private fun DrawScope.drawDashedBorder(color: Color) {
-    val width = PendingBorder.toPx()
-    val inset = width / 2
-    val radius = CornerRadius(PendingRadius.toPx())
-    drawRoundRect(
-        color = color,
-        topLeft = Offset(inset, inset),
-        size = Size(size.width - width, size.height - width),
-        cornerRadius = radius,
-        style =
-        Stroke(
-            width = width,
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(DashOn.toPx(), DashOff.toPx())),
-        ),
-    )
+    MedicalMateNotice(title = step.message, body = step.detail)
 }
 
 /** 문서 8.3의 KV Row보다 좁은 키 열. 블록 안 요약이라 한 단계 작다. */
 private val ItemKeyWidth = 52.dp
 
 private val OpenPadding = 11.dp
-
-private val PendingBorder = 1.dp
-
-/** 블록과 같은 반경. 점선을 직접 그리므로 `Shape`가 아니라 값이 필요하다. */
-private val PendingRadius = 16.dp
-
-private val DashOn = 6.dp
-
-private val DashOff = 5.dp

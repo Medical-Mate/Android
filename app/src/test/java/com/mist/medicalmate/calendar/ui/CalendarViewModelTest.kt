@@ -22,7 +22,8 @@ class CalendarViewModelTest {
     fun `일정이 있는 날에 점이 찍힌다`() {
         val state = CalendarViewModel().uiState.value
 
-        assertEquals(setOf(4, 12, 26), state.markedDays)
+        assertEquals(setOf(4), state.recordDays)
+        assertEquals(setOf(12, 26), state.plannedDays)
     }
 
     @Test

@@ -5,18 +5,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import com.mist.medicalmate.core.designsystem.MedicalMateIcons
 import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
@@ -76,25 +73,14 @@ fun MedicalMateChip(
         modifier =
         modifier
             .heightIn(min = MedicalMateSize.controlSm)
+            .widthIn(min = MinWidth)
             .semantics { this.selected = selected },
     ) {
         Row(
-            // 선택되면 check 아이콘이 붙어 왼쪽 여백을 12로 줄인다(DESIGN.md 8.1).
-            modifier =
-            Modifier.padding(
-                start = if (selected) MedicalMateSpace.s12 else MedicalMateSpace.s16,
-                end = MedicalMateSpace.s16,
-            ),
-            horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s6, Alignment.CenterHorizontally),
+            modifier = Modifier.padding(horizontal = MedicalMateSpace.s16),
+            horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (selected) {
-                Icon(
-                    painter = painterResource(MedicalMateIcons.Check),
-                    contentDescription = null,
-                    modifier = Modifier.size(MedicalMateSize.iconSm),
-                )
-            }
             Text(text = label, style = MedicalMateTheme.typography.labelM)
         }
     }
@@ -102,6 +88,14 @@ fun MedicalMateChip(
 
 /** 문서 8.1이 지정한 선택 경계 두께다. */
 private val SelectedBorderWidth = 1.5.dp
+
+/**
+ * 마스터의 `min-w-[64px]`.
+ *
+ * "전신"처럼 두 글자짜리 항목은 좌우 여백을 더해도 64에 못 미쳐서, 칩을 여러 개 늘어놓으면
+ * 폭이 들쭉날쭉해진다.
+ */
+private val MinWidth = 64.dp
 
 /**
  * 고르지 않은 칩의 테두리.
