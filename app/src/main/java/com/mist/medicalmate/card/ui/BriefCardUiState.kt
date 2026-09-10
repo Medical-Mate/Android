@@ -34,7 +34,7 @@ data class BriefCard(
 /**
  * 카드의 항목 한 줄. Figma `KV Row`.
  *
- * [emphasized]는 그 진료에서 가장 중요한 한 항목이다. 문서 8.3이 카드마다 하나를 넘기지
+ * [emphasized]는 그 진료에서 가장 중요한 한 항목이다. 문서의 컴포넌트 규격이 카드마다 하나를 넘기지
  * 말라고 한다. 전부 강조하면 아무것도 강조되지 않는다. 어느 항목을 세울지는 AI가 정한다.
  */
 data class BriefCardItem(val key: String, val value: String, val emphasized: Boolean = false)

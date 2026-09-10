@@ -6,7 +6,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * DESIGN.md 5절 고도.
+ * DESIGN.md의 고도.
  *
  * 이 시스템은 모든 요소에 테두리를 두르지 않는다. 선은 목록 구분, 선택, 포커스,
  * 접근성 경계에만 쓰고 나머지는 그림자로 층을 표현한다. 그림자는 순수 검정이 아니라
@@ -46,7 +46,7 @@ object MedicalMateElevation {
 val ShadowTint = Color(0xFF1B255A)
 
 /**
- * DESIGN.md 5절 Glass surface.
+ * DESIGN.md의 Glass surface.
  *
  * 콘텐츠 위에 떠 있다는 의미가 있을 때만 쓴다. 본문 Card와 Button에는 쓰지 않는다.
  * Glass에는 테두리를 추가하지 않는다. 한 화면에서 떠 있는 층은 최대 두 단계다.

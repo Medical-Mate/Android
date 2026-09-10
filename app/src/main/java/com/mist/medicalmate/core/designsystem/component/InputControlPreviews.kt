@@ -10,7 +10,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.tooling.preview.Preview
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 
-/** 8.2 Input 중 선택·전환 컴포넌트 Preview. */
+/** Input 묶음 중 선택·전환 컴포넌트 Preview. */
 @Preview(showBackground = true, name = "Checkbox / Radio / Toggle", widthDp = 390)
 @Composable
 private fun SelectionPreview() {

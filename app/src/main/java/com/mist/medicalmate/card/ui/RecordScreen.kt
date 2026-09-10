@@ -40,7 +40,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateTabBar
  * 하단 탭의 기록이다. 카드와 진료 기록을 월별로 묶어 보여준다.
  *
  * 1Depth 화면이라 하단 탭을 함께 그린다. 문답이나 카드처럼 흐름 안에 들어간 화면에서는
- * 감춘다(문서 8.5).
+ * 감춘다(문서의 컴포넌트 규격).
  */
 @Composable
 fun RecordScreen(

@@ -101,7 +101,7 @@ private fun HomeScreenFailedPreview() {
     HomeScreenPreview(HomeUiState.Failed)
 }
 
-/** 시작 버튼만 따로 본다. 마이크 아이콘과 라벨 간격이 문서 8.1의 gap 6인지 확인한다. */
+/** 시작 버튼만 따로 본다. 마이크 아이콘과 라벨 간격이 문서의 gap 6인지 확인한다. */
 @Preview(showBackground = true, widthDp = 390)
 @Composable
 private fun StartIntakeButtonPreview() {

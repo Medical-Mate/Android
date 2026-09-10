@@ -7,7 +7,7 @@ import androidx.compose.ui.graphics.Color
 import com.mist.medicalmate.R
 
 /**
- * DESIGN.md 2.2와 8.2의 통증 5단계.
+ * DESIGN.md의 원시 팔레트와 통증 5단계.
  *
  * Severity Slider, Scale, Select, Readout이 함께 쓴다. 네 컴포넌트가 같은 단계 정의를
  * 따로 들면 문구나 색이 갈린다.
@@ -15,11 +15,11 @@ import com.mist.medicalmate.R
  * [nrsFirst]와 [nrsLast]는 문서에 없다. Figma의 Severity Readout 마스터(`333:1126`)에서
  * 읽은 값이다. 임상 척도라서 추정하지 않았다.
  *
- * 단계를 색만으로 전달하지 않는다. 문서 1항 6번과 9절이 숫자, 낱말, 상황 설명 중 하나
+ * 단계를 색만으로 전달하지 않는다. 문서의 D11과 9절이 숫자, 낱말, 상황 설명 중 하나
  * 이상을 색과 함께 제공하라고 한다. 그래서 [labelRes]와 [descriptionRes]를 항상 함께
  * 노출할 수 있게 묶어 뒀다.
  *
- * [base]는 칩과 트랙 채움에, [tint]는 Severity Slider의 판독 영역에 쓴다(문서 2.2).
+ * [base]는 칩과 트랙 채움에, [tint]는 Severity Slider의 판독 영역에 쓴다(문서의 원시 팔레트).
  */
 enum class MedicalMateSeverity(
     val level: Int,

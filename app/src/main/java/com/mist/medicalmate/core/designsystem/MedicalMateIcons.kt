@@ -3,14 +3,14 @@ package com.mist.medicalmate.core.designsystem
 import com.mist.medicalmate.R
 
 /**
- * DESIGN.md 6절 아이콘 45종에 Figma가 나중에 더한 `arrow-up`을 합쳐 46종.
+ * DESIGN.md의 아이콘 45종에 Figma가 나중에 더한 `arrow-up`을 합쳐 46종.
  *
  * 호출부가 `R.drawable`을 직접 쓰지 않게 이름을 한곳에 모았다. 이름은 Figma의
  * `Icon/{name}`을 PascalCase로 옮긴 것이다.
  *
  * 기본 크기 24, 인라인 20, 좁은 자리 18이다. 16 이하로 줄이지 않는다. 원본 색은
  * `fg/default`이고 문맥에 따라 `Icon`의 tint로 바꾼다. 라벨 없는 아이콘 버튼에는
- * 접근성 이름을 반드시 준다(DESIGN.md 9절).
+ * 접근성 이름을 반드시 준다(DESIGN.md의 접근성 기준).
  *
  * 값은 drawable 리소스 id다. `painterResource`에 그대로 넘긴다.
  *

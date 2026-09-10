@@ -16,7 +16,7 @@ import androidx.compose.runtime.ReadOnlyComposable
  * 기본 팔레트가 새지 않도록 primary 계열로 맞췄다.
  *
  * 다크 스킴과 dynamic color는 두지 않는다. dynamic color는 Android 12 이상에서
- * 사용자 월페이퍼 색으로 브랜드 컬러를 덮어버린다. 다크 모드는 DESIGN.md 2.1과 11.7에
+ * 사용자 월페이퍼 색으로 브랜드 컬러를 덮어버린다. 다크 모드는 DESIGN.md에
  * 따라 값이 정해지기 전까지 지원하지 않는다.
  */
 private val MedicalMateColorScheme =

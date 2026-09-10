@@ -22,7 +22,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
 /**
- * DESIGN.md 8.2 `Segmented Control`.
+ * DESIGN.md의 `Segmented Control`.
  *
  * 화면 전체의 뷰를 바꾸는 자리에만 쓴다. 문서가 예로 든 것은 진료 전/후 전환이다.
  * 부분 필터에 쓰지 않는다. 목록 일부만 걸러내는 동작은 Chip이 맡는다.
@@ -30,7 +30,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
  * 모바일에서 최대 4칸이다. 그 이상은 각 칸의 글자가 잘린다.
  *
  * 고른 칸은 흰 면과 고도로 떠 있고 라벨이 굵어진다. 색만 바꾸면 어느 쪽이 켜졌는지
- * 구분이 약하다(문서 1항 6번).
+ * 구분이 약하다(문서의 D11).
  */
 @Composable
 fun MedicalMateSegmentedControl(
@@ -102,10 +102,10 @@ private fun Segment(label: String, selected: Boolean, onClick: () -> Unit, modif
 
 private val SelectedBorderWidth = 1.dp
 
-/** 문서 8.2의 inset padding 4. */
+/** 문서의 inset padding 4. */
 private val InsetPadding = MedicalMateSpace.s4
 
-/** 문서 8.2가 지정한 모바일 최대 칸 수. */
+/** 문서의 컴포넌트 규격이 지정한 모바일 최대 칸 수. */
 private const val MAX_SEGMENTS = 4
 
 /** 칸 수 검사는 그리는 코드가 아니라 판단이라 밖에서도 확인할 수 있게 둔다. */

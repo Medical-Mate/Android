@@ -30,7 +30,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.Primary300
 import com.mist.medicalmate.core.designsystem.Red100
 
-/** DESIGN.md 8.4 `Toast`의 `Tone` variant. */
+/** DESIGN.md의 `Toast`의 `Tone` variant. */
 enum class MedicalMateToastTone {
     NORMAL,
     POSITIVE,
@@ -39,11 +39,11 @@ enum class MedicalMateToastTone {
 }
 
 /**
- * DESIGN.md 8.4 `Toast`.
+ * DESIGN.md의 `Toast`.
  *
  * 행동 직후 사라지는 피드백이다. 화면에 남아야 하는 안내는 [MedicalMateNotice]다.
  *
- * 이 컴포넌트는 모양만 그린다. 띄우고 없애는 것은 호출자가 정한다. 문서 8.4의 위치
+ * 이 컴포넌트는 모양만 그린다. 띄우고 없애는 것은 호출자가 정한다. 문서의 위치
  * 우선순위는 Bottom CTA Bar 바로 위, 없으면 Tab Bar 위 20, 둘 다 없으면 safe area 위
  * 20이다.
  *
@@ -54,7 +54,7 @@ enum class MedicalMateToastTone {
  * 최대 2줄이다. 두 줄에 담기지 않는 내용은 Toast가 아니라 화면에 남을 안내다.
  *
  * 아이콘 색은 원시 팔레트에서 가져온다. inverse 면 위에서 쓸 상태색이 시맨틱 40개에
- * 없다. 문서 2.2가 이 경우 각 계열의 100 단계나 `primary/300`을 쓰라고 지정했고, 시맨틱
+ * 없다. 문서의 원시 팔레트가 이 경우 각 계열의 100 단계나 `primary/300`을 쓰라고 지정했고, 시맨틱
  * 컬렉션을 Figma와 어긋나게 늘리는 대신 문서가 지목한 팔레트 값을 직접 쓴다.
  */
 @Composable
@@ -155,7 +155,7 @@ private fun ToastAction(label: String, accent: Color, onClick: () -> Unit) {
     }
 }
 
-/** 문서 8.4가 지정한 radius 18. Scale에 없는 값이다. */
+/** 문서의 컴포넌트 규격이 지정한 radius 18. Scale에 없는 값이다. */
 private val ToastShape = RoundedCornerShape(18.dp)
 
 private val ToastMinHeight = 56.dp

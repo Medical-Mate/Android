@@ -128,7 +128,7 @@ MedicalMate/
 │       │   ├── MedicalMateApplication.kt  @HiltAndroidApp, KakaoSdk.init
 │       │   ├── core/
 │       │   │   ├── designsystem/          토큰, 타이포, 아이콘, 로고
-│       │   │   │   └── component/        8절 컴포넌트 43종
+│       │   │   │   └── component/        디자인 시스템 컴포넌트 43종
 │       │   │   └── network/               Retrofit·OkHttp 설정, ApiResult
 │       │   ├── navigation/                단일 NavHost, 세션 경계 동기화, 하단 탭 이동
 │       │   ├── auth/  data/ ui/           1o 로그인, 1a-1 스플래시, 세션 복구
@@ -168,8 +168,14 @@ DI는 Hilt입니다. `@HiltAndroidApp`은 `MedicalMateApplication`, 화면 진�
 
 ### 디자인 시스템
 
-값의 정본은 Figma다. 저장소의 `DESIGN.md`는 추출본이고, 어긋나면 Figma가 우선한다.
-실제로 `Elevation/Card`가 달랐다. 문서를 고치지 말고 디자인 트랙에 넘기세요.
+값의 정본은 Figma다. `DESIGN.md`는 디자인 트랙이 보내주는 사본이고, 어긋나면 Figma가
+우선한다. 실제로 `Elevation/Card`가 달랐다. 문서를 고치지 말고 디자인 트랙에 넘기세요.
+현재 사본은 3.0(2026-09-09)이다. `DESIGN.md`는 아직 저장소에 커밋하지 않았다.
+
+**주석에서 문서를 절 번호로 인용하지 마세요.** 문서가 개정되면 목차가 바뀐다. 3.0에서
+컴포넌트 장이 8에서 7로 내려가고 고도가 5에서 4.2로 들어가면서 200건 가까운 인용이
+엉뚱한 곳을 가리켰다. 장 이름(`문서의 접근성 기준`), 컴포넌트 이름, 3.0이 부여한 원칙
+id(`P1`~`P5`·`D4`·`D5`·`D11`), 또는 `COMPONENT_MAP.md`의 Figma 노드 id로 가리킵니다.
 
 **화면 코드에서 `MaterialTheme`을 직접 읽지 마세요.** 색과 타이포는
 `MedicalMateTheme.colors`, `MedicalMateTheme.typography`로 읽습니다. `colorScheme`과
@@ -447,15 +453,17 @@ com.mist.medicalmate/
 | 네비게이션 | Navigation Compose 2.10.0 확정. 단일 `NavHost` + 타입 세이프 라우트. 목적지 18개 |
 | 화면 전환 | `MedicalMateNavHost`. `MainActivity`는 세션 확인 중 로딩만 담당 |
 | ViewModel 스코프 | 화면 ViewModel은 목적지 스코프. `SessionViewModel`만 Activity 스코프 |
-| 디자인 시스템 | DESIGN.md 1~7절 반영 완료. 시맨틱 41개, 타이포 15종, 토큰, 아이콘 46개(arrow-up 추가), 로고 4개, Pretendard 4무게. DESIGN.md 3.2는 Badge를 `Label/M`으로 적었지만 Figma 마스터는 `Label/S`다. 코드는 Figma를 따랐고 문서는 디자인 트랙 확인 필요 |
-| 컴포넌트(8절) | 43종 구현. Figma 마스터 대응은 `COMPONENT_MAP.md`. `Severity Scale`은 Figma에서 마스터가 삭제돼 함께 지웠다 |
+| 디자인 시스템 | DESIGN.md 3.0의 토큰·타이포·아이콘 반영 완료. 시맨틱 41개, 타이포 15종, 아이콘 46개(arrow-up 추가), 로고 4개, Pretendard 4무게. 3.0이 확정한 `layout/tabbar-h` 79와 Date Cell 42는 코드와 같다. Badge를 `Label/M`으로 적었던 2.0의 오기는 3.0에서 사라졌다 |
+| 컴포넌트 | 43종 구현. Figma 마스터 대응은 `COMPONENT_MAP.md`. `Severity Scale`은 Figma에서 마스터가 삭제돼 함께 지웠는데 3.0 문서에는 아직 남아 있다. 디자인 트랙 확인 필요 |
 | 컴포넌트 v2 | Figma `06 · 추가`가 9종을 v2로 재등록. KV Row·Tab Bar·Nav Bar·Date Cell·Text Field·Segmented Control 반영 완료. Text Area의 Footer Row(카운터·마이크), Toast의 Timer, List Row의 Summary는 모두 기본 false라 미구현. Ghost→Outline은 구현된 화면에서 해당 지점이 여전히 텍스트형이라 적용 대상 없음(F·H 플로우에서 화면별로 확인) |
+| CRUD 규칙 | 3.0이 장으로 확정. 편집 상태는 `편집 → 취소 → 확인` 한 자리에서 이름만 바뀌고, 삭제는 세 갈래(개체=하단 Danger CTA+Dialog / 항목=행 × 확인 없음 / 목록=체크 다중선택+Dialog)다. 토스트와 스와이프는 쓰지 않는다. 미반영이고 #92가 이 규칙을 쓴다 |
+| 반경 13 · 14 | 3.0이 둘 다 스케일 밖 값으로 잡고 `radius/sm` 12 · `radius/md` 16 통일안을 적었다. 코드의 `MedicalMateRadius.dateCell`(13)과 `buttonM`(14)이 그 값이다. Figma가 바뀌면 함께 바꾼다 |
 | Elevation/Card | Figma가 2겹(y3 r10 8% + y1 r2 5%)으로 바뀜. 코드는 `Modifier.shadow` 한 겹 근사 |
 | Body Map | 구현 완료(#51). `core/designsystem/component`가 아니라 `intake/ui`에 있다. 화면 하나에서만 쓰고 좌표표·이미지 9장이 딸려 있어서 디자인 시스템에 올리지 않았다 |
 | 인체도 좌표 | `BodyMapGeometry.kt`는 디자인 트랙의 `humanmap_coords.json`(schema 3.0)에서 생성한 파일이다. **손으로 고치지 않는다.** 좌표가 바뀌면 새 파일로 다시 생성한다 |
 | 인체도 표시 크기 | 48dp 조작 영역이 겹치지 않는 최소 크기를 좌표에서 계산한다(`BodyMapLayout.kt`). 전신 505dp, 확대 최대 505dp. 시안 값을 받아 적지 않은 이유는 좌표가 바뀌면 필요한 크기도 바뀌기 때문이다 |
 | 인체도 미해결 | 좌표표의 `SUR:041 허리 가운데`가 천골 위치(신장 58%)에 있다. 허리 옆(62%)과 같은 높이로 올려달라고 디자인 트랙에 넘겼다. 데이터만 교체하면 되는 건이다 |
-| Search Field | 구현 완료(1m 병원 찾기에서 사용). DESIGN.md 8절에는 아직 항목이 없어 값은 Figma 마스터를 따랐다 |
+| Search Field | 구현 완료(1m 병원 찾기에서 사용). 2.0 문서에 항목이 없어 Figma 마스터를 따랐고, 3.0이 항목을 올렸다 |
 | 로그인 화면(1o) | 카카오 버튼 + 서버 토큰 교환 구현 완료. 토큰 적용 완료 |
 | 홈 화면(1n) | Figma 1n-1·1n-2 반영. `HomeViewModel`이 픽스처를 노출. 서버 미연동 |
 | 진입 · 온보딩(1a) | 스플래시(1a-1)와 온보딩 인트로(1a-2) 구현 완료. 스플래시는 최소 2초 노출, 세션 복구를 기다리는 상한은 6초. 상한을 넘기거나 연결이 없으면 `SessionUiState.RestoreFailed`로 로그인 화면에 보내고 카카오 버튼 위에 이유를 적는다. 시안에 없는 문구다. 상한을 넘기면 진행 중인 재발급 요청도 취소한다 |
@@ -484,7 +492,7 @@ com.mist.medicalmate/
 | Apple · 전화번호 로그인 | 백엔드 미지원. `User` 엔티티 식별자가 `kakaoId` 단독 |
 | 카카오 말풍선 심볼 에셋 | 없음. 콘솔의 도구 > 리소스 다운로드에서 받아야 함 |
 | 디자인 캔버스 | 360dp 재단 완료(활성 화면 전부 360x812, 콘텐츠 320, 거터 20). 화면은 fill-width라 코드 영향은 토큰뿐이었다. 미착수 화면(1e-2·1f-2·1q-2)은 아직 390. `1l-1`~`1l-3`도 390이지만 인체도는 좌표에서 크기를 계산해서 재단과 무관하다 |
-| 소셜 로그인 버튼 규격 | DESIGN.md 8.2는 radius 16, 카카오 가이드는 12. 색은 가이드, 크기는 문서를 따름 |
+| 소셜 로그인 버튼 규격 | 2.0 문서는 radius 16, 카카오 가이드는 12. 색은 가이드, 크기는 문서를 따름. 3.0은 반경을 적지 않는다 |
 | `mipmap-*` 래스터 아이콘 | 템플릿 그대로. API 24~25에서 쓰인다. Android Studio Image Asset으로 교체 필요 |
 | 오픈소스 고지 화면 | 없음. Pretendard가 OFL이라 스토어 배포 시 필요 |
 | 로컬 저장 | 미정. 문답 화면 착수 때 백엔드 API를 보고 결정 |

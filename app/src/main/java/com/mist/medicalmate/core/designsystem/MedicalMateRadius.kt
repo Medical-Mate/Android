@@ -6,14 +6,14 @@ import androidx.compose.material3.Shapes
 import androidx.compose.ui.unit.dp
 
 /**
- * DESIGN.md 4.2 반경 7개.
+ * DESIGN.md의 반경 7개.
  *
  * 같은 화면에서 반경 단계를 두 단계 이상 건너뛰지 않는다.
  *
  * 타입이 `RoundedCornerShape`인 이유는 Material3 `Shapes`가 `CornerBasedShape`를
  * 요구하기 때문이다. `Shape`로 두면 `Shapes` 생성자를 호출할 수 없다.
  *
- * 문서 8.1의 Button은 L/M/S에 16/14/12를 쓰는데 14는 4.2 Scale에 없는 값이다. 중간
+ * 문서의 Button은 L/M/S에 16/14/12를 쓰는데 14는 4.2 Scale에 없는 값이다. 중간
  * 단계가 필요하면 [buttonM]처럼 용도를 밝혀 두고, 표에 추가할지는 디자인 트랙과 정한다.
  */
 object MedicalMateRadius {

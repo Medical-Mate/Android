@@ -19,7 +19,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
 /**
- * 8.1 Action 컴포넌트 Preview.
+ * Action 묶음 컴포넌트 Preview.
  *
  * 이 묶음은 렌더링만 하는 코드라 JVM 테스트로 검증할 수 없다. Preview가 유일한 확인
  * 수단이므로 variant를 빠뜨리지 않고 늘어놓는다.
@@ -74,7 +74,7 @@ private fun ButtonDisabledPreview() {
 @Preview(showBackground = true, name = "Button - 두 개 병렬", widthDp = 390)
 @Composable
 private fun ButtonPairPreview() {
-    // 문서 8.1: 왼쪽 Outline, 오른쪽 Primary.
+    // 문서의 컴포넌트 규격: 왼쪽 Outline, 오른쪽 Primary.
     PreviewSurface {
         Row(horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12)) {
             MedicalMateButton(

@@ -30,10 +30,10 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
 /**
- * DESIGN.md 8.5 `Tab Bar`의 목적지.
+ * DESIGN.md의 `Tab Bar`의 목적지.
  *
  * 세 개다. Figma 마스터의 variant가 셋이고, 와이어프레임에서 Tab Bar가 붙은 화면도
- * 홈(1n), 기록(1j), 캘린더(1r) 셋뿐이다. 문서 8.5가 `내 정보`를 넣어 넷으로 적은 것은
+ * 홈(1n), 기록(1j), 캘린더(1r) 셋뿐이다. 문서의 컴포넌트 규격이 `내 정보`를 넣어 넷으로 적은 것은
  * 문서 오류다. `user`·`user-filled` 아이콘은 아이콘 세트에 있지만 탭에 쓰이지 않는다.
  *
  * **선언 순서가 화면 순서다.** `캘린더 · 홈 · 기록`이고 홈이 가운데다. Figma 마스터
@@ -47,19 +47,18 @@ enum class MedicalMateTab(@StringRes val labelRes: Int, @DrawableRes val icon: I
 }
 
 /**
- * DESIGN.md 8.5 `Tab Bar`.
+ * DESIGN.md의 `Tab Bar`.
  *
  * 1Depth에서만 노출한다. 문답이나 카드 작성처럼 흐름 안에 들어간 화면에서는 감춘다.
  *
  * 활성은 세 가지로 함께 표시한다. 채움 아이콘, 브랜드 색, 라벨 굵기다. 색만 바꾸면
- * 색각 이상에서 어느 탭에 있는지 알 수 없다(문서 1항 6번).
+ * 색각 이상에서 어느 탭에 있는지 알 수 없다(문서의 D11).
  *
- * 높이 79는 위 여백 8 + 탭 46 + 아래 안전 여백 24 + 경계선 1이다. 문서 4.3의
- * `layout/tabbar-h` 토큰은 82지만 마스터가 79이고, 문서 11.2가 둘 중 하나를 확정하라고
- * 남긴 항목이다. 확정 전까지 마스터를 따른다.
+ * 높이 79는 위 여백 8 + 탭 46 + 아래 안전 여백 24 + 경계선 1이다. 문서 3.0이
+ * `layout/tabbar-h`를 79로 확정했다.
  *
  * 아래 24는 Figma 컴포넌트 안쪽 여백이다. 기기의 홈 인디케이터 inset과 중복 적용하지
- * 않도록 호출자가 `Scaffold`나 `WindowInsets` 처리를 함께 정한다(문서 4.3).
+ * 않도록 호출자가 `Scaffold`나 `WindowInsets` 처리를 함께 정한다(문서의 치수 토큰).
  */
 @Composable
 fun MedicalMateTabBar(
@@ -76,7 +75,7 @@ fun MedicalMateTabBar(
         }
 
     Column(modifier = modifier.fillMaxWidth().background(background)) {
-        // 문서 5절이 Glass에 테두리를 두지 말라고 하지만, Tab Bar는 콘텐츠와 맞닿는
+        // 문서의 고도 규칙이 Glass에 테두리를 두지 말라고 하지만, Tab Bar는 콘텐츠와 맞닿는
         // 경계라 마스터에 1px 선이 있다. 목록 구분선과 같은 성격이다.
         Column(
             modifier =

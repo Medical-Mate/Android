@@ -11,20 +11,20 @@ import androidx.compose.ui.Modifier
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
-/** DESIGN.md 8.3 `Doctor Card`의 `State` variant. */
+/** DESIGN.md의 `Doctor Card`의 `State` variant. */
 enum class MedicalMateDoctorCardState {
     AVAILABLE,
     CLOSED,
 }
 
 /**
- * DESIGN.md 8.3 `Doctor Card`.
+ * DESIGN.md의 `Doctor Card`.
  *
  * 닫힘 상태에서도 정보는 그대로 유지하고 가능 시각 줄만 가라앉힌다. 이름과 진료과를 함께
  * 흐리면 환자가 어느 병원을 봤는지 기억하지 못한다.
  *
  * [hours]만 색이 바뀌므로 상태를 색으로만 전달하지 않도록 [statusLabel]을 함께 받는다.
- * 문서 1항 6번이 상태를 색만으로 알리지 말라고 한다.
+ * 문서의 D11이 상태를 색만으로 알리지 말라고 한다.
  */
 @Composable
 fun MedicalMateDoctorCard(

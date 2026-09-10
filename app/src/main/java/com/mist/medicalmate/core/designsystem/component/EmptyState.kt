@@ -21,7 +21,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
-/** DESIGN.md 8.4 `Empty State`의 `Type` variant. */
+/** DESIGN.md의 `Empty State`의 `Type` variant. */
 enum class MedicalMateEmptyStateType {
     NO_RECORD,
     NO_RESULT,
@@ -30,16 +30,16 @@ enum class MedicalMateEmptyStateType {
 }
 
 /**
- * DESIGN.md 8.4 `Empty State`.
+ * DESIGN.md의 `Empty State`.
  *
  * 사과보다 다음 행동을 제시한다. "죄송합니다"로 시작하면 사용자는 무엇을 해야 할지
  * 모른 채 화면을 떠난다.
  *
  * [note]는 제목 위에 먼저 나온다. [MedicalMateEmptyStateType.OFFLINE]에서는 작성 내용이
- * 남아 있다는 사실을 가장 먼저 알려야 한다(문서 8.4). 연결이 끊겼다는 말만 보이면
+ * 남아 있다는 사실을 가장 먼저 알려야 한다(문서의 컴포넌트 규격). 연결이 끊겼다는 말만 보이면
  * 환자는 방금 적은 증상이 날아갔다고 생각한다.
  *
- * 행동 버튼은 Tonal이다. 브랜드 채움은 실제 주 행동에만 쓴다(문서 8.1).
+ * 행동 버튼은 Tonal이다. 브랜드 채움은 실제 주 행동에만 쓴다(문서의 컴포넌트 규격).
  *
  * 아이콘이 옅은 원 안에 들어간다. Figma 1n-2의 인스턴스가 그렇게 그려져 있다. 맨 아이콘만
  * 두면 빈 화면 가운데에 회색 획만 남아 무엇을 보라는 것인지 약하다.

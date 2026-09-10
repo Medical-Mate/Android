@@ -5,13 +5,13 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 /**
- * DESIGN.md 2.3 시맨틱 컬러 40개.
+ * DESIGN.md의 시맨틱 컬러 40개.
  *
  * Material3 `ColorScheme`에는 `bg/canvas`, `fg/subtle`, `border/subtle`, `severity/1~5`에
  * 대응하는 역할이 없어서 별도 홀더를 둔다. 매핑되는 역할은 `ColorScheme`에도 같은 값으로
  * 채워 두므로(`Theme.kt`) M3 컴포넌트가 내부에서 참조하는 색도 브랜드 값이 된다.
  *
- * 이름은 Figma 경로를 camelCase로 옮긴 것이다(DESIGN.md 1항 이름 변환 규칙).
+ * 이름은 Figma 경로를 camelCase로 옮긴 것이다(DESIGN.md의 이름 변환 규칙).
  * `bg/primary` → `bgPrimary`.
  */
 @Immutable
@@ -35,11 +35,11 @@ data class MedicalMateColors(
      * 설명이라 Toast만큼 무겁지 않게 둔 것으로 보인다.
      */
     val bgInverseSoft: Color,
-    /** Overlay Scrim. 컴포넌트에서 opacity 50%를 적용한다(DESIGN.md 8.5). */
+    /** Overlay Scrim. 컴포넌트에서 opacity 50%를 적용한다(DESIGN.md의 컴포넌트 규격). */
     val bgScrim: Color,
     val fgDefault: Color,
     val fgSubtle: Color,
-    /** 비활성 아이콘·장식 획 전용. 텍스트에 쓰지 않는다(DESIGN.md 9절). */
+    /** 비활성 아이콘·장식 획 전용. 텍스트에 쓰지 않는다(DESIGN.md의 접근성 기준). */
     val fgMuted: Color,
     val fgDisabled: Color,
     val fgOnPrimary: Color,
@@ -68,7 +68,7 @@ data class MedicalMateColors(
 )
 
 /**
- * Light 모드 값. DESIGN.md 2.1과 11.7에 따라 다크 모드 값은 아직 없다.
+ * Light 모드 값. DESIGN.md에 다크 모드 값이 없다.
  * 값이 정해지고 컴포넌트 QA가 끝나기 전까지 다크를 지원 대상으로 표시하지 않는다.
  */
 internal val LightMedicalMateColors =

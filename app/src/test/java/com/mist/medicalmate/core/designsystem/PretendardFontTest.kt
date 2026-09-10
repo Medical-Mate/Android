@@ -11,7 +11,7 @@ import org.junit.Test
  * 폰트 리소스와 무게가 어긋나지 않는지 본다.
  *
  * 파일 이름과 무게를 잘못 짝지어도 빌드는 통과하고, 화면에서는 굵기만 조금 달라 보인다.
- * DESIGN.md 3절이 `Strong`을 같은 크기의 SemiBold로 규정하므로 600이 실물로 붙어 있어야
+ * DESIGN.md의 타이포 규칙이 `Strong`을 같은 크기의 SemiBold로 규정하므로 600이 실물로 붙어 있어야
  * 합성 굵기가 걸리지 않는다.
  */
 class PretendardFontTest {

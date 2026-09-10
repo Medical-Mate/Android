@@ -20,15 +20,15 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
 /**
- * DESIGN.md 8.1 `Chip`.
+ * DESIGN.md의 `Chip`.
  *
  * 짧은 증상과 부위를 고르는 자리에 쓴다. 6개를 넘으면 칩 대신 세로 목록을 검토한다.
  *
  * 선택 상태를 색만으로 알리지 않는다. tint 면, 1.5dp 브랜드 경계, check 아이콘 세 가지를
- * 함께 쓴다. 문서 1항 6번이 상태를 색만으로 전달하지 말라고 한다. 색각 이상이나 흑백
+ * 함께 쓴다. 문서의 D11이 상태를 색만으로 전달하지 말라고 한다. 색각 이상이나 흑백
  * 출력에서 선택이 사라지면 안 된다.
  *
- * 높이 40에 pill 형태다. 문서 8.1의 반경 20은 높이의 절반이라 4.2의 `radius/full`과 같은
+ * 높이 40에 pill 형태다. 문서의 반경 20은 높이의 절반이라 `radius/full`과 같은
  * 결과가 된다.
  *
  * Figma의 `State=Pressed`는 파라미터로 받지 않는다. 대응하는 색 토큰이 없어 press
@@ -86,7 +86,7 @@ fun MedicalMateChip(
     }
 }
 
-/** 문서 8.1이 지정한 선택 경계 두께다. */
+/** 문서의 컴포넌트 규격이 지정한 선택 경계 두께다. */
 private val SelectedBorderWidth = 1.5.dp
 
 /**

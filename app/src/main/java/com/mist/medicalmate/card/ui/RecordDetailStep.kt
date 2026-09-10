@@ -135,7 +135,7 @@ internal fun RecordStepPending(step: RecordStep.Pending) {
     MedicalMateNotice(title = step.message, body = step.detail)
 }
 
-/** 문서 8.3의 KV Row보다 좁은 키 열. 블록 안 요약이라 한 단계 작다. */
+/** 문서의 KV Row보다 좁은 키 열. 블록 안 요약이라 한 단계 작다. */
 private val ItemKeyWidth = 52.dp
 
 private val OpenPadding = 11.dp

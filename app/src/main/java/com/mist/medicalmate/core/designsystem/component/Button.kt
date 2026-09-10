@@ -29,12 +29,12 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
 /**
- * DESIGN.md 8.1 `Button`의 `Type` variant.
+ * DESIGN.md의 `Button`의 `Type` variant.
  *
  * 브랜드 채움([PRIMARY])은 실제 행동에만 쓴다. 버튼 두 개를 나란히 둘 때는 왼쪽에
  * [OUTLINE], 오른쪽에 [PRIMARY]를 둔다.
  *
- * [DANGER]는 채움이 아니라 danger 면과 danger 글자 조합이다. 문서 2.2가 상태색의 기본
+ * [DANGER]는 채움이 아니라 danger 면과 danger 글자 조합이다. 문서의 원시 팔레트가 상태색의 기본
  * 조합을 50 배경과 700 텍스트로 정했고, 채움에 쓸 red/500급 시맨틱 토큰이 없다. 파괴
  * 동작의 최종 확인은 Dialog가 담당하므로 버튼 자체를 더 세게 만들 이유도 적다.
  */
@@ -47,9 +47,9 @@ enum class MedicalMateButtonType {
 }
 
 /**
- * DESIGN.md 8.1 `Button`의 `Size` variant. 높이 56/48/40, radius 16/14/12다.
+ * DESIGN.md의 `Button`의 `Size` variant. 높이 56/48/40, radius 16/14/12다.
  *
- * 라벨은 [L]이 `Label/L`, [M]과 [S]가 `Label/M`이다. 문서 3절이 `Label/L`을 높이 56
+ * 라벨은 [L]이 `Label/L`, [M]과 [S]가 `Label/M`이다. 문서의 타이포 규칙이 `Label/L`을 높이 56
  * 버튼 라벨, `Label/M`을 작은 버튼으로 규정한다.
  */
 enum class MedicalMateButtonSize {
@@ -59,11 +59,11 @@ enum class MedicalMateButtonSize {
 }
 
 /**
- * DESIGN.md 8.1 `Button`.
+ * DESIGN.md의 `Button`.
  *
  * Figma의 `State=Default/Pressed/Disabled`를 파라미터로 받지 않는다. Compose가 [enabled]와
  * press indication으로 이미 다루고, 상태를 따로 받으면 [enabled]와 중복돼 어긋날 수 있다.
- * 문서 10.2가 말하는 매핑은 이렇다. Default는 기본, Disabled는 `enabled = false`,
+ * 매핑은 이렇다. Default는 기본, Disabled는 `enabled = false`,
  * Pressed는 `interactionSource`가 누름을 알려줄 때다. Primary만 누름에
  * `bg/primary-pressed` 토큰이 있어 색을 바꾸고, 나머지는 ripple로 표현한다.
  *
@@ -130,7 +130,7 @@ private val MedicalMateButtonSize.shape: RoundedCornerShape
         MedicalMateButtonSize.S -> MedicalMateRadius.sm
     }
 
-/** 버튼 안 아이콘은 인라인이라 20, S에서는 좁은 자리라 18이다(DESIGN.md 6.1). */
+/** 버튼 안 아이콘은 인라인이라 20, S에서는 좁은 자리라 18이다(DESIGN.md의 아이콘 규격). */
 private val MedicalMateButtonSize.iconSize: Dp
     get() = when (this) {
         MedicalMateButtonSize.S -> MedicalMateSize.iconSm

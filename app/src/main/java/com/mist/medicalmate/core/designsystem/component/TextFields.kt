@@ -34,19 +34,19 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
 /**
- * DESIGN.md 8.2 `Text Field`.
+ * DESIGN.md의 `Text Field`.
  *
  * Figma의 `State=Default/Focus/Filled/Error/Disabled`를 파라미터로 받지 않는다. Focus는
  * `interactionSource`가, Filled는 [value]가, Disabled는 [enabled]가, Error는 [errorText]가
- * 각각 결정한다. 상태를 따로 받으면 실제 값과 어긋날 수 있다(문서 10.2의 매핑 지침).
+ * 각각 결정한다. 상태를 따로 받으면 실제 값과 어긋날 수 있다.
  *
  * Default는 테두리 없는 subtle 면이다. Focus와 Filled는 surface 면에 테두리가 생긴다.
- * 모든 칸에 테두리를 두르면 화면이 선으로 가득 찬다(문서 5절).
+ * 모든 칸에 테두리를 두르면 화면이 선으로 가득 찬다(문서의 고도 규칙).
  *
  * [trailing]은 Figma의 `Actions` 슬롯이다. 지우기·보내기·추가처럼 그 필드에 딸린 동작을
  * 필드 안쪽 끝에 붙인다. 옆에 따로 두면 무엇에 딸린 버튼인지가 흐려진다.
  *
- * [errorText]는 무엇이 잘못됐는지가 아니라 어떻게 고치는지를 적는다. 문서 8.2가 "행동
+ * [errorText]는 무엇이 잘못됐는지가 아니라 어떻게 고치는지를 적는다. 문서의 컴포넌트 규격이 "행동
  * 지침을 함께 표시"하라고 하고, 9절은 비활성만으로 필수 행동을 숨기지 말라고 한다.
  */
 @Composable
@@ -121,14 +121,14 @@ fun MedicalMateTextField(
 }
 
 /**
- * DESIGN.md 8.2 `Text Area`.
+ * DESIGN.md의 `Text Area`.
  *
  * 자유 서술이다. 본문은 `Body/L`이고 내용에 따라 높이가 늘어난다. 최소 120이다.
  *
- * 안내 placeholder는 `fg/subtle`이다. `fg/muted`를 쓰면 안 된다. 문서 9절이 `fg/muted`를
+ * 안내 placeholder는 `fg/subtle`이다. `fg/muted`를 쓰면 안 된다. 문서의 접근성 기준이 `fg/muted`를
  * 텍스트에 쓰지 말라고 한다.
  *
- * 글자 크기 확대에서 잘리지 않도록 고정 높이를 주지 않는다(문서 3절).
+ * 글자 크기 확대에서 잘리지 않도록 고정 높이를 주지 않는다(문서의 타이포 규칙).
  *
  * [maxLength]를 주면 아래에 글자 수가 붙는다. Text Area v2가 더한 Footer Row이고, 같은
  * 줄의 오른쪽에 마이크가 들어가는 변이는 기본값이 꺼짐이라 아직 두지 않았다. 넘겨도
@@ -301,7 +301,7 @@ private fun SupportText(errorText: String?, helperText: String?) {
 /**
  * Text Field v2의 radius 16.
  *
- * 문서 8.2는 14로 적혀 있고 Figma가 16으로 바뀌었다. 같은 개정에서 "56 높이 입력 = 16 ·
+ * 문서의 컴포넌트 규격은 14로 적혀 있고 Figma가 16으로 바뀌었다. 같은 개정에서 "56 높이 입력 = 16 ·
  * 그 안 48 버튼 = 12"라는 동심원 규칙이 함께 들어왔다. 바깥에서 여백만큼 뺀 값이 안쪽
  * 반경이 된다.
  */
@@ -309,7 +309,7 @@ private val FieldShape = MedicalMateRadius.md
 
 private val BorderWidth = 1.dp
 
-/** 포커스 링은 문서 9절이 2px로 정했다. 오류 테두리도 같은 두께로 둔다. */
+/** 포커스 링은 문서의 접근성 기준이 2px로 정했다. 오류 테두리도 같은 두께로 둔다. */
 private val FocusBorderWidth = 2.dp
 
 private val TextAreaMinHeight = 120.dp

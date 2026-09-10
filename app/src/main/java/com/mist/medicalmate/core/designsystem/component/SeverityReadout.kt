@@ -22,12 +22,12 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
 /**
- * DESIGN.md 8.3 `Severity Readout`.
+ * DESIGN.md의 `Severity Readout`.
  *
  * 출력 전용이다. 고르는 자리는 Severity Slider, Scale, Select다.
  *
  * 단계 숫자, 환자가 고른 낱말, NRS 등가를 함께 보여준다. 색만으로 단계를 전달하지
- * 않는다는 문서 1항 6번을 이 세 가지가 함께 지킨다. 색을 지워도 숫자와 낱말로 단계를
+ * 않는다는 문서의 D11을 이 세 가지가 함께 지킨다. 색을 지워도 숫자와 낱말로 단계를
  * 알 수 있어야 한다.
  *
  * 접근성 이름은 "3단계, 꽤 아파요" 형태로 한 번에 읽는다. 숫자 칩과 낱말을 따로 읽으면
@@ -85,7 +85,7 @@ private fun LevelChip(severity: MedicalMateSeverity) {
     }
 }
 
-/** 문서 8.3이 지정한 높이. */
+/** 문서의 컴포넌트 규격이 지정한 높이. */
 private val ReadoutHeight = 32.dp
 
 private val LevelChipSize = 28.dp

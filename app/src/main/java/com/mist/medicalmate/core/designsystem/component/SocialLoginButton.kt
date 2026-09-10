@@ -33,12 +33,12 @@ import com.mist.medicalmate.core.designsystem.NaverContainer
 import com.mist.medicalmate.core.designsystem.NaverLabel
 
 /**
- * DESIGN.md 8.2 `Social Login Button`의 `Provider` variant.
+ * DESIGN.md의 `Social Login Button`의 `Provider` variant.
  *
  * 색은 각 사 공식 브랜드 가이드가 정한 값이고 변경이 금지된다. 문서도 이 컴포넌트를
  * 브랜드 가이드 예외로 표시했다.
  *
- * Naver 조합은 공식 규격 때문에 WCAG 대비 기준을 벗어난다. 문서 8.2가 그 사실을 밝히고
+ * Naver 조합은 공식 규격 때문에 WCAG 대비 기준을 벗어난다. 문서의 컴포넌트 규격이 그 사실을 밝히고
  * 다른 안내 요소는 기준을 지키라고 한다.
  */
 enum class MedicalMateSocialProvider(
@@ -53,14 +53,14 @@ enum class MedicalMateSocialProvider(
 }
 
 /**
- * DESIGN.md 8.2 `Social Login Button`.
+ * DESIGN.md의 `Social Login Button`.
  *
  * 350x56에 radius 16이다. 컨테이너 규격은 문서를 따르고 색은 각 사 가이드를 따른다.
  *
- * 카카오 가이드는 radius 12를 적는다. DESIGN.md 8.2가 16으로 정하고 같은 항목을 브랜드
+ * 카카오 가이드는 radius 12를 적는다. DESIGN.md의 컴포넌트 규격이 16으로 정하고 같은 항목을 브랜드
  * 가이드 예외로 표시했으며, #39에서 문서 값으로 결정했다.
  *
- * **로고 자리가 비어 있다.** Figma의 로고는 임시 사각형이고(문서 11.5) 각 사 공식
+ * **로고 자리가 비어 있다.** Figma의 로고는 임시 사각형이고 각 사 공식
  * 개발자 키트에서 받아 교체해야 한다. 임의로 그린 로고를 넣으면 가이드 위반이라, 받기
  * 전까지는 라벨만 둔다.
  *
@@ -110,7 +110,7 @@ fun MedicalMateSocialLoginButton(
 }
 
 /**
- * DESIGN.md 8.2 `Social Login Stack`.
+ * DESIGN.md의 `Social Login Stack`.
  *
  * 카카오 → 네이버 → Apple 세로 순서다. gap 10이고 화면에서는 폭 Fill에 좌우 거터 20이다.
  *
