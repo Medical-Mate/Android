@@ -27,6 +27,19 @@ data class BodyMapUiState(
     /** 구역을 고르는 중인지. 구역이 있는 앵커를 확대한 상태면 그렇다. */
     val pickingZone: Boolean get() = focus != null && zones.isNotEmpty()
 
+    /**
+     * 지금 보여줄 화면.
+     *
+     * 세 화면이 한 목적지 안에 있어서 스크롤 상태와 전환 애니메이션이 이 값을 기준으로
+     * 갈린다. 조건을 화면마다 다시 쓰면 셋이 어긋난다.
+     */
+    val screen: BodyMapScreen
+        get() = when {
+            byList -> BodyMapScreen.LIST
+            pickingZone -> BodyMapScreen.ZONE
+            else -> BodyMapScreen.ANCHOR
+        }
+
     /** 확대해서 보고 있는 앵커. */
     val anchor: BodyMapAnchorGeometry? get() = focus?.let { bodyMapAnchorOf(it.anchorId) }
 
@@ -35,7 +48,24 @@ data class BodyMapUiState(
     /** 지금 보여줄 전신 이미지. */
     val bodyImage: BodyMapImage
         get() = if (view == BodyMapView.BACK) bodyMapBack else bodyMapFront
+
+    /**
+     * 확대해 들어간 앵커의 전신 이미지 위 좌표. 확대 애니메이션의 축이 된다.
+     *
+     * 팔·다리는 좌우 두 점이라 짚은 쪽을 골라야 한다. 반대쪽을 축으로 삼으면 화면이
+     * 엉뚱한 방향으로 밀려난다.
+     */
+    val focusPoint: BodyMapPoint?
+        get() = focus?.let { f -> bodyMapAnchorOf(f.anchorId).points.firstOrNull { it.side == f.side } }
 }
+
+/**
+ * 인체도 단계의 화면 셋.
+ *
+ * [ANCHOR]는 전신에서 앵커를 짚는 1l-1·1l-3, [ZONE]은 확대해 구역을 고르는 1l-2,
+ * [LIST]는 인체도를 쓸 수 없을 때의 목록이다.
+ */
+enum class BodyMapScreen { ANCHOR, ZONE, LIST }
 
 /**
  * 인체도에 자리가 없는 앵커. 전신과 피부다.

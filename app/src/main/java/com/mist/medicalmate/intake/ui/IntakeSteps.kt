@@ -12,6 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -34,14 +35,25 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateTextField
  * 네 단계가 상단 내비와 하단 영역을 공유하고 이 파일이 그 사이를 채운다.
  */
 
-/** 단계 본문의 공통 껍데기. 여백과 간격, 스크롤이 네 단계에서 같다. */
+/**
+ * 단계 본문의 공통 껍데기. 여백과 간격, 스크롤이 네 단계에서 같다.
+ *
+ * [scrollKey]가 바뀌면 스크롤이 맨 위로 돌아간다. 한 단계 안에서 화면이 갈리는 곳이
+ * 있어서(인체도의 앵커·확대·목록) 하나의 스크롤 상태를 공유하면, 아래로 내려 부위를 짚은
+ * 뒤 확대 화면이 그 위치로 열려 제목이 잘린다.
+ */
 @Composable
-internal fun StepContent(step: IntakeStep, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+internal fun StepContent(
+    step: IntakeStep,
+    modifier: Modifier = Modifier,
+    scrollKey: Any? = Unit,
+    content: @Composable () -> Unit,
+) {
     Column(
         modifier =
         modifier
             .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(key(scrollKey) { rememberScrollState() })
             .padding(
                 start = MedicalMateSize.gutter,
                 end = MedicalMateSize.gutter,

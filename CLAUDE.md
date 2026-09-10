@@ -439,7 +439,7 @@ com.mist.medicalmate/
 
 | 항목 | 상태 |
 | -- | -- |
-| 유닛 테스트 | `LoginViewModel` 13건, `SessionViewModel` 17건, `HomeViewModel` 9건, `IntakeViewModel` 27건, `BodyMapGeometry` 17건, `BodyMapLayout` 7건, `BriefCardViewModel` 8건, `RecordDetailViewModel` 10건, `MyProfileViewModel` 5건, `HealthEditViewModel` 11건, `HospitalPickViewModel` 10건, `VisitRecordViewModel` 11건, `VisitNoteViewModel` 6건, `CalendarViewModel` 7건, `ProfileSetupViewModel` 7건, `HomeSchedule` 4건, `TokenAuthenticator` 7건, 템플릿 1개 |
+| 유닛 테스트 | `LoginViewModel` 13건, `SessionViewModel` 17건, `HomeViewModel` 9건, `IntakeViewModel` 27건, `BodyMapGeometry` 17건, `BodyMapLayout` 10건, `BriefCardViewModel` 8건, `RecordDetailViewModel` 10건, `MyProfileViewModel` 5건, `HealthEditViewModel` 11건, `HospitalPickViewModel` 10건, `VisitRecordViewModel` 11건, `VisitNoteViewModel` 6건, `CalendarViewModel` 7건, `ProfileSetupViewModel` 7건, `HomeSchedule` 4건, `TokenAuthenticator` 7건, 템플릿 1개 |
 | 네비게이션 테스트 | 없음. `NavHost`는 계측 테스트가 필요하고 CI가 androidTest를 실행하지 않음 |
 | 아키텍처 패턴 | MVVM 확정. UseCase는 필요할 때만 |
 | DI | Hilt 확정 |
@@ -464,6 +464,9 @@ com.mist.medicalmate/
 | 아픈 부위(1l) | 인체도 구현 완료. 앞뒤 전환 · 앵커 9개 · 확대 후 구역 25개 · 팔·다리 좌우 반전 · 전신·피부 칩 · 진료과 안내 · 목록 대안. 부위 id는 AI 트랙의 온톨로지(`ANC:*` · `SUR:*`)를 쓰고 이름과 진료과는 `BodyMapOntologyFixture.kt`가 픽스처로 들고 있다. 서버 연동 시 그 파일만 지운다 |
 | 부위 선택 개수 | 한 곳만 고른다. 다중선택을 넣었다가 되돌렸다 |
 | 고른 부위 표시 | 상태를 `focus`(확대한 앵커)와 `selection`(고른 부위)으로 나눈다. 하나로 두면 구역을 고르는 순간 화면이 앵커 단계로 돌아가 고른 점도 고른 줄도 보이지 않는다. 확대 화면의 제목과 좌우 반전도 `focus`를 봐야 맞는다 |
+| 인체도 화면 배치 | 판이 505dp라 상태바·하단 버튼까지 빼면 판 위에 쓸 수 있는 높이가 131dp뿐이다. 앵커 화면에 설명 문구를 두지 않는 이유이고, 전신·피부 칩과 목록 전환을 한 줄에 합친 이유다. 이 둘을 판 아래에 두면 첫 화면에서 보이지 않고 다리 앵커가 하단 버튼 뒤로 들어간다 |
+| 화면별 스크롤 | `StepContent`가 `scrollKey`를 받는다. 인체도의 세 화면이 한 스크롤 상태를 공유하면 아래로 내려 부위를 짚었을 때 확대 화면이 그 위치로 열려 제목이 잘린다 |
+| 확대 애니메이션 | 짚은 점을 축으로 전신을 밀어내고 확대 이미지를 들여보낸다(`BodyMapTransition.kt`). 두 이미지가 다른 파일이라 이어 확대할 수 없어 그렇게 읽히도록 만든 것이다. 판 모양으로 잘라야 커지는 이미지가 위아래 버튼을 덮지 않는다. 기기에서 애니메이션을 끄면(`ANIMATOR_DURATION_SCALE` 0) 즉시 바뀐다 |
 | 목록에서 고르기 | 고르는 줄은 `MedicalMateRadio`다. 라디오가 역할과 선택 상태를 시맨틱에 실어 스크린 리더가 "선택됨"을 읽는다. 앵커 줄은 하위 목록으로 들어가는 이동이라 `List Row`이고, 그 안에서 고른 부위 이름을 보조 텍스트에 적는다 |
 | 진료과 안내 | 없다. 응답(`docs/examples/body-map.json`)이 부위별 진료과를 함께 주지만 화면에 넣지 않았고, 픽스처에도 담지 않았다. 넣게 되면 응답에서 다시 가져온다 |
 | 부위 이름 조사 | 물음의 주격 조사를 문자열 리소스에 박지 않는다. 부위가 25가지라 `%1$s가`로 고정하면 "무릎가"가 된다. 문구는 리소스에, 조사는 `withSubjectParticle`이 계산해 `IntakeUiState.bodyPartSubject`로 넘긴다 |

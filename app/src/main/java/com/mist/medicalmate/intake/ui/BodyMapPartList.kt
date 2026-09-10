@@ -39,12 +39,18 @@ internal fun BodyMapPartList(state: BodyMapUiState, callbacks: IntakeCallbacks, 
         color = MedicalMateTheme.colors.fgDefault,
         modifier = modifier,
     )
+    MedicalMateButton(
+        onClick = callbacks.onBodyListModeToggle,
+        label = stringResource(R.string.body_map_use_image),
+        type = MedicalMateButtonType.OUTLINE,
+        size = MedicalMateButtonSize.M,
+        modifier = Modifier.fillMaxWidth(),
+    )
     if (state.pickingZone && anchor != null && focus != null) {
         ZoneRows(anchor = anchor, focus = focus, selection = state.selection, callbacks = callbacks)
     } else {
         AnchorRows(selection = state.selection, callbacks = callbacks)
     }
-    BodyMapImageModeButton(callbacks = callbacks)
 }
 
 /**

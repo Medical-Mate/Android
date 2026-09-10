@@ -1,5 +1,6 @@
 package com.mist.medicalmate.intake.ui
 
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import org.junit.Assert.assertEquals
@@ -110,7 +111,46 @@ class BodyMapLayoutTest {
         }
     }
 
+    @Test
+    fun `확대 축은 짚은 점을 판 안의 비율로 바꾼다`() {
+        val leg = bodyMapAnchorOf("ANC:014")
+        val right = leg.points.single { it.side == BodyMapSide.RIGHT }
+        val height = bodyMapBodyHeight().value
+        val imageWidth = height * bodyMapFront.aspectRatio
+
+        val origin = bodyMapZoomOrigin(right, imageWidth = imageWidth, cardWidth = CARD_WIDTH)
+
+        // 이미지가 판보다 좁아 양옆에 여백이 있다. 점의 위치는 그 여백을 더한 값이다.
+        val inset = (CARD_WIDTH - imageWidth) / 2f
+        assertEquals((inset + imageWidth * right.x) / CARD_WIDTH, origin.pivotFractionX, ORIGIN_TOLERANCE)
+        assertEquals(right.y, origin.pivotFractionY, ORIGIN_TOLERANCE)
+        // 오른쪽 다리는 화면 왼쪽에 있다. 축이 가운데보다 왼쪽이어야 한다.
+        assertTrue(origin.pivotFractionX < 0.5f)
+    }
+
+    @Test
+    fun `좌우가 갈린 앵커는 짚은 쪽이 축이 된다`() {
+        val height = bodyMapBodyHeight().value
+        val imageWidth = height * bodyMapFront.aspectRatio
+        val leg = bodyMapAnchorOf("ANC:014")
+
+        val left = bodyMapZoomOrigin(leg.points.single { it.side == BodyMapSide.LEFT }, imageWidth, CARD_WIDTH)
+        val right = bodyMapZoomOrigin(leg.points.single { it.side == BodyMapSide.RIGHT }, imageWidth, CARD_WIDTH)
+
+        assertTrue(left.pivotFractionX > right.pivotFractionX)
+    }
+
+    @Test
+    fun `짚은 점이 없으면 축은 가운데다`() {
+        assertEquals(TransformOrigin.Center, bodyMapZoomOrigin(null, imageWidth = 220f, cardWidth = 320f))
+    }
+
     private companion object {
+        /** 360 기준 콘텐츠 폭. 판은 폭을 채운다. */
+        const val CARD_WIDTH = 320f
+
+        const val ORIGIN_TOLERANCE = 0.0001f
+
         /** 좌표표가 소수 한 자리로 반올림한 값을 싣고 있다. */
         const val CSV_TOLERANCE = 0.1
 

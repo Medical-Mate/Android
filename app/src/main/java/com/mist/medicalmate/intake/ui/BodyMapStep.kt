@@ -1,14 +1,18 @@
 package com.mist.medicalmate.intake.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import com.mist.medicalmate.R
+import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
@@ -23,44 +27,113 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateSegmentedCont
  * 세 화면이 한 단계에 들어 있다. 앞면과 뒷면은 토글이고, 구역은 앵커를 짚으면
  * 이어진다. 목적지를 나누면 진행 표시가 `증상 문답 1 / 4`에서 어긋난다.
  *
- * 이미지 위의 좌표를 짚는 조작이라 스크린 리더로 쓸 수 없다. 그래서 같은 부위를
- * 목록에서 고르는 길을 함께 둔다([BodyMapPartList]). 음성 입력에 글 대안을 두는 것과
- * 같은 성격이다(DESIGN.md 9절).
+ * 전신·피부 칩과 목록 전환은 판 **위** 한 줄에 함께 둔다. 판이 505dp라 아래에 두면 첫
+ * 화면에서 보이지 않는데, 목록은 인체도를 쓸 수 없는 사람을 위한 길이라 발견되지 않으면
+ * 없는 것과 같다. 둘을 한 줄로 합쳐서 위로 올리는 값이 48dp에서 그친다.
  */
 @Composable
 internal fun BodyPartStep(state: IntakeUiState, callbacks: IntakeCallbacks, modifier: Modifier = Modifier) {
     val bodyMap = state.bodyMap
-    StepContent(step = state.step, modifier = modifier) {
-        if (bodyMap.byList) {
+    StepContent(step = state.step, scrollKey = bodyMap.screen, modifier = modifier) {
+        if (bodyMap.screen == BodyMapScreen.LIST) {
             BodyMapPartList(state = bodyMap, callbacks = callbacks)
-        } else if (bodyMap.pickingZone) {
-            ZonePicker(state = bodyMap, callbacks = callbacks)
         } else {
-            AnchorPicker(state = bodyMap, callbacks = callbacks)
+            ImagePicker(state = bodyMap, callbacks = callbacks)
         }
     }
 }
 
-/** 앵커 단계. 전신에서 큰 부위 하나를 짚는다. */
+/**
+ * 인체도로 고르는 길. 앵커 화면과 확대 화면이 같은 자리를 쓴다.
+ *
+ * 제목 아래 조작 자리에는 화면마다 다른 것이 들어가지만 높이가 같다. 앵커에서는 앞뒤
+ * 토글, 확대에서는 되돌아가는 버튼이다. 하나가 사라지고 다른 것이 나타나면 확대
+ * 애니메이션 중에 판이 위아래로 튄다.
+ */
 @Composable
-private fun AnchorPicker(state: BodyMapUiState, callbacks: IntakeCallbacks) {
-    val image = state.bodyImage
-    val dots = bodyMapAnchorDots(state.view, state.selection)
+private fun ImagePicker(state: BodyMapUiState, callbacks: IntakeCallbacks) {
+    val zooming = state.screen == BodyMapScreen.ZONE
     Text(
-        text = stringResource(R.string.intake_body_part_question),
+        text = pickerQuestion(state),
         style = MedicalMateTheme.typography.headingL,
         color = MedicalMateTheme.colors.fgDefault,
     )
-    Text(
-        text = stringResource(R.string.intake_body_part_description),
-        style = MedicalMateTheme.typography.bodyM,
-        color = MedicalMateTheme.colors.fgSubtle,
-    )
-    MedicalMateSegmentedControl(
-        options = bodyMapViewOptions(),
-        selectedIndex = state.view.ordinal,
-        onSelect = { callbacks.onBodyViewChange(BodyMapView.entries[it]) },
-    )
+    // 앵커 화면에는 설명을 두지 않는다. 인체도와 점이 보이는 상태에서 "가장 불편한 곳
+    // 하나를 짚어주세요"는 화면이 이미 말하는 것이고, 두 줄을 쓰면 그만큼 판이 내려가
+    // 다리 점이 하단 버튼 뒤로 들어간다. 확대 화면은 판이 짧아 여유가 있어 남긴다.
+    if (zooming) {
+        Text(
+            text = stringResource(R.string.body_map_zone_description),
+            style = MedicalMateTheme.typography.bodyM,
+            color = MedicalMateTheme.colors.fgSubtle,
+        )
+    }
+    if (zooming) {
+        MedicalMateButton(
+            onClick = callbacks.onBodyFocusClear,
+            label = stringResource(R.string.body_map_other_anchor),
+            type = MedicalMateButtonType.OUTLINE,
+            size = MedicalMateButtonSize.M,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    } else {
+        MedicalMateSegmentedControl(
+            options = bodyMapViewOptions(),
+            selectedIndex = state.view.ordinal,
+            onSelect = { callbacks.onBodyViewChange(BodyMapView.entries[it]) },
+        )
+        SideAnchorRow(state = state, callbacks = callbacks)
+    }
+    AnimatedCard(state = state, callbacks = callbacks)
+}
+
+/** 화면 제목. 확대 중이면 앵커 이름을 부른다. */
+@Composable
+private fun pickerQuestion(state: BodyMapUiState): String {
+    val focus = state.focus
+    return if (state.screen == BodyMapScreen.ZONE && focus != null) {
+        stringResource(R.string.body_map_zone_question, focus.title())
+    } else {
+        stringResource(R.string.intake_body_part_question)
+    }
+}
+
+/**
+ * 확대 애니메이션이 걸린 판.
+ *
+ * 축을 짚은 점에 두려면 판의 실제 폭을 알아야 해서 [BoxWithConstraints]로 감싼다. 판은
+ * 폭을 채우고 높이만 좌표에서 계산한 값이다.
+ */
+@Composable
+private fun AnimatedCard(state: BodyMapUiState, callbacks: IntakeCallbacks) {
+    val bodyHeight = bodyMapBodyHeight()
+    // 확대되는 이미지가 판 밖으로 나가지 않게 판 모양으로 자른다. 자르지 않으면 커지는
+    // 전신이 위아래 버튼을 덮고 지나간다.
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth().clip(MedicalMateRadius.md)) {
+        val cardWidth = maxWidth
+        BodyMapCardTransition(
+            screen = state.screen,
+            zoomOrigin =
+            bodyMapZoomOrigin(
+                point = state.focusPoint,
+                imageWidth = (bodyHeight * state.bodyImage.aspectRatio).value,
+                cardWidth = cardWidth.value,
+            ),
+        ) { screen ->
+            if (screen == BodyMapScreen.ZONE) {
+                ZoneCard(state = state, callbacks = callbacks)
+            } else {
+                AnchorCard(state = state, callbacks = callbacks)
+            }
+        }
+    }
+}
+
+/** 전신에서 확대할 부위를 짚는 판. */
+@Composable
+private fun AnchorCard(state: BodyMapUiState, callbacks: IntakeCallbacks) {
+    val image = state.bodyImage
+    val dots = bodyMapAnchorDots(state.view, state.selection)
     BodyMapCard(
         height = bodyMapBodyHeight(),
         orientationLabels = image.view == BodyMapView.FRONT,
@@ -73,36 +146,21 @@ private fun AnchorPicker(state: BodyMapUiState, callbacks: IntakeCallbacks) {
             modifier = Modifier.fillMaxSize(),
         )
     }
-    SideAnchorChips(state = state, callbacks = callbacks)
-    ListModeButton(byList = false, callbacks = callbacks)
 }
 
 /**
- * 구역 단계. 짚은 앵커를 확대해 세부 구역을 고른다. 1l-2다.
+ * 확대해 구역을 고르는 판. 1l-2다.
  *
- * 고른 뒤에도 이 화면에 머문다. 고른 점이 브랜드색으로 바뀌고 판 아래 알약에 이름이
- * 나오는데, 곧바로 앵커 화면으로 돌아가면 그 둘을 볼 수 없다.
- *
- * 제목과 좌우 반전은 확대한 앵커([BodyMapUiState.focus])를 본다. 고른 구역을 보면 머리에서
- * 왼쪽 눈을 골랐을 때 제목이 "왼쪽 머리 어디가 아프세요?"가 된다.
+ * 고른 뒤에도 이 화면에 머문다. 고른 점이 브랜드색으로 바뀌고 아래 알약에 이름이 나오는데,
+ * 곧바로 앵커 화면으로 돌아가면 그 둘을 볼 수 없다.
  */
 @Composable
-private fun ZonePicker(state: BodyMapUiState, callbacks: IntakeCallbacks) {
+private fun ZoneCard(state: BodyMapUiState, callbacks: IntakeCallbacks) {
     val anchor = state.anchor
     val detail = anchor?.detail
     val focus = state.focus
     if (anchor == null || detail == null || focus == null) return
     val dots = bodyMapZoneDots(anchor, focus.side, state.selection)
-    Text(
-        text = stringResource(R.string.body_map_zone_question, focus.title()),
-        style = MedicalMateTheme.typography.headingL,
-        color = MedicalMateTheme.colors.fgDefault,
-    )
-    Text(
-        text = stringResource(R.string.body_map_zone_description),
-        style = MedicalMateTheme.typography.bodyM,
-        color = MedicalMateTheme.colors.fgSubtle,
-    )
     BodyMapCard(
         height = bodyMapCardHeight(dots, detail),
         orientationLabels = detail.view == BodyMapView.FRONT && !detail.mirrored,
@@ -116,23 +174,23 @@ private fun ZonePicker(state: BodyMapUiState, callbacks: IntakeCallbacks) {
             modifier = Modifier.fillMaxSize(),
         )
     }
-    MedicalMateButton(
-        onClick = callbacks.onBodyFocusClear,
-        label = stringResource(R.string.body_map_other_anchor),
-        type = MedicalMateButtonType.OUTLINE,
-        size = MedicalMateButtonSize.M,
-        modifier = Modifier.fillMaxWidth(),
-    )
 }
 
 /**
- * 전신 · 피부 칩.
+ * 전신 · 피부 칩과 목록 전환을 담은 줄.
  *
- * 인체도에 점으로 찍을 수 없는 앵커 둘이다. 고르면 구역 단계가 없어서 바로 정해진다.
+ * 칩 둘은 인체도에 점으로 찍을 수 없는 앵커다. 몸 전체에 걸리는 증상(열·피로)과 어디든
+ * 생기는 증상(발진)이라 한 점으로 찍을 수 없다. 구역 단계가 없어서 누르면 바로 정해진다.
+ *
+ * 목록 전환을 같은 줄 오른쪽에 붙였다. 따로 줄을 두면 판이 그만큼 더 밀려 내려간다.
  */
 @Composable
-private fun SideAnchorChips(state: BodyMapUiState, callbacks: IntakeCallbacks) {
-    Row(horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8)) {
+private fun SideAnchorRow(state: BodyMapUiState, callbacks: IntakeCallbacks) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         bodyMapSideAnchors.forEach { anchor ->
             MedicalMateChip(
                 label = bodyMapLabelOf(anchor.id),
@@ -140,25 +198,14 @@ private fun SideAnchorChips(state: BodyMapUiState, callbacks: IntakeCallbacks) {
                 onClick = { callbacks.onBodySideAnchorClick(anchor.id) },
             )
         }
+        MedicalMateButton(
+            onClick = callbacks.onBodyListModeToggle,
+            label = stringResource(R.string.body_map_use_list),
+            type = MedicalMateButtonType.GHOST,
+            size = MedicalMateButtonSize.S,
+            modifier = Modifier.weight(1f),
+        )
     }
-}
-
-/** 인체도와 목록을 오가는 버튼. */
-@Composable
-private fun ListModeButton(byList: Boolean, callbacks: IntakeCallbacks) {
-    MedicalMateButton(
-        onClick = callbacks.onBodyListModeToggle,
-        label = stringResource(if (byList) R.string.body_map_use_image else R.string.body_map_use_list),
-        type = MedicalMateButtonType.GHOST,
-        size = MedicalMateButtonSize.M,
-        modifier = Modifier.fillMaxWidth(),
-    )
-}
-
-/** 목록 화면에서도 인체도로 돌아갈 수 있어야 한다. */
-@Composable
-internal fun BodyMapImageModeButton(callbacks: IntakeCallbacks) {
-    ListModeButton(byList = true, callbacks = callbacks)
 }
 
 @Composable
