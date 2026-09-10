@@ -25,11 +25,12 @@ internal data class HandoffDestination(val cardId: String)
 
 internal fun NavGraphBuilder.briefCardDestination(
     onSaved: () -> Unit,
+    onDeleted: () -> Unit,
     onHandoff: (String) -> Unit,
     onExit: () -> Unit,
 ) {
     composable<BriefCardDestination> {
-        BriefCardRoute(onSaved = onSaved, onHandoff = onHandoff, onExit = onExit)
+        BriefCardRoute(onSaved = onSaved, onDeleted = onDeleted, onHandoff = onHandoff, onExit = onExit)
     }
 }
 
@@ -42,13 +43,16 @@ internal fun NavGraphBuilder.handoffDestination(onDone: () -> Unit) {
 /**
  * 상태 있는 진입점.
  *
- * 저장은 두 가지 일을 한다. 수정 중이면 초안을 옮기고 화면에 남고, 읽는 중이면 기록에
- * 저장하고 화면을 나간다. 나가는 판단을 여기서 하는 이유는 목적지 이동이 그래프의
- * 일이기 때문이다.
+ * 편집 모드에서는 하단에 저장하기가 없다. 그 자리가 `브리핑 카드 삭제`이고, 사본을 카드에
+ * 옮기는 것은 Nav 우측 `확인`이 한다. 그래서 저장하기는 읽는 중에만 나오고 항상 화면을
+ * 나간다. 나가는 판단을 여기서 하는 이유는 목적지 이동이 그래프의 일이기 때문이다.
+ *
+ * 삭제는 대화상자의 `삭제`를 누른 뒤 화면을 나간다. 지운 카드의 화면에 남을 수 없다.
  */
 @Composable
 private fun BriefCardRoute(
     onSaved: () -> Unit,
+    onDeleted: () -> Unit,
     onHandoff: (String) -> Unit,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
@@ -66,11 +70,16 @@ private fun BriefCardRoute(
         BriefCardCallbacks(
             onBackClick = onExit,
             onEditClick = viewModel::onEditClick,
-            onDraftChange = viewModel::onDraftChange,
-            onSaveClick = {
-                if (content?.editing == true) viewModel.onSaveClick() else onSaved()
-            },
+            onEditDoneClick = viewModel::onEditDoneClick,
             onCancelClick = viewModel::onCancelClick,
+            edit = viewModel.editActions,
+            onSaveClick = onSaved,
+            onDeleteClick = viewModel::onDeleteClick,
+            onDeleteDismiss = viewModel::onDeleteDismiss,
+            onDeleteConfirm = {
+                viewModel.onDeleteConfirm()
+                onDeleted()
+            },
             onHandoffClick = { content?.card?.id?.let(onHandoff) },
             onRetryClick = viewModel::load,
         ),
