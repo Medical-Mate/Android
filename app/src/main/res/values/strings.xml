@@ -17,7 +17,7 @@
       Figma 1o의 Legal 문구다. 이전에 있던 약관·개인정보 동의 안내가 이 문구로 바뀌었다.
       둘 다 필요할 수 있어 #55에 남겼다. 법무 판단이 필요하다.
     -->
-    <string name="login_disclaimer">진료메이트가 정리한 내용은 진료를 돕기 위한 참고 자료예요. 진단이나 처방이 아니니 최종 판단은 의사 선생님과 상의해 주세요.</string>
+    <string name="login_disclaimer">진료메이트가 정리한 내용은 진료를 돕기 위한 참고 자료예요.\n진단이나 처방이 아니니 최종 판단은 의료진과 상의해 주세요.</string>
     <string name="login_failed_kakao">카카오 로그인에 실패했어요. 다시 시도해주세요</string>
     <string name="login_failed_network">인터넷 연결을 확인해주세요</string>
     <string name="login_failed_server">로그인에 실패했어요. 잠시 후 다시 시도해주세요</string>
@@ -39,8 +39,7 @@
     <string name="hospital_pick_result_count">검색 결과 %1$d곳</string>
     <string name="hospital_pick_submit">완료</string>
     <string name="visit_note_title">진료 후 기록</string>
-    <string name="visit_note_heading">진료실에서 들은 말을
-그대로 남겨두세요</string>
+    <string name="visit_note_heading">진료실에서 들은 말을\n그대로 남겨두세요</string>
     <string name="visit_note_description">기억나는 대로 편하게 적어주세요.</string>
     <string name="visit_note_placeholder">들은 내용을 그대로 적어주세요</string>
     <string name="visit_note_organize">AI로 정리하기</string>
@@ -156,15 +155,16 @@
     <string name="intake_chat_waiting">답변을 준비하고 있어요</string>
 
     <string name="intake_severity_question">%1$s 얼마나 아프세요?</string>
-    <string name="intake_severity_description">지금 느끼는 정도를 골라주세요. 정확한 숫자가 아니어도 괜찮아요.</string>
+    <string name="intake_severity_description">지금 느끼는 정도를 골라주세요.\n정확한 숫자가 아니어도 괜찮아요.</string>
     <string name="intake_severity_notice_title">숫자는 진료실에서 의사가 읽어요</string>
-    <string name="intake_severity_notice_body">환자분은 낱말로 고르시면 돼요. 카드에는 NRS 등가로 함께 표시됩니다.</string>
+    <string name="intake_severity_notice_body">환자분은 낱말로 고르시면 돼요.\n카드에는 NRS 등가로 함께 표시됩니다.</string>
 
     <string name="intake_questions_question">의사에게 물어볼 것을 적어두세요</string>
-    <string name="intake_questions_description">진료실에서 잊지 않고 꺼낼 수 있게, 브리핑 카드 맨 아래에 함께 담아드려요.</string>
+    <string name="intake_questions_description">진료실에서 잊지 않고 꺼낼 수 있게\n브리핑 카드 맨 아래에 함께 담아드려요.</string>
     <string name="intake_questions_placeholder">예) 검사를 받아야 하나요?</string>
     <string name="intake_questions_add">질문 추가</string>
     <string name="intake_questions_saved">적어둔 질문</string>
+    <string name="intake_questions_ai_hint">AI가 추천하는 질문이에요</string>
     <string name="intake_questions_count">%1$d개</string>
     <string name="intake_questions_remove">%1$d번째 질문 지우기</string>
 
@@ -173,7 +173,7 @@
 
     <!-- Figma 1a-2(397:1233) 온보딩. -->
     <string name="onboarding_title">아플 때 뭘 말해야 할지\n몰라도 괜찮아요</string>
-    <string name="onboarding_description">어디가, 언제부터, 얼마나 아픈지 하나씩 물어볼게요. 답한 내용은 의사에게 보여줄 수 있는 카드로 정리됩니다.</string>
+    <string name="onboarding_description">언제부터, 얼마나 아픈지 하나씩 물어볼게요.\n답한 내용은 의사에게 보여줄 수 있는 카드로 정리됩니다.</string>
     <string name="onboarding_step_1">아픈 부위를 짚어요</string>
     <string name="onboarding_step_2">말로 답하면 AI가 정리해요</string>
     <string name="onboarding_step_3">카드를 진료실에서 보여줘요</string>
@@ -204,8 +204,7 @@
     <string name="my_profile_setting_handoff_brightness">진료실 화면 밝기 최대</string>
     <string name="health_edit_title">건강 정보 수정</string>
     <string name="health_edit_notice_title">바꾸면 다음 브리핑 카드부터 반영돼요</string>
-    <string name="health_edit_notice_body">이미 만든 카드는 그대로 남고,
-새로 만드는 카드에 적용됩니다.</string>
+    <string name="health_edit_notice_body">이미 만든 카드는 그대로 남고,\n새로 만드는 카드에 적용됩니다.</string>
     <string name="health_edit_add">+ 직접 추가</string>
     <string name="health_edit_add_placeholder">직접 적어주세요</string>
     <string name="health_edit_add_submit">추가</string>
@@ -253,7 +252,7 @@
 
     <!-- Figma 1b-4(676:2519) 신상정보 완료. -->
     <string name="profile_complete_title">내 정보가 등록되었어요</string>
-    <string name="profile_complete_description">복용약 · 기저질환 · 알러지는 브리핑 카드에 자동으로 담겨요</string>
+    <string name="profile_complete_description">복용약 · 기저질환 · 알러지를 카드에 담았어요</string>
 
     <!-- Figma 1n-1(399:1339)·1n-2(399:1720)의 홈 문구. -->
     <string name="home_notification">알림</string>
@@ -262,10 +261,10 @@
 
     <string name="home_today_first_label">처음 오셨네요</string>
     <string name="home_today_first_title">아픈 곳을 말로 편하게 알려주세요</string>
-    <string name="home_today_first_body">어디가, 언제부터, 얼마나 아픈지 하나씩 물어볼게요. 답한 내용은 진료실에서 보여줄 카드로 정리돼요.</string>
+    <string name="home_today_first_body">언제부터, 얼마나 아픈지 하나씩 물어볼게요.\n답변은 진료실에서 보여줄 카드로 정리돼요.</string>
     <string name="home_today_since_label">오늘의 한 줄</string>
     <string name="home_today_since_title">지난 진료 후 %1$d일이 지났어요</string>
-    <string name="home_today_since_body_next">다음 진료가 %1$s이에요. 그동안 달라진 점이 있으면 미리 정리해두세요.</string>
+    <string name="home_today_since_body_next">다음 진료가 %1$s이에요.\n그동안 달라진 점이 있으면 미리 정리해두세요.</string>
     <string name="home_today_since_body">그동안 달라진 점이 있으면 미리 정리해두세요.</string>
 
     <string name="home_start_intake">증상 정리 시작하기</string>

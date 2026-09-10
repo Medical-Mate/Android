@@ -42,7 +42,7 @@ constructor() : ViewModel() {
                     intakeId = "intake-1",
                     symptomTitle = "복부 통증",
                     answeredSteps = 2,
-                    totalSteps = 3,
+                    totalSteps = 4,
                 ),
                 savedCards =
                 listOf(

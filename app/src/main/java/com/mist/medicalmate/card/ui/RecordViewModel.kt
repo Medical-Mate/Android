@@ -42,7 +42,6 @@ internal val previewRecordGroups =
                     title = "무릎 통증",
                     status = RecordItem.Status.DRAFT,
                     meta = "오늘 · 증상 문답 4단계 중 2단계",
-                    detail = "아직 카드로 정리되지 않았어요",
                     resumeLabel = "이어서 정리하기",
                 ),
                 RecordItem(

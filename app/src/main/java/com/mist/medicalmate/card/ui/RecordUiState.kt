@@ -33,7 +33,7 @@ data class RecordItem(
     val title: String,
     val status: Status,
     val meta: String,
-    val detail: String,
+    val detail: String? = null,
     val resumeLabel: String? = null,
 ) {
     enum class Status { DRAFT, BEFORE_VISIT, CONFIRMED }

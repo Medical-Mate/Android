@@ -94,7 +94,7 @@ constructor() : ViewModel() {
                     id = "visit-1",
                     title = "서울OO병원 내과 재진",
                     time = "오전 10:30",
-                    detail = "김OO 의사 · 복부 통증 브리핑 카드를 가져가요",
+                    detail = "복부 통증 브리핑 카드",
                     dday = ChronoUnit.DAYS.between(today, date),
                 ),
             )

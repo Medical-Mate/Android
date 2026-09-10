@@ -137,6 +137,11 @@ internal fun QuestionsStep(state: IntakeUiState, callbacks: IntakeCallbacks, mod
         )
         if (state.questions.isNotEmpty()) {
             QuestionsHeader(count = state.questions.size)
+            Text(
+                text = stringResource(R.string.intake_questions_ai_hint),
+                style = MedicalMateTheme.typography.bodyS,
+                color = MedicalMateTheme.colors.fgSubtle,
+            )
             state.questions.forEachIndexed { index, question ->
                 QuestionRow(
                     number = index + 1,

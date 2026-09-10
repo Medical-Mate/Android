@@ -35,7 +35,7 @@ internal val previewRecordDetail =
                     RecordDetailItem(key = "알러지", value = "페니실린", tone = RecordDetailItem.Tone.WARNING),
                     RecordDetailItem(key = "질문", value = "검사를 받아야 하나요? 외 2개"),
                 ),
-                action = RecordStepAction(label = "카드 열기", target = RecordStepAction.Target.BRIEF_CARD),
+                action = RecordStepAction(label = "카드 전체 보기", target = RecordStepAction.Target.BRIEF_CARD),
             ),
             RecordStep.Block(
                 at = "09.12 · 진료 후 기록",
@@ -86,7 +86,7 @@ private val beforeVisitRecordDetail =
                     RecordDetailItem(key = "알러지", value = "페니실린", tone = RecordDetailItem.Tone.WARNING),
                     RecordDetailItem(key = "질문", value = "혈압약과 관련이 있나요? 외 2개"),
                 ),
-                action = RecordStepAction(label = "카드 열기", target = RecordStepAction.Target.BRIEF_CARD),
+                action = RecordStepAction(label = "카드 전체 보기", target = RecordStepAction.Target.BRIEF_CARD),
             ),
             RecordStep.Pending(at = "진료 예정", message = "병원을 정하면 진료 일정이 여기에 표시돼요"),
         ),
@@ -146,7 +146,7 @@ private val closedRecordDetail =
                     RecordDetailItem(key = "알러지", value = "페니실린", tone = RecordDetailItem.Tone.WARNING),
                     RecordDetailItem(key = "질문", value = "며칠이면 나아요? 외 1개"),
                 ),
-                action = RecordStepAction(label = "카드 열기", target = RecordStepAction.Target.BRIEF_CARD),
+                action = RecordStepAction(label = "카드 전체 보기", target = RecordStepAction.Target.BRIEF_CARD),
             ),
             RecordStep.Block(
                 at = "07.18 · 진료 후 기록",
