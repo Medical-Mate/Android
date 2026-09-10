@@ -56,9 +56,10 @@ private fun DateCellPreview() {
             MedicalMateDateCell(day = 1, selected = false, onClick = {})
             MedicalMateDateCell(day = 2, selected = false, onClick = {}, isToday = true)
             MedicalMateDateCell(day = 3, selected = true, onClick = {})
-            MedicalMateDateCell(day = 4, selected = false, onClick = {}, hasRecord = true)
-            MedicalMateDateCell(day = 5, selected = true, onClick = {}, hasRecord = true)
-            MedicalMateDateCell(day = 6, selected = false, onClick = {}, enabled = false)
+            MedicalMateDateCell(day = 4, selected = false, onClick = {}, marker = MedicalMateDateMarker.RECORD)
+            MedicalMateDateCell(day = 5, selected = true, onClick = {}, marker = MedicalMateDateMarker.RECORD)
+            MedicalMateDateCell(day = 6, selected = false, onClick = {}, marker = MedicalMateDateMarker.PLANNED)
+            MedicalMateDateCell(day = 7, selected = false, onClick = {}, enabled = false)
         }
     }
 }

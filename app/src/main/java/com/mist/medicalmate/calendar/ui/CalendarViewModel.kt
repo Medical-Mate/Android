@@ -57,8 +57,11 @@ constructor() : ViewModel() {
         /** Figma가 그린 진료 예정일. */
         val VisitDate: LocalDate = LocalDate.of(2026, 9, 12)
 
-        /** 점이 찍히는 날들. 9월 4일 작성, 12일 진료, 26일 재방문이다. */
-        val MarkedDays = setOf(4, 12, 26)
+        /** 기록이 있는 날. 9월 4일에 브리핑 카드를 썼다. */
+        val RecordDays = setOf(4)
+
+        /** 앞으로 일정이 있는 날. 12일 진료, 26일 재방문이다. */
+        val PlannedDays = setOf(12, 26)
 
         val fixtureCard =
             DayCard(
@@ -81,7 +84,8 @@ constructor() : ViewModel() {
                 month = YearMonth.from(VisitDate),
                 today = today,
                 selected = VisitDate,
-                markedDays = MarkedDays,
+                recordDays = RecordDays,
+                plannedDays = PlannedDays,
                 schedules = schedulesOn(VisitDate, today),
             )
         }
@@ -108,7 +112,8 @@ internal val previewCalendarState =
         month = YearMonth.of(2026, 9),
         today = LocalDate.of(2026, 9, 7),
         selected = LocalDate.of(2026, 9, 12),
-        markedDays = setOf(4, 12, 26),
+        recordDays = setOf(4),
+        plannedDays = setOf(12, 26),
         schedules =
         listOf(
             CalendarSchedule(

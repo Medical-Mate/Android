@@ -112,8 +112,11 @@ private fun ColumnScope.ProfileContent(
  * 프로필 카드.
  *
  * 시안에는 오른쪽에 chevron이 있는데 가리키는 화면이 없다. 이름·생년·성별은 카카오에서
- * 오는 값이라 앱에서 고칠 것이 없을 수도 있어서, 눌러도 아무 일이 없는 표시를 두지 않고
- * 비웠다. 수정 화면이 정해지면 chevron과 함께 붙인다(#85).
+ * 오는 값이고, 와이어프레임에 그것을 고치는 화면이 없다. 신상정보 입력(1b)은 온보딩
+ * 흐름이라 끝나면 홈으로 나가므로 수정 진입으로 재사용할 수 없다.
+ *
+ * `List Row`의 규칙과 같은 이유로 비워 둔다 — 눌러도 아무 일이 없는데 chevron이 있으면
+ * 사용자가 눌러본다. 수정 화면이 정해지면 chevron과 함께 붙인다.
  */
 @Composable
 private fun ProfileCard(profile: MyProfile) {

@@ -52,7 +52,11 @@ internal val previewRecordDetail =
                     ),
                 ),
             ),
-            RecordStep.Pending(at = "09.26 예정", message = "재방문 일정이 캘린더에 등록돼 있어요"),
+            RecordStep.Pending(
+                at = "09.26 예정",
+                message = "다음 진료가 예약돼 있어요",
+                detail = "9월 26일 (토) 오전 10:30",
+            ),
         ),
     )
 

@@ -52,7 +52,13 @@ sealed interface RecordStep {
     ) : RecordStep
 
     /** 아직 오지 않은 단계. 점선 블록으로 그려진다. */
-    data class Pending(override val at: String, val message: String) : RecordStep
+    /**
+     * 아직 오지 않은 단계.
+     *
+     * [detail]은 있을 때만 둘째 줄로 나온다. 재방문이 잡힌 경우에는 날짜와 시간이 있고,
+     * 병원이 정해지지 않은 경우에는 알릴 값이 없다.
+     */
+    data class Pending(override val at: String, val message: String, val detail: String? = null) : RecordStep
 }
 
 /**

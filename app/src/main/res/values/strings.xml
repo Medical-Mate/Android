@@ -78,6 +78,8 @@
     <string name="calendar_next_month">다음달</string>
     <string name="calendar_month">%1$d년 %2$d월</string>
     <string name="calendar_add_schedule">일정 추가</string>
+    <string name="calendar_legend_record">기록 있음</string>
+    <string name="calendar_legend_planned">예정</string>
     <!-- 월 격자의 요일 머리글. 일요일 시작. -->
     <string-array name="calendar_weekdays">
         <item>일</item>
@@ -360,5 +362,6 @@
 
     <!-- 날짜 칸. 기록이 있는 날은 점으로도 표시하므로 이름으로도 알린다. -->
     <string name="date_cell_has_record">기록 있음</string>
+    <string name="date_cell_planned">예정</string>
     <string name="date_cell_today">오늘</string>
 </resources>

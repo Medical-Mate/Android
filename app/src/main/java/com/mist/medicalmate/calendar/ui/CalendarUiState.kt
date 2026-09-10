@@ -1,13 +1,15 @@
 package com.mist.medicalmate.calendar.ui
 
+import com.mist.medicalmate.core.designsystem.component.MedicalMateDateMarker
 import java.time.LocalDate
 import java.time.YearMonth
 
 /**
  * 캘린더 월 화면의 상태. Figma 1r-1 `406:2310`.
  *
- * [markedDays]는 일정이 있는 날이다. 날짜 칸이 점을 찍는다. 어떤 일정인지는 그 날을 눌러야
- * 나오므로 여기서는 날짜만 갖는다.
+ * [recordDays]는 기록이 있는 날, [plannedDays]는 앞으로 일정이 있는 날이다. 날짜 칸이 각각
+ * 채운 점과 빈 원을 찍는다. 지난 기록과 앞으로의 일정을 색만으로 가르면 구별되지 않아서
+ * 두 집합으로 나눠 갖는다. 어떤 일정인지는 그 날을 눌러야 나오므로 여기서는 날짜만 갖는다.
  *
  * [selected]와 [today]를 나눠 갖는다. 오늘은 옅은 테두리, 고른 날은 채움이라 표시가 다르고,
  * 오늘이 아닌 날을 골라 볼 수 있어야 한다.
@@ -16,7 +18,8 @@ data class CalendarUiState(
     val month: YearMonth,
     val today: LocalDate,
     val selected: LocalDate,
-    val markedDays: Set<Int> = emptySet(),
+    val recordDays: Set<Int> = emptySet(),
+    val plannedDays: Set<Int> = emptySet(),
     val schedules: List<CalendarSchedule> = emptyList(),
 )
 
@@ -49,3 +52,10 @@ data class DayCard(val id: String, val title: String, val status: String, val me
 
 /** 진료 전 할 일 한 줄. */
 data class DayTodo(val id: String, val label: String, val done: Boolean)
+
+/** 그 날에 찍을 표시. 기록이 예정보다 앞선다. 이미 지난 일은 사실이고 예정은 계획이다. */
+internal fun CalendarUiState.markerOn(day: Int): MedicalMateDateMarker = when (day) {
+    in recordDays -> MedicalMateDateMarker.RECORD
+    in plannedDays -> MedicalMateDateMarker.PLANNED
+    else -> MedicalMateDateMarker.NONE
+}
