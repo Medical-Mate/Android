@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
+import com.mist.medicalmate.core.designsystem.component.MedicalMateBadgeTone
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonSize
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonType
@@ -21,6 +22,9 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateListRow
  *
  * 목록도 인체도와 같은 두 단계다. 25개 구역을 좌우까지 펼치면 44줄이 되고, 그 안에서
  * 찾는 것이 그림에서 짚는 것보다 어렵다.
+ *
+ * 고르고 빼는 것도 인체도와 같은 길로 보낸다([IntakeCallbacks.onBodyDotClick]). 두 길이
+ * 각자 상태를 고치면 한쪽만 다중선택이 되는 일이 생긴다.
  */
 @Composable
 internal fun BodyMapPartList(state: BodyMapUiState, callbacks: IntakeCallbacks, modifier: Modifier = Modifier) {
@@ -34,54 +38,75 @@ internal fun BodyMapPartList(state: BodyMapUiState, callbacks: IntakeCallbacks, 
     if (state.pickingZone && anchor != null) {
         ZoneRows(anchor = anchor, state = state, callbacks = callbacks)
     } else {
-        AnchorRows(callbacks = callbacks)
+        AnchorRows(selected = state.selected, callbacks = callbacks)
     }
+    BodyMapSelectedParts(selected = state.selected, callbacks = callbacks)
     BodyMapImageModeButton(callbacks = callbacks)
 }
 
-/** 앵커 9개. 팔·다리는 좌우가 갈려서 두 줄이다. */
+/**
+ * 앵커 9개. 팔·다리는 좌우가 갈려서 두 줄이다.
+ *
+ * 구역이 있는 앵커는 눌러도 골라지지 않고 그 앵커의 구역 목록으로 들어간다. 몇 곳을
+ * 골랐는지 배지로 보여주는 이유는, 들어가지 않고도 어디에 골라둔 것이 있는지 알아야
+ * 하기 때문이다.
+ */
 @Composable
-private fun AnchorRows(callbacks: IntakeCallbacks) {
+private fun AnchorRows(selected: List<BodyMapSelection>, callbacks: IntakeCallbacks) {
     bodyMapAnchors.forEach { anchor ->
-        if (anchor.view == null) {
-            PartRow(BodyMapSelection(anchor.id), callbacks)
-        } else {
-            anchor.points.forEach { point ->
-                PartRow(BodyMapSelection(anchor.id, side = point.side), callbacks)
-            }
+        // 전신·피부는 인체도에 점이 없어서 좌표도 없다. 좌우 없는 한 줄로 낸다.
+        val sides = anchor.points.map { it.side }.ifEmpty { listOf(BodyMapSide.CENTER) }
+        sides.forEach { side ->
+            val selection = BodyMapSelection(anchor.id, side = side)
+            MedicalMateListRow(
+                title = selection.title(),
+                meta = selection.departments().joinToString(" · ").ifEmpty { null },
+                badge =
+                pickedBadge(
+                    hasZones = anchor.zones.isNotEmpty(),
+                    picked = selected.count { it.belongsTo(anchor.id, side) },
+                ),
+                badgeTone = MedicalMateBadgeTone.BRAND,
+                onClick = { callbacks.onBodyDotClick(bodyMapDotId(anchor.id, side)) },
+            )
         }
     }
 }
 
-/** 고른 앵커의 구역들. 좌우가 갈리는 구역은 두 줄이다. */
+/**
+ * 앵커 줄의 배지.
+ *
+ * 구역이 있는 앵커는 그 안에서 몇 곳을 골랐는지, 없는 앵커(전신·피부)는 골랐는지를
+ * 보여준다. 둘의 의미가 달라서 문구도 다르다.
+ */
+@Composable
+private fun pickedBadge(hasZones: Boolean, picked: Int): String? = when {
+    picked == 0 -> null
+    hasZones -> stringResource(R.string.body_map_selected_count, picked)
+    else -> stringResource(R.string.body_map_list_picked_one)
+}
+
+/** 고른 앵커의 구역들. 좌우가 갈리는 구역은 두 줄이고, 여러 줄을 함께 고를 수 있다. */
 @Composable
 private fun ZoneRows(anchor: BodyMapAnchorGeometry, state: BodyMapUiState, callbacks: IntakeCallbacks) {
     anchor.zones.forEach { zone ->
         zone.points.forEach { point ->
-            val side = if (point.side == BodyMapSide.BASE) state.selection?.side ?: point.side else point.side
-            PartRow(BodyMapSelection(anchor.id, zone.id, side), callbacks)
+            val side = if (point.side == BodyMapSide.BASE) state.focus?.side ?: point.side else point.side
+            val selection = BodyMapSelection(anchor.id, zone.id, side)
+            MedicalMateListRow(
+                title = selection.title(),
+                meta = selection.departments().joinToString(" · ").ifEmpty { null },
+                badge = if (selection in state.selected) stringResource(R.string.body_map_list_picked_one) else null,
+                badgeTone = MedicalMateBadgeTone.BRAND,
+                onClick = { callbacks.onBodyPartToggle(selection) },
+            )
         }
     }
     MedicalMateButton(
-        onClick = callbacks.onBodyAnchorReset,
-        label = stringResource(R.string.body_map_reset_anchor),
+        onClick = callbacks.onBodyFocusClear,
+        label = stringResource(R.string.body_map_other_anchor),
         type = MedicalMateButtonType.OUTLINE,
         size = MedicalMateButtonSize.M,
         modifier = Modifier.fillMaxWidth(),
-    )
-}
-
-/**
- * 부위 한 줄.
- *
- * 진료과를 보조 텍스트로 함께 보여준다. 그림에서는 [DepartmentNotice]가 고른 뒤에
- * 알려주지만, 목록에서는 고르기 전에 보이는 것이 도움이 된다.
- */
-@Composable
-private fun PartRow(selection: BodyMapSelection, callbacks: IntakeCallbacks) {
-    MedicalMateListRow(
-        title = selection.title(),
-        meta = selection.departments().joinToString(" · ").ifEmpty { null },
-        onClick = { callbacks.onBodyPartSelect(selection) },
     )
 }

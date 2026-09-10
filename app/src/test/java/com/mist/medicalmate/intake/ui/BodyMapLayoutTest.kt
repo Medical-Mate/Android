@@ -16,7 +16,7 @@ import org.junit.Test
 class BodyMapLayoutTest {
     @Test
     fun `앞면은 220dp보다 좁아지면 점이 겹친다`() {
-        val dots = bodyMapAnchorDots(BodyMapView.FRONT, null)
+        val dots = bodyMapAnchorDots(BodyMapView.FRONT, emptyList())
 
         assertEquals(220.0, bodyMapMinWidth(dots, bodyMapFront.aspectRatio).value.toDouble(), CSV_TOLERANCE)
         assertEquals(505.2, bodyMapMinHeight(dots, bodyMapFront.aspectRatio).value.toDouble(), CSV_TOLERANCE)
@@ -38,7 +38,7 @@ class BodyMapLayoutTest {
         expected.forEach { (anchorId, minWidth) ->
             val anchor = bodyMapAnchorOf(anchorId)
             val detail = requireNotNull(anchor.detail)
-            val dots = bodyMapZoneDots(anchor, BodyMapSide.RIGHT, null)
+            val dots = bodyMapZoneDots(anchor, BodyMapSide.RIGHT, emptyList())
 
             assertEquals(anchorId, minWidth, bodyMapMinWidth(dots, detail.aspectRatio).value.toDouble(), CSV_TOLERANCE)
         }
@@ -46,7 +46,7 @@ class BodyMapLayoutTest {
 
     @Test
     fun `가장 좁은 곳은 앞면의 목과 가슴이다`() {
-        val dots = bodyMapAnchorDots(BodyMapView.FRONT, null)
+        val dots = bodyMapAnchorDots(BodyMapView.FRONT, emptyList())
         val width = bodyMapMinWidth(dots, bodyMapFront.aspectRatio)
 
         val neck = dots.single { it.id == "ANC:002@CENTER" }
@@ -61,9 +61,9 @@ class BodyMapLayoutTest {
     fun `계산한 높이에서 어느 두 점도 겹치지 않는다`() {
         val cases =
             bodyMapAnchorsOn(BodyMapView.FRONT).let {
-                listOf(bodyMapAnchorDots(BodyMapView.FRONT, null) to bodyMapFront) +
+                listOf(bodyMapAnchorDots(BodyMapView.FRONT, emptyList()) to bodyMapFront) +
                     bodyMapAnchors.mapNotNull { anchor ->
-                        anchor.detail?.let { bodyMapZoneDots(anchor, BodyMapSide.RIGHT, null) to it }
+                        anchor.detail?.let { bodyMapZoneDots(anchor, BodyMapSide.RIGHT, emptyList()) to it }
                     }
             }
 
@@ -86,7 +86,7 @@ class BodyMapLayoutTest {
 
     @Test
     fun `뒷면은 점이 하나라 겹칠 상대가 없다`() {
-        val dots = bodyMapAnchorDots(BodyMapView.BACK, null)
+        val dots = bodyMapAnchorDots(BodyMapView.BACK, emptyList())
 
         assertEquals(1, dots.size)
         assertEquals(0.dp, bodyMapMinWidth(dots, bodyMapBack.aspectRatio))
@@ -101,7 +101,7 @@ class BodyMapLayoutTest {
     fun `확대 판은 최소치와 전신 판 사이에 있다`() {
         bodyMapAnchors.forEach { anchor ->
             val detail = anchor.detail ?: return@forEach
-            val dots = bodyMapZoneDots(anchor, BodyMapSide.RIGHT, null)
+            val dots = bodyMapZoneDots(anchor, BodyMapSide.RIGHT, emptyList())
             val height = bodyMapCardHeight(dots, detail)
 
             assertTrue(anchor.id, height >= bodyMapMinHeight(dots, detail.aspectRatio))

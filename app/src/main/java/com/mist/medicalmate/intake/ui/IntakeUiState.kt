@@ -64,17 +64,45 @@ data class IntakeUiState(
     /**
      * 첫 단계에서 뒤로 가면 흐름을 벗어난다. 그 판단은 호출자가 한다.
      *
-     * 인체도의 구역 단계는 화면이 바뀌지 않고 같은 단계 안에서 깊어진다. 그래서 앵커를
-     * 고른 상태에서 뒤로 가면 흐름을 벗어나는 대신 앵커 선택으로 돌아간다.
+     * 인체도의 구역 단계는 화면이 바뀌지 않고 같은 단계 안에서 깊어진다. 그래서 확대한
+     * 상태에서 뒤로 가면 흐름을 벗어나는 대신 앵커 화면으로 돌아간다.
      */
     val canGoBack: Boolean
-        get() = step != IntakeStep.entries.first() || bodyMap.selection != null
+        get() = step != IntakeStep.entries.first() || bodyMap.focus != null
 
-    /** 부위를 다 고르기 전에는 다음으로 갈 수 없다. */
-    val canLeaveBodyPart: Boolean get() = bodyMap.selection?.isComplete == true
+    /** 부위를 한 곳이라도 골라야 다음으로 갈 수 있다. */
+    val canLeaveBodyPart: Boolean get() = bodyMap.selected.isNotEmpty()
+
+    /**
+     * 주격 조사를 붙인 부위 이름. 부위를 부르는 물음이 이 값을 쓴다.
+     *
+     * 조사를 문자열 리소스에 박아 두면("%1$s가 얼마나 아프세요?") 부위가 25가지로 늘었을
+     * 때 "무릎가"가 된다. 문구는 리소스에 두고 조사는 상태가 계산한다.
+     */
+    val bodyPartSubject: String get() = bodyPart?.let { withSubjectParticle(it) }.orEmpty()
 
     /** 보낼 것이 있는지. 빈 글이나 공백만 보내면 문답이 헛돈다. */
     val canSend: Boolean get() = draft.isNotBlank() && !awaitingReply
 
     val canAddQuestion: Boolean get() = questionDraft.isNotBlank()
 }
+
+/**
+ * 주격 조사를 붙인 낱말. 받침이 있으면 "이", 없으면 "가"다.
+ *
+ * 부위 이름 25개에 "무릎"과 "머리"가 함께 있어서 하나로 고정할 수 없다. 이름 끝에
+ * 괄호가 붙는 것도 있어("가슴 옆(갈비)") 마지막 한글 음절을 찾아서 본다. 여러 곳을 고르면
+ * 쉼표로 이어진 목록이 들어오는데, 조사는 마지막 이름에만 붙으므로 같은 규칙이 그대로
+ * 맞는다.
+ */
+internal fun withSubjectParticle(word: String): String {
+    // 한글은 식별자에 쓸 수 있는 문자다. "$word이"로 쓰면 `word이`라는 이름을 찾는다.
+    val syllable = word.lastOrNull { it.code in HANGUL_FIRST..HANGUL_LAST } ?: return "${word}이"
+    val hasFinalConsonant = (syllable.code - HANGUL_FIRST) % HANGUL_FINAL_COUNT != 0
+    return if (hasFinalConsonant) "${word}이" else "${word}가"
+}
+
+/** 한글 음절 영역과 종성 개수. 유니코드가 초성·중성·종성 순서로 음절을 나열한다. */
+private const val HANGUL_FIRST = 0xAC00
+private const val HANGUL_LAST = 0xD7A3
+private const val HANGUL_FINAL_COUNT = 28

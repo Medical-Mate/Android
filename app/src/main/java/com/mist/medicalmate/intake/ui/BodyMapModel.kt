@@ -88,21 +88,20 @@ internal data class BodyMapDot(val id: String, val label: String, val x: Float, 
 data class BodyMapLabel(val label: String, val departments: List<String>)
 
 /**
- * 고른 부위.
+ * 부위 하나를 가리키는 값.
  *
- * [zoneId]가 null이면 앵커까지만 고른 상태다. 전신·피부는 구역이 없어서 계속 null이고,
- * 나머지는 구역 단계를 지나면 채워진다.
+ * 고른 부위와 확대해서 보고 있는 앵커가 같은 타입이다. [zoneId]가 null이면 앵커까지만
+ * 가리킨 것이고, 그것이 확대 대상(`focus`)이거나 구역이 없는 앵커(전신·피부)다.
  *
  * [side]는 좌우 구분이 있는 부위에서만 의미가 있다. 없는 부위는 [BodyMapSide.CENTER]다.
+ * 좌우가 갈리는 부위는 왼쪽과 오른쪽이 서로 다른 값이라, 둘을 따로 고를 수 있다.
  */
 @Immutable
 data class BodyMapSelection(
     val anchorId: String,
     val zoneId: String? = null,
     val side: BodyMapSide = BodyMapSide.CENTER,
-) {
-    val isComplete: Boolean get() = zoneId != null || bodyMapZonesOf(anchorId).isEmpty()
-}
+)
 
 /** 앵커를 id로 찾는다. 좌표표와 온톨로지가 같은 9개를 담고 있어서 없을 수 없다. */
 internal fun bodyMapAnchorOf(anchorId: String): BodyMapAnchorGeometry = bodyMapAnchors.first { it.id == anchorId }
@@ -151,4 +150,35 @@ internal fun BodyMapSelection.title(): String {
 internal fun BodyMapSelection.departments(): List<String> {
     val zone = zoneId?.let { bodyMapOntology[it]?.departments }.orEmpty()
     return zone.ifEmpty { bodyMapOntology[anchorId]?.departments.orEmpty() }
+}
+
+/**
+ * 고른 부위들을 한 문장으로.
+ *
+ * 문답의 첫 마디와 통증 강도의 물음이 이 값을 읽는다. 여러 곳을 고를 수 있으므로 쉼표로
+ * 잇고, 마지막 이름에 조사가 붙는다.
+ */
+internal fun List<BodyMapSelection>.partsText(): String = joinToString(", ") { it.title() }
+
+/**
+ * 고른 부위들의 진료과. 겹치는 과는 한 번만 넣는다.
+ *
+ * 여러 곳을 고르면 과도 여러 개가 되는데, 목·가슴·배가 모두 내과를 물고 있어서 그대로
+ * 이으면 같은 과가 반복된다.
+ */
+internal fun List<BodyMapSelection>.departments(): List<String> = flatMap { it.departments() }.distinct()
+
+/**
+ * 이 선택이 [anchorId] · [side]로 열리는 확대 화면에 속하는지.
+ *
+ * 좌우 공용 이미지를 쓰는 앵커(팔·다리)는 왼쪽과 오른쪽이 서로 다른 화면이라 좌우까지
+ * 봐야 한다. 나머지 앵커는 한 이미지에 좌우 구역이 함께 있어서 앵커만 맞으면 된다.
+ *
+ * 이 구분이 없으면 머리를 확대해 왼쪽 눈을 골랐을 때 그 선택이 어디에도 속하지 않는다.
+ * 머리 앵커의 좌우는 `CENTER`이고 고른 구역의 좌우는 `LEFT`이기 때문이다.
+ */
+internal fun BodyMapSelection.belongsTo(anchorId: String, side: BodyMapSide): Boolean {
+    if (this.anchorId != anchorId) return false
+    val sharedImage = bodyMapAnchorOf(anchorId).detail?.mirrored == true
+    return !sharedImage || this.side == side
 }

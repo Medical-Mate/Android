@@ -142,14 +142,14 @@ constructor() : ViewModel() {
         val state = mutableUiState.value
         when {
             state.step == IntakeStep.BODY_PART -> {
-                // 부위를 다 고르기 전에는 문답을 열지 않는다. 화면의 다음 버튼도 꺼져 있다.
-                val part = state.bodyMap.selection?.takeIf { state.canLeaveBodyPart }?.title()
-                if (part != null) {
+                // 한 곳도 고르지 않았으면 문답을 열지 않는다. 화면의 다음 버튼도 꺼져 있다.
+                if (state.canLeaveBodyPart) {
+                    val parts = state.bodyMap.selected.partsText()
                     mutableUiState.update {
                         it.copy(
-                            bodyPart = part,
+                            bodyPart = parts,
                             messages =
-                            listOf(IntakeMessage(nextMessageId++, IntakeMessage.Sender.AI, openingLine(part))),
+                            listOf(IntakeMessage(nextMessageId++, IntakeMessage.Sender.AI, openingLine(parts))),
                             step = IntakeStep.SYMPTOM_CHAT,
                         )
                     }
@@ -165,13 +165,14 @@ constructor() : ViewModel() {
     /**
      * 이전으로.
      *
-     * 인체도에서 구역을 고르는 중이면 단계를 내리는 대신 앵커 선택으로 돌아간다. 화면이
-     * 바뀌지 않고 같은 단계 안에서 깊어진 상태라 뒤로 가는 곳도 그 안이다.
+     * 인체도에서 구역을 고르는 중이면 단계를 내리는 대신 앵커 화면으로 돌아간다. 화면이
+     * 바뀌지 않고 같은 단계 안에서 깊어진 상태라 뒤로 가는 곳도 그 안이다. 고른 부위는
+     * 남는다.
      */
     fun onBack() {
         val state = mutableUiState.value
         if (state.step == IntakeStep.BODY_PART) {
-            if (state.bodyMap.selection != null) bodyMap.onAnchorReset()
+            if (state.bodyMap.focus != null) bodyMap.onFocusClear()
             return
         }
         mutableUiState.update { it.copy(step = IntakeStep.entries[it.step.ordinal - 1]) }
@@ -195,23 +196,6 @@ constructor() : ViewModel() {
  * 문답의 첫 마디. Figma 1c-1의 문장에 고른 부위를 끼운다.
  *
  * LLM이 붙으면 사라진다. 그때까지도 부위 이름은 고른 값이어야 한다. "복부가"로 고정해
- * 두면 무릎을 짚고도 복부를 묻는다.
+ * 두면 무릎을 짚고도 복부를 묻는다. 여러 곳을 고르면 쉼표로 이어진 목록이 들어온다.
  */
-private fun openingLine(part: String): String = "$part${subjectParticle(part)} 불편하시군요. 언제부터 그러셨어요? 정확하지 않아도 괜찮아요."
-
-/**
- * 주격 조사. 받침이 있으면 "이", 없으면 "가"다.
- *
- * 부위 이름 25개에 "무릎"과 "머리"가 함께 있어서 하나로 고정할 수 없다. 이름 끝에
- * 괄호가 붙는 것도 있어("가슴 옆(갈비)") 마지막 한글 음절을 찾아서 본다.
- */
-private fun subjectParticle(word: String): String {
-    val syllable = word.lastOrNull { it.code in HANGUL_FIRST..HANGUL_LAST } ?: return "이"
-    val hasFinalConsonant = (syllable.code - HANGUL_FIRST) % HANGUL_FINAL_COUNT != 0
-    return if (hasFinalConsonant) "이" else "가"
-}
-
-/** 한글 음절 영역과 종성 개수. 유니코드가 초성·중성·종성 순서로 음절을 나열한다. */
-private const val HANGUL_FIRST = 0xAC00
-private const val HANGUL_LAST = 0xD7A3
-private const val HANGUL_FINAL_COUNT = 28
+private fun openingLine(parts: String): String = "${withSubjectParticle(parts)} 불편하시군요. 언제부터 그러셨어요? 정확하지 않아도 괜찮아요."

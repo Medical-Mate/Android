@@ -134,19 +134,24 @@
     <string name="intake_next">다음</string>
 
     <string name="intake_body_part_question">어디가 아프세요?</string>
-    <string name="intake_body_part_description">가장 불편한 곳 하나를 짚어주세요. 나머지는 문답에서 여쭤볼게요.</string>
+    <string name="intake_body_part_description">부위를 짚고 세부 위치를 골라주세요. 아픈 곳이 여러 군데면 다 고르셔도 돼요.</string>
 
     <string name="body_map_view_front">앞면</string>
     <string name="body_map_view_back">뒷면</string>
     <string name="body_map_orientation_right">RIGHT</string>
     <string name="body_map_orientation_left">LEFT</string>
     <string name="body_map_zone_question">%1$s 어디가 아프세요?</string>
-    <string name="body_map_zone_description">더 짚어주시면 문답이 짧아져요. 애매하면 가까운 곳으로 고르셔도 괜찮아요.</string>
-    <string name="body_map_reset_anchor">부위 다시 고르기</string>
+    <string name="body_map_zone_description">여러 곳을 고를 수 있어요. 다시 누르면 빠지고, 애매하면 가까운 곳으로 고르셔도 괜찮아요.</string>
+    <string name="body_map_other_anchor">다른 부위 고르기</string>
+    <string name="body_map_selected_title">고른 부위</string>
+    <string name="body_map_selected_count">%1$d곳</string>
+    <string name="body_map_selected_caption">고른 부위 %1$d곳</string>
+    <string name="body_map_selected_remove">%1$s 빼기</string>
+    <string name="body_map_list_picked_one">고름</string>
     <string name="body_map_use_list">목록에서 고르기</string>
     <string name="body_map_use_image">인체도에서 고르기</string>
     <string name="body_map_list_question">아픈 부위를 골라주세요</string>
-    <string name="body_map_department_title">이 부위는 어느 과로 가나요</string>
+    <string name="body_map_department_title">어느 과로 가면 되나요</string>
     <string name="body_map_department_body">%1$s에서 봐요. 진료받을 곳을 정할 때 참고하세요.</string>
 
     <string name="intake_chat_ai">AI</string>
@@ -156,7 +161,7 @@
     <string name="intake_chat_voice">음성으로 답하기</string>
     <string name="intake_chat_waiting">답변을 준비하고 있어요</string>
 
-    <string name="intake_severity_question">%1$s가 얼마나 아프세요?</string>
+    <string name="intake_severity_question">%1$s 얼마나 아프세요?</string>
     <string name="intake_severity_description">지금 느끼는 정도를 골라주세요. 정확한 숫자가 아니어도 괜찮아요.</string>
     <string name="intake_severity_notice_title">숫자는 진료실에서 의사가 읽어요</string>
     <string name="intake_severity_notice_body">환자분은 낱말로 고르시면 돼요. 카드에는 NRS 등가로 함께 표시됩니다.</string>

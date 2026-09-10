@@ -74,7 +74,7 @@ internal fun SeverityStep(
 ) {
     StepContent(step = state.step, modifier = modifier) {
         Text(
-            text = stringResource(R.string.intake_severity_question, state.bodyPart.orEmpty()),
+            text = stringResource(R.string.intake_severity_question, state.bodyPartSubject),
             style = MedicalMateTheme.typography.headingL,
             color = MedicalMateTheme.colors.fgDefault,
         )
