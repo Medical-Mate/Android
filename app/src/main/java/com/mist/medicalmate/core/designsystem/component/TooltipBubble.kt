@@ -28,8 +28,8 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
  * 컴포넌트로 쪼개졌다. 그래서 트리거와 따로 만든다. 문서 3.0도 트리거와 말풍선을 같은
  * 이유로 나눠 올렸다.
  *
- * 규격은 Figma에서 읽고 렌더를 픽셀로 재서 맞췄다. 본문 180x36, 좌우 여백 12, 위아래 10,
- * 반경 8, 꼬리 16x10이고 꼬리 중심이 오른쪽 끝에서 24다.
+ * 규격은 Figma에서 읽었다. 본문 180x36, 좌우 여백 12, 위아래 10, 반경 10, 꼬리 16x10이고
+ * 꼬리 중심이 오른쪽 끝에서 24다.
  *
  * 면이 `bg/inverse-soft`다. Toast의 `bg/inverse`(`#131722`)보다 옅은 `#3A4053`이다. 화면에
  * 겹쳐 뜨는 짧은 설명이라 Toast만큼 무겁지 않게 둔 것으로 보인다.
@@ -116,8 +116,14 @@ private class TooltipBubbleShape(
 /** Figma 마스터의 본문 폭. 글이 길어지면 줄바꿈한다. */
 private val BubbleMaxWidth = 180.dp
 
-/** 렌더에서 재서 얻은 값. 위 모서리 곡선이 y 17~25에 걸쳐 있었다. */
-private val BubbleCornerRadius = 8.dp
+/**
+ * 마스터의 본문 반경 10.
+ *
+ * 반경 스케일에 없는 값이라 상수로 둔다. 문서가 반경 10을 스케일 밖 값으로 잡고
+ * `radius/full` 통일안을 냈지만, 높이 36인 말풍선에 full을 주면 18이 되어 알약이 된다.
+ * 마스터를 따랐다.
+ */
+private val BubbleCornerRadius = 10.dp
 
 private val ArrowWidth = 16.dp
 
