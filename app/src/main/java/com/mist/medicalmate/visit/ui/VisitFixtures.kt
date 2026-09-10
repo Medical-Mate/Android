@@ -80,6 +80,7 @@ internal val previewVisitSummary =
         HospitalSummary(
             name = "서울OO병원 내과",
             address = "서울 관악구 남부순환로 1820, 3층",
-            visitLine = "2026.09.12 진료 · 다음 방문 09.26",
+            visitDate = "09.12",
+            revisitDate = "09.26",
         ),
     )
