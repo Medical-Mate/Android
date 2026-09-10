@@ -26,6 +26,7 @@ import kotlinx.coroutines.launch
 fun LoginRoute(
     onAuthenticated: (onboardingRequired: Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    restoreFailed: Boolean = false,
     viewModel: LoginViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -53,5 +54,6 @@ fun LoginRoute(
             }
         },
         modifier = modifier,
+        restoreFailed = restoreFailed,
     )
 }

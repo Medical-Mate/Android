@@ -38,9 +38,18 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateSocialProvide
  * 실패한다. `Social Login Stack`을 쓰지 않고 버튼 하나를 직접 두는 이유도 같다.
  *
  * Figma에는 로그인 실패 안내 자리가 없다. 기능상 필요해서 버튼 위에 유지한다.
+ *
+ * [restoreFailed]는 자동 로그인을 확인하지 못하고 이 화면으로 온 경우다. 같은 자리에 문구를
+ * 얹는다. 사용자가 여기서 할 일은 카카오 버튼을 누르는 것 하나라 자리를 따로 만들지 않았고,
+ * 왜 다시 로그인해야 하는지는 알려줘야 한다.
  */
 @Composable
-fun LoginScreen(state: LoginUiState, onKakaoLoginClick: () -> Unit, modifier: Modifier = Modifier) {
+fun LoginScreen(
+    state: LoginUiState,
+    onKakaoLoginClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    restoreFailed: Boolean = false,
+) {
     Column(
         modifier =
         modifier
@@ -51,7 +60,11 @@ fun LoginScreen(state: LoginUiState, onKakaoLoginClick: () -> Unit, modifier: Mo
         Spacer(Modifier.weight(1f))
         Hero()
         Spacer(Modifier.weight(1f))
-        Actions(state = state, onKakaoLoginClick = onKakaoLoginClick)
+        Actions(
+            state = state,
+            restoreFailed = restoreFailed,
+            onKakaoLoginClick = onKakaoLoginClick,
+        )
         Spacer(Modifier.height(MedicalMateSize.safeBottom))
     }
 }
@@ -81,14 +94,22 @@ private fun Hero() {
 
 /** 버튼과 하단 문구. Figma Actions(`397:1206`) 350x116이고 사이 간격이 20이다. */
 @Composable
-private fun Actions(state: LoginUiState, onKakaoLoginClick: () -> Unit) {
+private fun Actions(state: LoginUiState, restoreFailed: Boolean, onKakaoLoginClick: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s20),
     ) {
-        if (state is LoginUiState.Failed) {
+        // 두 문구가 같은 자리를 쓰므로 하나만 띄운다. 눌러본 결과가 있으면 그것이 먼저다.
+        // 자동 로그인 실패는 이미 지나간 일이고, 방금 누른 버튼의 결과를 먼저 알려야 한다.
+        val noticeRes =
+            when {
+                state is LoginUiState.Failed -> state.reason.messageRes()
+                restoreFailed -> R.string.login_restore_failed
+                else -> null
+            }
+        if (noticeRes != null) {
             Text(
-                text = stringResource(state.reason.messageRes()),
+                text = stringResource(noticeRes),
                 style = MedicalMateTheme.typography.bodyM,
                 color = MedicalMateTheme.colors.fgDanger,
             )
@@ -120,9 +141,9 @@ private fun LoginFailure.messageRes(): Int = when (this) {
 private val LockupHeight = 36.dp
 
 @Composable
-private fun LoginScreenPreview(state: LoginUiState) {
+private fun LoginScreenPreview(state: LoginUiState, restoreFailed: Boolean = false) {
     MedicalMateTheme {
-        LoginScreen(state = state, onKakaoLoginClick = {})
+        LoginScreen(state = state, onKakaoLoginClick = {}, restoreFailed = restoreFailed)
     }
 }
 
@@ -148,4 +169,10 @@ private fun LoginScreenNetworkFailedPreview() {
 @Composable
 private fun LoginScreenServerFailedPreview() {
     LoginScreenPreview(LoginUiState.Failed(LoginFailure.SERVER))
+}
+
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun LoginScreenRestoreFailedPreview() {
+    LoginScreenPreview(LoginUiState.Idle, restoreFailed = true)
 }

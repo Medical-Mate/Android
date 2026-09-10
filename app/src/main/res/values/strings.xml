@@ -21,6 +21,9 @@
     <string name="login_failed_kakao">카카오 로그인에 실패했어요. 다시 시도해주세요</string>
     <string name="login_failed_network">인터넷 연결을 확인해주세요</string>
     <string name="login_failed_server">로그인에 실패했어요. 잠시 후 다시 시도해주세요</string>
+    <!-- 자동 로그인을 확인하지 못하고 이 화면으로 온 경우. 사용자가 한 실패가 아니라
+         왜 다시 로그인해야 하는지 알려주는 문구다. -->
+    <string name="login_restore_failed">자동 로그인을 확인하지 못했어요. 다시 로그인해주세요</string>
     <!-- Figma 1j-1(406:2569)·1j-2(406:2646) 기록. -->
     <string name="record_title">기록</string>
     <string name="record_count">%1$d건</string>

@@ -21,6 +21,16 @@ sealed interface SessionUiState {
     data object SignedOut : SessionUiState
 
     data class SignedIn(val onboardingRequired: Boolean) : SessionUiState
+
+    /**
+     * 서버에 물어보지 못해 로그인 여부를 모른다.
+     *
+     * 가는 곳은 [SignedOut]과 같은 로그인 화면이다. 홈으로 보내면 로그인되지 않았을 수도
+     * 있는 사람에게 자기 기록인 척하는 화면을 보여주게 된다. 그래도 상태를 나눠 두는 이유는
+     * 로그인 화면이 왜 다시 로그인해야 하는지 알려야 하기 때문이다. 스스로 로그아웃한 사람과
+     * 자동 로그인이 실패한 사람은 같은 화면에서 다른 것을 알아야 한다.
+     */
+    data object RestoreFailed : SessionUiState
 }
 
 /**
@@ -44,11 +54,9 @@ sealed interface AccountActionState {
  * 저장된 refresh 토큰이 있으면 서버에 교환을 시도한다. 저장된 토큰이 없거나 서버가
  * 거절하면 로그인 화면으로 보낸다.
  *
- * **서버에 물어보지 못한 것은 로그아웃이 아니다.** 응답이 늦거나 연결이 안 되면 토큰이
- * 살아 있다고 보고 들어간다. 저장소가 토큰을 지우는 것은 서버가 거절했을 때뿐이라
- * (`DefaultAuthRepository.restoreSession`) 그 경우에만 확실히 못 쓰는 토큰이다. 정말
- * 만료됐다면 다음 인증 요청의 401이 재발급을 시도하고, 그것도 거절되면 저장소가 비면서
- * [observeSession]이 로그인 화면으로 보낸다.
+ * **서버에 물어보지 못한 것과 서버가 거절한 것을 나눈다.** 응답이 늦거나 연결이 안 되면
+ * [SessionUiState.RestoreFailed]다. 두 경우 모두 로그인 화면으로 가지만, 그쪽은 왜 다시
+ * 로그인해야 하는지 문구로 알려준다.
  */
 @HiltViewModel
 class SessionViewModel
@@ -123,13 +131,19 @@ constructor(private val authRepository: AuthRepository) : ViewModel() {
      * 토큰 재발급이 거절되면 저장소가 비워진다. 그 자리는 OkHttp 스레드라 화면을 옮길 수
      * 없어서, 저장소가 비는 것을 신호로 삼는다.
      *
-     * 로그인된 상태에서만 움직인다. 복구 중(Checking)에는 저장된 토큰이 없는 것이 정상이고,
-     * 이미 로그아웃된 상태라면 옮길 곳이 없다.
+     * 복구에 실패한 상태([SessionUiState.RestoreFailed])도 함께 본다. 토큰이 남아 있다고 보고
+     * 안내 문구를 띄우는 상태인데, 저장소가 비었다면 그 전제가 깨진 것이다. 문구를 내리고
+     * 평범한 로그인 화면으로 돌린다.
+     *
+     * 복구 중(Checking)에는 움직이지 않는다. 저장된 토큰이 없는 것이 정상인 시점이라 여기서
+     * 옮기면 복구 결과보다 먼저 화면을 정해버린다. 이미 로그아웃된 상태라면 옮길 곳이 없다.
      */
     private fun observeSession() {
         viewModelScope.launch {
             authRepository.hasSession.collect { hasSession ->
-                if (!hasSession && mutableUiState.value is SessionUiState.SignedIn) {
+                if (hasSession) return@collect
+                val current = mutableUiState.value
+                if (current is SessionUiState.SignedIn || current == SessionUiState.RestoreFailed) {
                     mutableUiState.value = SessionUiState.SignedOut
                 }
             }
@@ -149,27 +163,35 @@ constructor(private val authRepository: AuthRepository) : ViewModel() {
      * 재발급 응답이 읽기 제한(60초)까지 오지 않는데, 그동안 스플래시만 떠 있어서 앱이 멈춘
      * 것으로 보인다.
      *
-     * 상한을 넘겼을 때 가는 곳은 로그인 화면이 **아니다.** 기다리다 만 것은 서버가 거절한
-     * 것과 다르고, 저장된 토큰도 그대로 남아 있다. 로그인 화면으로 보내면 멀쩡한 세션을 두고
-     * 다시 로그인을 시키는 셈이다. 클래스 주석의 규칙을 그대로 따른다.
+     * 상한을 넘기면 로그인 화면으로 보내되 [SessionUiState.RestoreFailed]로 구분한다. 기다리다
+     * 만 것은 서버가 거절한 것과 다르고 저장된 토큰도 그대로 남아 있다. 그 사실을 로그인
+     * 화면이 문구로 알려준다.
+     *
+     * **기다리기를 그만두면 요청도 끊는다.** 그대로 두면 응답이 읽기 제한까지 살아 있어서, 그
+     * 사이 사용자가 카카오 로그인을 마치면 재발급 응답이 뒤늦게 도착해 방금 받은 토큰을 덮는다.
+     * 서버가 refresh 토큰을 회전시키므로 어느 쪽이 살아남는지도 서버 구현에 달렸다. 어차피
+     * 결과를 쓰지 않는 요청이라 끊는 편이 분명하다.
      *
      * 늦게 도착한 결과는 버린다. 아래의 `Checking` 확인이 그 일을 한다. 화면을 보고 있는
-     * 사람을 갑자기 다른 곳으로 옮기면 그 사이에 한 일과 부딪힌다. 그래도 늦게 온 거절은
-     * 반영된다. 저장소가 비면서 [observeSession]이 받는다.
+     * 사람을 갑자기 다른 곳으로 옮기면 그 사이에 한 일과 부딪힌다.
      */
     private fun restore() {
         viewModelScope.launch {
             val restored = async { authRepository.restoreSession() }
             delay(MIN_SPLASH_MILLIS)
 
-            // 상한과 최소 노출의 차이만큼만 더 기다린다. 결과를 [RestoreOutcome]으로 감싸는
-            // 이유는 시간이 다 됐을 때의 null과 저장된 토큰이 없을 때의 null이 겹치기
-            // 때문이다. 둘은 가는 곳이 다르다.
-            val outcome = withTimeoutOrNull(MAX_SPLASH_MILLIS - MIN_SPLASH_MILLIS) { RestoreOutcome(restored.await()) }
+            // 남은 시간만큼만 더 기다린다. 결과를 [RestoreOutcome]으로 감싸는 이유는 시간이
+            // 다 됐을 때의 null과 저장된 토큰이 없을 때의 null이 겹치기 때문이다. 둘은 가는
+            // 곳이 다르다.
+            val outcome =
+                withTimeoutOrNull(MAX_SPLASH_MILLIS - MIN_SPLASH_MILLIS) { RestoreOutcome(restored.await()) }
             val next =
                 when {
-                    // 시간이 다 됐다. 아직 답을 모르는 것이라 토큰을 믿고 들어간다.
-                    outcome == null -> keepGoingWithStoredToken()
+                    // 시간이 다 됐다. 답을 모르는 채로 로그아웃이라고 단정하지 않는다.
+                    outcome == null -> {
+                        restored.cancel()
+                        SessionUiState.RestoreFailed
+                    }
 
                     // 저장된 토큰이 없다. 복구할 세션이 애초에 없다.
                     outcome.result == null -> SessionUiState.SignedOut
@@ -193,18 +215,9 @@ constructor(private val authRepository: AuthRepository) : ViewModel() {
      */
     private fun AuthResult.toSessionState(): SessionUiState = when (this) {
         is AuthResult.Success -> SessionUiState.SignedIn(session.onboardingRequired)
-        AuthResult.NetworkUnavailable -> keepGoingWithStoredToken()
+        AuthResult.NetworkUnavailable -> SessionUiState.RestoreFailed
         is AuthResult.Rejected -> SessionUiState.SignedOut
     }
-
-    /**
-     * 서버에 물어보지 못했을 때 들어가는 상태.
-     *
-     * 온보딩 필요 여부를 false로 두는 것은 임의로 정한 값이 아니다. `refresh` 응답이 이 값을
-     * 항상 false로 주므로(`TokenResponse` 주석) 복구가 성공했더라도 같은 값이 들어온다.
-     * 온보딩을 보여줄지는 `profile/data/OnboardingStore`의 기기 기록이 따로 판단한다.
-     */
-    private fun keepGoingWithStoredToken(): SessionUiState = SessionUiState.SignedIn(onboardingRequired = false)
 
     /** 시간 값은 시험이 그대로 읽는다. 시험이 6000을 다시 적으면 값을 바꿀 때 한쪽만 바뀐다. */
     internal companion object {
@@ -231,7 +244,7 @@ constructor(private val authRepository: AuthRepository) : ViewModel() {
          * **응답 시간에 맞춰 정한 값이 아니다.** 실기기에서 `POST /api/auth/refresh`를 재보니
          * 깨어 있는 서버가 9.2초, 잠든 서버는 90초에도 답이 없었다. 답을 덮으려면 스플래시가
          * 10초를 넘어야 해서 그쪽은 택하지 않았다. 6초는 브랜드 화면을 보여줄 수 있는 한계로
-         * 잡은 값이고, 답은 늦게 와도 반영된다.
+         * 잡은 값이다. 넘기면 기다리기를 그만두고 로그인 화면으로 보낸다.
          */
         const val MAX_SPLASH_MILLIS = 6_000L
     }
