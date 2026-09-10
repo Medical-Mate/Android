@@ -101,7 +101,7 @@ private fun DoneMessage(modifier: Modifier = Modifier) {
                 painter = painterResource(MedicalMateIcons.CheckCircle),
                 contentDescription = null,
                 tint = colors.fgPrimary,
-                modifier = Modifier.size(MedicalMateSize.iconLg),
+                modifier = Modifier.size(IconSize),
             )
         }
         Text(
@@ -121,8 +121,11 @@ private fun DoneMessage(modifier: Modifier = Modifier) {
     }
 }
 
-/** 시안의 아이콘 원 64. 안쪽 아이콘은 24다. */
-private val IconCircleSize = 64.dp
+/** 시안(`1041:3663`)의 아이콘 원 80. 안쪽 아이콘은 38이다. */
+private val IconCircleSize = 80.dp
+
+/** 38은 아이콘 크기 토큰에 없는 값이다. 이 화면에만 쓰여서 여기 둔다. */
+private val IconSize = 38.dp
 
 @MedicalMateScreenPreviews
 @Composable
