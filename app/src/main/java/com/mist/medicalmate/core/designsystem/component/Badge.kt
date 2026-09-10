@@ -14,7 +14,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
-/** DESIGN.md 8.3 `Badge`의 `Tone` variant. */
+/** DESIGN.md의 `Badge`의 `Tone` variant. */
 enum class MedicalMateBadgeTone {
     BRAND,
     NEUTRAL,
@@ -24,7 +24,7 @@ enum class MedicalMateBadgeTone {
 }
 
 /**
- * DESIGN.md 8.3 `Badge`.
+ * DESIGN.md의 `Badge`.
  *
  * 읽는 상태나 속성을 붙인다. 누를 수 없다. 누르는 선택지는 [MedicalMateChip]이다.
  *
@@ -82,5 +82,5 @@ fun MedicalMateBadge(
     }
 }
 
-/** 문서 8.3의 높이. 큰 글꼴에서는 글자에 맞춰 늘어난다. */
+/** 문서의 높이. 큰 글꼴에서는 글자에 맞춰 늘어난다. */
 private val BadgeHeight = 26.dp

@@ -13,16 +13,16 @@ import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
-/** DESIGN.md 8.3 `Bubble`의 `Sender` variant. */
+/** DESIGN.md의 `Bubble`의 `Sender` variant. */
 enum class MedicalMateBubbleSender {
     AI,
     PATIENT,
 }
 
 /**
- * DESIGN.md 8.3 `Bubble`.
+ * DESIGN.md의 `Bubble`.
  *
- * 환자의 말을 가장 강하게 보여준다는 원칙이 이 컴포넌트에서 가장 잘 드러난다(문서 1항 5번).
+ * 환자의 말을 가장 강하게 보여준다는 원칙이 이 컴포넌트에서 가장 잘 드러난다(문서의 P5).
  * 환자 발화는 `bg/primary-subtle` 면을 갖고, AI 발화는 면 없이 본문만 둔다. AI를 브랜드
  * 색으로 강조하지 않는다.
  *
@@ -74,5 +74,5 @@ fun MedicalMateBubble(
     }
 }
 
-/** 문서 8.3이 지정한 폭. AI 280x72, Patient 280x50이라 최대 폭이 같다. */
+/** 문서의 컴포넌트 규격이 지정한 폭. AI 280x72, Patient 280x50이라 최대 폭이 같다. */
 private val BubbleMaxWidth = 280.dp

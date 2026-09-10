@@ -30,7 +30,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
 /**
- * DESIGN.md 8.3 `KV Row`의 `Type` variant.
+ * DESIGN.md의 `KV Row`의 `Type` variant.
  *
  * [EDITING]은 문서에 없다. Figma가 나중에 늘린 variant(`597:4800`)를 옮긴 것이다.
  */
@@ -42,7 +42,7 @@ enum class MedicalMateKvRowType {
 }
 
 /**
- * DESIGN.md 8.3 `KV Row`.
+ * DESIGN.md의 `KV Row`.
  *
  * 의사가 훑어보는 자리다. key 열을 72로 고정해서 값이 세로로 정렬된다. 정렬이 깨지면
  * 여러 행을 눈으로 훑는 속도가 떨어진다.
@@ -121,7 +121,7 @@ fun MedicalMateKvRow(
     }
 }
 
-/** DESIGN.md 8.3 `List Row`의 `Type` variant. */
+/** DESIGN.md의 `List Row`의 `Type` variant. */
 enum class MedicalMateListRowType {
     DEFAULT,
     BADGE,
@@ -129,7 +129,7 @@ enum class MedicalMateListRowType {
 }
 
 /**
- * DESIGN.md 8.3 `List Row`.
+ * DESIGN.md의 `List Row`.
  *
  * 제목과 메타를 2단으로 둔다. chevron은 들어갈 상세가 있을 때만 붙인다. 눌러도 아무 일이
  * 없는데 chevron이 있으면 사용자가 눌러본다.
@@ -200,7 +200,7 @@ fun MedicalMateListRow(
 }
 
 /**
- * DESIGN.md 8.3 `Section Header`.
+ * DESIGN.md의 `Section Header`.
  *
  * 목록 제목과 보조 텍스트 링크를 한 줄에 둔다. 위 여백 24, 아래 10이다.
  */
@@ -236,10 +236,10 @@ fun MedicalMateSectionHeader(
 }
 
 /**
- * DESIGN.md 8.3 `Divider`.
+ * DESIGN.md의 `Divider`.
  *
  * 고밀도 목록 사이에만 쓴다. 목록 구분은 우선 여백으로 해결하고, 인터랙션 행의 경계에는
- * 쓰지 않는다. 모든 행에 선을 두르면 화면이 선으로 가득 찬다(문서 5절).
+ * 쓰지 않는다. 모든 행에 선을 두르면 화면이 선으로 가득 찬다(문서의 고도 규칙).
  */
 @Composable
 fun MedicalMateDivider(modifier: Modifier = Modifier) {
@@ -304,11 +304,11 @@ private fun Modifier.editingUnderline(color: Color): Modifier = this
 
 private val UnderlineWidth = 1.dp
 
-/** 문서 8.3의 KV Row와 Severity Readout이 쓰는 행 높이. */
+/** 문서의 KV Row와 Severity Readout이 쓰는 행 높이. */
 private val RowHeightSm = 54.dp
 
-/** 문서 8.3의 List Row 높이. */
+/** 문서의 List Row 높이. */
 private val RowHeightLg = 79.dp
 
-/** 문서 8.3이 고정한 key 열 폭. 값 열이 세로로 정렬되게 만든다. */
+/** 문서의 컴포넌트 규격이 고정한 key 열 폭. 값 열이 세로로 정렬되게 만든다. */
 private val KeyColumnWidth = 72.dp

@@ -13,7 +13,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
-/** 8.4 Feedback 컴포넌트 Preview. 렌더링만 하는 코드라 이것이 유일한 확인 수단이다. */
+/** Feedback 묶음 컴포넌트 Preview. 렌더링만 하는 코드라 이것이 유일한 확인 수단이다. */
 @Preview(showBackground = true, name = "Notice - Tone", widthDp = 390)
 @Composable
 private fun NoticePreview() {

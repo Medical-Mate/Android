@@ -18,9 +18,9 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
 /**
- * DESIGN.md 8.3 `Source Quote`.
+ * DESIGN.md의 `Source Quote`.
  *
- * AI가 정리한 값 아래에 환자 원문과 수정 진입점을 **항상** 함께 둔다(문서 9절). 정리된
+ * AI가 정리한 값 아래에 환자 원문과 수정 진입점을 **항상** 함께 둔다(문서의 접근성 기준). 정리된
  * 문장만 보여주면 환자는 자기가 한 말이 어떻게 바뀌었는지 확인할 수 없고, 진료실에서
  * 틀린 내용을 그대로 의사에게 건네게 된다.
  *
@@ -110,5 +110,5 @@ private fun OriginalQuote(quoteLabel: String, quote: String) {
     }
 }
 
-/** 문서 8.3의 Edited 경계. Chip 선택 경계와 같은 두께를 쓴다. */
+/** 문서의 Edited 경계. Chip 선택 경계와 같은 두께를 쓴다. */
 private val EditedBorderWidth = 1.5.dp

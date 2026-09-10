@@ -22,7 +22,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
-/** DESIGN.md 8.4 `Notice`의 `Tone` variant. */
+/** DESIGN.md의 `Notice`의 `Tone` variant. */
 enum class MedicalMateNoticeTone {
     INFO,
     SUCCESS,
@@ -31,12 +31,12 @@ enum class MedicalMateNoticeTone {
 }
 
 /**
- * DESIGN.md 8.4 `Notice`.
+ * DESIGN.md의 `Notice`.
  *
  * 화면에 남는 인라인 안내다. 행동 직후 사라지는 피드백은 [MedicalMateToast]다.
  *
  * 톤을 색으로만 알리지 않는다. tone마다 아이콘이 다르고 제목이 tone foreground 색을
- * 갖는다(문서 1항 6번).
+ * 갖는다(문서의 D11).
  *
  * [body]는 `fg/subtle`이다. 제목과 본문의 위계가 뒤집히면 훑을 때 무엇이 요점인지
  * 흐려진다.
@@ -109,5 +109,5 @@ private fun noticeStyle(tone: MedicalMateNoticeTone): NoticeStyle {
     }
 }
 
-/** 문서 8.4가 지정한 높이. 본문이 길어지면 늘어난다. */
+/** 문서의 컴포넌트 규격이 지정한 높이. 본문이 길어지면 늘어난다. */
 private val NoticeMinHeight = 79.dp

@@ -21,13 +21,13 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
 /**
- * DESIGN.md 8.4 `Progress Indicator`.
+ * DESIGN.md의 `Progress Indicator`.
  *
  * 단계별 칸과 `n/총` 숫자를 함께 보여준다. 칸만 두면 몇 단계가 남았는지 세어야 하고,
  * 숫자만 두면 진행 정도가 한눈에 안 들어온다.
  *
- * [total]이 6을 넘으면 칸을 나누지 않고 연속 막대로 바꾼다(문서 8.4). 칸이 잘게 쪼개지면
- * 390 폭에서 각 칸이 몇 픽셀이 되어 진행이 보이지 않는다.
+ * [total]이 6을 넘으면 칸을 나누지 않고 연속 막대로 바꾼다(문서의 컴포넌트 규격). 칸이 잘게
+ * 쪼개지면 콘텐츠 폭 320에서 각 칸이 몇 픽셀이 되어 진행이 보이지 않는다.
  *
  * 접근성 트리에서는 "3/4 단계"로 한 번만 읽는다. 칸을 하나씩 읽으면 소리만 길어진다.
  */
@@ -155,7 +155,7 @@ private fun Track(filled: Boolean, modifier: Modifier = Modifier) {
     )
 }
 
-/** 문서 8.4의 `Step=1/2/3/4`. */
+/** 문서의 `Step=1/2/3/4`. */
 private const val DEFAULT_STEPS = 4
 
 /** 이 수를 넘으면 칸이 너무 잘게 쪼개져 연속 막대로 바꾼다. */

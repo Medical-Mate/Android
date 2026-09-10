@@ -3,10 +3,10 @@ package com.mist.medicalmate.core.designsystem
 import androidx.compose.ui.graphics.Color
 
 /**
- * DESIGN.md 2.2 원시 팔레트 43개.
+ * DESIGN.md의 원시 팔레트 43개.
  *
  * 화면 코드에서 직접 쓰지 않는다. 시맨틱 토큰([MedicalMateColors])을 정의하는 곳에서만
- * 참조한다(DESIGN.md 1항). 그래서 전부 `internal`이다.
+ * 참조한다(DESIGN.md의 구현 규칙). 그래서 전부 `internal`이다.
  */
 internal val Primary50 = Color(0xFFF2F4FE)
 internal val Primary100 = Color(0xFFE3E7FC)

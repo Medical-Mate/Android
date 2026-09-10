@@ -1,7 +1,7 @@
 package com.mist.medicalmate.core.designsystem.component
 
 /**
- * DESIGN.md 5절의 Glass surface 여부.
+ * DESIGN.md의 Glass surface 여부.
  *
  * 콘텐츠 위에 떠 있는 면(Bottom CTA Bar, Nav Bar, Tab Bar)이 공유한다. 알파는 면마다
  * 달라서(78 / 82 / 86) 각 컴포넌트가 `MedicalMateGlass`에서 자기 값을 가져간다.

@@ -4,7 +4,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * DESIGN.md 4.1 간격 12개.
+ * DESIGN.md의 간격 12개.
  *
  * 임의의 간격값을 쓰지 않는다. 새 값이 필요하면 컴포넌트에 하드코딩하기 전에 여기에
  * 추가할지 검토한다. `space/16` → `MedicalMateSpace.s16`.
@@ -25,10 +25,10 @@ object MedicalMateSpace {
 }
 
 /**
- * DESIGN.md 4.3 크기와 레이아웃.
+ * DESIGN.md의 크기와 레이아웃.
  *
  * `size/touch-min` 48은 접근성 기준이다. 시각 규격이 더 작은 컨트롤(32 Icon Button,
- * 42 Date Cell)은 hit area를 따로 넓혀 48을 맞춘다(DESIGN.md 9절, 11.4).
+ * 42 Date Cell)은 hit area를 따로 넓혀 48을 맞춘다(DESIGN.md의 접근성 기준, 11.4).
  *
  * OS 상태바와 홈 인디케이터 높이는 여기 두지 않는다. 플랫폼 safe-area를 쓴다.
  * [safeBottom]은 Figma 컴포넌트 내부의 시각 여백이라 기기 inset과 중복 적용하지 않는다.
@@ -49,7 +49,7 @@ object MedicalMateSize {
     val screenWidth: Dp = 360.dp
     val gutter: Dp = 20.dp
 
-    /** 360 기준 콘텐츠 폭. 모든 기기에서 강제하지 않는다(DESIGN.md 4.4). */
+    /** 360 기준 콘텐츠 폭. 모든 기기에서 강제하지 않는다(DESIGN.md의 조립 규칙). */
     val contentWidth: Dp = 320.dp
     val safeBottom: Dp = 24.dp
     val navBarHeight: Dp = 56.dp
@@ -57,9 +57,8 @@ object MedicalMateSize {
     /**
      * Tab Bar 높이.
      *
-     * DESIGN.md 4.3의 `layout/tabbar-h` 토큰은 82이지만 Figma의 Tab Bar variant 3개는
-     * 실제로 390x79다. 문서 11.2가 토큰과 마스터 중 하나를 확정하라고 남긴 항목이고,
-     * 확정 전까지는 활성 마스터 값을 쓴다.
+     * DESIGN.md 3.0이 `layout/tabbar-h`를 79로 확정했다. 2.0까지는 토큰이 82이고 Figma
+     * 마스터만 79여서 마스터를 따랐다.
      */
     val tabBarHeight: Dp = 79.dp
 }

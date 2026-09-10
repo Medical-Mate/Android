@@ -25,7 +25,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
 /**
- * DESIGN.md 8.5 `Bottom Sheet`.
+ * DESIGN.md의 `Bottom Sheet`.
  *
  * `ModalBottomSheet` 위에 얹었다. 끌어내리기, 뒤로 가기, 스크림, 접근성 처리를 직접
  * 만들면 셋 다 빠뜨리기 쉽다.
@@ -33,7 +33,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
  * 위쪽 두 각만 28로 둥글다. grabber는 40x4다. 아래 여백 24는 문서가 지정한 값이고
  * 기기 inset과 중복되지 않도록 `ModalBottomSheet`의 기본 창 여백을 그대로 쓴다.
  *
- * 한 화면에서 떠 있는 층은 최대 두 단계다(문서 5절). 시트 위에 시트나 대화상자를 다시
+ * 한 화면에서 떠 있는 층은 최대 두 단계다(문서의 고도 규칙). 시트 위에 시트나 대화상자를 다시
  * 띄우지 않는다.
  *
  * 행동 영역은 [MedicalMateSheetActions]로 따로 둔다. Figma의 `Action` variant가 버튼
@@ -100,7 +100,7 @@ private fun SheetGrabber() {
     }
 }
 
-/** DESIGN.md 8.5 `Bottom Sheet`의 `Action` variant. */
+/** DESIGN.md의 `Bottom Sheet`의 `Action` variant. */
 enum class MedicalMateSheetAction {
     /** 주 행동과 보조 행동을 위아래로 둔다. 둘의 무게가 다를 때 쓴다. */
     STRONG,
@@ -115,7 +115,7 @@ enum class MedicalMateSheetAction {
 /**
  * 시트의 행동 영역.
  *
- * [MedicalMateSheetAction.NEUTRAL]에서 왼쪽이 Outline, 오른쪽이 Primary다. 문서 8.1의
+ * [MedicalMateSheetAction.NEUTRAL]에서 왼쪽이 Outline, 오른쪽이 Primary다. 문서의
  * "2개 병렬 시 왼쪽 Outline, 오른쪽 Primary"를 따른다.
  *
  * [MedicalMateSheetAction.STRONG]은 주 행동을 위에 둔다. 세로 배치에서는 위가 먼저
@@ -183,7 +183,7 @@ fun MedicalMateSheetActions(
     }
 }
 
-/** 문서 8.5가 지정한 위쪽 반경 28. */
+/** 문서의 컴포넌트 규격이 지정한 위쪽 반경 28. */
 private val SheetShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
 
 private val GrabberWidth = 40.dp

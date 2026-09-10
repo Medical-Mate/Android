@@ -22,7 +22,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
 /**
- * DESIGN.md 8.3 `Callout`.
+ * DESIGN.md의 `Callout`.
  *
  * 브리핑 카드에서 "환자가 묻고 싶어 하는 것"을 한 번만 보여준다. 화면에 두 번 이상 두면
  * 무엇이 환자의 질문인지 흐려진다.
@@ -72,7 +72,7 @@ fun MedicalMateCallout(title: String, questions: List<String>, modifier: Modifie
 private fun QuestionPill(number: Int, question: String) {
     Surface(
         shape = MedicalMateRadius.sm,
-        // 문서 8.3이 지정한 흰색 75%다. 뒤의 브랜드 tint가 살짝 배어 나온다.
+        // 문서의 컴포넌트 규격이 지정한 흰색 75%다. 뒤의 브랜드 tint가 살짝 배어 나온다.
         color = MedicalMateTheme.colors.bgSurface.copy(alpha = QUESTION_PILL_ALPHA),
         contentColor = MedicalMateTheme.colors.fgDefault,
         modifier = Modifier.fillMaxWidth(),

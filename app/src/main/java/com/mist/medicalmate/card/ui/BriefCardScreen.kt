@@ -178,7 +178,7 @@ private fun FailedContent(onRetryClick: () -> Unit, modifier: Modifier = Modifie
     }
 }
 
-/** 문서 8.2가 포커스 테두리에 쓰는 두께. Figma 1e-1-E의 카드 테두리와 같다. */
+/** 문서의 컴포넌트 규격이 포커스 테두리에 쓰는 두께. Figma 1e-1-E의 카드 테두리와 같다. */
 private val EditingBorderWidth = 2.dp
 
 /** Preview용 카드. AI가 넘겨줄 모양을 Figma 1e-1의 내용으로 채운 것이다. */

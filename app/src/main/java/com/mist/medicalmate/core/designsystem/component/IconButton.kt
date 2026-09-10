@@ -18,7 +18,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
-/** DESIGN.md 8.1 `Icon Button`의 `Style` variant. */
+/** DESIGN.md의 `Icon Button`의 `Style` variant. */
 enum class MedicalMateIconButtonStyle {
     GHOST,
     TONAL,
@@ -26,7 +26,7 @@ enum class MedicalMateIconButtonStyle {
     OUTLINE,
 }
 
-/** DESIGN.md 8.1 `Icon Button`의 `Size` variant. 시각 규격 48/40/32, 아이콘 24/20/18이다. */
+/** DESIGN.md의 `Icon Button`의 `Size` variant. 시각 규격 48/40/32, 아이콘 24/20/18이다. */
 enum class MedicalMateIconButtonSize {
     L,
     M,
@@ -34,15 +34,15 @@ enum class MedicalMateIconButtonSize {
 }
 
 /**
- * DESIGN.md 8.1 `Icon Button`.
+ * DESIGN.md의 `Icon Button`.
  *
  * 뒤로, 닫기, 더보기처럼 의미가 자명한 동작에만 쓴다. 그 외에는 라벨이 있는
  * [MedicalMateButton]을 쓴다.
  *
- * [contentDescription]을 필수로 받는다. 문서 9절이 아이콘 단독 버튼에 접근성 이름을
+ * [contentDescription]을 필수로 받는다. 문서의 접근성 기준이 아이콘 단독 버튼에 접근성 이름을
  * 반드시 제공하라고 하고, 기본값을 두면 빠뜨리기 쉽다.
  *
- * 시각 규격이 48보다 작아도 hit area는 48을 유지한다. 문서 11.4가 `size/touch-min` 48을
+ * 시각 규격이 48보다 작아도 hit area는 48을 유지한다. 문서의 접근성 기준이 `size/touch-min` 48을
  * 기준으로 정리했고, 시각 크기를 그대로 터치 영역으로 쓰면 [MedicalMateIconButtonSize.S]가
  * 32로 내려가 접근성 기준에 못 미친다.
  */

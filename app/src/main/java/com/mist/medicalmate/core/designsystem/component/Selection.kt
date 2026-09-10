@@ -28,12 +28,12 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
 /**
- * DESIGN.md 8.2 `Checkbox`.
+ * DESIGN.md의 `Checkbox`.
  *
  * 동의와 다중 선택에 쓴다. **행 전체가 hit area다.** 24 상자만 누를 수 있으면 접근성
  * 기준 48에 못 미치고, 손이 떨리는 환자가 맞추기 어렵다.
  *
- * 미선택 테두리는 `border/strong` 1.5다. 문서 9절이 비텍스트 경계에 3:1 대비를 요구하고,
+ * 미선택 테두리는 `border/strong` 1.5다. 문서의 접근성 기준이 비텍스트 경계에 3:1 대비를 요구하고,
  * `border/default`는 흰 배경에서 그 기준에 못 미친다.
  *
  * [Role.Checkbox]를 주면 스크린 리더가 선택 여부를 함께 읽는다.
@@ -102,9 +102,9 @@ fun MedicalMateCheckbox(
 }
 
 /**
- * DESIGN.md 8.2 `Radio`.
+ * DESIGN.md의 `Radio`.
  *
- * 단일 선택이다. 항목이 5개를 넘으면 세로 카드 목록을 검토한다(문서 8.2).
+ * 단일 선택이다. 항목이 5개를 넘으면 세로 카드 목록을 검토한다(문서의 컴포넌트 규격).
  *
  * 선택 표시는 7 ring이다. 행 전체가 hit area인 것은 [MedicalMateCheckbox]와 같다.
  */
@@ -157,12 +157,12 @@ fun MedicalMateRadio(
 }
 
 /**
- * DESIGN.md 8.2 `Toggle`.
+ * DESIGN.md의 `Toggle`.
  *
  * 누르는 즉시 적용되는 설정에만 쓴다. 저장 버튼이 있는 폼에서는 쓰지 않는다. 되돌릴
  * 방법 없이 값이 바뀌면 사용자가 실수를 알아채기 어렵다.
  *
- * 라벨은 스위치 밖에 두고 행 전체를 hit area로 처리한다(문서 8.2). 52x32 스위치만
+ * 라벨은 스위치 밖에 두고 행 전체를 hit area로 처리한다(문서의 컴포넌트 규격). 52x32 스위치만
  * 누르게 하면 접근성 기준 48에 못 미친다.
  *
  * Material3 `Switch`를 쓴다. 크기 52x32가 M3 기본과 같고, 끌기와 접근성 처리가 이미
@@ -219,13 +219,13 @@ fun MedicalMateToggle(
     }
 }
 
-/** 문서 8.2의 Checkbox·Radio 행 높이 54. */
+/** 문서의 Checkbox·Radio 행 높이 54. */
 private val SelectionRowHeight = 54.dp
 
-/** 문서 8.2의 box 24. Radio도 같은 지름을 쓴다. */
+/** 문서의 box 24. Radio도 같은 지름을 쓴다. */
 private val BoxSize = 24.dp
 
 private val UncheckedBorderWidth = 1.5.dp
 
-/** 문서 8.2의 "선택은 7px ring". */
+/** 문서의 "선택은 7px ring". */
 private val RadioRingWidth = 7.dp

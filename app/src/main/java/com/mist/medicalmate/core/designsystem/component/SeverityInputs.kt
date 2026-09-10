@@ -31,11 +31,11 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
 /**
- * DESIGN.md 8.2 `Severity Slider`.
+ * DESIGN.md의 `Severity Slider`.
  *
  * 기본 통증 입력이다. 5단계로 붙고 drag와 정지점 tap을 모두 받는다.
  *
- * Material3 `Slider` 위에 얹었다. 문서 8.2가 요구하는 키보드 ←/→와 Home/End를 그쪽이
+ * Material3 `Slider` 위에 얹었다. 문서의 컴포넌트 규격이 요구하는 키보드 ←/→와 Home/End를 그쪽이
  * 이미 처리한다(material3 1.4.0의 `slideOnKeyEvents`). 직접 만들면 그 네 가지를
  * 빠뜨리기 쉽다.
  *
@@ -43,7 +43,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
  * 무엇을 고른 것인지 알 수 없다.
  *
  * 단계를 색만으로 전달하지 않는다. 위쪽 판독 영역에 숫자, 낱말, 상황 설명이 함께 나온다
- * (문서 1항 6번).
+ * (문서의 D11).
  *
  * [showNrs]는 문서의 `Show NRS` boolean이다. 의료진용 표기라 기본은 끈다.
  */
@@ -113,7 +113,7 @@ private fun SliderThumb() {
     )
 }
 
-/** 판독 영역. 문서 2.2에 따라 tint를 면에, base를 숫자 칩에 쓴다. */
+/** 판독 영역. 문서의 원시 팔레트에 따라 tint를 면에, base를 숫자 칩에 쓴다. */
 @Composable
 private fun SeverityReadoutCard(severity: MedicalMateSeverity, showNrs: Boolean) {
     Surface(
@@ -173,9 +173,9 @@ internal fun SeverityLevelChip(severity: MedicalMateSeverity) {
 }
 
 /**
- * DESIGN.md 8.2 `Severity Select`.
+ * DESIGN.md의 `Severity Select`.
  *
- * 설명을 모두 펼친 세로 카드다. 단독 화면에 배치한다(문서 8.2). 다섯 단계의 상황 설명을
+ * 설명을 모두 펼친 세로 카드다. 단독 화면에 배치한다(문서의 컴포넌트 규격). 다섯 단계의 상황 설명을
  * 한 번에 읽고 고르는 방식이라, 다른 입력과 같은 화면에 두면 화면이 이것만으로 찬다.
  */
 @Composable

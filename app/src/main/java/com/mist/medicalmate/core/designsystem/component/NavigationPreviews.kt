@@ -22,7 +22,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
-/** 8.5 Navigation·Overlay 컴포넌트 Preview. */
+/** Navigation·Overlay 묶음 컴포넌트 Preview. */
 @Preview(showBackground = true, name = "Nav Bar", widthDp = 390)
 @Composable
 private fun NavBarPreview() {

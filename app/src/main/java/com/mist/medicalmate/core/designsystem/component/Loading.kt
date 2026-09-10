@@ -22,9 +22,9 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
 /**
- * DESIGN.md 8.4 `Loading`의 `Type=Spinner`.
+ * DESIGN.md의 `Loading`의 `Type=Spinner`.
  *
- * 2초 이상 걸릴 것 같으면 [message]에 무슨 일을 하는 중인지 적는다(문서 8.4, 9절).
+ * 2초 이상 걸릴 것 같으면 [message]에 무슨 일을 하는 중인지 적는다(문서의 컴포넌트 규격, 9절).
  * 돌아가는 원만 보이면 사용자는 앱이 멈춘 것인지 판단할 근거가 없다.
  *
  * 실패했을 때 복구 행동을 함께 주는 것은 호출자 몫이다. 이 컴포넌트는 진행 중만 그린다.
@@ -55,13 +55,13 @@ fun MedicalMateLoadingSpinner(modifier: Modifier = Modifier, message: String? = 
 }
 
 /**
- * DESIGN.md 8.4 `Loading`의 `Type=Skeleton`.
+ * DESIGN.md의 `Loading`의 `Type=Skeleton`.
  *
  * [lineWidthFractions]에 실제로 들어올 줄의 폭 비율을 준다. 문서가 실제 줄 수와 폭을
  * 맞추라고 하는 이유는, 뼈대와 실제 내용의 모양이 다르면 로딩이 끝나는 순간 화면이
  * 덜컥 움직이기 때문이다.
  *
- * 반짝임을 넣지 않았다. 문서 9절이 움직임 축소 설정에서 움직임을 줄이라고 하는데,
+ * 반짝임을 넣지 않았다. 문서의 접근성 기준이 움직임 축소 설정에서 움직임을 줄이라고 하는데,
  * 애니메이션을 넣으면 그 설정을 읽어 끄는 처리가 함께 필요하다. 정지 상태로 두면 두
  * 경우가 같아진다.
  *
@@ -97,7 +97,7 @@ fun MedicalMateLoadingSkeleton(
     }
 }
 
-/** 문서 8.4의 116/132를 아우르는 최소 높이. */
+/** 문서의 116/132를 아우르는 최소 높이. */
 private val LoadingMinHeight = 116.dp
 
 private val SkeletonLineHeight = 16.dp

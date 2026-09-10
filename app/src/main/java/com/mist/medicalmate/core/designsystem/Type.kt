@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.sp
 import com.mist.medicalmate.R
 
 /**
- * DESIGN.md 3절 기본 서체.
+ * DESIGN.md의 기본 서체.
  *
  * Pretendard v1.3.9의 static OTF를 동봉한다. Google Fonts에 없어 Downloadable Fonts로는
  * 받을 수 없다.
@@ -81,7 +81,7 @@ private fun mmTextStyle(
 )
 
 /**
- * DESIGN.md 3절 타이포그래피 15종.
+ * DESIGN.md의 타이포그래피 15종.
  *
  * 이름은 Figma 스타일 이름을 camelCase로 옮겼다. `Body/L Strong` → `bodyLStrong`.
  * `Strong`은 크기를 바꾸지 않고 같은 크기의 SemiBold로 강조한다.

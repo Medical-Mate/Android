@@ -13,12 +13,12 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
 /**
- * DESIGN.md 8.1 `Bottom CTA Bar`.
+ * DESIGN.md의 `Bottom CTA Bar`.
  *
  * 한 손으로 누를 주 액션을 화면 아래에 고정한다. 높이 92는 위 여백 12 + L 버튼 56 +
  * 아래 안전 여백 24다. [content]에는 높이 56 버튼 하나를 넣는 것을 전제한다.
  *
- * **기본값이 [MedicalMateSurfaceStyle.OPAQUE]다.** 문서 5절은 스크롤 콘텐츠 위에
+ * **기본값이 [MedicalMateSurfaceStyle.OPAQUE]다.** 문서의 고도 규칙은 스크롤 콘텐츠 위에
  * Glass를 쓰라고 하는데, 지금 구현에서 블러가 걸리지 않는다. compose-ui 1.10.5에는 뒤
  * 배경을 블러하는 API가 없다. `Modifier.blur`는 자기 콘텐츠를 블러하는 것이고
  * 클래스 목록에 `Backdrop` 계열이 없다. `RenderEffect`도 API 31부터라 minSdk 24에서는

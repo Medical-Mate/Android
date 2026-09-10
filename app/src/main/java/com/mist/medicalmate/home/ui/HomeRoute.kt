@@ -23,7 +23,7 @@ import java.time.LocalDate
  * 동안 바뀔 수 있고, 자정을 넘겨 값이 달라지는 것을 지금 다루지 않는다.
  *
  * [justRegistered]면 등록 완료 토스트를 띄우고 [TOAST_MILLIS] 뒤에 없앤다. 없애는 일을
- * 화면이 아니라 여기서 하는 이유는 Toast 컴포넌트가 모양만 그리기 때문이다(문서 8.4).
+ * 화면이 아니라 여기서 하는 이유는 Toast 컴포넌트가 모양만 그리기 때문이다(문서의 컴포넌트 규격).
  */
 @Composable
 fun HomeRoute(

@@ -3,7 +3,7 @@ package com.mist.medicalmate.core.designsystem
 import com.mist.medicalmate.R
 
 /**
- * DESIGN.md 7절 로고.
+ * DESIGN.md의 로고.
  *
  * 맞물린 두 조각으로 환자의 말과 의사의 진료를 잇는 제품 역할을 표현한다.
  *

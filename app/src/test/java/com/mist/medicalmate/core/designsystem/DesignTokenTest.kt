@@ -148,7 +148,7 @@ class DesignTokenTest {
             assertEquals(RoundedCornerShape(24.dp), xl)
             assertEquals(RoundedCornerShape(28.dp), xxl)
             assertEquals(CircleShape, full)
-            // 4.2 Scale에 없는 중간값. 문서 8.1 Button M 전용이다.
+            // 4.2 Scale에 없는 중간값. 문서의 Button M 전용이다.
             assertEquals(RoundedCornerShape(14.dp), buttonM)
         }
     }
@@ -173,9 +173,9 @@ class DesignTokenTest {
     }
 
     @Test
-    fun `Tab Bar 높이는 토큰이 아니라 활성 마스터 값을 쓴다`() {
-        // 문서 4.3의 layout/tabbar-h는 82이지만 Figma variant 3개는 390x79다.
-        // 문서 11.2가 확정을 남긴 항목이고, 그때까지 마스터 값을 따른다.
+    fun `Tab Bar 높이는 79다`() {
+        // 문서 3.0이 layout/tabbar-h를 79로 확정했다. 2.0까지는 토큰이 82,
+        // Figma 마스터만 79여서 마스터를 따랐다.
         assertEquals(79.dp, MedicalMateSize.tabBarHeight)
     }
 

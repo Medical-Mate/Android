@@ -18,7 +18,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.ShadowTint
 
 /**
- * DESIGN.md 8.3 `Card`의 `Emphasis` variant.
+ * DESIGN.md의 `Card`의 `Emphasis` variant.
  *
  * 큰 유색 면은 환자 콘텐츠에만 쓴다. 시스템 안내나 목록 배경으로 [BRAND]를 쓰지 않는다.
  */
@@ -29,14 +29,14 @@ enum class MedicalMateCardEmphasis {
 }
 
 /**
- * DESIGN.md 8.3 `Card`.
+ * DESIGN.md의 `Card`.
  *
  * 이 시스템은 모든 요소에 테두리를 두르지 않는다. [MedicalMateCardEmphasis.DEFAULT]는
  * 테두리 없이 `Elevation/Card`로 층을 표현한다. 선은 목록 구분, 선택, 포커스, 접근성
- * 경계에만 쓴다(문서 5절).
+ * 경계에만 쓴다(문서의 고도 규칙).
  *
  * 그림자는 `Surface`의 `shadowElevation`이 아니라 [Modifier.shadow]로 준다. 전자는
- * 그림자 색을 받지 않아 검정으로 나오고, 문서 5절이 브랜드 틴트 `#1B255A`를 쓰라고 한다.
+ * 그림자 색을 받지 않아 검정으로 나오고, 문서의 고도 규칙이 브랜드 틴트 `#1B255A`를 쓰라고 한다.
  * 틴트는 API 28부터 적용되므로 24~27에서는 여전히 검정이다.
  *
  * [onClick]을 주면 누를 수 있는 카드가 된다. 들어갈 상세가 있을 때만 준다.
@@ -101,5 +101,5 @@ fun MedicalMateCard(
     }
 }
 
-/** 문서 8.3이 지정한 최소 높이. */
+/** 문서의 컴포넌트 규격이 지정한 최소 높이. */
 private val CardMinHeight = 116.dp

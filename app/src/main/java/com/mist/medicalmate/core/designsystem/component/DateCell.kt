@@ -29,20 +29,22 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 enum class MedicalMateDateMarker { NONE, RECORD, PLANNED }
 
 /**
- * DESIGN.md 8.2 `Date Cell`.
+ * DESIGN.md의 `Date Cell`.
  *
- * 7열 캘린더의 한 칸이다. 시각 규격은 46x46이다.
+ * 7열 캘린더의 한 칸이다. 시각 규격은 42x42다. 문서는 시트 안에서 34를 쓰라고 하는데
+ * 아직 그 자리가 없다.
  *
- * 세 가지가 서로 다른 뜻이라 표시 방법도 다르다(문서 8.2).
+ * 세 가지가 서로 다른 뜻이라 표시 방법도 다르다(문서의 컴포넌트 규격).
  * [marker]는 그 날 기록이 있거나 일정이 있다는 사실이라 5 점으로 알린다.
  * [isToday]는 오늘이라는 상태라 **옅은 면과 테두리**로 알린다. 채움이 아니다.
  * [selected]는 사용자가 고른 칸이라 채움으로 알린다.
  * 셋이 겹칠 수 있어 한 칸에 함께 나타난다.
  *
- * 칸은 원이 아니라 반경 13의 둥근 사각형이다(마스터 `335:1188`).
+ * 칸은 원이 아니라 반경 13의 둥근 사각형이다(마스터 `335:1188`). 문서 3.0이 13을 스케일
+ * 밖 값으로 잡고 `radius/sm` 12로 통일하겠다고 적었다. Figma가 바뀌면 함께 바꾼다.
  *
- * 46은 접근성 기준 48보다 작다. 문서 11.4에 따라 hit area는 48을 맞춰야 하는데, 7열
- * 캘린더에서 칸마다 48을 넣으면 390 폭에 들어가지 않는다. 그래서 이 컴포넌트는 시각
+ * 42는 접근성 기준 48보다 작다. 문서의 접근성 기준이 hit area 48을 요구하는데, 7열
+ * 캘린더에서 칸마다 48을 넣으면 360 폭에 들어가지 않는다. 그래서 이 컴포넌트는 시각
  * 크기만 담당하고, **캘린더 그리드가 칸 사이 여백까지 포함해 hit test를 하도록 호출자가
  * 배치한다.** 문서도 같은 방법을 적어 두었다.
  *
@@ -176,13 +178,13 @@ private fun DayMarker(marker: MedicalMateDateMarker, selected: Boolean) {
  */
 val MedicalMateDateCellSize = 42.dp
 
-/** 문서 8.2의 "5px dot". */
+/** 문서의 "5px dot". */
 private val RecordDotSize = 5.dp
 
 /** Date Cell v2가 더한 오늘 표시 링. 색만으로 상태를 구분하던 것을 테두리로 보강한다. */
 private val TodayBorderWidth = 1.dp
 
-/** 마스터의 숫자와 점 사이 `gap-[3px]`. 4.1 간격 토큰에 없는 값이다. */
+/** 마스터의 숫자와 점 사이 `gap-[3px]`. 문서의 간격 토큰에 없는 값이다. */
 private val DotGap = 3.dp
 
 /** 빈 원의 테두리. 5px 안에서 채움과 구별되려면 이보다 두꺼울 수 없다. */

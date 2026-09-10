@@ -31,7 +31,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
  * Figma `Search Field`(590:1307). `06 · 추가` 섹션의 신규 3종 가운데 하나다.
  *
  * `State=Empty/Filled` 두 변이를 파라미터로 받지 않는다. [value]가 비었는지로 갈린다.
- * 상태를 따로 받으면 실제 값과 어긋날 수 있다(문서 10.2).
+ * 상태를 따로 받으면 실제 값과 어긋날 수 있다.
  *
  * 채워지면 오른쪽에 지우기가 붙는다. 검색은 고쳐 쓰는 일이 잦아서, 글자를 하나씩 지우게
  * 두면 다시 찾기가 번거롭다.

@@ -30,7 +30,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
 /**
- * DESIGN.md 8.2 `Voice Input`의 `State` variant.
+ * DESIGN.md의 `Voice Input`의 `State` variant.
  *
  * 문구가 상태마다 정해져 있어 컴포넌트가 들고 있다. Figma 마스터(`313:993`)에서 읽었다.
  */
@@ -42,11 +42,11 @@ enum class MedicalMateVoiceState(@StringRes val titleRes: Int, @StringRes val de
 }
 
 /**
- * DESIGN.md 8.2 `Voice Input`.
+ * DESIGN.md의 `Voice Input`.
  *
  * 문답의 주 입력이다. 마이크 지름 88이고 콘텐츠 폭 350이다.
  *
- * **모든 상태에 직접 입력 대안을 같은 자리에 둔다.** 문서 8.2와 9절이 요구하는 것이고,
+ * **모든 상태에 직접 입력 대안을 같은 자리에 둔다.** 문서의 컴포넌트 규격과 9절이 요구하는 것이고,
  * 위치가 상태마다 움직이면 말하기 어려운 사용자가 매번 찾아야 한다. 조용한 곳이 아니거나
  * 목소리가 잘 안 나오는 환자에게 음성만 남기면 앱을 쓸 수 없다.
  *
@@ -54,7 +54,7 @@ enum class MedicalMateVoiceState(@StringRes val titleRes: Int, @StringRes val de
  * 녹음이 겹치면 어느 말이 반영됐는지 알 수 없다.
  *
  * 파형은 [MedicalMateVoiceState.LISTENING]에서만 보인다. 움직임 축소 설정에서 흔들림을
- * 줄이더라도 "듣고 있어요" 문구는 남아야 하므로(문서 9절), 상태를 파형으로만 알리지
+ * 줄이더라도 "듣고 있어요" 문구는 남아야 하므로(문서의 접근성 기준), 상태를 파형으로만 알리지
  * 않는다. 지금 파형은 정지 막대이고 애니메이션은 넣지 않았다.
  */
 @Composable
@@ -174,7 +174,7 @@ private fun MicContent(state: MedicalMateVoiceState, tint: Color) {
 /**
  * 듣는 중 파형.
  *
- * 정지 막대다. 문서 9절이 움직임 축소 설정에서 파형의 움직임을 줄이라고 하는데,
+ * 정지 막대다. 문서의 접근성 기준이 움직임 축소 설정에서 파형의 움직임을 줄이라고 하는데,
  * 애니메이션을 넣으면 그 설정을 읽어 끄는 처리가 함께 필요하다. 상태는 문구가 알리므로
  * 파형이 움직이지 않아도 정보가 빠지지 않는다.
  *
@@ -204,7 +204,7 @@ private fun Waveform() {
     }
 }
 
-/** 문서 8.2의 "6px brand ring". */
+/** 문서의 "6px brand ring". */
 private val ListeningRingWidth = 6.dp
 
 private val WaveformBarWidth = 4.dp

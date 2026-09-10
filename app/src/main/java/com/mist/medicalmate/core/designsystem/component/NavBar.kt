@@ -23,7 +23,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateIcons
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
-/** DESIGN.md 8.5 `Nav Bar`의 `Leading` variant. */
+/** DESIGN.md의 `Nav Bar`의 `Leading` variant. */
 enum class MedicalMateNavLeading {
     BACK,
     CLOSE,
@@ -31,13 +31,13 @@ enum class MedicalMateNavLeading {
 }
 
 /**
- * DESIGN.md 8.5 `Nav Bar`.
+ * DESIGN.md의 `Nav Bar`.
  *
  * 390x56이고 좌우 slot이 각각 48이다. 제목은 가운데에 고정한다. slot 폭을 좌우 같게
  * 잡아야 제목이 화면 가운데에 온다. 오른쪽 액션 유무에 따라 제목이 움직이면 화면을
  * 넘길 때마다 눈이 따라가야 한다.
  *
- * 우측 주요 액션은 아이콘이 아니라 텍스트 라벨을 쓴다(문서 8.5). 저장이나 완료 같은
+ * 우측 주요 액션은 아이콘이 아니라 텍스트 라벨을 쓴다(문서의 컴포넌트 규격). 저장이나 완료 같은
  * 동작은 아이콘만으로 뜻이 전달되지 않는다.
  *
  * [MedicalMateNavLeading.BACK]과 [MedicalMateNavLeading.CLOSE]는 뜻이 다르다. 뒤로는
