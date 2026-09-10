@@ -207,6 +207,10 @@ private fun NavGraphBuilder.visitDestinations(navController: NavHostController) 
     )
     visitRecordDestination(
         onSaved = { navController.navigate(VisitSummaryDestination(visitId = NEW_VISIT_ID)) },
+        // 지운 기록의 화면에 남을 수 없다. 한 단계만 pop하면 방금 적은 메모 화면(1p)으로
+        // 돌아가는데, 거기서 저장하면 지운 것을 다시 만든다. 그래서 흐름이 시작된 캘린더
+        // 일자까지 되돌린다.
+        onDeleted = { navController.popBackStack<CalendarDayDestination>(inclusive = false) },
         onExit = { navController.popBackStack() },
     )
     visitSummaryDestination(

@@ -41,22 +41,54 @@ data class VisitHeadline(val label: String, val title: String, val detail: Strin
 /**
  * 1q-1 자동 분류 결과와 1q-1-E 전체 수정. Figma `405:2193`, `636:3675`.
  *
- * 한 화면의 두 모드다. [editing]이 켜지면 값이 그 자리에서 입력으로 바뀌고, 일정 등록
+ * 한 화면의 두 모드다. 편집이 켜지면 값이 그 자리에서 입력으로 바뀌고, 일정 등록
  * 체크박스가 숨는다(시안이 `hidden`으로 표시해 둔 부분이다).
  *
- * [drafts]를 따로 두는 이유는 취소가 있기 때문이다. 원본을 바로 고치면 되돌릴 것이 없다.
+ * [VisitRecordDraft]를 따로 두는 이유는 취소가 있기 때문이다. 원본을 바로 고치면 되돌릴
+ * 것이 없다.
  */
 sealed interface VisitRecordUiState {
     data object Loading : VisitRecordUiState
 
     data object Failed : VisitRecordUiState
 
+    /**
+     * [draft]가 있으면 편집 모드다. 모드를 따로 두면 "편집 중이라면서 사본이 없는" 상태를
+     * 만들 수 있다.
+     *
+     * [deleteRequested]는 삭제 확인 대화상자(1q-1-DC)가 떠 있는지다. 삭제를 취소하면 편집
+     * 모드는 그대로 남아야 해서 편집 상태와 분리한다.
+     */
     data class Content(
         val record: VisitRecord,
-        val editing: Boolean = false,
-        val drafts: List<String> = emptyList(),
+        val draft: VisitRecordDraft? = null,
         val scheduleRevisit: Boolean = false,
-    ) : VisitRecordUiState
+        val deleteRequested: Boolean = false,
+    ) : VisitRecordUiState {
+        val editing: Boolean get() = draft != null
+
+        /** 화면에 그릴 항목. 편집 중이면 사본, 아니면 원본이다. */
+        val items: List<VisitRecordItem> get() = draft?.items ?: record.items
+
+        /**
+         * 편집 중에 무엇이든 바뀌었는지. Nav 우측이 `취소`에서 `확인`으로 바뀌는 기준이다.
+         *
+         * 아무것도 안 건드렸는데 `확인`이 떠 있으면 뭘 확인하라는 건지 알 수 없다.
+         */
+        val changed: Boolean get() = draft != null && draft.items != record.items
+    }
+}
+
+/**
+ * 편집 중인 사본.
+ *
+ * 원문 메모는 담지 않는다. 문서가 지울 수 없는 것 목록에 그 메모를 넣었다. AI 정리는 고치되
+ * 환자가 적은 말은 남는다는 P2다. 그래서 편집 모드에서도 메모 블록은 ×도 입력도 없다.
+ */
+data class VisitRecordDraft(val items: List<VisitRecordItem>) {
+    internal companion object {
+        fun of(record: VisitRecord) = VisitRecordDraft(items = record.items)
+    }
 }
 
 /**

@@ -11,16 +11,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.R
-import com.mist.medicalmate.core.designsystem.MedicalMateIcons
 import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateCard
 import com.mist.medicalmate.core.designsystem.component.MedicalMateDivider
-import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButton
-import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButtonSize
+import com.mist.medicalmate.core.designsystem.component.MedicalMateEditingKvRow
 import com.mist.medicalmate.core.designsystem.component.MedicalMateKvRow
 import com.mist.medicalmate.core.designsystem.component.MedicalMateKvRowType
 import com.mist.medicalmate.core.designsystem.component.MedicalMateQuoteBlock
+import com.mist.medicalmate.core.designsystem.component.MedicalMateRowDelete
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTooltip
 
 /**
@@ -44,20 +43,27 @@ internal fun VisitRecordCard(state: VisitRecordUiState.Content, callbacks: Visit
             Modifier
         },
     ) {
-        Head(clinicLine = state.record.clinicLine, onEditClick = callbacks.onEditClick)
+        Head(clinicLine = state.record.clinicLine)
         MedicalMateDivider()
-        state.record.items.forEachIndexed { index, item ->
-            MedicalMateKvRow(
-                key = item.key,
-                value = state.drafts.getOrNull(index) ?: item.value,
-                type = rowType(item = item, editing = state.editing),
-                onValueChange =
-                if (state.editing) {
-                    { value -> callbacks.onDraftChange(index, value) }
-                } else {
-                    null
-                },
-            )
+        state.items.forEachIndexed { index, item ->
+            if (state.editing) {
+                MedicalMateEditingKvRow(
+                    key = item.key,
+                    value = item.value,
+                    onValueChange = { value -> callbacks.edit.onItemValueChange(index, value) },
+                    delete =
+                    MedicalMateRowDelete(
+                        contentDescription = stringResource(R.string.visit_record_item_delete, item.key),
+                        onClick = { callbacks.edit.onItemDeleteClick(index) },
+                    ),
+                )
+            } else {
+                MedicalMateKvRow(
+                    key = item.key,
+                    value = item.value,
+                    type = rowType(item = item, editing = false),
+                )
+            }
         }
         MedicalMateDivider()
         Memo(memo = state.record.memo)
@@ -65,25 +71,20 @@ internal fun VisitRecordCard(state: VisitRecordUiState.Content, callbacks: Visit
     }
 }
 
+/**
+ * 카드 머리.
+ *
+ * 편집 진입은 여기 없다. 카드 안 연필을 Nav 우측 `편집`으로 옮겼다. 문서의 CRUD 규칙이
+ * 편집 상태를 Nav 한 자리에서 바꾸기로 정했고, 카드 안에 연필을 남기면 진입이 두 곳이 된다.
+ */
 @Composable
-private fun Head(clinicLine: String, onEditClick: () -> Unit) {
-    Row(
+private fun Head(clinicLine: String) {
+    Text(
+        text = stringResource(R.string.visit_record_card_title),
+        style = MedicalMateTheme.typography.headingS,
+        color = MedicalMateTheme.colors.fgDefault,
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = stringResource(R.string.visit_record_card_title),
-            style = MedicalMateTheme.typography.headingS,
-            color = MedicalMateTheme.colors.fgDefault,
-            modifier = Modifier.weight(1f),
-        )
-        MedicalMateIconButton(
-            onClick = onEditClick,
-            icon = MedicalMateIcons.Edit,
-            contentDescription = stringResource(R.string.visit_record_edit),
-            size = MedicalMateIconButtonSize.L,
-        )
-    }
+    )
     Text(
         text = clinicLine,
         style = MedicalMateTheme.typography.bodyS,

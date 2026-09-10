@@ -43,9 +43,9 @@ internal fun NavGraphBuilder.visitNoteDestination(onSaved: () -> Unit, onExit: (
     }
 }
 
-internal fun NavGraphBuilder.visitRecordDestination(onSaved: () -> Unit, onExit: () -> Unit) {
+internal fun NavGraphBuilder.visitRecordDestination(onSaved: () -> Unit, onDeleted: () -> Unit, onExit: () -> Unit) {
     composable<VisitRecordDestination> {
-        VisitRecordRoute(onSaved = onSaved, onExit = onExit)
+        VisitRecordRoute(onSaved = onSaved, onDeleted = onDeleted, onExit = onExit)
     }
 }
 
@@ -107,6 +107,7 @@ private fun VisitNoteRoute(
 @Composable
 private fun VisitRecordRoute(
     onSaved: () -> Unit,
+    onDeleted: () -> Unit,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: VisitRecordViewModel = hiltViewModel(),
@@ -115,18 +116,25 @@ private fun VisitRecordRoute(
 
     LaunchedEffect(Unit) { viewModel.load() }
 
-    val editing = (state as? VisitRecordUiState.Content)?.editing == true
-
     VisitRecordScreen(
         state = state,
         callbacks =
         VisitRecordCallbacks(
             onBackClick = onExit,
             onEditClick = viewModel::onEditClick,
-            onDraftChange = viewModel::onDraftChange,
-            onScheduleChange = viewModel::onScheduleChange,
-            onSaveClick = { if (editing) viewModel.onSaveClick() else onSaved() },
+            onEditDoneClick = viewModel::onEditDoneClick,
             onCancelClick = viewModel::onCancelClick,
+            edit = viewModel.editActions,
+            onScheduleChange = viewModel::onScheduleChange,
+            // 편집 중에는 하단에 저장하기가 없다. 그 자리가 삭제이고 사본을 옮기는 것은
+            // Nav 우측 `확인`이 한다. 그래서 저장하기는 항상 화면을 나간다.
+            onSaveClick = onSaved,
+            onDeleteClick = viewModel::onDeleteClick,
+            onDeleteDismiss = viewModel::onDeleteDismiss,
+            onDeleteConfirm = {
+                viewModel.onDeleteConfirm()
+                onDeleted()
+            },
             onRetryClick = viewModel::load,
         ),
         modifier = modifier,

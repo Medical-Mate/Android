@@ -22,6 +22,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateBottomCtaBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonType
 import com.mist.medicalmate.core.designsystem.component.MedicalMateCheckbox
+import com.mist.medicalmate.core.designsystem.component.MedicalMateDialog
 import com.mist.medicalmate.core.designsystem.component.MedicalMateEmptyState
 import com.mist.medicalmate.core.designsystem.component.MedicalMateEmptyStateType
 import com.mist.medicalmate.core.designsystem.component.MedicalMateLoadingSpinner
@@ -39,6 +40,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
  */
 @Composable
 fun VisitRecordScreen(state: VisitRecordUiState, callbacks: VisitRecordCallbacks, modifier: Modifier = Modifier) {
+    val content = state as? VisitRecordUiState.Content
     Column(
         modifier =
         modifier
@@ -49,6 +51,8 @@ fun VisitRecordScreen(state: VisitRecordUiState, callbacks: VisitRecordCallbacks
             title = stringResource(R.string.visit_record_title),
             onLeadingClick = callbacks.onBackClick,
             surface = MedicalMateSurfaceStyle.GLASS,
+            actionLabel = content?.let { stringResource(navActionLabel(it)) },
+            onActionClick = content?.let { { onNavAction(it, callbacks) } },
         )
         when (state) {
             VisitRecordUiState.Loading ->
@@ -63,18 +67,52 @@ fun VisitRecordScreen(state: VisitRecordUiState, callbacks: VisitRecordCallbacks
             }
         }
     }
+
+    if (content?.deleteRequested == true) {
+        MedicalMateDialog(
+            title = stringResource(R.string.visit_record_delete_title),
+            message = stringResource(R.string.visit_record_delete_body),
+            confirmLabel = stringResource(R.string.visit_record_delete_confirm),
+            onConfirm = callbacks.onDeleteConfirm,
+            dismissLabel = stringResource(R.string.visit_record_cancel),
+            onDismissRequest = callbacks.onDeleteDismiss,
+        )
+    }
 }
 
-/** 분류 결과 화면의 조작. 수정은 화면 안에서 모드만 바뀌므로 목적지가 아니다. */
+/** 분류 결과 화면의 조작. 편집은 화면 안에서 모드만 바뀌므로 목적지가 아니다. */
 data class VisitRecordCallbacks(
     val onBackClick: () -> Unit = {},
     val onEditClick: () -> Unit = {},
-    val onDraftChange: (Int, String) -> Unit = { _, _ -> },
+    val onEditDoneClick: () -> Unit = {},
+    val onCancelClick: () -> Unit = {},
+    val edit: VisitRecordEditActions = VisitRecordEditActions {},
     val onScheduleChange: (Boolean) -> Unit = {},
     val onSaveClick: () -> Unit = {},
-    val onCancelClick: () -> Unit = {},
+    val onDeleteClick: () -> Unit = {},
+    val onDeleteDismiss: () -> Unit = {},
+    val onDeleteConfirm: () -> Unit = {},
     val onRetryClick: () -> Unit = {},
 )
+
+/**
+ * Nav 우측 버튼의 이름. 브리핑 카드와 같은 규칙이다.
+ *
+ * 편집 중이 아니면 `편집`, 편집 중이고 바뀐 것이 없으면 `취소`, 바뀐 것이 있으면 `확인`이다.
+ */
+private fun navActionLabel(content: VisitRecordUiState.Content): Int = when {
+    !content.editing -> R.string.visit_record_edit
+    content.changed -> R.string.visit_record_edit_done
+    else -> R.string.visit_record_cancel
+}
+
+private fun onNavAction(content: VisitRecordUiState.Content, callbacks: VisitRecordCallbacks) {
+    when {
+        !content.editing -> callbacks.onEditClick()
+        content.changed -> callbacks.onEditDoneClick()
+        else -> callbacks.onCancelClick()
+    }
+}
 
 @Composable
 private fun ColumnScope.RecordContent(state: VisitRecordUiState.Content, callbacks: VisitRecordCallbacks) {
@@ -93,22 +131,18 @@ private fun ColumnScope.RecordContent(state: VisitRecordUiState.Content, callbac
 /**
  * 하단.
  *
- * 읽을 때는 일정 등록 체크와 저장하기다. 수정 중에는 저장하기와 취소 둘이 되고 체크는
- * 숨는다.
+ * 읽을 때는 일정 등록 체크와 저장하기다. 편집 중에는 `진료 후 기록 삭제` 하나가 되고 체크는
+ * 숨는다. 사본을 옮기는 것은 Nav 우측 `확인`이 하므로 저장하기를 함께 두면 같은 일이 두
+ * 번이 된다.
  */
 @Composable
 private fun Footer(state: VisitRecordUiState.Content, callbacks: VisitRecordCallbacks) {
     MedicalMateBottomCtaBar {
         if (state.editing) {
             MedicalMateButton(
-                label = stringResource(R.string.visit_record_save),
-                onClick = callbacks.onSaveClick,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            MedicalMateButton(
-                label = stringResource(R.string.visit_record_cancel),
-                onClick = callbacks.onCancelClick,
-                type = MedicalMateButtonType.GHOST,
+                label = stringResource(R.string.visit_record_delete),
+                onClick = callbacks.onDeleteClick,
+                type = MedicalMateButtonType.DANGER,
                 modifier = Modifier.fillMaxWidth(),
             )
         } else {
@@ -164,8 +198,7 @@ private fun VisitRecordScreenEditingPreview() {
             state =
             VisitRecordUiState.Content(
                 record = previewVisitRecord,
-                editing = true,
-                drafts = previewVisitRecord.items.map { it.value },
+                draft = VisitRecordDraft.of(previewVisitRecord),
             ),
             callbacks = VisitRecordCallbacks(),
         )
