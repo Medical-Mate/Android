@@ -12,6 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -34,14 +35,25 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateTextField
  * 네 단계가 상단 내비와 하단 영역을 공유하고 이 파일이 그 사이를 채운다.
  */
 
-/** 단계 본문의 공통 껍데기. 여백과 간격, 스크롤이 네 단계에서 같다. */
+/**
+ * 단계 본문의 공통 껍데기. 여백과 간격, 스크롤이 네 단계에서 같다.
+ *
+ * [scrollKey]가 바뀌면 스크롤이 맨 위로 돌아간다. 한 단계 안에서 화면이 갈리는 곳이
+ * 있어서(인체도의 앵커·확대·목록) 하나의 스크롤 상태를 공유하면, 아래로 내려 부위를 짚은
+ * 뒤 확대 화면이 그 위치로 열려 제목이 잘린다.
+ */
 @Composable
-private fun StepContent(step: IntakeStep, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+internal fun StepContent(
+    step: IntakeStep,
+    modifier: Modifier = Modifier,
+    scrollKey: Any? = Unit,
+    content: @Composable () -> Unit,
+) {
     Column(
         modifier =
         modifier
             .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(key(scrollKey) { rememberScrollState() })
             .padding(
                 start = MedicalMateSize.gutter,
                 end = MedicalMateSize.gutter,
@@ -52,33 +64,6 @@ private fun StepContent(step: IntakeStep, modifier: Modifier = Modifier, content
     ) {
         IntakeProgress(step)
         content()
-    }
-}
-
-/**
- * 1단계 아픈 부위. **인체도 시안이 아직 없다.**
- *
- * Figma의 1l-1~1l-3은 섹션 밖에 있고 Body Map 컴포넌트가 확정 대기(#51)다. 그림 없이
- * 대신할 만한 조작을 지어내지 않고, 무엇이 준비 중인지 적고 다음으로 넘어가는 버튼만 둔다.
- * 문답이 "짚은 부위"를 전제로 시작하므로 부위는 임시 값으로 채운다.
- */
-@Composable
-internal fun BodyPartStep(state: IntakeUiState, modifier: Modifier = Modifier) {
-    StepContent(step = state.step, modifier = modifier) {
-        Text(
-            text = stringResource(R.string.intake_body_part_question),
-            style = MedicalMateTheme.typography.headingL,
-            color = MedicalMateTheme.colors.fgDefault,
-        )
-        Text(
-            text = stringResource(R.string.intake_body_part_description),
-            style = MedicalMateTheme.typography.bodyM,
-            color = MedicalMateTheme.colors.fgSubtle,
-        )
-        MedicalMateNotice(
-            title = stringResource(R.string.intake_body_part_pending_title),
-            body = stringResource(R.string.intake_body_part_pending_body),
-        )
     }
 }
 
@@ -101,7 +86,7 @@ internal fun SeverityStep(
 ) {
     StepContent(step = state.step, modifier = modifier) {
         Text(
-            text = stringResource(R.string.intake_severity_question, state.bodyPart.orEmpty()),
+            text = stringResource(R.string.intake_severity_question, state.bodyPartSubject),
             style = MedicalMateTheme.typography.headingL,
             color = MedicalMateTheme.colors.fgDefault,
         )

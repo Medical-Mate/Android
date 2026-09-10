@@ -135,8 +135,18 @@
 
     <string name="intake_body_part_question">어디가 아프세요?</string>
     <string name="intake_body_part_description">가장 불편한 곳 하나를 짚어주세요. 나머지는 문답에서 여쭤볼게요.</string>
-    <string name="intake_body_part_pending_title">인체도 화면을 준비하고 있어요</string>
-    <string name="intake_body_part_pending_body">지금은 복부로 진행해요. 그림에서 부위를 짚는 화면이 준비되면 이 자리에 들어갑니다.</string>
+
+    <string name="body_map_view_front">앞면</string>
+    <string name="body_map_view_back">뒷면</string>
+    <string name="body_map_orientation_right">RIGHT</string>
+    <string name="body_map_orientation_left">LEFT</string>
+    <string name="body_map_zone_question">%1$s 어디가 아프세요?</string>
+    <string name="body_map_zone_description">더 짚어주시면 문답이 짧아져요. 애매하면 가까운 곳으로 고르셔도 괜찮아요.</string>
+    <string name="body_map_other_anchor">다른 부위 보기</string>
+    <string name="body_map_list_picked">고른 부위: %1$s</string>
+    <string name="body_map_use_list">목록에서 고르기</string>
+    <string name="body_map_use_image">인체도에서 고르기</string>
+    <string name="body_map_list_question">아픈 부위를 골라주세요</string>
 
     <string name="intake_chat_ai">AI</string>
     <string name="intake_chat_context">짚은 부위</string>
@@ -145,7 +155,7 @@
     <string name="intake_chat_voice">음성으로 답하기</string>
     <string name="intake_chat_waiting">답변을 준비하고 있어요</string>
 
-    <string name="intake_severity_question">%1$s가 얼마나 아프세요?</string>
+    <string name="intake_severity_question">%1$s 얼마나 아프세요?</string>
     <string name="intake_severity_description">지금 느끼는 정도를 골라주세요. 정확한 숫자가 아니어도 괜찮아요.</string>
     <string name="intake_severity_notice_title">숫자는 진료실에서 의사가 읽어요</string>
     <string name="intake_severity_notice_body">환자분은 낱말로 고르시면 돼요. 카드에는 NRS 등가로 함께 표시됩니다.</string>

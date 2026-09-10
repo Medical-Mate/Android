@@ -70,7 +70,7 @@ label은 `Compose`를 쓴다.
 
 | Figma 마스터 | 노드 id | 상태 |
 | -- | -- | -- |
-| `Body Map` | `387:4164` | #51 — 디자인 확정 대기 |
+| `Body Map` | `387:4164` | `intake/ui/BodyMapCanvas.kt` · `BodyMapCard.kt` |
 
 ## 표를 다시 만드는 방법
 

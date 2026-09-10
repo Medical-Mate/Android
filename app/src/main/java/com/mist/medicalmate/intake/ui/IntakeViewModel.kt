@@ -34,6 +34,11 @@ constructor() : ViewModel() {
     private val mutableUiState = MutableStateFlow(IntakeUiState())
     val uiState: StateFlow<IntakeUiState> = mutableUiState.asStateFlow()
 
+    /** 인체도 단계의 조작. 왜 나눴는지는 [BodyMapActions]에 있다. */
+    val bodyMap = BodyMapActions { transform ->
+        mutableUiState.update { it.copy(bodyMap = transform(it.bodyMap)) }
+    }
+
     private var nextMessageId = 0L
 
     fun onDraftChange(draft: String) {
@@ -130,20 +135,26 @@ constructor() : ViewModel() {
     /**
      * 다음 단계로. 마지막 단계에서는 흐름을 마친다.
      *
-     * 아픈 부위를 지날 때 부위를 임시 값으로 채우고 대화를 열어 둔다. 인체도가 없어서
-     * 고를 것이 없고, 문답의 첫 마디가 부위를 부르며 시작한다.
+     * 아픈 부위를 지날 때 고른 부위 이름을 [IntakeUiState.bodyPart]에 넣고 대화를 연다.
+     * 문답의 첫 마디가 부위를 부르며 시작하고, 통증 강도 화면의 물음도 그 이름을 쓴다.
      */
     fun onNext() {
         val state = mutableUiState.value
         when {
-            state.step == IntakeStep.BODY_PART ->
-                mutableUiState.update {
-                    it.copy(
-                        bodyPart = PLACEHOLDER_BODY_PART,
-                        messages = listOf(IntakeMessage(nextMessageId++, IntakeMessage.Sender.AI, OPENING_LINE)),
-                        step = IntakeStep.SYMPTOM_CHAT,
-                    )
+            state.step == IntakeStep.BODY_PART -> {
+                // 부위를 다 고르기 전에는 문답을 열지 않는다. 화면의 다음 버튼도 꺼져 있다.
+                val part = state.bodyMap.selection?.takeIf { state.canLeaveBodyPart }?.title()
+                if (part != null) {
+                    mutableUiState.update {
+                        it.copy(
+                            bodyPart = part,
+                            messages =
+                            listOf(IntakeMessage(nextMessageId++, IntakeMessage.Sender.AI, openingLine(part))),
+                            step = IntakeStep.SYMPTOM_CHAT,
+                        )
+                    }
                 }
+            }
 
             state.step.isLast -> mutableUiState.update { it.copy(completed = true) }
 
@@ -151,20 +162,23 @@ constructor() : ViewModel() {
         }
     }
 
-    /** 이전 단계로. 첫 단계에서는 아무 일도 하지 않는다. */
+    /**
+     * 이전으로.
+     *
+     * 인체도에서 구역을 고르는 중이면 단계를 내리는 대신 앵커 화면으로 돌아간다. 화면이
+     * 바뀌지 않고 같은 단계 안에서 깊어진 상태라 뒤로 가는 곳도 그 안이다. 고른 부위는
+     * 남는다.
+     */
     fun onBack() {
-        mutableUiState.update {
-            if (it.canGoBack) it.copy(step = IntakeStep.entries[it.step.ordinal - 1]) else it
+        val state = mutableUiState.value
+        if (state.step == IntakeStep.BODY_PART) {
+            if (state.bodyMap.focus != null) bodyMap.onFocusClear()
+            return
         }
+        mutableUiState.update { it.copy(step = IntakeStep.entries[it.step.ordinal - 1]) }
     }
 
     private companion object {
-        /** 인체도가 없어서 쓰는 임시 부위. 시안이 오면 화면이 고른 값으로 바뀐다. */
-        const val PLACEHOLDER_BODY_PART = "복부"
-
-        /** Figma 1c-1의 첫 마디. */
-        const val OPENING_LINE = "복부가 불편하시군요. 언제부터 그러셨어요? 정확하지 않아도 괜찮아요."
-
         /** 그 다음 마디들. LLM이 붙으면 사라진다. */
         val REPLY_SCRIPT =
             listOf(
@@ -177,3 +191,11 @@ constructor() : ViewModel() {
         const val REPLY_DELAY_MILLIS = 700L
     }
 }
+
+/**
+ * 문답의 첫 마디. Figma 1c-1의 문장에 고른 부위를 끼운다.
+ *
+ * LLM이 붙으면 사라진다. 그때까지도 부위 이름은 고른 값이어야 한다. "복부가"로 고정해
+ * 두면 무릎을 짚고도 복부를 묻는다.
+ */
+private fun openingLine(part: String): String = "${withSubjectParticle(part)} 불편하시군요. 언제부터 그러셨어요? 정확하지 않아도 괜찮아요."
