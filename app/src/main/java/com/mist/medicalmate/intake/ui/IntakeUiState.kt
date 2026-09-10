@@ -64,14 +64,14 @@ data class IntakeUiState(
     /**
      * 첫 단계에서 뒤로 가면 흐름을 벗어난다. 그 판단은 호출자가 한다.
      *
-     * 인체도의 구역 단계는 화면이 바뀌지 않고 같은 단계 안에서 깊어진다. 그래서 확대한
-     * 상태에서 뒤로 가면 흐름을 벗어나는 대신 앵커 화면으로 돌아간다.
+     * 인체도의 구역 단계는 화면이 바뀌지 않고 같은 단계 안에서 깊어진다. 그래서 앵커를
+     * 고른 상태에서 뒤로 가면 흐름을 벗어나는 대신 앵커 선택으로 돌아간다.
      */
     val canGoBack: Boolean
-        get() = step != IntakeStep.entries.first() || bodyMap.focus != null
+        get() = step != IntakeStep.entries.first() || bodyMap.selection != null
 
-    /** 부위를 한 곳이라도 골라야 다음으로 갈 수 있다. */
-    val canLeaveBodyPart: Boolean get() = bodyMap.selected.isNotEmpty()
+    /** 부위를 다 고르기 전에는 다음으로 갈 수 없다. */
+    val canLeaveBodyPart: Boolean get() = bodyMap.selection?.isComplete == true
 
     /**
      * 주격 조사를 붙인 부위 이름. 부위를 부르는 물음이 이 값을 쓴다.
@@ -91,9 +91,7 @@ data class IntakeUiState(
  * 주격 조사를 붙인 낱말. 받침이 있으면 "이", 없으면 "가"다.
  *
  * 부위 이름 25개에 "무릎"과 "머리"가 함께 있어서 하나로 고정할 수 없다. 이름 끝에
- * 괄호가 붙는 것도 있어("가슴 옆(갈비)") 마지막 한글 음절을 찾아서 본다. 여러 곳을 고르면
- * 쉼표로 이어진 목록이 들어오는데, 조사는 마지막 이름에만 붙으므로 같은 규칙이 그대로
- * 맞는다.
+ * 괄호가 붙는 것도 있어("가슴 옆(갈비)") 마지막 한글 음절을 찾아서 본다.
  */
 internal fun withSubjectParticle(word: String): String {
     // 한글은 식별자에 쓸 수 있는 문자다. "$word이"로 쓰면 `word이`라는 이름을 찾는다.

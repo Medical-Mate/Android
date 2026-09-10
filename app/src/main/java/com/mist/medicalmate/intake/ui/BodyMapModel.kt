@@ -12,7 +12,7 @@ import androidx.compose.runtime.Immutable
  * 부위를 가리켜야 하기 때문이다.
  *
  * 좌표(기하)와 이름(온톨로지)을 나눠 둔 것은 출처가 다르기 때문이다. 좌표와 이미지는
- * 앱이 들고 있는 에셋이고([bodyMapAnchors]), 이름과 진료과는 서버 응답에서 온다
+ * 앱이 들고 있는 에셋이고([bodyMapAnchors]), 이름은 서버 응답에서 온다
  * (`docs/examples/body-map.json`). 연동 전까지 후자만 픽스처다.
  */
 
@@ -83,25 +83,22 @@ data class BodyMapAnchorGeometry(
 @Immutable
 internal data class BodyMapDot(val id: String, val label: String, val x: Float, val y: Float, val selected: Boolean)
 
-/** 온톨로지가 준 부위 하나의 표시 정보. */
-@Immutable
-data class BodyMapLabel(val label: String, val departments: List<String>)
-
 /**
- * 부위 하나를 가리키는 값.
+ * 고른 부위.
  *
- * 고른 부위와 확대해서 보고 있는 앵커가 같은 타입이다. [zoneId]가 null이면 앵커까지만
- * 가리킨 것이고, 그것이 확대 대상(`focus`)이거나 구역이 없는 앵커(전신·피부)다.
+ * [zoneId]가 null이면 앵커까지만 고른 상태다. 전신·피부는 구역이 없어서 계속 null이고,
+ * 나머지는 구역 단계를 지나면 채워진다.
  *
  * [side]는 좌우 구분이 있는 부위에서만 의미가 있다. 없는 부위는 [BodyMapSide.CENTER]다.
- * 좌우가 갈리는 부위는 왼쪽과 오른쪽이 서로 다른 값이라, 둘을 따로 고를 수 있다.
  */
 @Immutable
 data class BodyMapSelection(
     val anchorId: String,
     val zoneId: String? = null,
     val side: BodyMapSide = BodyMapSide.CENTER,
-)
+) {
+    val isComplete: Boolean get() = zoneId != null || bodyMapZonesOf(anchorId).isEmpty()
+}
 
 /** 앵커를 id로 찾는다. 좌표표와 온톨로지가 같은 9개를 담고 있어서 없을 수 없다. */
 internal fun bodyMapAnchorOf(anchorId: String): BodyMapAnchorGeometry = bodyMapAnchors.first { it.id == anchorId }
@@ -109,7 +106,7 @@ internal fun bodyMapAnchorOf(anchorId: String): BodyMapAnchorGeometry = bodyMapA
 internal fun bodyMapZonesOf(anchorId: String): List<BodyMapZoneGeometry> = bodyMapAnchorOf(anchorId).zones
 
 /** 부위 이름. 온톨로지에 없는 id는 없지만, 서버 응답이 바뀌면 id를 그대로 보여준다. */
-internal fun bodyMapLabelOf(id: String): String = bodyMapOntology[id]?.label ?: id
+internal fun bodyMapLabelOf(id: String): String = bodyMapOntology[id] ?: id
 
 /**
  * 판 안의 알약에 넣는 이름. "무릎(왼쪽)"처럼 읽힌다. 시안의 `Selected Label` 형식이다.
@@ -138,47 +135,4 @@ internal fun BodyMapSelection.title(): String {
         BodyMapSide.RIGHT -> "오른쪽 $base"
         else -> base
     }
-}
-
-/**
- * 안내할 진료과.
- *
- * 구역에 진료과가 비어 있으면 앵커의 것을 쓴다. 팔·다리의 구역 11개가 모두 비어 있고
- * 앵커가 정형외과 하나를 들고 있는 구조다. 구역마다 같은 값을 반복하지 않으려고 서버가
- * 비워 보낸다.
- */
-internal fun BodyMapSelection.departments(): List<String> {
-    val zone = zoneId?.let { bodyMapOntology[it]?.departments }.orEmpty()
-    return zone.ifEmpty { bodyMapOntology[anchorId]?.departments.orEmpty() }
-}
-
-/**
- * 고른 부위들을 한 문장으로.
- *
- * 문답의 첫 마디와 통증 강도의 물음이 이 값을 읽는다. 여러 곳을 고를 수 있으므로 쉼표로
- * 잇고, 마지막 이름에 조사가 붙는다.
- */
-internal fun List<BodyMapSelection>.partsText(): String = joinToString(", ") { it.title() }
-
-/**
- * 고른 부위들의 진료과. 겹치는 과는 한 번만 넣는다.
- *
- * 여러 곳을 고르면 과도 여러 개가 되는데, 목·가슴·배가 모두 내과를 물고 있어서 그대로
- * 이으면 같은 과가 반복된다.
- */
-internal fun List<BodyMapSelection>.departments(): List<String> = flatMap { it.departments() }.distinct()
-
-/**
- * 이 선택이 [anchorId] · [side]로 열리는 확대 화면에 속하는지.
- *
- * 좌우 공용 이미지를 쓰는 앵커(팔·다리)는 왼쪽과 오른쪽이 서로 다른 화면이라 좌우까지
- * 봐야 한다. 나머지 앵커는 한 이미지에 좌우 구역이 함께 있어서 앵커만 맞으면 된다.
- *
- * 이 구분이 없으면 머리를 확대해 왼쪽 눈을 골랐을 때 그 선택이 어디에도 속하지 않는다.
- * 머리 앵커의 좌우는 `CENTER`이고 고른 구역의 좌우는 `LEFT`이기 때문이다.
- */
-internal fun BodyMapSelection.belongsTo(anchorId: String, side: BodyMapSide): Boolean {
-    if (this.anchorId != anchorId) return false
-    val sharedImage = bodyMapAnchorOf(anchorId).detail?.mirrored == true
-    return !sharedImage || this.side == side
 }

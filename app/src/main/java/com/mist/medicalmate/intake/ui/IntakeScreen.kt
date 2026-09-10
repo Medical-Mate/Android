@@ -69,8 +69,9 @@ data class IntakeCallbacks(
     val onNextClick: () -> Unit = {},
     val onBodyViewChange: (BodyMapView) -> Unit = {},
     val onBodyDotClick: (String) -> Unit = {},
-    val onBodyPartToggle: (BodyMapSelection) -> Unit = {},
-    val onBodyFocusClear: () -> Unit = {},
+    val onBodySideAnchorClick: (String) -> Unit = {},
+    val onBodyPartSelect: (BodyMapSelection) -> Unit = {},
+    val onBodyAnchorReset: () -> Unit = {},
     val onBodyListModeToggle: () -> Unit = {},
     val onDraftChange: (String) -> Unit = {},
     val onSendClick: () -> Unit = {},
@@ -220,15 +221,7 @@ private fun IntakeBodyZonePreview() {
             state =
             IntakeUiState(
                 step = IntakeStep.BODY_PART,
-                bodyMap =
-                BodyMapUiState(
-                    focus = BodyMapSelection("ANC:014", side = BodyMapSide.LEFT),
-                    selected =
-                    listOf(
-                        BodyMapSelection("ANC:014", "SUR:091", BodyMapSide.LEFT),
-                        BodyMapSelection("ANC:014", "SUR:097", BodyMapSide.LEFT),
-                    ),
-                ),
+                bodyMap = BodyMapUiState(selection = BodyMapSelection("ANC:014", side = BodyMapSide.LEFT)),
             ),
             callbacks = IntakeCallbacks(),
         )

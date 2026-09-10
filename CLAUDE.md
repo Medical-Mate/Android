@@ -439,7 +439,7 @@ com.mist.medicalmate/
 
 | 항목 | 상태 |
 | -- | -- |
-| 유닛 테스트 | `LoginViewModel` 13건, `SessionViewModel` 17건, `HomeViewModel` 9건, `IntakeViewModel` 26건, `BodyMapGeometry` 22건, `BodyMapLayout` 7건, `BriefCardViewModel` 8건, `RecordDetailViewModel` 10건, `MyProfileViewModel` 5건, `HealthEditViewModel` 11건, `HospitalPickViewModel` 10건, `VisitRecordViewModel` 11건, `VisitNoteViewModel` 6건, `CalendarViewModel` 7건, `ProfileSetupViewModel` 7건, `HomeSchedule` 4건, `TokenAuthenticator` 7건, 템플릿 1개 |
+| 유닛 테스트 | `LoginViewModel` 13건, `SessionViewModel` 17건, `HomeViewModel` 9건, `IntakeViewModel` 21건, `BodyMapGeometry` 14건, `BodyMapLayout` 7건, `BriefCardViewModel` 8건, `RecordDetailViewModel` 10건, `MyProfileViewModel` 5건, `HealthEditViewModel` 11건, `HospitalPickViewModel` 10건, `VisitRecordViewModel` 11건, `VisitNoteViewModel` 6건, `CalendarViewModel` 7건, `ProfileSetupViewModel` 7건, `HomeSchedule` 4건, `TokenAuthenticator` 7건, 템플릿 1개 |
 | 네비게이션 테스트 | 없음. `NavHost`는 계측 테스트가 필요하고 CI가 androidTest를 실행하지 않음 |
 | 아키텍처 패턴 | MVVM 확정. UseCase는 필요할 때만 |
 | DI | Hilt 확정 |
@@ -462,8 +462,9 @@ com.mist.medicalmate/
 | 신상정보 입력(1b) | 1b-1~1b-3 화면과 1b-4 완료 모션, 홈 등록 완료 토스트까지 구현. **서버 저장 미연동** |
 | 증상 정리(1l·1c·1d·1i) | 네 단계 화면 구현. AI 응답과 음성 인식 미연동 |
 | 아픈 부위(1l) | 인체도 구현 완료. 앞뒤 전환 · 앵커 9개 · 확대 후 구역 25개 · 팔·다리 좌우 반전 · 전신·피부 칩 · 진료과 안내 · 목록 대안. 부위 id는 AI 트랙의 온톨로지(`ANC:*` · `SUR:*`)를 쓰고 이름과 진료과는 `BodyMapOntologyFixture.kt`가 픽스처로 들고 있다. 서버 연동 시 그 파일만 지운다 |
-| 부위 다중선택 | 세부 구역은 여러 곳을 고른다. 앵커는 고르는 대상이 아니라 확대해 들어가는 입구라 하나만 열린다(`focus`). 고른 목록은 `selected`이고 세 화면 모두 아래에 보여준다. 좌우가 갈리는 부위는 왼쪽과 오른쪽이 서로 다른 값이라 따로 고른다. 상한은 두지 않았다 |
-| 부위 좌우 판정 | 팔·다리는 좌우가 이미지 한 장을 공유해서 왼쪽과 오른쪽이 서로 다른 확대 화면이다. 나머지 앵커는 한 이미지에 좌우 구역이 함께 있다. 이 차이를 `BodyMapSelection.belongsTo`가 담는다. 좌우를 무조건 비교하면 머리를 확대해 왼쪽 눈을 골랐을 때 그 선택이 어디에도 속하지 않는다 |
+| 부위 선택 개수 | 한 곳만 고른다. 다중선택을 넣었다가 되돌렸다. 고른 부위는 판 안의 알약과 브랜드색 점으로 보여준다 |
+| 진료과 안내 | 없다. 응답(`docs/examples/body-map.json`)이 부위별 진료과를 함께 주지만 화면에 넣지 않았고, 픽스처에도 담지 않았다. 넣게 되면 응답에서 다시 가져온다 |
+| 부위 이름 조사 | 물음의 주격 조사를 문자열 리소스에 박지 않는다. 부위가 25가지라 `%1$s가`로 고정하면 "무릎가"가 된다. 문구는 리소스에, 조사는 `withSubjectParticle`이 계산해 `IntakeUiState.bodyPartSubject`로 넘긴다 |
 | 브리핑 카드(1e·1f) | 카드 읽기·전체 수정·진료실 화면 구현. 카드 내용은 픽스처. AI 응답과 저장 미연동 |
 | 진료 후 기록(1m·1p·1q·1k) | 네 화면 구현. 병원 검색·메모·자동 분류·정리. 내용은 픽스처이고 AI 분류와 저장은 미연동. 캘린더 일자의 "진료 후 기록하기"에서 들어간다 |
 | 기록·캘린더(1j·1r) | 다섯 화면 구현. 목록에서 기록 상세(1j-3)로, 상세의 카드 열기에서 브리핑 카드로 이어짐. 목록·상세·일정은 픽스처. 할 일 체크와 일정 추가는 저장 미연동 |

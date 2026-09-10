@@ -57,14 +57,13 @@ class IntakeViewModelTest {
     }
 
     @Test
-    fun `앵커를 짚는 것은 확대일 뿐 고른 것이 아니다`() {
+    fun `앵커만 짚으면 구역이 남아 아직 넘어갈 수 없다`() {
         val viewModel = IntakeViewModel()
 
         viewModel.bodyMap.onDotClick("ANC:004@CENTER")
 
         val state = viewModel.uiState.value
         assertTrue(state.bodyMap.pickingZone)
-        assertEquals(emptyList<BodyMapSelection>(), state.bodyMap.selected)
         assertFalse(state.canLeaveBodyPart)
         assertEquals(IntakeStep.BODY_PART, state.step)
     }
@@ -86,71 +85,12 @@ class IntakeViewModelTest {
     }
 
     @Test
-    fun `한 앵커에서 구역 여럿을 고른다`() {
-        val viewModel = IntakeViewModel()
-
-        viewModel.bodyMap.onDotClick("ANC:014@LEFT")
-        viewModel.bodyMap.onDotClick("SUR:091@LEFT")
-        viewModel.bodyMap.onDotClick("SUR:097@LEFT")
-
-        val bodyMap = viewModel.uiState.value.bodyMap
-        assertEquals(2, bodyMap.selected.size)
-        assertEquals(2, bodyMap.selectedInFocus.size)
-        assertTrue(viewModel.uiState.value.canLeaveBodyPart)
-    }
-
-    @Test
-    fun `고른 구역을 다시 누르면 빠진다`() {
-        val viewModel = IntakeViewModel()
-        viewModel.bodyMap.onDotClick("ANC:014@LEFT")
-        viewModel.bodyMap.onDotClick("SUR:091@LEFT")
-
-        viewModel.bodyMap.onDotClick("SUR:091@LEFT")
-
-        assertEquals(emptyList<BodyMapSelection>(), viewModel.uiState.value.bodyMap.selected)
-        assertFalse(viewModel.uiState.value.canLeaveBodyPart)
-    }
-
-    @Test
-    fun `다른 앵커로 옮겨도 앞서 고른 것이 남는다`() {
-        val viewModel = IntakeViewModel()
-        viewModel.bodyMap.onDotClick("ANC:014@LEFT")
-        viewModel.bodyMap.onDotClick("SUR:091@LEFT")
-
-        viewModel.bodyMap.onFocusClear()
-        viewModel.bodyMap.onDotClick("ANC:004@CENTER")
-        viewModel.bodyMap.onDotClick("SUR:031@RIGHT")
-
-        val bodyMap = viewModel.uiState.value.bodyMap
-        assertEquals(2, bodyMap.selected.size)
-        // 확대 중인 앵커의 것만 알약에 나온다
-        assertEquals(1, bodyMap.selectedInFocus.size)
-
-        viewModel.onNext()
-
-        assertEquals("왼쪽 무릎, 오른쪽 윗배(명치)", viewModel.uiState.value.bodyPart)
-    }
-
-    @Test
-    fun `고른 순서대로 문장이 된다`() {
-        val viewModel = IntakeViewModel()
-
-        viewModel.bodyMap.onPartToggle(BodyMapSelection("ANC:011"))
-        viewModel.bodyMap.onPartToggle(BodyMapSelection("ANC:001", "SUR:004"))
-        viewModel.onNext()
-
-        assertEquals("피부, 코", viewModel.uiState.value.bodyPart)
-        assertTrue(viewModel.uiState.value.messages.first().text.startsWith("피부, 코가 불편하시군요"))
-    }
-
-    @Test
     fun `전신과 피부는 구역이 없어 칩만 누르면 정해진다`() {
         val viewModel = IntakeViewModel()
 
-        viewModel.bodyMap.onDotClick("ANC:011@CENTER")
+        viewModel.bodyMap.onSideAnchorClick("ANC:011")
 
         assertTrue(viewModel.uiState.value.canLeaveBodyPart)
-        assertEquals(null, viewModel.uiState.value.bodyMap.focus)
 
         viewModel.onNext()
 
@@ -158,41 +98,39 @@ class IntakeViewModelTest {
     }
 
     @Test
-    fun `구역 단계에서 뒤로 가면 앵커 화면으로 돌아가고 고른 것은 남는다`() {
+    fun `구역 단계에서 뒤로 가면 앵커 선택으로 돌아간다`() {
         val viewModel = IntakeViewModel()
         viewModel.bodyMap.onDotClick("ANC:001@CENTER")
-        viewModel.bodyMap.onDotClick("SUR:004@CENTER")
 
         viewModel.onBack()
 
         val state = viewModel.uiState.value
         assertEquals(IntakeStep.BODY_PART, state.step)
-        assertEquals(null, state.bodyMap.focus)
-        assertEquals(1, state.bodyMap.selected.size)
+        assertEquals(null, state.bodyMap.selection)
         assertFalse(state.canGoBack)
     }
 
     @Test
     fun `앞뒤를 바꿔도 고른 부위는 남는다`() {
         val viewModel = IntakeViewModel()
-        viewModel.bodyMap.onPartToggle(BodyMapSelection("ANC:010"))
+        viewModel.bodyMap.onSideAnchorClick("ANC:010")
 
         viewModel.bodyMap.onViewChange(BodyMapView.BACK)
 
         val state = viewModel.uiState.value
         assertEquals(BodyMapView.BACK, state.bodyMap.view)
-        assertEquals(listOf(BodyMapSelection("ANC:010")), state.bodyMap.selected)
+        assertEquals("ANC:010", state.bodyMap.selection?.anchorId)
     }
 
     @Test
     fun `목록과 인체도를 오가도 고른 부위는 남는다`() {
         val viewModel = IntakeViewModel()
-        viewModel.bodyMap.onPartToggle(BodyMapSelection("ANC:003", "SUR:022", BodyMapSide.RIGHT))
+        viewModel.bodyMap.onPartSelect(BodyMapSelection("ANC:003", "SUR:022", BodyMapSide.RIGHT))
 
         viewModel.bodyMap.onListModeToggle()
 
         assertTrue(viewModel.uiState.value.bodyMap.byList)
-        assertEquals("SUR:022", viewModel.uiState.value.bodyMap.selected.single().zoneId)
+        assertEquals("SUR:022", viewModel.uiState.value.bodyMap.selection?.zoneId)
 
         viewModel.bodyMap.onListModeToggle()
 
@@ -284,21 +222,11 @@ class IntakeViewModelTest {
     fun `받침이 없으면 조사가 가가 된다`() {
         val viewModel = IntakeViewModel()
 
-        viewModel.bodyMap.onPartToggle(BodyMapSelection("ANC:001", "SUR:004"))
+        viewModel.bodyMap.onPartSelect(BodyMapSelection("ANC:001", "SUR:004"))
         viewModel.onNext()
 
         assertEquals("코가", viewModel.uiState.value.bodyPartSubject)
-    }
-
-    @Test
-    fun `여러 곳을 고르면 마지막 이름에만 조사가 붙는다`() {
-        val viewModel = IntakeViewModel()
-
-        viewModel.bodyMap.onPartToggle(BodyMapSelection("ANC:001", "SUR:004"))
-        viewModel.bodyMap.onPartToggle(BodyMapSelection("ANC:014", "SUR:102", BodyMapSide.RIGHT))
-        viewModel.onNext()
-
-        assertEquals("코, 오른쪽 발이", viewModel.uiState.value.bodyPartSubject)
+        assertTrue(viewModel.uiState.value.messages.first().text.startsWith("코가 불편하시군요"))
     }
 
     @Test

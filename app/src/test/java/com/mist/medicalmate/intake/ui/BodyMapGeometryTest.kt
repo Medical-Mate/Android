@@ -113,8 +113,8 @@ class BodyMapGeometryTest {
         val leg = bodyMapAnchorOf("ANC:014")
         val knee = leg.zones.first { it.id == "SUR:091" }.points.single()
 
-        val right = bodyMapZoneDots(leg, BodyMapSide.RIGHT, emptyList()).first { it.id == "SUR:091@RIGHT" }
-        val left = bodyMapZoneDots(leg, BodyMapSide.LEFT, emptyList()).first { it.id == "SUR:091@LEFT" }
+        val right = bodyMapZoneDots(leg, BodyMapSide.RIGHT, null).first { it.id == "SUR:091@RIGHT" }
+        val left = bodyMapZoneDots(leg, BodyMapSide.LEFT, null).first { it.id == "SUR:091@LEFT" }
 
         assertEquals(knee.x, right.x, TOLERANCE)
         assertEquals(1f - knee.x, left.x, TOLERANCE)
@@ -123,7 +123,7 @@ class BodyMapGeometryTest {
 
     @Test
     fun `점 id는 좌우까지 구분한다`() {
-        val eyes = bodyMapZoneDots(bodyMapAnchorOf("ANC:001"), BodyMapSide.CENTER, emptyList())
+        val eyes = bodyMapZoneDots(bodyMapAnchorOf("ANC:001"), BodyMapSide.CENTER, null)
             .filter { it.id.startsWith("SUR:002") }
 
         assertEquals(listOf("SUR:002@RIGHT", "SUR:002@LEFT"), eyes.map { it.id })
@@ -132,104 +132,12 @@ class BodyMapGeometryTest {
     }
 
     @Test
-    fun `앵커 점은 그 안에서 구역을 골랐을 때만 켜진다`() {
-        val picked = listOf(BodyMapSelection("ANC:013", "SUR:061", BodyMapSide.LEFT))
-        val dots = bodyMapAnchorDots(BodyMapView.FRONT, picked)
+    fun `짚은 점만 고른 상태로 그려진다`() {
+        val selection = BodyMapSelection("ANC:013", side = BodyMapSide.LEFT)
+        val dots = bodyMapAnchorDots(BodyMapView.FRONT, selection)
 
         assertTrue(dots.single { it.id == "ANC:013@LEFT" }.selected)
         assertFalse(dots.single { it.id == "ANC:013@RIGHT" }.selected)
-    }
-
-    @Test
-    fun `앵커를 짚기만 해서는 켜지지 않는다`() {
-        val dots = bodyMapAnchorDots(BodyMapView.FRONT, emptyList())
-
-        assertTrue(dots.none { it.selected })
-    }
-
-    @Test
-    fun `고른 구역만 켜진다`() {
-        val head = bodyMapAnchorOf("ANC:001")
-        val picked =
-            listOf(
-                BodyMapSelection("ANC:001", "SUR:002", BodyMapSide.LEFT),
-                BodyMapSelection("ANC:001", "SUR:004"),
-            )
-        val dots = bodyMapZoneDots(head, BodyMapSide.CENTER, picked)
-
-        assertEquals(
-            listOf("SUR:002@LEFT", "SUR:004@CENTER"),
-            dots.filter { it.selected }.map { it.id },
-        )
-    }
-
-    @Test
-    fun `좌우가 갈리는 부위는 왼쪽과 오른쪽을 따로 고른다`() {
-        val head = bodyMapAnchorOf("ANC:001")
-        val both =
-            listOf(
-                BodyMapSelection("ANC:001", "SUR:003", BodyMapSide.LEFT),
-                BodyMapSelection("ANC:001", "SUR:003", BodyMapSide.RIGHT),
-            )
-        val dots = bodyMapZoneDots(head, BodyMapSide.CENTER, both)
-
-        assertEquals(2, dots.count { it.selected && it.id.startsWith("SUR:003") })
-    }
-
-    @Test
-    fun `앵커가 가운데여도 좌우로 갈린 구역이 그 앵커에 속한다`() {
-        val leftEye = BodyMapSelection("ANC:001", "SUR:002", BodyMapSide.LEFT)
-
-        // 머리 앵커의 좌우는 CENTER인데 고른 구역은 LEFT다
-        assertTrue(leftEye.belongsTo("ANC:001", BodyMapSide.CENTER))
-        assertTrue(bodyMapAnchorDots(BodyMapView.FRONT, listOf(leftEye)).single { it.id == "ANC:001@CENTER" }.selected)
-    }
-
-    @Test
-    fun `좌우 공용 이미지는 반대쪽 선택을 자기 것으로 보지 않는다`() {
-        val leftKnee = BodyMapSelection("ANC:014", "SUR:091", BodyMapSide.LEFT)
-
-        assertTrue(leftKnee.belongsTo("ANC:014", BodyMapSide.LEFT))
-        assertFalse(leftKnee.belongsTo("ANC:014", BodyMapSide.RIGHT))
-
-        val dots = bodyMapAnchorDots(BodyMapView.FRONT, listOf(leftKnee))
-        assertTrue(dots.single { it.id == "ANC:014@LEFT" }.selected)
-        assertFalse(dots.single { it.id == "ANC:014@RIGHT" }.selected)
-    }
-
-    @Test
-    fun `고른 부위들을 한 문장으로 잇는다`() {
-        val picked =
-            listOf(
-                BodyMapSelection("ANC:014", "SUR:091", BodyMapSide.LEFT),
-                BodyMapSelection("ANC:014", "SUR:097", BodyMapSide.LEFT),
-                BodyMapSelection("ANC:011"),
-            )
-
-        assertEquals("왼쪽 무릎, 왼쪽 종아리, 피부", picked.partsText())
-    }
-
-    @Test
-    fun `여러 부위의 진료과는 겹치지 않게 모은다`() {
-        val picked =
-            listOf(
-                BodyMapSelection("ANC:003", "SUR:021"),
-                BodyMapSelection("ANC:004", "SUR:032", BodyMapSide.LEFT),
-            )
-
-        assertEquals(
-            listOf("내과", "심장내과", "호흡기내과", "소화기내과", "산부인과", "비뇨의학과"),
-            picked.departments(),
-        )
-    }
-
-    @Test
-    fun `진료과가 빈 구역은 앵커의 진료과를 쓴다`() {
-        val knee = BodyMapSelection("ANC:014", "SUR:091", BodyMapSide.LEFT)
-        val eye = BodyMapSelection("ANC:001", "SUR:002", BodyMapSide.LEFT)
-
-        assertEquals(listOf("정형외과"), knee.departments())
-        assertEquals(listOf("안과"), eye.departments())
     }
 
     @Test

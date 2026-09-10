@@ -87,6 +87,6 @@ internal fun bodyMapCardHeight(dots: List<BodyMapDot>, image: BodyMapImage): Dp 
  * 사라진다.
  */
 internal fun bodyMapBodyHeight(): Dp = maxOf(
-    bodyMapMinHeight(bodyMapAnchorDots(BodyMapView.FRONT, emptyList()), bodyMapFront.aspectRatio),
-    bodyMapMinHeight(bodyMapAnchorDots(BodyMapView.BACK, emptyList()), bodyMapBack.aspectRatio),
+    bodyMapMinHeight(bodyMapAnchorDots(BodyMapView.FRONT, null), bodyMapFront.aspectRatio),
+    bodyMapMinHeight(bodyMapAnchorDots(BodyMapView.BACK, null), bodyMapBack.aspectRatio),
 )
