@@ -112,14 +112,10 @@
     <string name="calendar_day_empty">이 날은 일정이 없어요</string>
 
     <string name="calendar_day_schedule">이 날 일정</string>
-    <string name="calendar_day_schedule_edit">수정</string>
     <string name="calendar_day_dday">D-%1$d</string>
     <string name="calendar_day_card">가져갈 브리핑 카드</string>
-    <string name="calendar_day_card_open">열기</string>
     <string name="calendar_day_todo">진료 전 할 일</string>
-    <string name="calendar_day_todo_add">추가</string>
     <string name="calendar_day_record">이 날 기록</string>
-    <string name="calendar_day_record_add">추가</string>
     <string name="calendar_day_record_empty_title">아직 진료 전이에요</string>
     <string name="calendar_day_record_empty_description">진료가 끝나면 들은 내용을 여기에 기록할 수 있어요</string>
     <string name="calendar_day_record_empty_action">진료 후 기록하기</string>
