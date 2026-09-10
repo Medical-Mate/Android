@@ -352,14 +352,9 @@ private fun ColumnScope.SelectedDay(state: CalendarUiState, onScheduleClick: (St
         color = MedicalMateTheme.colors.fgDefault,
         modifier = Modifier.padding(top = MedicalMateSpace.s10),
     )
-    if (state.schedules.isEmpty()) {
-        Text(
-            text = stringResource(R.string.calendar_day_empty),
-            style = MedicalMateTheme.typography.bodyM,
-            color = MedicalMateTheme.colors.fgSubtle,
-        )
-        return
-    }
+    // 시안 `1185:13797`이 일정 없는 날에 제목만 두고 아래를 비운다. 그 날 무엇을 할지는
+    // 아래 + 버튼이 이미 말하고 있어서 "일정이 없어요"를 한 줄 더 적을 자리가 아니다.
+    if (state.schedules.isEmpty()) return
     state.schedules.forEach { schedule ->
         MedicalMateCard(onClick = { onScheduleClick(schedule.id) }) {
             Row(

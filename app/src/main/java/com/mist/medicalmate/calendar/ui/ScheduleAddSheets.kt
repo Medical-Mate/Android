@@ -19,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -186,8 +187,8 @@ private fun DateGrid(month: YearMonth, picked: LocalDate, today: LocalDate, onDa
 private fun TimeSheet(initial: LocalTime?, onConfirm: (LocalTime) -> Unit, onDismissRequest: () -> Unit) {
     val start = initial ?: DefaultTime
     var afternoon by remember { mutableStateOf(start.hour >= NOON) }
-    var hour by remember { mutableStateOf(start.hour % NOON) }
-    var minute by remember { mutableStateOf(if (start.minute < HALF_HOUR) 0 else HALF_HOUR) }
+    var hour by remember { mutableIntStateOf(start.hour % NOON) }
+    var minute by remember { mutableIntStateOf(if (start.minute < HALF_HOUR) 0 else HALF_HOUR) }
 
     MedicalMateBottomSheet(onDismissRequest = onDismissRequest) {
         SheetTitle(stringResource(R.string.schedule_add_time_sheet))
