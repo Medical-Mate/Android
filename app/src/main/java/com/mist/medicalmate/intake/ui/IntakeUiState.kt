@@ -64,14 +64,14 @@ data class IntakeUiState(
     /**
      * 첫 단계에서 뒤로 가면 흐름을 벗어난다. 그 판단은 호출자가 한다.
      *
-     * 인체도의 구역 단계는 화면이 바뀌지 않고 같은 단계 안에서 깊어진다. 그래서 앵커를
-     * 고른 상태에서 뒤로 가면 흐름을 벗어나는 대신 앵커 선택으로 돌아간다.
+     * 인체도의 구역 단계는 화면이 바뀌지 않고 같은 단계 안에서 깊어진다. 그래서 확대한
+     * 상태에서 뒤로 가면 흐름을 벗어나는 대신 앵커 화면으로 돌아간다.
      */
     val canGoBack: Boolean
-        get() = step != IntakeStep.entries.first() || bodyMap.selection != null
+        get() = step != IntakeStep.entries.first() || bodyMap.focus != null
 
-    /** 부위를 다 고르기 전에는 다음으로 갈 수 없다. */
-    val canLeaveBodyPart: Boolean get() = bodyMap.selection?.isComplete == true
+    /** 부위를 고르기 전에는 다음으로 갈 수 없다. */
+    val canLeaveBodyPart: Boolean get() = bodyMap.selection != null
 
     /**
      * 주격 조사를 붙인 부위 이름. 부위를 부르는 물음이 이 값을 쓴다.

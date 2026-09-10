@@ -84,10 +84,10 @@ data class BodyMapAnchorGeometry(
 internal data class BodyMapDot(val id: String, val label: String, val x: Float, val y: Float, val selected: Boolean)
 
 /**
- * 고른 부위.
+ * 부위 하나를 가리키는 값.
  *
- * [zoneId]가 null이면 앵커까지만 고른 상태다. 전신·피부는 구역이 없어서 계속 null이고,
- * 나머지는 구역 단계를 지나면 채워진다.
+ * 고른 부위와 확대해서 보고 있는 앵커가 같은 타입이다. [zoneId]가 null이면 앵커까지만
+ * 가리킨 것이고, 그것이 확대 대상이거나 구역이 없는 앵커(전신·피부)다.
  *
  * [side]는 좌우 구분이 있는 부위에서만 의미가 있다. 없는 부위는 [BodyMapSide.CENTER]다.
  */
@@ -96,8 +96,21 @@ data class BodyMapSelection(
     val anchorId: String,
     val zoneId: String? = null,
     val side: BodyMapSide = BodyMapSide.CENTER,
-) {
-    val isComplete: Boolean get() = zoneId != null || bodyMapZonesOf(anchorId).isEmpty()
+)
+
+/**
+ * 이 선택이 [anchorId] · [side]로 열리는 확대 화면에 속하는지.
+ *
+ * 좌우 공용 이미지를 쓰는 앵커(팔·다리)는 왼쪽과 오른쪽이 서로 다른 화면이라 좌우까지
+ * 봐야 한다. 나머지 앵커는 한 이미지에 좌우 구역이 함께 있어서 앵커만 맞으면 된다.
+ *
+ * 이 구분이 없으면 머리를 확대해 왼쪽 눈을 골랐을 때 머리 점의 고른 표시가 켜지지
+ * 않는다. 머리 앵커의 좌우는 `CENTER`이고 고른 구역의 좌우는 `LEFT`이기 때문이다.
+ */
+internal fun BodyMapSelection.belongsTo(anchorId: String, side: BodyMapSide): Boolean {
+    if (this.anchorId != anchorId) return false
+    val sharedImage = bodyMapAnchorOf(anchorId).detail?.mirrored == true
+    return !sharedImage || this.side == side
 }
 
 /** 앵커를 id로 찾는다. 좌표표와 온톨로지가 같은 9개를 담고 있어서 없을 수 없다. */

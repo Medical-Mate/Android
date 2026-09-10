@@ -77,16 +77,24 @@ private fun AnchorPicker(state: BodyMapUiState, callbacks: IntakeCallbacks) {
     ListModeButton(byList = false, callbacks = callbacks)
 }
 
-/** 구역 단계. 짚은 앵커를 확대해 세부 구역을 고른다. 1l-2다. */
+/**
+ * 구역 단계. 짚은 앵커를 확대해 세부 구역을 고른다. 1l-2다.
+ *
+ * 고른 뒤에도 이 화면에 머문다. 고른 점이 브랜드색으로 바뀌고 판 아래 알약에 이름이
+ * 나오는데, 곧바로 앵커 화면으로 돌아가면 그 둘을 볼 수 없다.
+ *
+ * 제목과 좌우 반전은 확대한 앵커([BodyMapUiState.focus])를 본다. 고른 구역을 보면 머리에서
+ * 왼쪽 눈을 골랐을 때 제목이 "왼쪽 머리 어디가 아프세요?"가 된다.
+ */
 @Composable
 private fun ZonePicker(state: BodyMapUiState, callbacks: IntakeCallbacks) {
     val anchor = state.anchor
     val detail = anchor?.detail
-    val selection = state.selection
-    if (anchor == null || detail == null || selection == null) return
-    val dots = bodyMapZoneDots(anchor, selection.side, selection)
+    val focus = state.focus
+    if (anchor == null || detail == null || focus == null) return
+    val dots = bodyMapZoneDots(anchor, focus.side, state.selection)
     Text(
-        text = stringResource(R.string.body_map_zone_question, selection.title()),
+        text = stringResource(R.string.body_map_zone_question, focus.title()),
         style = MedicalMateTheme.typography.headingL,
         color = MedicalMateTheme.colors.fgDefault,
     )
@@ -98,19 +106,19 @@ private fun ZonePicker(state: BodyMapUiState, callbacks: IntakeCallbacks) {
     BodyMapCard(
         height = bodyMapCardHeight(dots, detail),
         orientationLabels = detail.view == BodyMapView.FRONT && !detail.mirrored,
-        caption = selection.zoneId?.let { selection.label() },
+        caption = state.selection?.takeIf { it.belongsTo(focus.anchorId, focus.side) }?.label(),
     ) {
         BodyMapCanvas(
             image = detail,
             dots = dots,
             onDotClick = { callbacks.onBodyDotClick(it) },
-            mirrored = detail.mirrored && selection.side == BodyMapSide.LEFT,
+            mirrored = detail.mirrored && focus.side == BodyMapSide.LEFT,
             modifier = Modifier.fillMaxSize(),
         )
     }
     MedicalMateButton(
-        onClick = callbacks.onBodyAnchorReset,
-        label = stringResource(R.string.body_map_reset_anchor),
+        onClick = callbacks.onBodyFocusClear,
+        label = stringResource(R.string.body_map_other_anchor),
         type = MedicalMateButtonType.OUTLINE,
         size = MedicalMateButtonSize.M,
         modifier = Modifier.fillMaxWidth(),
@@ -128,7 +136,7 @@ private fun SideAnchorChips(state: BodyMapUiState, callbacks: IntakeCallbacks) {
         bodyMapSideAnchors.forEach { anchor ->
             MedicalMateChip(
                 label = bodyMapLabelOf(anchor.id),
-                selected = state.selection?.anchorId == anchor.id,
+                selected = state.selection == BodyMapSelection(anchor.id),
                 onClick = { callbacks.onBodySideAnchorClick(anchor.id) },
             )
         }

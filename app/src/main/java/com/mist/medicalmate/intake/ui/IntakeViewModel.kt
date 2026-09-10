@@ -165,13 +165,14 @@ constructor() : ViewModel() {
     /**
      * 이전으로.
      *
-     * 인체도에서 구역을 고르는 중이면 단계를 내리는 대신 앵커 선택으로 돌아간다. 화면이
-     * 바뀌지 않고 같은 단계 안에서 깊어진 상태라 뒤로 가는 곳도 그 안이다.
+     * 인체도에서 구역을 고르는 중이면 단계를 내리는 대신 앵커 화면으로 돌아간다. 화면이
+     * 바뀌지 않고 같은 단계 안에서 깊어진 상태라 뒤로 가는 곳도 그 안이다. 고른 부위는
+     * 남는다.
      */
     fun onBack() {
         val state = mutableUiState.value
         if (state.step == IntakeStep.BODY_PART) {
-            if (state.bodyMap.selection != null) bodyMap.onAnchorReset()
+            if (state.bodyMap.focus != null) bodyMap.onFocusClear()
             return
         }
         mutableUiState.update { it.copy(step = IntakeStep.entries[it.step.ordinal - 1]) }

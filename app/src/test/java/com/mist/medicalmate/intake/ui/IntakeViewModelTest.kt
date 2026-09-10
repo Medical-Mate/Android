@@ -57,15 +57,95 @@ class IntakeViewModelTest {
     }
 
     @Test
-    fun `앵커만 짚으면 구역이 남아 아직 넘어갈 수 없다`() {
+    fun `앵커를 짚는 것은 확대일 뿐 고른 것이 아니다`() {
         val viewModel = IntakeViewModel()
 
         viewModel.bodyMap.onDotClick("ANC:004@CENTER")
 
         val state = viewModel.uiState.value
         assertTrue(state.bodyMap.pickingZone)
+        assertEquals(null, state.bodyMap.selection)
         assertFalse(state.canLeaveBodyPart)
         assertEquals(IntakeStep.BODY_PART, state.step)
+    }
+
+    @Test
+    fun `구역을 고른 뒤에도 확대 화면에 머문다`() {
+        val viewModel = IntakeViewModel()
+        viewModel.bodyMap.onDotClick("ANC:014@LEFT")
+
+        viewModel.bodyMap.onDotClick("SUR:091@LEFT")
+
+        val bodyMap = viewModel.uiState.value.bodyMap
+        // 고른 점과 이름을 볼 수 있어야 한다. 앵커 화면으로 튕기면 둘 다 못 본다.
+        assertTrue(bodyMap.pickingZone)
+        assertEquals("ANC:014", bodyMap.focus?.anchorId)
+        assertEquals("SUR:091", bodyMap.selection?.zoneId)
+    }
+
+    @Test
+    fun `확대한 앵커의 좌우가 고른 구역의 좌우에 덮이지 않는다`() {
+        val viewModel = IntakeViewModel()
+        viewModel.bodyMap.onDotClick("ANC:001@CENTER")
+
+        viewModel.bodyMap.onDotClick("SUR:002@LEFT")
+
+        val bodyMap = viewModel.uiState.value.bodyMap
+        // 제목이 "왼쪽 머리 어디가 아프세요?"가 되면 안 된다
+        assertEquals("머리", bodyMap.focus?.title())
+        assertEquals("왼쪽 눈", bodyMap.selection?.title())
+    }
+
+    @Test
+    fun `고른 구역은 확대 화면과 목록에서 같은 값으로 표시된다`() {
+        val viewModel = IntakeViewModel()
+        viewModel.bodyMap.onDotClick("ANC:014@LEFT")
+        viewModel.bodyMap.onDotClick("SUR:091@LEFT")
+
+        val bodyMap = viewModel.uiState.value.bodyMap
+        val anchor = requireNotNull(bodyMap.anchor)
+        val focus = requireNotNull(bodyMap.focus)
+
+        val litDot = bodyMapZoneDots(anchor, focus.side, bodyMap.selection).single { it.selected }
+        val checkedRow = bodyMapZoneChoices(anchor, focus.side).single { it == bodyMap.selection }
+
+        assertEquals(litDot.label, checkedRow.title())
+    }
+
+    @Test
+    fun `다른 구역을 누르면 앞서 고른 것을 대신한다`() {
+        val viewModel = IntakeViewModel()
+        viewModel.bodyMap.onDotClick("ANC:014@LEFT")
+        viewModel.bodyMap.onDotClick("SUR:091@LEFT")
+
+        viewModel.bodyMap.onDotClick("SUR:097@LEFT")
+
+        assertEquals("SUR:097", viewModel.uiState.value.bodyMap.selection?.zoneId)
+    }
+
+    @Test
+    fun `확대를 닫아도 고른 부위는 남는다`() {
+        val viewModel = IntakeViewModel()
+        viewModel.bodyMap.onDotClick("ANC:014@LEFT")
+        viewModel.bodyMap.onDotClick("SUR:091@LEFT")
+
+        viewModel.bodyMap.onFocusClear()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.bodyMap.pickingZone)
+        assertEquals("SUR:091", state.bodyMap.selection?.zoneId)
+        assertTrue(state.canLeaveBodyPart)
+    }
+
+    @Test
+    fun `목록에서 앵커 줄을 누르면 확대만 되고 골라지지 않는다`() {
+        val viewModel = IntakeViewModel()
+
+        viewModel.bodyMap.onAnchorFocus(BodyMapSelection("ANC:013", side = BodyMapSide.RIGHT))
+
+        val bodyMap = viewModel.uiState.value.bodyMap
+        assertTrue(bodyMap.pickingZone)
+        assertEquals(null, bodyMap.selection)
     }
 
     @Test
@@ -88,7 +168,7 @@ class IntakeViewModelTest {
     fun `전신과 피부는 구역이 없어 칩만 누르면 정해진다`() {
         val viewModel = IntakeViewModel()
 
-        viewModel.bodyMap.onSideAnchorClick("ANC:011")
+        viewModel.bodyMap.onSideAnchorSelect("ANC:011")
 
         assertTrue(viewModel.uiState.value.canLeaveBodyPart)
 
@@ -98,7 +178,7 @@ class IntakeViewModelTest {
     }
 
     @Test
-    fun `구역 단계에서 뒤로 가면 앵커 선택으로 돌아간다`() {
+    fun `구역 단계에서 뒤로 가면 앵커 화면으로 돌아간다`() {
         val viewModel = IntakeViewModel()
         viewModel.bodyMap.onDotClick("ANC:001@CENTER")
 
@@ -106,14 +186,14 @@ class IntakeViewModelTest {
 
         val state = viewModel.uiState.value
         assertEquals(IntakeStep.BODY_PART, state.step)
-        assertEquals(null, state.bodyMap.selection)
+        assertEquals(null, state.bodyMap.focus)
         assertFalse(state.canGoBack)
     }
 
     @Test
     fun `앞뒤를 바꿔도 고른 부위는 남는다`() {
         val viewModel = IntakeViewModel()
-        viewModel.bodyMap.onSideAnchorClick("ANC:010")
+        viewModel.bodyMap.onSideAnchorSelect("ANC:010")
 
         viewModel.bodyMap.onViewChange(BodyMapView.BACK)
 

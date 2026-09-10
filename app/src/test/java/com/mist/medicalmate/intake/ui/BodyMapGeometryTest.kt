@@ -132,12 +132,40 @@ class BodyMapGeometryTest {
     }
 
     @Test
-    fun `짚은 점만 고른 상태로 그려진다`() {
-        val selection = BodyMapSelection("ANC:013", side = BodyMapSide.LEFT)
-        val dots = bodyMapAnchorDots(BodyMapView.FRONT, selection)
+    fun `앵커 점은 그 안에서 구역을 골랐을 때 켜진다`() {
+        val picked = BodyMapSelection("ANC:013", "SUR:061", BodyMapSide.LEFT)
+        val dots = bodyMapAnchorDots(BodyMapView.FRONT, picked)
 
         assertTrue(dots.single { it.id == "ANC:013@LEFT" }.selected)
         assertFalse(dots.single { it.id == "ANC:013@RIGHT" }.selected)
+    }
+
+    @Test
+    fun `앵커가 가운데여도 좌우로 갈린 구역이 그 앵커에 속한다`() {
+        val leftEye = BodyMapSelection("ANC:001", "SUR:002", BodyMapSide.LEFT)
+
+        // 머리 앵커의 좌우는 CENTER인데 고른 구역은 LEFT다
+        assertTrue(leftEye.belongsTo("ANC:001", BodyMapSide.CENTER))
+        assertTrue(bodyMapAnchorDots(BodyMapView.FRONT, leftEye).single { it.id == "ANC:001@CENTER" }.selected)
+    }
+
+    @Test
+    fun `좌우 공용 이미지는 반대쪽 선택을 자기 것으로 보지 않는다`() {
+        val leftKnee = BodyMapSelection("ANC:014", "SUR:091", BodyMapSide.LEFT)
+
+        assertTrue(leftKnee.belongsTo("ANC:014", BodyMapSide.LEFT))
+        assertFalse(leftKnee.belongsTo("ANC:014", BodyMapSide.RIGHT))
+    }
+
+    @Test
+    fun `목록의 선택지가 인체도의 점과 같다`() {
+        bodyMapAnchors.filter { it.zones.isNotEmpty() }.forEach { anchor ->
+            val side = anchor.points.firstOrNull()?.side ?: BodyMapSide.CENTER
+            val dots = bodyMapZoneDots(anchor, side, null)
+            val choices = bodyMapZoneChoices(anchor, side)
+
+            assertEquals(anchor.id, dots.map { it.label }, choices.map { it.title() })
+        }
     }
 
     @Test

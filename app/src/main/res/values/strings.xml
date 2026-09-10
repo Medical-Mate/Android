@@ -142,7 +142,8 @@
     <string name="body_map_orientation_left">LEFT</string>
     <string name="body_map_zone_question">%1$s 어디가 아프세요?</string>
     <string name="body_map_zone_description">더 짚어주시면 문답이 짧아져요. 애매하면 가까운 곳으로 고르셔도 괜찮아요.</string>
-    <string name="body_map_reset_anchor">부위 다시 고르기</string>
+    <string name="body_map_other_anchor">다른 부위 보기</string>
+    <string name="body_map_list_picked">고른 부위: %1$s</string>
     <string name="body_map_use_list">목록에서 고르기</string>
     <string name="body_map_use_image">인체도에서 고르기</string>
     <string name="body_map_list_question">아픈 부위를 골라주세요</string>
