@@ -8,6 +8,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import androidx.navigation.toRoute
 import kotlinx.serialization.Serializable
 
 /**
@@ -16,8 +17,20 @@ import kotlinx.serialization.Serializable
  * 병원 id가 라우트로 다음 화면에 건너간다. 어느 병원의 진료를 적는지가 목적지의 일부이고,
  * 화면이 다시 만들어질 때 살아 있어야 한다. 서버 연동 전에는 쓰이지 않고 픽스처가 나온다.
  */
+/**
+ * 와이어프레임 1m과 1m-B.
+ *
+ * [purpose]가 두 자리를 가른다. 라우트에 담는 이유는 어느 목적으로 열린 화면인지가 목적지의
+ * 일부이고, 화면이 다시 만들어질 때 살아 있어야 하기 때문이다.
+ *
+ * [cardId]는 브리핑 카드의 `변경`에서 들어온 경우에만 있다. 고른 뒤 그 카드로 돌아가야 해서
+ * 어느 카드였는지를 들고 간다.
+ */
 @Serializable
-internal data object HospitalPickDestination
+internal data class HospitalPickDestination(
+    val purpose: HospitalPickPurpose = HospitalPickPurpose.AFTER_VISIT,
+    val cardId: String? = null,
+)
 
 /** 와이어프레임 1p. */
 @Serializable
@@ -31,9 +44,25 @@ internal data class VisitRecordDestination(val hospitalId: String)
 @Serializable
 internal data class VisitSummaryDestination(val visitId: String)
 
-internal fun NavGraphBuilder.hospitalPickDestination(onPicked: (String) -> Unit, onExit: () -> Unit) {
-    composable<HospitalPickDestination> {
-        HospitalPickRoute(onPicked = onPicked, onExit = onExit)
+/**
+ * @param onPicked 진료 후(1m)에서 병원을 고르고 완료했을 때. 병원 id가 넘어간다.
+ * @param onCardRequested 진료 전(1m-B)에서 카드로 넘어갈 때. 고른 병원이 없으면 null이
+ *   넘어간다. 건너뛰기와 CTA가 같은 곳으로 가고, 다른 것은 병원을 들고 가는지뿐이다.
+ */
+internal fun NavGraphBuilder.hospitalPickDestination(
+    onPicked: (String) -> Unit,
+    onCardRequested: (cardId: String?, hospital: Hospital?) -> Unit,
+    onExit: () -> Unit,
+) {
+    composable<HospitalPickDestination> { entry ->
+        val route = entry.toRoute<HospitalPickDestination>()
+        HospitalPickRoute(
+            purpose = route.purpose,
+            cardId = route.cardId,
+            onPicked = onPicked,
+            onCardRequested = onCardRequested,
+            onExit = onExit,
+        )
     }
 }
 
@@ -57,22 +86,38 @@ internal fun NavGraphBuilder.visitSummaryDestination(onHome: () -> Unit, onExit:
 
 @Composable
 private fun HospitalPickRoute(
+    purpose: HospitalPickPurpose,
+    cardId: String?,
     onPicked: (String) -> Unit,
+    onCardRequested: (cardId: String?, hospital: Hospital?) -> Unit,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HospitalPickViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(Unit) { viewModel.load() }
+    LaunchedEffect(purpose) { viewModel.load(purpose) }
+
+    val before = purpose == HospitalPickPurpose.BEFORE_VISIT
+    val selected = state.results.firstOrNull { it.id == state.selectedId }
 
     HospitalPickScreen(
         state = state,
         onQueryChange = viewModel::onQueryChange,
         onHospitalClick = viewModel::onHospitalClick,
-        onSubmitClick = { state.selectedId?.let(onPicked) },
+        // 진료 후에는 고른 병원의 id만 다음 화면으로 간다. 진료 전에는 카드가 이름과 주소를
+        // 바로 그려야 해서 병원을 그대로 넘긴다.
+        onSubmitClick = {
+            if (before) onCardRequested(cardId, selected) else state.selectedId?.let(onPicked)
+        },
         onBackClick = onExit,
         modifier = modifier,
+        // 건너뛰기는 병원 없이 카드로 간다. 진료 전에만 있다.
+        onSkipClick = if (before) {
+            { onCardRequested(cardId, null) }
+        } else {
+            null
+        },
     )
 }
 

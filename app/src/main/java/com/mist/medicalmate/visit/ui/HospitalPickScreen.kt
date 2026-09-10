@@ -29,17 +29,24 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateBottomCtaBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateDivider
+import com.mist.medicalmate.core.designsystem.component.MedicalMateEmptyState
+import com.mist.medicalmate.core.designsystem.component.MedicalMateEmptyStateType
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSearchField
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
 
 /**
- * 와이어프레임 1m. Figma `489:5447`.
+ * 와이어프레임 1m과 1m-B. Figma `489:5447`, `1041:3687`.
  *
- * 진료를 받고 나서 어디서 받았는지 고른다. 이름으로 찾으면 주소가 함께 등록돼서, 환자가
- * 주소를 따로 적을 일이 없다.
+ * 이름으로 찾으면 주소가 함께 등록돼서 환자가 주소를 따로 적을 일이 없다.
  *
  * 하나만 고른다. 진료 한 건에 병원이 둘일 수 없다.
+ *
+ * **한 화면이 두 자리에서 쓰인다.** 진료 후(1m)와 진료 전(1m-B)이다. 검색과 목록과 선택이
+ * 같고 문구·CTA·건너뛰기만 [HospitalPickUiState.purpose]에 따라 갈린다. 화면을 둘로 만들면
+ * 검색 규칙이 두 곳에 생긴다.
+ *
+ * [onSkipClick]은 진료 전에만 있다. 없으면 Nav 우측이 비고, 그러면 1m이 된다.
  */
 @Composable
 fun HospitalPickScreen(
@@ -49,7 +56,9 @@ fun HospitalPickScreen(
     onSubmitClick: () -> Unit,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onSkipClick: (() -> Unit)? = null,
 ) {
+    val before = state.purpose == HospitalPickPurpose.BEFORE_VISIT
     Column(
         modifier =
         modifier
@@ -60,6 +69,8 @@ fun HospitalPickScreen(
             title = stringResource(R.string.hospital_pick_title),
             onLeadingClick = onBackClick,
             surface = MedicalMateSurfaceStyle.GLASS,
+            actionLabel = onSkipClick?.let { stringResource(R.string.hospital_pick_skip) },
+            onActionClick = onSkipClick,
         )
         PickContent(
             state = state,
@@ -68,7 +79,10 @@ fun HospitalPickScreen(
         )
         MedicalMateBottomCtaBar {
             MedicalMateButton(
-                label = stringResource(R.string.hospital_pick_submit),
+                label =
+                stringResource(
+                    if (before) R.string.hospital_pick_submit_before else R.string.hospital_pick_submit,
+                ),
                 onClick = onSubmitClick,
                 enabled = state.canSubmit,
                 modifier = Modifier.fillMaxWidth(),
@@ -83,6 +97,7 @@ private fun ColumnScope.PickContent(
     onQueryChange: (String) -> Unit,
     onHospitalClick: (String) -> Unit,
 ) {
+    val before = state.purpose == HospitalPickPurpose.BEFORE_VISIT
     Column(
         modifier =
         Modifier
@@ -94,12 +109,22 @@ private fun ColumnScope.PickContent(
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8)) {
             Text(
-                text = stringResource(R.string.hospital_pick_question),
+                text =
+                stringResource(
+                    if (before) R.string.hospital_pick_question_before else R.string.hospital_pick_question,
+                ),
                 style = MedicalMateTheme.typography.headingL,
                 color = MedicalMateTheme.colors.fgDefault,
             )
             Text(
-                text = stringResource(R.string.hospital_pick_description),
+                text =
+                stringResource(
+                    if (before) {
+                        R.string.hospital_pick_description_before
+                    } else {
+                        R.string.hospital_pick_description
+                    },
+                ),
                 style = MedicalMateTheme.typography.bodyM,
                 color = MedicalMateTheme.colors.fgSubtle,
             )
@@ -112,13 +137,39 @@ private fun ColumnScope.PickContent(
         )
         Column(verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12)) {
             Text(
-                text = stringResource(R.string.hospital_pick_result_count, state.results.size),
+                text =
+                if (state.results.isEmpty()) {
+                    stringResource(R.string.hospital_pick_result_none)
+                } else {
+                    stringResource(R.string.hospital_pick_result_count, state.results.size)
+                },
                 style = MedicalMateTheme.typography.labelM,
                 color = MedicalMateTheme.colors.fgSubtle,
             )
-            Results(state = state, onHospitalClick = onHospitalClick)
+            if (state.results.isEmpty()) {
+                EmptyResults()
+            } else {
+                Results(state = state, onHospitalClick = onHospitalClick)
+            }
         }
     }
+}
+
+/**
+ * 찾은 것이 없을 때. 1m-B의 입력 전 상태이고, 검색해서 안 나온 경우도 같은 자리다.
+ *
+ * 아이콘이 시안과 다르다. 시안은 병원 아이콘을 쓰는데 `Empty State`의 아이콘은 변이가
+ * 정한다(문서가 "제목·아이콘·액션은 변이가 정하고 본문만 갈아 끼운다"고 적었다). 한 화면을
+ * 위해 아이콘을 열면 어느 화면이든 변이의 시각 언어를 벗어날 수 있게 된다. 그래서
+ * `NoResult`의 `search-off`를 그대로 쓰고 디자인 트랙에 확인을 넘겼다.
+ */
+@Composable
+private fun EmptyResults() {
+    MedicalMateEmptyState(
+        type = MedicalMateEmptyStateType.NO_RESULT,
+        title = stringResource(R.string.hospital_pick_empty_title),
+        description = stringResource(R.string.hospital_pick_empty_description),
+    )
 }
 
 @Composable

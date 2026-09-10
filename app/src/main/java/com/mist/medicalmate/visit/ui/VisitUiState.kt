@@ -1,5 +1,7 @@
 package com.mist.medicalmate.visit.ui
 
+import androidx.annotation.Keep
+
 /**
  * 진료 후 기록 플로우의 상태. Figma 1m·1p·1q-1·1k.
  *
@@ -13,12 +15,39 @@ package com.mist.medicalmate.visit.ui
  * [query]로 좁힌 [results]에서 하나를 고른다. 검색을 서버가 하면 [results]가 응답이 되고
  * 화면은 그대로다.
  */
+/**
+ * 병원을 고르는 목적. 같은 화면이 두 자리에서 쓰인다.
+ *
+ * [AFTER_VISIT]은 1m이다. 진료를 받고 나서 어디서 받았는지 고른다. 반드시 골라야 다음으로
+ * 간다.
+ *
+ * [BEFORE_VISIT]은 1m-B다. 증상 정리를 마치고 진료받을 병원을 미리 찾는다. 건너뛸 수 있다.
+ * 병원은 진료 후에도 등록할 수 있어서 여기서 반드시 정해야 하는 값이 아니다.
+ *
+ * 화면을 두 개로 만들지 않는다. 검색과 목록과 선택이 같고 문구와 CTA만 다르다.
+ */
+@Keep
+enum class HospitalPickPurpose {
+    AFTER_VISIT,
+    BEFORE_VISIT,
+}
+
 data class HospitalPickUiState(
     val query: String = "",
     val results: List<Hospital> = emptyList(),
     val selectedId: String? = null,
+    val purpose: HospitalPickPurpose = HospitalPickPurpose.AFTER_VISIT,
 ) {
-    val canSubmit: Boolean = selectedId != null
+    /**
+     * 하단 CTA를 누를 수 있는지.
+     *
+     * 진료 후(1m)에는 병원을 골라야 한다. 어느 진료의 기록인지가 정해지지 않으면 다음
+     * 화면이 무엇을 적는지 모른다.
+     *
+     * 진료 전(1m-B)에는 고르지 않아도 넘어간다. 시안이 아무것도 고르지 않은 상태에서도 CTA를
+     * 살려 뒀고, 옆의 `건너뛰기`와 같은 곳으로 간다. 병원은 진료 후에도 등록할 수 있다.
+     */
+    val canSubmit: Boolean = selectedId != null || purpose == HospitalPickPurpose.BEFORE_VISIT
 }
 
 /** 검색 결과 한 곳. 이름으로 찾으면 주소가 함께 등록된다. */

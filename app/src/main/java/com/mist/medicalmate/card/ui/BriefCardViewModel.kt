@@ -38,8 +38,15 @@ constructor() : ViewModel() {
             }
         }
 
-    fun load() {
-        mutableUiState.value = BriefCardUiState.Content(card = fixture)
+    /**
+     * [hospital]은 라우트가 들고 온 값이다. 진료 전 병원 찾기(1m-B)에서 고른 것이다.
+     *
+     * null이면 픽스처의 병원을 그대로 쓴다. 서버가 붙으면 카드에 저장된 병원이 응답에 담겨
+     * 오고, 이 파라미터는 방금 고른 것을 즉시 반영하는 자리로만 남는다.
+     */
+    fun load(hospital: BriefCardHospital? = null) {
+        val card = if (hospital == null) fixture else fixture.copy(hospital = hospital)
+        mutableUiState.value = BriefCardUiState.Content(card = card)
     }
 
     /** Nav 우측 `편집`. 카드 안의 모든 값을 한 번에 연다. */

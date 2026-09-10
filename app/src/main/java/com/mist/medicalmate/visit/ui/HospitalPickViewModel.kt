@@ -25,8 +25,22 @@ constructor() : ViewModel() {
     private val mutableUiState = MutableStateFlow(HospitalPickUiState())
     val uiState: StateFlow<HospitalPickUiState> = mutableUiState.asStateFlow()
 
-    fun load() {
-        mutableUiState.value = HospitalPickUiState(results = previewHospitals)
+    /**
+     * [purpose]에 따라 첫 화면이 갈린다.
+     *
+     * 진료 전(1m-B)에는 검색어가 없으면 결과를 비워 둔다. 시안이 입력 전 상태를 빈 화면으로
+     * 그려 뒀다. 아직 아무것도 찾지 않은 사람에게 병원 네 곳을 보여주면 그중 하나를 골라야
+     * 하는 것으로 읽힌다.
+     *
+     * 진료 후(1m)는 그대로 목록을 보여준다. 방금 다녀온 병원을 고르는 자리라 후보가 먼저
+     * 보이는 편이 빠르다.
+     */
+    fun load(purpose: HospitalPickPurpose = HospitalPickPurpose.AFTER_VISIT) {
+        mutableUiState.value =
+            HospitalPickUiState(
+                results = if (purpose == HospitalPickPurpose.BEFORE_VISIT) emptyList() else previewHospitals,
+                purpose = purpose,
+            )
     }
 
     /**
@@ -36,7 +50,13 @@ constructor() : ViewModel() {
      * 눌렀을 때 무엇이 저장되는지 알 수 없다.
      */
     fun onQueryChange(query: String) {
-        val results = previewHospitals.filter { it.matches(query) }
+        val blank = query.isBlank()
+        val results =
+            if (blank && mutableUiState.value.purpose == HospitalPickPurpose.BEFORE_VISIT) {
+                emptyList()
+            } else {
+                previewHospitals.filter { it.matches(query) }
+            }
         mutableUiState.update { state ->
             state.copy(
                 query = query,

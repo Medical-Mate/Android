@@ -19,15 +19,35 @@ import kotlinx.serialization.Serializable
 @Serializable
 internal data object IntakeDestination
 
+/** 와이어프레임 1c-5. 문답을 마친 뒤의 갈림길. */
+@Serializable
+internal data object IntakeDoneDestination
+
 /**
  * 그래프 등록.
  *
- * [onCompleted]는 네 단계를 마쳤을 때다. 브리핑 카드(1e-1)로 가야 하는데 그 화면이 없어서
- * 호출자가 홈으로 돌려보낸다. [onExit]는 첫 단계에서 뒤로 갈 때다.
+ * [onCompleted]는 네 단계를 마쳤을 때다. 정리 완료(1c-5)로 간다. 전에는 브리핑 카드로 바로
+ * 갔는데, 시안이 그 사이에 카드와 병원 찾기로 갈리는 화면을 뒀다. [onExit]는 첫 단계에서
+ * 뒤로 갈 때다.
  */
 internal fun NavGraphBuilder.intakeDestination(onCompleted: () -> Unit, onExit: () -> Unit) {
     composable<IntakeDestination> {
         IntakeRoute(onCompleted = onCompleted, onExit = onExit)
+    }
+}
+
+/**
+ * 1c-5 그래프 등록.
+ *
+ * 상태가 없어서 Route를 두지 않는다. 두 버튼과 뒤로가 전부다.
+ */
+internal fun NavGraphBuilder.intakeDoneDestination(
+    onCardClick: () -> Unit,
+    onHospitalClick: () -> Unit,
+    onExit: () -> Unit,
+) {
+    composable<IntakeDoneDestination> {
+        IntakeDoneScreen(onCardClick = onCardClick, onHospitalClick = onHospitalClick, onBackClick = onExit)
     }
 }
 
