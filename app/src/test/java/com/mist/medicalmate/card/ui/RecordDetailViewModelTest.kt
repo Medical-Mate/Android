@@ -16,12 +16,12 @@ class RecordDetailViewModelTest {
         val detail = content("card-1").detail
 
         assertEquals("복부 통증 · 3주", detail.title)
+        // 최신 날짜가 위다
         assertEquals(
             listOf(
-                "09.04 · 증상 정리",
-                "09.04 작성 · 09.12 진료실에서 보여줌",
-                "09.12 · 진료 후 기록",
                 "09.26 예정",
+                "09.12 · 진료 후 기록",
+                "09.04 작성 · 09.12 진료실에서 보여줌",
             ),
             detail.steps.map { it.at },
         )
@@ -71,11 +71,32 @@ class RecordDetailViewModelTest {
     }
 
     @Test
-    fun `진료 전 건은 마지막 단계가 예정이다`() {
+    fun `진료 전 건은 첫 단계가 예정이다`() {
         val steps = content("card-2").detail.steps
 
-        assertTrue(steps.last() is RecordStep.Pending)
+        // 최신순이라 아직 오지 않은 일이 맨 위다
+        assertTrue(steps.first() is RecordStep.Pending)
         assertEquals(1, steps.count { it is RecordStep.Pending })
+    }
+
+    @Test
+    fun `타임라인에 증상 정리 단계를 넣지 않는다`() {
+        val titles =
+            previewRecordGroups
+                .flatMap { it.items }
+                .flatMap { content(it.id).detail.steps.filterIsInstance<RecordStep.Block>() }
+                .map { it.title }
+
+        assertEquals(emptyList<String>(), titles.filter { it == "내가 입력한 증상" })
+        assertEquals(setOf("브리핑 카드", "진료 후 기록"), titles.toSet())
+    }
+
+    @Test
+    fun `작성 중인 건은 예정 한 단계뿐이다`() {
+        val steps = content("card-3").detail.steps
+
+        assertEquals(1, steps.size)
+        assertTrue(steps.single() is RecordStep.Pending)
     }
 
     @Test
