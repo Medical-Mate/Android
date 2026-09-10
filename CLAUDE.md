@@ -128,7 +128,7 @@ MedicalMate/
 │       │   ├── MedicalMateApplication.kt  @HiltAndroidApp, KakaoSdk.init
 │       │   ├── core/
 │       │   │   ├── designsystem/          토큰, 타이포, 아이콘, 로고
-│       │   │   │   └── component/        디자인 시스템 컴포넌트 43종
+│       │   │   │   └── component/        디자인 시스템 컴포넌트 50종
 │       │   │   └── network/               Retrofit·OkHttp 설정, ApiResult
 │       │   ├── navigation/                단일 NavHost, 세션 경계 동기화, 하단 탭 이동
 │       │   ├── auth/  data/ ui/           1o 로그인, 1a-1 스플래시, 세션 복구
@@ -454,8 +454,9 @@ com.mist.medicalmate/
 | 화면 전환 | `MedicalMateNavHost`. `MainActivity`는 세션 확인 중 로딩만 담당 |
 | ViewModel 스코프 | 화면 ViewModel은 목적지 스코프. `SessionViewModel`만 Activity 스코프 |
 | 디자인 시스템 | DESIGN.md 3.0의 토큰·타이포·아이콘 반영 완료. 시맨틱 41개, 타이포 15종, 아이콘 46개(arrow-up 추가), 로고 4개, Pretendard 4무게. 3.0이 확정한 `layout/tabbar-h` 79와 Date Cell 42는 코드와 같다. Badge를 `Label/M`으로 적었던 2.0의 오기는 3.0에서 사라졌다 |
-| 컴포넌트 | 43종 구현. Figma 마스터 대응은 `COMPONENT_MAP.md`. `Severity Scale`은 Figma에서 마스터가 삭제돼 함께 지웠는데 3.0 문서에는 아직 남아 있다. 디자인 트랙 확인 필요 |
+| 컴포넌트 | 50종 구현. Figma 마스터 대응은 `COMPONENT_MAP.md`. `Severity Scale`은 Figma에서 마스터가 삭제돼 함께 지웠는데 3.0 문서에는 아직 남아 있다. 디자인 트랙 확인 필요 |
 | 컴포넌트 v2 | Figma `06 · 추가`가 9종을 v2로 재등록. KV Row·Tab Bar·Nav Bar·Date Cell·Text Field·Segmented Control 반영 완료. Text Area의 Footer Row(카운터·마이크), Toast의 Timer, List Row의 Summary는 모두 기본 false라 미구현. Ghost→Outline은 구현된 화면에서 해당 지점이 여전히 텍스트형이라 적용 대상 없음(F·H 플로우에서 화면별로 확인) |
+| 컴포넌트 3.0 신규 | 7종 구현(`Add Row` · `Todo Row` · `Picker Field` · `Card Pick` · `Hospital Card` · `Select Bar` · `Onboarding Progress`). 아직 어느 화면도 쓰지 않는다. Preview로만 확인했고 기기 확인은 화면에 붙을 때 한다. `Hospital Card`·`Card Pick`·`Select Bar` 마스터는 채움이 묶여 있지 않아 카드 둘은 `bg/surface`를 넣었고 `Select Bar`는 면 없이 뒀다. 디자인 트랙 확인 필요 |
 | CRUD 규칙 | 3.0이 장으로 확정. 편집 상태는 `편집 → 취소 → 확인` 한 자리에서 이름만 바뀌고, 삭제는 세 갈래(개체=하단 Danger CTA+Dialog / 항목=행 × 확인 없음 / 목록=체크 다중선택+Dialog)다. 토스트와 스와이프는 쓰지 않는다. 미반영이고 #92가 이 규칙을 쓴다 |
 | 반경 13 · 14 | 3.0이 둘 다 스케일 밖 값으로 잡고 `radius/sm` 12 · `radius/md` 16 통일안을 적었다. 코드의 `MedicalMateRadius.dateCell`(13)과 `buttonM`(14)이 그 값이다. Figma가 바뀌면 함께 바꾼다 |
 | Elevation/Card | Figma가 2겹(y3 r10 8% + y1 r2 5%)으로 바뀜. 코드는 `Modifier.shadow` 한 겹 근사 |
