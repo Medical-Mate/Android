@@ -30,7 +30,9 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
 import com.mist.medicalmate.home.ui.HomeDestination
 import com.mist.medicalmate.home.ui.homeDestination
 import com.mist.medicalmate.intake.ui.IntakeDestination
+import com.mist.medicalmate.intake.ui.IntakeDoneDestination
 import com.mist.medicalmate.intake.ui.intakeDestination
+import com.mist.medicalmate.intake.ui.intakeDoneDestination
 import com.mist.medicalmate.profile.ui.AccountActionCallbacks
 import com.mist.medicalmate.profile.ui.HealthEditDestination
 import com.mist.medicalmate.profile.ui.MyProfileDestination
@@ -43,6 +45,7 @@ import com.mist.medicalmate.profile.ui.onboardingIntroDestination
 import com.mist.medicalmate.profile.ui.profileCompleteDestination
 import com.mist.medicalmate.profile.ui.profileSetupDestination
 import com.mist.medicalmate.visit.ui.HospitalPickDestination
+import com.mist.medicalmate.visit.ui.HospitalPickPurpose
 import com.mist.medicalmate.visit.ui.VisitNoteDestination
 import com.mist.medicalmate.visit.ui.VisitRecordDestination
 import com.mist.medicalmate.visit.ui.VisitSummaryDestination
@@ -93,12 +96,15 @@ internal fun MedicalMateNavHost(
             onAuthenticated = onAuthenticated,
             onOnboardingCompleted = onOnboardingCompleted,
         )
-        intakeDestination(
-            onCompleted = { navController.navigate(BriefCardDestination(cardId = NEW_CARD_ID)) },
-            onExit = { navController.popBackStack() },
-        )
+        intakeDestinations(navController)
         briefCardDestination(
             onSaved = { navController.resetTo(HomeDestination()) },
+            // 카드의 `변경`. 어느 카드로 돌아갈지 들고 간다.
+            onHospitalChange = { cardId ->
+                navController.navigate(
+                    HospitalPickDestination(purpose = HospitalPickPurpose.BEFORE_VISIT, cardId = cardId),
+                )
+            },
             // 지운 카드의 화면에 남을 수 없다. 저장과 같은 자리로 나간다.
             onDeleted = { navController.resetTo(HomeDestination()) },
             onHandoff = { cardId -> navController.navigate(HandoffDestination(cardId)) },
@@ -120,7 +126,7 @@ internal fun MedicalMateNavHost(
         )
         calendarDayDestination(
             onCardOpen = { cardId -> navController.navigate(BriefCardDestination(cardId)) },
-            onRecordAdd = { navController.navigate(HospitalPickDestination) },
+            onRecordAdd = { navController.navigate(HospitalPickDestination()) },
             onExit = { navController.popBackStack() },
         )
         visitDestinations(navController)
@@ -165,6 +171,26 @@ private fun NavGraphBuilder.entryDestinations(
 }
 
 /**
+ * 증상 문답과 그 끝의 갈림길. Figma 흐름은 `1l·1c·1d·1i → 1c-5`다.
+ *
+ * 1c-5에서 브리핑 카드와 진료 전 병원 찾기로 갈린다. 병원을 먼저 찾아도 결국 카드로 오므로
+ * 두 길이 같은 곳에서 만난다.
+ */
+private fun NavGraphBuilder.intakeDestinations(navController: NavHostController) {
+    intakeDestination(
+        onCompleted = { navController.navigate(IntakeDoneDestination) },
+        onExit = { navController.popBackStack() },
+    )
+    intakeDoneDestination(
+        onCardClick = { navController.navigate(BriefCardDestination(cardId = NEW_CARD_ID)) },
+        onHospitalClick = {
+            navController.navigate(HospitalPickDestination(purpose = HospitalPickPurpose.BEFORE_VISIT))
+        },
+        onExit = { navController.popBackStack() },
+    )
+}
+
+/**
  * 내 정보와 건강 정보 수정. Figma 흐름은 `1s-1 → 1s-2`다.
  *
  * 홈 헤더의 아바타에서 들어온다. 하단 탭이 세 개로 확정돼서 내 정보는 탭이 아니다.
@@ -199,6 +225,24 @@ private fun NavGraphBuilder.profileDestinations(
 private fun NavGraphBuilder.visitDestinations(navController: NavHostController) {
     hospitalPickDestination(
         onPicked = { hospitalId -> navController.navigate(VisitNoteDestination(hospitalId)) },
+        // 진료 전(1m-B)에서 카드로. cardId가 있으면 카드의 `변경`에서 온 것이라 그 카드
+        // 엔트리를 새 병원을 담은 것으로 갈아치운다. 그러지 않으면 뒤로 갔을 때 병원이 없던
+        // 카드가 다시 나온다. 없으면 문답을 마치고 온 것이라 새 카드를 만든다.
+        onCardRequested = { cardId, hospital ->
+            val destination =
+                BriefCardDestination(
+                    cardId = cardId ?: NEW_CARD_ID,
+                    hospitalName = hospital?.name,
+                    hospitalAddress = hospital?.address,
+                )
+            if (cardId == null) {
+                navController.navigate(destination)
+            } else {
+                navController.navigate(destination) {
+                    popUpTo<BriefCardDestination> { inclusive = true }
+                }
+            }
+        },
         onExit = { navController.popBackStack() },
     )
     visitNoteDestination(

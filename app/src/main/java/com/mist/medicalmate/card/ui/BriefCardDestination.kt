@@ -8,6 +8,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import androidx.navigation.toRoute
 import kotlinx.serialization.Serializable
 
 /**
@@ -16,8 +17,21 @@ import kotlinx.serialization.Serializable
  * [cardId]를 라우트에 담는다. 어느 카드를 여는지가 목적지의 일부이고, 화면이 다시
  * 만들어질 때 살아 있어야 한다. 서버 연동 전에는 쓰이지 않고 픽스처가 나온다.
  */
+/**
+ * @param hospitalName 진료 전 병원 찾기(1m-B)에서 고른 병원. 고르지 않았으면 null이다.
+ * @param hospitalAddress 같은 병원의 주소.
+ *
+ * **id가 아니라 이름과 주소를 받는다.** id로 받으면 카드가 병원 목록을 찾아봐야 하는데 그
+ * 목록은 `visit` 도메인에 있다. 한 도메인이 다른 도메인을 직접 참조하지 않는다는 규칙이
+ * 있고, 서버가 붙기 전에는 고른 병원이 사실 이 두 문자열뿐이다. 병원 조회 API가 생기면
+ * id를 받고 여기서 조회한다.
+ */
 @Serializable
-internal data class BriefCardDestination(val cardId: String)
+internal data class BriefCardDestination(
+    val cardId: String,
+    val hospitalName: String? = null,
+    val hospitalAddress: String? = null,
+)
 
 /** 와이어프레임 1f-1. 폰을 의사에게 건네는 화면. */
 @Serializable
@@ -26,11 +40,20 @@ internal data class HandoffDestination(val cardId: String)
 internal fun NavGraphBuilder.briefCardDestination(
     onSaved: () -> Unit,
     onDeleted: () -> Unit,
+    onHospitalChange: (String) -> Unit,
     onHandoff: (String) -> Unit,
     onExit: () -> Unit,
 ) {
-    composable<BriefCardDestination> {
-        BriefCardRoute(onSaved = onSaved, onDeleted = onDeleted, onHandoff = onHandoff, onExit = onExit)
+    composable<BriefCardDestination> { entry ->
+        val route = entry.toRoute<BriefCardDestination>()
+        BriefCardRoute(
+            hospital = briefCardHospital(route),
+            onSaved = onSaved,
+            onDeleted = onDeleted,
+            onHospitalChange = onHospitalChange,
+            onHandoff = onHandoff,
+            onExit = onExit,
+        )
     }
 }
 
@@ -51,8 +74,10 @@ internal fun NavGraphBuilder.handoffDestination(onDone: () -> Unit) {
  */
 @Composable
 private fun BriefCardRoute(
+    hospital: BriefCardHospital?,
     onSaved: () -> Unit,
     onDeleted: () -> Unit,
+    onHospitalChange: (String) -> Unit,
     onHandoff: (String) -> Unit,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
@@ -60,7 +85,7 @@ private fun BriefCardRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(Unit) { viewModel.load() }
+    LaunchedEffect(hospital) { viewModel.load(hospital) }
 
     val content = state as? BriefCardUiState.Content
 
@@ -80,11 +105,23 @@ private fun BriefCardRoute(
                 viewModel.onDeleteConfirm()
                 onDeleted()
             },
+            onHospitalChangeClick = { content?.card?.id?.let(onHospitalChange) },
             onHandoffClick = { content?.card?.id?.let(onHandoff) },
-            onRetryClick = viewModel::load,
+            onRetryClick = { viewModel.load(hospital) },
         ),
         modifier = modifier,
     )
+}
+
+/**
+ * 라우트가 들고 온 병원.
+ *
+ * 이름이 없으면 병원이 없는 것이다. 이름만 있고 주소가 없는 경우는 만들지 않는다. 병원
+ * 찾기가 둘을 함께 넘긴다.
+ */
+private fun briefCardHospital(route: BriefCardDestination): BriefCardHospital? {
+    val name = route.hospitalName ?: return null
+    return BriefCardHospital(name = name, address = route.hospitalAddress.orEmpty())
 }
 
 /**

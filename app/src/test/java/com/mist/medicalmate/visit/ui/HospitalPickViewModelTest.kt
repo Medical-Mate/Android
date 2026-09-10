@@ -104,5 +104,46 @@ class HospitalPickViewModelTest {
         assertEquals("hospital-1", viewModel.uiState.value.selectedId)
     }
 
+    @Test
+    fun `진료 전에는 검색어가 없으면 결과를 비운다`() {
+        // 1m-B는 입력 전 상태를 빈 화면으로 그린다. 아직 아무것도 찾지 않은 사람에게 후보
+        // 네 곳을 보여주면 그중 하나를 골라야 하는 것으로 읽힌다.
+        val viewModel = loadedBefore()
+
+        assertTrue(viewModel.uiState.value.results.isEmpty())
+    }
+
+    @Test
+    fun `진료 전에도 검색하면 결과가 나온다`() {
+        val viewModel = loadedBefore()
+
+        viewModel.onQueryChange("이비인후과")
+
+        assertEquals(listOf("서울OO병원 이비인후과", "OO이비인후과의원"), viewModel.uiState.value.results.map { it.name })
+    }
+
+    @Test
+    fun `진료 전에 검색어를 지우면 다시 빈다`() {
+        val viewModel = loadedBefore()
+        viewModel.onQueryChange("이비인후과")
+
+        viewModel.onQueryChange("")
+
+        assertTrue(viewModel.uiState.value.results.isEmpty())
+    }
+
+    @Test
+    fun `진료 전에는 고르지 않아도 넘어갈 수 있다`() {
+        // 건너뛰기와 같은 곳으로 간다. 병원은 진료 후에도 등록할 수 있다.
+        assertTrue(loadedBefore().uiState.value.canSubmit)
+    }
+
+    @Test
+    fun `진료 후에는 골라야 넘어갈 수 있다`() {
+        assertFalse(loaded().uiState.value.canSubmit)
+    }
+
     private fun loaded() = HospitalPickViewModel().apply { load() }
+
+    private fun loadedBefore() = HospitalPickViewModel().apply { load(HospitalPickPurpose.BEFORE_VISIT) }
 }

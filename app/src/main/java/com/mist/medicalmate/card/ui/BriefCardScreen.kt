@@ -93,6 +93,7 @@ data class BriefCardCallbacks(
     val onCancelClick: () -> Unit = {},
     val edit: BriefCardEditActions = BriefCardEditActions {},
     val onSaveClick: () -> Unit = {},
+    val onHospitalChangeClick: () -> Unit = {},
     val onDeleteClick: () -> Unit = {},
     val onDeleteDismiss: () -> Unit = {},
     val onDeleteConfirm: () -> Unit = {},
@@ -165,7 +166,10 @@ private fun ColumnScope.CardContent(state: BriefCardUiState.Content, callbacks: 
             questions = state.questions,
             edit = if (state.editing) questionEdit(callbacks) else null,
         )
-        HospitalSection(hospital = state.card.hospital)
+        HospitalSection(
+            hospital = state.card.hospital,
+            onChangeClick = callbacks.onHospitalChangeClick,
+        )
     }
     Footer(editing = state.editing, callbacks = callbacks)
 
@@ -203,14 +207,18 @@ private fun questionEdit(callbacks: BriefCardCallbacks): MedicalMateCalloutEdit 
  * 병원이 없으면 섹션째로 두지 않는다. 증상 정리를 마치고 병원을 먼저 찾은 경우에만 채워지는
  * 값이라, 빈 섹션을 두면 아직 안 정한 사람에게 비어 있는 자리만 보인다.
  *
- * **시안의 `변경` 액션을 넣지 않았다.** 누르면 진료 전 병원 찾기(1m-B)로 가야 하는데 그
- * 화면이 없다. 갈 곳 없는 조작을 두지 않는다(#105).
+ * `변경`은 진료 전 병원 찾기(1m-B)를 다시 연다. #92에서는 그 화면이 없어서 이 액션을 빼
+ * 뒀다. 갈 곳이 생겨서 붙였다.
  */
 @Composable
-private fun HospitalSection(hospital: BriefCardHospital?) {
+private fun HospitalSection(hospital: BriefCardHospital?, onChangeClick: () -> Unit) {
     if (hospital == null) return
 
-    MedicalMateSectionHeader(title = stringResource(R.string.brief_card_hospital_section))
+    MedicalMateSectionHeader(
+        title = stringResource(R.string.brief_card_hospital_section),
+        actionLabel = stringResource(R.string.brief_card_hospital_change),
+        onActionClick = onChangeClick,
+    )
     MedicalMateHospitalCard(name = hospital.name, address = hospital.address)
 }
 

@@ -41,6 +41,14 @@
     <string name="hospital_pick_search_clear">검색어 지우기</string>
     <string name="hospital_pick_result_count">검색 결과 %1$d곳</string>
     <string name="hospital_pick_submit">완료</string>
+    <!-- 1m-B 진료 전 병원 찾기. 같은 화면이 목적에 따라 문구와 CTA가 갈린다. -->
+    <string name="hospital_pick_question_before">진료받을 병원을 찾아주세요</string>
+    <string name="hospital_pick_description_before">아직 정하지 않았다면 건너뛰어도 돼요.\n진료 후에 등록할 수 있어요.</string>
+    <string name="hospital_pick_skip">건너뛰기</string>
+    <string name="hospital_pick_submit_before">브리핑 카드 만들기</string>
+    <string name="hospital_pick_result_none">검색 결과 없음</string>
+    <string name="hospital_pick_empty_title">아직 검색 기록이 없어요</string>
+    <string name="hospital_pick_empty_description">병원 명을 입력하면 진료받을 병원을 찾을 수 있어요</string>
     <string name="visit_note_title">진료 후 기록</string>
     <string name="visit_note_heading">진료실에서 들은 말을\n그대로 남겨두세요</string>
     <string name="visit_note_description">기억나는 대로 편하게 적어주세요.</string>
@@ -116,6 +124,11 @@
     <string name="calendar_day_record_empty_action">진료 후 기록하기</string>
 
     <!-- Figma 1e-1(404:1679)·1e-1-E(597:4804)·1f-1(404:1835) 브리핑 카드. -->
+    <!-- 1c-5 증상 정리 완료. 문답과 카드 사이의 갈림길. -->
+    <string name="intake_done_title">증상 정리가 끝났어요</string>
+    <string name="intake_done_description">말씀하신 내용을 진료실에서 보여줄\n카드로 만들 준비가 됐어요</string>
+    <string name="intake_done_card">브리핑 카드 만들기</string>
+    <string name="intake_done_hospital">진료받을 병원 먼저 찾기</string>
     <string name="brief_card_title">브리핑 카드</string>
     <string name="brief_card_status_before_visit">진료 전</string>
     <string name="brief_card_status_confirmed">진료 완료</string>
@@ -135,6 +148,7 @@
     <string name="brief_card_failed_description">인터넷 연결을 확인하고 다시 시도해주세요</string>
     <string name="brief_card_retry">다시 시도</string>
     <string name="brief_card_hospital_section">진료받을 병원</string>
+    <string name="brief_card_hospital_change">변경</string>
     <string name="brief_card_item_delete">%1$s 항목 삭제</string>
     <string name="brief_card_question_add">질문 추가</string>
     <string name="brief_card_question_delete">%1$d번 질문 삭제</string>
