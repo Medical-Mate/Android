@@ -87,19 +87,11 @@ internal fun MedicalMateNavHost(
         startDestination = session.destination(onboardingCompleted),
         modifier = modifier,
     ) {
-        loginDestination(onAuthenticated = onAuthenticated)
-        onboardingIntroDestination(
-            onStartClick = { navController.navigate(ProfileSetupDestination) },
-        )
-        profileSetupDestination(
-            onCompleted = { navController.navigate(ProfileCompleteDestination) },
-            onExit = { navController.popBackStack() },
-        )
-        profileCompleteDestination(
-            onFinished = {
-                onOnboardingCompleted()
-                navController.resetTo(HomeDestination(justRegistered = true))
-            },
+        entryDestinations(
+            navController = navController,
+            session = session,
+            onAuthenticated = onAuthenticated,
+            onOnboardingCompleted = onOnboardingCompleted,
         )
         intakeDestination(
             onCompleted = { navController.navigate(BriefCardDestination(cardId = NEW_CARD_ID)) },
@@ -136,6 +128,37 @@ internal fun MedicalMateNavHost(
         navController = navController,
         session = session,
         onboardingCompleted = onboardingCompleted,
+    )
+}
+
+/**
+ * 진입과 온보딩. Figma 흐름은 `1o → 1a-2 → 1b-1~1b-4`다.
+ *
+ * [session]을 받는 곳은 로그인 화면 하나다. 자동 로그인을 확인하지 못하고 왔는지에 따라
+ * 문구가 달라서, 그 판단을 화면이 아니라 세션 상태가 한다.
+ */
+private fun NavGraphBuilder.entryDestinations(
+    navController: NavHostController,
+    session: SessionUiState,
+    onAuthenticated: (onboardingRequired: Boolean) -> Unit,
+    onOnboardingCompleted: () -> Unit,
+) {
+    loginDestination(
+        restoreFailed = session == SessionUiState.RestoreFailed,
+        onAuthenticated = onAuthenticated,
+    )
+    onboardingIntroDestination(
+        onStartClick = { navController.navigate(ProfileSetupDestination) },
+    )
+    profileSetupDestination(
+        onCompleted = { navController.navigate(ProfileCompleteDestination) },
+        onExit = { navController.popBackStack() },
+    )
+    profileCompleteDestination(
+        onFinished = {
+            onOnboardingCompleted()
+            navController.resetTo(HomeDestination(justRegistered = true))
+        },
     )
 }
 
@@ -226,15 +249,15 @@ private const val NEW_VISIT_ID = "new"
 /**
  * 세션 상태가 가리키는 목적지.
  *
- * [SessionUiState.Checking]은 `MainActivity`가 스플래시로 잡아서 여기까지 오지 않는다.
- * 로그인과 같이 두는 것은 분기를 하나 더 만들지 않으려는 것이고, 그래도 온다면 인증이
- * 필요한 화면을 열지 않는 쪽이 안전하다.
+ * [SessionUiState.Checking]과 [SessionUiState.RestoreFailed]는 `MainActivity`가 스플래시로
+ * 잡아서 여기까지 오지 않는다. 로그인과 같이 두는 것은 분기를 하나 더 만들지 않으려는
+ * 것이고, 그래도 온다면 인증이 필요한 화면을 열지 않는 쪽이 안전하다.
  *
  * 온보딩은 가입하고 한 번만 나온다. 서버가 필요하다고 해도 기기에 마쳤다는 기록이 있으면
  * 홈으로 보낸다. 두 값을 함께 보는 이유는 `profile/data/OnboardingStore`에 적었다.
  */
 private fun SessionUiState.destination(onboardingCompleted: Boolean): Any = when (this) {
-    SessionUiState.Checking, SessionUiState.SignedOut -> LoginDestination
+    SessionUiState.Checking, SessionUiState.RestoreFailed, SessionUiState.SignedOut -> LoginDestination
     is SessionUiState.SignedIn ->
         if (onboardingRequired && !onboardingCompleted) {
             OnboardingIntroDestination
