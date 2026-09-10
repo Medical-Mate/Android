@@ -36,14 +36,14 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
  * 홈(1n), 기록(1j), 캘린더(1r) 셋뿐이다. 문서 8.5가 `내 정보`를 넣어 넷으로 적은 것은
  * 문서 오류다. `user`·`user-filled` 아이콘은 아이콘 세트에 있지만 탭에 쓰이지 않는다.
  *
- * 선언 순서가 화면 순서다. 홈이 가운데다.
- *
- * 디자인이 아직 확정 전이라 목적지와 순서가 바뀔 수 있다.
+ * **선언 순서가 화면 순서다.** `캘린더 · 홈 · 기록`이고 홈이 가운데다. Figma 마스터
+ * `319:1026`의 variant 셋과 Tab Bar가 붙은 화면 다섯(1n-1 · 1n-2 · 1j-1 · 1j-2 · 1r-1)이
+ * 모두 이 순서라 순서를 바꾸려면 양쪽을 함께 봐야 한다.
  */
 enum class MedicalMateTab(@StringRes val labelRes: Int, @DrawableRes val icon: Int, @DrawableRes val activeIcon: Int) {
-    RECORD(R.string.tab_record, MedicalMateIcons.Note, MedicalMateIcons.NoteFilled),
-    HOME(R.string.tab_home, MedicalMateIcons.Home, MedicalMateIcons.HomeFilled),
     CALENDAR(R.string.tab_calendar, MedicalMateIcons.Calendar, MedicalMateIcons.CalendarFilled),
+    HOME(R.string.tab_home, MedicalMateIcons.Home, MedicalMateIcons.HomeFilled),
+    RECORD(R.string.tab_record, MedicalMateIcons.Note, MedicalMateIcons.NoteFilled),
 }
 
 /**
