@@ -250,7 +250,12 @@ fun MedicalMateListRow(
 /**
  * DESIGN.md의 `Section Header`.
  *
- * 목록 제목과 보조 텍스트 링크를 한 줄에 둔다. 위 여백 24, 아래 10이다.
+ * 목록 제목과 오른쪽 슬롯을 한 줄에 둔다. 위 여백 24, 아래 10이다.
+ *
+ * 오른쪽은 두 갈래다. [actionLabel]은 누르는 링크이고 [caption]은 읽기만 하는 표시다.
+ * 마스터(`334:1156`)의 `Action` 슬롯이 `fg/link`인데 1r-4가 그것을 `fg/subtle`로 덮어
+ * "선택 안 함"·"1개"를 적는다. 누를 수 없는 글자를 링크 색으로 두면 눌러 보게 된다.
+ * 둘을 함께 주지 않는다. 한 자리라 뒤에 오는 것이 앞을 덮는다.
  */
 @Composable
 fun MedicalMateSectionHeader(
@@ -258,6 +263,7 @@ fun MedicalMateSectionHeader(
     modifier: Modifier = Modifier,
     actionLabel: String? = null,
     onActionClick: (() -> Unit)? = null,
+    caption: String? = null,
 ) {
     Row(
         modifier =
@@ -272,13 +278,21 @@ fun MedicalMateSectionHeader(
             style = MedicalMateTheme.typography.headingS,
             color = MedicalMateTheme.colors.fgDefault,
         )
-        if (actionLabel != null && onActionClick != null) {
-            MedicalMateButton(
-                onClick = onActionClick,
-                label = actionLabel,
-                type = MedicalMateButtonType.GHOST,
-                size = MedicalMateButtonSize.S,
-            )
+        when {
+            actionLabel != null && onActionClick != null ->
+                MedicalMateButton(
+                    onClick = onActionClick,
+                    label = actionLabel,
+                    type = MedicalMateButtonType.GHOST,
+                    size = MedicalMateButtonSize.S,
+                )
+
+            caption != null ->
+                Text(
+                    text = caption,
+                    style = MedicalMateTheme.typography.bodyMStrong,
+                    color = MedicalMateTheme.colors.fgSubtle,
+                )
         }
     }
 }

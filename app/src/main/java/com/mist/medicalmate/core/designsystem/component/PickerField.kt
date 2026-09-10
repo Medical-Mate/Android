@@ -1,5 +1,6 @@
 package com.mist.medicalmate.core.designsystem.component
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -35,8 +36,12 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
  * 문서가 선택 완료된 필드의 테두리를 `fg/default`로 못박았다. 글자와 테두리가 함께 진해져야
  * 채워졌다는 것이 읽힌다. 마스터(`1129:9196`)는 채워진 상태만 그려 뒀다.
  *
- * 오른쪽 `chevron-right`는 장식이 아니라 "눌러서 고른다"는 표시다. 아이콘 20은 마스터
- * 값이고 `Body/L` 옆 인라인 아이콘 규칙과도 같다.
+ * 오른쪽 아이콘은 장식이 아니라 "눌러서 고른다"는 표시다. 아이콘 20은 마스터 값이고
+ * `Body/L` 옆 인라인 아이콘 규칙과도 같다.
+ *
+ * [trailingIcon]을 받는 이유는 1r-4가 세 필드에 다른 아이콘을 쓰기 때문이다. 병원은
+ * 마스터의 `chevron-right`, 날짜는 달력, 시간은 시계다. 어디로 가는지가 아이콘으로
+ * 먼저 읽힌다.
  */
 @Composable
 fun MedicalMatePickerField(
@@ -45,6 +50,7 @@ fun MedicalMatePickerField(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    @DrawableRes trailingIcon: Int = MedicalMateIcons.ChevronRight,
 ) {
     val colors = MedicalMateTheme.colors
     val filled = !value.isNullOrBlank()
@@ -79,7 +85,7 @@ fun MedicalMatePickerField(
             modifier = Modifier.weight(1f),
         )
         Icon(
-            painter = painterResource(MedicalMateIcons.ChevronRight),
+            painter = painterResource(trailingIcon),
             contentDescription = null,
             tint = if (enabled) colors.fgDefault else colors.fgDisabled,
             modifier = Modifier.size(MedicalMateSize.iconMd),
