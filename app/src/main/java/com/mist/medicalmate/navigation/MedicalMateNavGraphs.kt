@@ -218,10 +218,7 @@ internal fun NavGraphBuilder.recordDestinations(navController: NavHostController
         onStartIntakeClick = { navController.navigate(IntakeDestination) },
         onTabSelect = navController::selectTab,
     )
-    recordDetailDestination(
-        onBackClick = { navController.popBackStack() },
-        onBriefCardClick = { cardId -> navController.navigate(BriefCardDestination(cardId)) },
-    )
+    recordDetailDestination(onBackClick = { navController.popBackStack() })
     // 1j-4. 기록 탭이 아니라 홈의 "전체 보기"에서 들어오는데, 목록과 줄이 기록과 같은
     // 짜임이라 여기 함께 둔다.
     briefCardListDestination(

@@ -3,27 +3,33 @@ package com.mist.medicalmate.card.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateElevation
+import com.mist.medicalmate.core.designsystem.MedicalMateIcons
 import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.ShadowTint
+import com.mist.medicalmate.core.designsystem.component.MedicalMateDivider
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNotice
 import com.mist.medicalmate.core.designsystem.component.MedicalMateQuoteBlock
+import com.mist.medicalmate.core.designsystem.component.MedicalMateSeverityReadout
 
 /**
  * 타임라인 한 단계의 내용. Figma `735:3850`.
@@ -33,7 +39,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateQuoteBlock
  * `Elevation/Card`로 준다.
  */
 @Composable
-internal fun RecordStepBlock(step: RecordStep.Block, onActionClick: (RecordStepAction.Target) -> Unit) {
+internal fun RecordStepBlock(step: RecordStep.Block, expanded: Boolean, onExpandToggle: () -> Unit) {
     Column(
         modifier =
         Modifier
@@ -53,11 +59,31 @@ internal fun RecordStepBlock(step: RecordStep.Block, onActionClick: (RecordStepA
             style = MedicalMateTheme.typography.headingS,
             color = MedicalMateTheme.colors.fgDefault,
         )
-        step.items.forEach { item -> StepItemRow(item) }
+        val shown =
+            if (step.card == null || expanded) step.items else step.items.take(step.card.collapsedItemCount)
+        shown.forEach { item -> StepItemRow(item) }
         step.quote?.let { MedicalMateQuoteBlock(label = it.label, text = it.text) }
-        step.action?.let { action ->
-            StepOpen(label = action.label, onClick = { onActionClick(action.target) })
+        step.card?.let { card ->
+            if (expanded) ExpandedCard(card)
+            StepExpandRow(expanded = expanded, onClick = onExpandToggle)
         }
+    }
+}
+
+/**
+ * 펼쳤을 때 줄 아래 붙는 것들.
+ *
+ * 통증 강도·알러지·질문은 브리핑 카드 화면(1e-1)과 같은 컴포넌트를 쓴다. 같은 카드를 다른
+ * 자리에서 보는 것이라 모양이 갈리면 안 된다.
+ */
+@Composable
+private fun ExpandedCard(card: RecordStepCard) {
+    card.severity?.let { MedicalMateSeverityReadout(severity = it) }
+    if (card.allergies.isNotEmpty()) {
+        AllergyNotice(allergies = card.allergies)
+    }
+    if (card.questions.isNotEmpty()) {
+        QuestionsCallout(questions = card.questions)
     }
 }
 
@@ -98,27 +124,35 @@ private fun itemValueColor(tone: RecordDetailItem.Tone): Color = when (tone) {
 }
 
 /**
- * 그 단계를 여는 줄. Figma `735:3864`.
+ * 카드를 접었다 펴는 줄. Figma 1j-3 `735:3864`, 1j-3-X `1038:2768`.
  *
- * `Button`을 쓰지 않는다. 그쪽은 높이 56에 반경 16인 화면의 주 행동이고, 이건 블록 안에서
- * 원래 화면으로 건너가는 옅은 줄이다.
+ * 위에 구분선을 두고 왼쪽에 글자, 오른쪽에 화살표다. 전에는 가운데 정렬한 옅은 면의 줄로
+ * 그렸는데 시안이 구분선과 화살표로 바꿨다. 누르면 화면을 옮기는 것이 아니라 이 자리가
+ * 늘어나는 조작이라, 면을 채운 버튼보다 접기·펴기로 읽히는 모양이 맞는다.
+ *
+ * `Button`을 쓰지 않는다. 그쪽은 높이 56에 반경 16인 화면의 주 행동이다.
  */
 @Composable
-private fun StepOpen(label: String, onClick: () -> Unit) {
-    Box(
+private fun StepExpandRow(expanded: Boolean, onClick: () -> Unit) {
+    MedicalMateDivider()
+    Row(
         modifier =
         Modifier
             .fillMaxWidth()
-            .background(MedicalMateTheme.colors.bgPrimaryFaint, MedicalMateRadius.sm)
-            .clickable(onClick = onClick)
+            .clickable(role = Role.Button, onClick = onClick)
             .padding(vertical = OpenPadding),
-        contentAlignment = Alignment.Center,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = label,
+            text = stringResource(if (expanded) R.string.record_detail_collapse else R.string.record_detail_expand),
             style = MedicalMateTheme.typography.bodyM,
             color = MedicalMateTheme.colors.fgPrimary,
-            textAlign = TextAlign.Center,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(
+            painter = painterResource(if (expanded) MedicalMateIcons.ChevronUp else MedicalMateIcons.ChevronDown),
+            contentDescription = null,
+            tint = MedicalMateTheme.colors.fgPrimary,
         )
     }
 }

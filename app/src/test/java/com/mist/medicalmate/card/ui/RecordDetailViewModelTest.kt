@@ -59,15 +59,67 @@ class RecordDetailViewModelTest {
     }
 
     @Test
-    fun `카드가 있는 건에만 카드 열기가 붙는다`() {
-        val withCard = content("card-1").detail.steps.filterIsInstance<RecordStep.Block>()
-        val draft = content("card-3").detail.steps.filterIsInstance<RecordStep.Block>()
+    fun `브리핑 카드 단계만 펼 수 있다`() {
+        val steps = content("card-1").detail.steps.filterIsInstance<RecordStep.Block>()
 
+        assertEquals(listOf("브리핑 카드"), steps.filter { it.card != null }.map { it.title })
+        assertTrue(steps.filter { it.title != "브리핑 카드" }.all { it.card == null })
+    }
+
+    @Test
+    fun `접혀 있을 때는 앞 세 줄만 보인다`() {
+        val card = content("card-1").detail.steps
+            .filterIsInstance<RecordStep.Block>()
+            .first { it.card != null }
+
+        assertEquals(5, card.items.size)
+        assertEquals(3, card.card?.collapsedItemCount)
+        assertEquals(listOf("부위", "기간", "양상"), card.items.take(3).map { it.key })
+    }
+
+    @Test
+    fun `펼침은 자리마다 따로 켜고 끈다`() {
+        val viewModel = RecordDetailViewModel()
+        viewModel.load("card-1")
+
+        viewModel.onExpandToggle(2)
+        assertEquals(setOf(2), viewModel.expandedSteps.value)
+
+        viewModel.onExpandToggle(0)
+        assertEquals(setOf(0, 2), viewModel.expandedSteps.value)
+
+        viewModel.onExpandToggle(2)
+        assertEquals(setOf(0), viewModel.expandedSteps.value)
+    }
+
+    @Test
+    fun `다른 건을 열면 펼친 것이 접힌다`() {
+        val viewModel = RecordDetailViewModel()
+        viewModel.load("card-1")
+        viewModel.onExpandToggle(2)
+
+        viewModel.load("card-0")
+
+        assertEquals(emptySet<Int>(), viewModel.expandedSteps.value)
+    }
+
+    @Test
+    fun `재방문까지 간 건은 배지와 병원 줄이 다르다`() {
+        val detail = content("card-4").detail
+
+        assertEquals("진료 2회", detail.badge)
+        assertEquals("서울OO병원 내과 · 09.12 초진 · 09.26 재방문", detail.clinicLine)
         assertEquals(
-            listOf(RecordStepAction.Target.BRIEF_CARD),
-            withCard.mapNotNull { it.action?.target },
+            listOf("진료 후 기록", "진료 후 기록", "브리핑 카드"),
+            detail.steps.filterIsInstance<RecordStep.Block>().map { it.title },
         )
-        assertTrue(draft.all { it.action == null })
+    }
+
+    @Test
+    fun `재방문 건에는 예정 단계가 없다`() {
+        val steps = content("card-4").detail.steps
+
+        assertTrue(steps.none { it is RecordStep.Pending })
     }
 
     @Test
@@ -107,11 +159,16 @@ class RecordDetailViewModelTest {
     }
 
     @Test
-    fun `알러지는 경고색으로 나온다`() {
-        val items = content("card-1").detail.steps.filterIsInstance<RecordStep.Block>().flatMap { it.items }
-        val allergy = items.first { it.key == "알러지" }
+    fun `알러지는 카드를 펼쳤을 때 경고 블록으로 나온다`() {
+        val card = content("card-1").detail.steps
+            .filterIsInstance<RecordStep.Block>()
+            .first { it.card != null }
+            .card
 
-        assertEquals(RecordDetailItem.Tone.WARNING, allergy.tone)
+        // 시안 1j-3-X가 알러지를 KV 줄이 아니라 노란 경고 블록으로 그린다. 줄로 두면
+        // 다른 값과 같은 무게가 되고, 처방 전에 꼭 봐야 하는 값이 묻힌다.
+        assertEquals(listOf("페니실린"), card?.allergies)
+        assertTrue(card?.severity != null)
     }
 
     @Test
