@@ -9,7 +9,7 @@ import java.time.LocalTime
  *
  * 병원 · 날짜 · 시간은 골라 채우는 값이고, 카드와 할 일은 이 일정에 딸리는 목록이다.
  *
- * [hospital]이 없어도 저장할 수 있다. 시안에 `1r-4 · 병원 미등록`이 정상 상태로 있고,
+ * [hospital]·[date]·[time] 셋이 필수다. 나머지는 선택이다. 예전에는 병원 없이도 저장했는데,
  * 병원 찾기(1m-B)도 건너뛰기를 준다. 반대로 날짜와 시간은 없으면 캘린더에 놓을 자리가
  * 없어서 [canSave]가 둘을 요구한다. 시안에 부분만 채운 프레임이 없어 그 선은 여기서
  * 정했다.
@@ -20,12 +20,26 @@ data class ScheduleAddUiState(
     val hospital: String? = null,
     val date: LocalDate? = null,
     val time: LocalTime? = null,
+    /**
+     * 빠진 필수 칸을 알릴지.
+     *
+     * 화면을 열자마자 붉히지 않는다. 아직 채울 기회가 없었는데 틀렸다고 하는 셈이다.
+     * 저장을 누른 뒤부터 선다.
+     */
+    val showErrors: Boolean = false,
     val sheet: ScheduleAddSheet = ScheduleAddSheet.NONE,
 ) {
     /** 고른 카드 수. 섹션 머리 오른쪽에 적는다. */
     val pickedCardCount: Int get() = cards.count { it.picked }
 
-    val canSave: Boolean get() = date != null && time != null
+    val canSave: Boolean get() = hospital != null && date != null && time != null
+
+    /** 채우지 않은 필수 칸. [showErrors]가 서면 그 칸 아래에 안내가 붙는다. */
+    val hospitalMissing: Boolean get() = showErrors && hospital == null
+
+    val dateMissing: Boolean get() = showErrors && date == null
+
+    val timeMissing: Boolean get() = showErrors && time == null
 }
 
 /** 가져갈 카드 후보 한 장. */

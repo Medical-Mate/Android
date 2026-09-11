@@ -80,6 +80,9 @@ private fun CalendarMonthRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
+    // 일정을 넣거나 지우고 돌아오면 달라져 있다. 화면으로 올 때마다 다시 읽는다.
+    LaunchedEffect(Unit) { viewModel.load() }
+
     CalendarMonthScreen(
         state = state,
         onPreviousMonthClick = viewModel::onPreviousMonth,
@@ -130,7 +133,7 @@ private fun CalendarDayRoute(
             onEditDoneClick = viewModel::onEditDone,
             onTodoDeleteClick = viewModel::onTodoDelete,
             onScheduleDeleteClick = viewModel::onScheduleDeleteClick,
-            onScheduleDeleteConfirm = onExit,
+            onScheduleDeleteConfirm = { viewModel.onScheduleDeleteConfirm(onExit) },
             onScheduleDeleteDismiss = viewModel::onScheduleDeleteDismiss,
         ),
         modifier = modifier,

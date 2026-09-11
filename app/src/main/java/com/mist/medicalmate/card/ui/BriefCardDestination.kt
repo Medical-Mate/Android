@@ -6,9 +6,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.mist.medicalmate.navigation.ConsumeResult
+import com.mist.medicalmate.navigation.NavResult
 import kotlinx.serialization.Serializable
 
 /**
@@ -47,6 +50,7 @@ internal fun NavGraphBuilder.briefCardDestination(
     composable<BriefCardDestination> { entry ->
         val route = entry.toRoute<BriefCardDestination>()
         BriefCardRoute(
+            entry = entry,
             // 라우트는 문자열로 들고 다닌다. 서버 id는 숫자라 여기서 바꾼다.
             cardId = route.cardId.toLongOrNull() ?: return@composable,
             hospital = briefCardHospital(route),
@@ -77,6 +81,7 @@ internal fun NavGraphBuilder.handoffDestination(onDone: () -> Unit) {
  */
 @Composable
 private fun BriefCardRoute(
+    entry: NavBackStackEntry,
     cardId: Long,
     hospital: BriefCardHospital?,
     onSaved: () -> Unit,
@@ -90,6 +95,9 @@ private fun BriefCardRoute(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(cardId, hospital) { viewModel.load(cardId, hospital) }
+
+    // 병원 `변경`에서 골라 돌아온 값. 엔트리가 살아 있어서 편집 중이던 값이 남는다.
+    entry.ConsumeResult(NavResult.HOSPITAL_NAME, viewModel::onHospitalPicked)
 
     val content = state as? BriefCardUiState.Content
 

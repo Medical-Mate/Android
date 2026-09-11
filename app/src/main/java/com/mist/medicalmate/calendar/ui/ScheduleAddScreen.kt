@@ -40,6 +40,9 @@ import java.time.format.DateTimeFormatter
  * 캘린더의 + 버튼과 카드만 있는 날 시트의 "이 카드로 일정 만들기"에서 들어온다. 진료 후
  * 기록에서 들어오면 병원이 이미 채워진 `1r-4-B` 상태다.
  *
+ * 병원·날짜·시간이 필수다. 비운 채 저장을 누르면 그 칸 아래에 안내가 붙는다. 버튼을
+ * 비활성으로 막지 않는다. 문서가 비활성만으로 필요한 행동을 숨기지 말라고 한다.
+ *
  * 병원·날짜·시간은 [MedicalMatePickerField]다. 적는 것이 아니라 골라 채우는 값이라
  * 키보드를 띄우지 않는다. 병원은 검색 화면(1m-B)으로, 날짜와 시간은 시트로 간다.
  *
@@ -61,10 +64,10 @@ fun ScheduleAddScreen(state: ScheduleAddUiState, callbacks: ScheduleAddCallbacks
         )
         FormContent(state = state, callbacks = callbacks)
         MedicalMateBottomCtaBar {
+            // 늘 누를 수 있다. 눌러야 무엇이 비었는지 알 수 있다.
             MedicalMateButton(
                 label = stringResource(R.string.schedule_add_save),
                 onClick = callbacks.onSaveClick,
-                enabled = state.canSave,
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -102,6 +105,7 @@ private fun ColumnScope.FormContent(state: ScheduleAddUiState, callbacks: Schedu
             value = state.hospital,
             placeholder = stringResource(R.string.schedule_add_hospital_placeholder),
             onClick = callbacks.onHospitalClick,
+            errorText = stringResource(R.string.schedule_add_hospital_required).takeIf { state.hospitalMissing },
         )
         FieldLabel(stringResource(R.string.schedule_add_datetime))
         DateTimeFields(state = state, onSheetOpen = callbacks.onSheetOpen)
@@ -136,6 +140,7 @@ private fun DateTimeFields(state: ScheduleAddUiState, onSheetOpen: (ScheduleAddS
             onClick = { onSheetOpen(ScheduleAddSheet.DATE) },
             trailingIcon = MedicalMateIcons.Calendar,
             modifier = Modifier.weight(1f),
+            errorText = stringResource(R.string.schedule_add_date_required).takeIf { state.dateMissing },
         )
         MedicalMatePickerField(
             value = state.time?.let { timeLabel(it) },
@@ -143,6 +148,7 @@ private fun DateTimeFields(state: ScheduleAddUiState, onSheetOpen: (ScheduleAddS
             onClick = { onSheetOpen(ScheduleAddSheet.TIME) },
             trailingIcon = MedicalMateIcons.Clock,
             modifier = Modifier.weight(1f),
+            errorText = stringResource(R.string.schedule_add_time_required).takeIf { state.timeMissing },
         )
     }
 }
