@@ -23,6 +23,19 @@ interface SessionRepository {
     suspend fun start(siteCodes: List<String>, siteText: String?): ApiResult<IntakeSession>
 
     suspend fun load(sessionId: Long): ApiResult<IntakeSession>
+
+    /**
+     * 환자 발화를 보내고 다음 질문을 받는다.
+     *
+     * @param byVoice 음성으로 말했는지. 오디오는 보내지 않고 그 사실만 기록된다.
+     */
+    suspend fun send(sessionId: Long, text: String, byVoice: Boolean): ApiResult<IntakeTurn>
+
+    /** 3단계의 통증 강도. 표시 문구도 함께 보낸다. 서버가 카피를 들고 있지 않다. */
+    suspend fun setSeverity(sessionId: Long, level: Int, label: String): ApiResult<IntakeSession>
+
+    /** 4단계의 질문. 목록을 통째로 보낸다. */
+    suspend fun setQuestions(sessionId: Long, questions: List<String>): ApiResult<IntakeSession>
 }
 
 internal class DefaultSessionRepository
@@ -35,6 +48,17 @@ constructor(private val api: SessionApi, private val json: Json) :
 
     override suspend fun load(sessionId: Long): ApiResult<IntakeSession> =
         apiCall(json) { api.session(sessionId) }.map { it.toSession() }
+
+    override suspend fun send(sessionId: Long, text: String, byVoice: Boolean): ApiResult<IntakeTurn> = apiCall(json) {
+        api.sendMessage(sessionId, SendMessageRequest(text = text, inputMethod = if (byVoice) "STT" else "TEXT"))
+    }.map { it.toTurn() }
+
+    override suspend fun setSeverity(sessionId: Long, level: Int, label: String): ApiResult<IntakeSession> =
+        apiCall(json) { api.putSeverity(sessionId, SeverityRequest(level = level, label = label)) }
+            .map { it.toSession() }
+
+    override suspend fun setQuestions(sessionId: Long, questions: List<String>): ApiResult<IntakeSession> =
+        apiCall(json) { api.putQuestions(sessionId, QuestionsRequest(questions)) }.map { it.toSession() }
 }
 
 /**
@@ -51,11 +75,35 @@ data class IntakeSession(
     val answered: Int,
     val total: Int,
     val messages: List<IntakeSessionMessage>,
+    /** 3단계에서 고른 강도. 1~5 서열척도다. */
+    val severityLevel: Int? = null,
+    /** 4단계에 적어 둔 질문. 최대 셋이다. */
+    val questions: List<String> = emptyList(),
 )
 
 enum class IntakeSessionStatus { IN_PROGRESS, COMPLETED, ABANDONED }
 
+/**
+ * 한 턴의 결과.
+ *
+ * [messages]에 대화 전체가 들어 있다. 화면이 그것으로 다시 그리면 세션을 또 조회하지
+ * 않아도 된다.
+ *
+ * [ended]가 서면 문답이 끝난 것이다. 그 뒤에 또 보내도 오류가 아니라 마지막 문장만
+ * 돌아온다. 네트워크가 끊긴 사이에 끝났을 수 있어서 서버가 그렇게 열어 뒀다.
+ */
+data class IntakeTurn(val ended: Boolean, val messages: List<IntakeSessionMessage>, val answered: Int, val total: Int)
+
 data class IntakeSessionMessage(val seq: Long, val fromPatient: Boolean, val text: String)
+
+private fun TurnResponse.toTurn() = IntakeTurn(
+    ended = ended,
+    messages = messages.map { it.toMessage() },
+    answered = progress?.current ?: 0,
+    total = progress?.total ?: 0,
+)
+
+private fun MessageResponse.toMessage() = IntakeSessionMessage(seq = seq, fromPatient = role == ROLE_USER, text = text)
 
 private fun SessionResponse.toSession() = IntakeSession(
     id = sessionId,
@@ -64,7 +112,9 @@ private fun SessionResponse.toSession() = IntakeSession(
     siteText = siteText,
     answered = progress?.current ?: 0,
     total = progress?.total ?: 0,
-    messages = messages.map { IntakeSessionMessage(seq = it.seq, fromPatient = it.role == ROLE_USER, text = it.text) },
+    messages = messages.map { it.toMessage() },
+    severityLevel = severity?.level,
+    questions = questions,
 )
 
 /**

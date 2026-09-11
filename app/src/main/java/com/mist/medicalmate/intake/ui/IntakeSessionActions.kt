@@ -44,6 +44,25 @@ internal class IntakeSessionActions(
      * 되돌아가는 자리는 문답이다. 서버의 `progress`는 문답 안의 물음 수이지 우리 네 단계가
      * 아니라서, 강도나 질문 단계까지 건너뛸 근거가 없다. 답한 마디는 그대로 다시 그린다.
      */
+    /**
+     * 고른 강도를 서버에 남긴다.
+     *
+     * 표시 문구를 함께 보낸다. 서버가 카피를 들고 있으면 문구를 바꿀 때마다 배포해야 하고,
+     * 그것은 디자인 것이지 서버 것이 아니다.
+     *
+     * 실패해도 흐름을 막지 않는다. 다음 단계로 못 가게 하는 것이 더 나쁘다.
+     */
+    fun saveSeverity(state: IntakeUiState, label: String) {
+        val sessionId = state.sessionId ?: return
+        scope.launch { repository.setSeverity(sessionId, state.severity.level, label) }
+    }
+
+    /** 적어 둔 질문을 통째로 보낸다. 추가·삭제·순서가 한 번에 처리된다. */
+    fun saveQuestions(state: IntakeUiState) {
+        val sessionId = state.sessionId ?: return
+        scope.launch { repository.setQuestions(sessionId, state.questions) }
+    }
+
     fun restore(sessionId: Long) {
         update { it.copy(restoring = true) }
         scope.launch {

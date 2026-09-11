@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
@@ -110,6 +111,9 @@ private fun IntakeRoute(
     viewModel: IntakeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    // 강도의 표시 문구는 문자열 리소스라 ViewModel이 읽을 수 없다. 서버가 그 문구를 함께
+    // 받으므로 화면이 풀어서 넘긴다.
+    val severityLabel = stringResource(state.severity.labelRes)
 
     // 목적지 스코프라 화면을 떠나면 ViewModel도 사라진다. 다시 들어오면 다시 불러온다.
     LaunchedEffect(sessionId) {
@@ -125,7 +129,7 @@ private fun IntakeRoute(
         callbacks =
         IntakeCallbacks(
             onBackClick = { if (state.canGoBack) viewModel.onBack() else onExit() },
-            onNextClick = viewModel::onNext,
+            onNextClick = { viewModel.onNext(severityLabel) },
             onBodyViewChange = viewModel.bodyMap::onViewChange,
             onBodyDotClick = viewModel.bodyMap::onDotClick,
             onBodySideAnchorClick = viewModel.bodyMap::onSideAnchorSelect,
