@@ -10,7 +10,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import kotlinx.serialization.Serializable
 
-/** 와이어프레임 A2 온보딩. 로그인 뒤 온보딩이 필요할 때의 목적지다. */
+/** 와이어프레임 온보딩 v2. 로그인 뒤 온보딩이 필요할 때의 목적지다. */
 @Serializable
 internal data object OnboardingIntroDestination
 

@@ -278,55 +278,25 @@
     <string name="splash_tagline">진료실에서 하고 싶은 말, 미리 정리해요</string>
 
     <!-- Figma A2 온보딩(1157:4246~4249). 로그인 뒤 네 장이다. -->
+    <!--
+      Figma V2-00(1320:4570)~V2-03(1320:4675) 온보딩. 시안이 v1 네 장을 걷어내고 다시
+      썼다. 장 위의 작은 말과 첫 장의 단계 셋이 없어져 그 문자열도 함께 지웠다.
+      제목은 첫 장만 두 줄이고 설명은 넷 다 세 줄이다.
+    -->
     <string name="onboarding_next">다음</string>
     <string name="onboarding_start">시작하기</string>
 
-    <string name="onboarding_intro_eyebrow">진료 전부터 다음 진료까지</string>
-    <string name="onboarding_intro_title">아플 때 뭘 말해야 할지\n몰라도 괜찮아요</string>
-    <string name="onboarding_intro_lead">언제부터, 얼마나 아픈지 하나씩 물어볼게요.\n답한 내용은 의사에게 보여줄 카드로 정리되고,\n진료 후 기록과 다음 일정까지 이어져요.</string>
-    <string name="onboarding_intro_step1">아픈 부위를 직접 짚어요</string>
-    <string name="onboarding_intro_step1_detail">정확한 의학 용어를 몰라도 괜찮아요.</string>
-    <string name="onboarding_intro_step2">말한 증상을 AI가 정리해요</string>
-    <string name="onboarding_intro_step2_detail">진료실에서 바로 보여줄 카드가 돼요.</string>
-    <string name="onboarding_intro_step3">진료 후 기록과 일정을 이어가요</string>
-    <string name="onboarding_intro_step3_detail">들은 말과 다음 진료를 한곳에서 확인해요.</string>
+    <string name="onboarding_prepare_title">말하기 어려웠던 증상,\n함께 준비해요.</string>
+    <string name="onboarding_prepare_description">아픈 곳을 짚고, 증상을 말해 주세요.\n진료 전에 보여줄 카드부터\n진료 후 기록까지 함께 정리해요.</string>
 
-    <string name="onboarding_body_eyebrow">아픈 부위 선택</string>
-    <string name="onboarding_body_title">아픈 곳을 먼저 짚고\n편하게 말해 주세요</string>
-    <string name="onboarding_body_description">내가 아픈 정확한 부위를 고를 수 있어요.\n이어지는 질문에는 평소 말하듯 답하면 돼요.</string>
-    <string name="onboarding_body_anchor">팔 선택</string>
-    <string name="onboarding_body_hint">아픈 부위를 눌러 선택해요</string>
+    <string name="onboarding_point_title">짚어요.</string>
+    <string name="onboarding_point_description">정확한 의학 용어를 몰라도 괜찮아요.\n아픈 부위를 먼저 고르고,\n이어지는 질문에 편하게 답해 주세요.</string>
 
-    <string name="onboarding_card_eyebrow">환자가 확인하는 AI 정리</string>
-    <string name="onboarding_card_title">말한 증상은 진료 전에\n한 장으로 정리돼요</string>
-    <string name="onboarding_card_description">답변은 AI가 진료용 카드로 정리해요.\n보내기 전 직접 확인하고 고칠 수 있어요.</string>
-    <string name="onboarding_card_ask1">언제부터 불편하셨어요?</string>
-    <string name="onboarding_card_answer1">한 3주쯤 됐어요</string>
-    <string name="onboarding_card_ask2">어떨 때 더 아픈가요?</string>
-    <string name="onboarding_card_answer2">밥 먹고 나면 쓰려요</string>
-    <string name="onboarding_card_editable">직접 고칠 수 있어요</string>
-    <!-- 그림 속 작은 브리핑 카드. 실제 카드(1e-1)의 줄을 셋만 남긴 것이다. -->
-    <string name="onboarding_card_mini_title">복부 통증 · 3주</string>
-    <string name="onboarding_card_mini_key1">부위</string>
-    <string name="onboarding_card_mini_value1">명치 아래</string>
-    <string name="onboarding_card_mini_key2">기간</string>
-    <string name="onboarding_card_mini_value2">3주 · 최근 악화</string>
-    <string name="onboarding_card_mini_key3">양상</string>
-    <string name="onboarding_card_mini_value3">식후 쓰림</string>
-    <string name="onboarding_card_mini_allergy">알러지 · 페니실린</string>
+    <string name="onboarding_card_title">정리해요.</string>
+    <string name="onboarding_card_description">말한 증상은 AI가 한 장으로 정리해요.\n직접 확인하고 고친 뒤,\n진료실에서 의료진에게 보여 주세요.</string>
 
-    <string name="onboarding_timeline_eyebrow">진료 후에도 이어지는 기록</string>
-    <string name="onboarding_timeline_title">진료가 끝난 뒤에도\n기록과 일정은 이어져요</string>
-    <string name="onboarding_timeline_description">소견·검사·약·처방을 나눠 저장하고\n다음 진료 준비 시점에 다시 알려드려요.</string>
-    <string name="onboarding_timeline_when1">진료 전</string>
-    <string name="onboarding_timeline_title1">브리핑 카드</string>
-    <string name="onboarding_timeline_detail1">증상과 묻고 싶은 것을\n진료실에서 보여줘요</string>
-    <string name="onboarding_timeline_when2">진료 후</string>
-    <string name="onboarding_timeline_title2">들은 말 기록</string>
-    <string name="onboarding_timeline_detail2">소견·검사·약·처방으로\n나눠 저장해요</string>
-    <string name="onboarding_timeline_when3">다음 진료</string>
-    <string name="onboarding_timeline_title3">9월 26일 재방문</string>
-    <string name="onboarding_timeline_detail3">기록과 카드를 이어서\n다음 진료를 준비해요</string>
+    <string name="onboarding_follow_title">이어가요.</string>
+    <string name="onboarding_follow_description">진료에서 들은 말과 처방을 기록해요.\n다음 진료 일정까지 한곳에서,\n다시 준비할 때 꺼내 볼 수 있어요.</string>
 
     <!-- Figma 1b-1(398:1225)·1b-2(398:1285)·1b-3(398:1341) 신상정보 입력. -->
     <string name="profile_setup_title">내 정보 등록</string>
