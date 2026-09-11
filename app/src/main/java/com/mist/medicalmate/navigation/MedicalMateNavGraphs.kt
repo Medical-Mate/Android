@@ -67,7 +67,7 @@ internal fun NavGraphBuilder.entryDestinations(
         onAuthenticated = onAuthenticated,
     )
     onboardingIntroDestination(
-        onStartClick = { navController.navigate(ProfileSetupDestination) },
+        onDoneClick = { navController.navigate(ProfileSetupDestination) },
     )
     profileSetupDestination(
         onCompleted = { navController.navigate(ProfileCompleteDestination) },
