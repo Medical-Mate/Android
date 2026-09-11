@@ -46,9 +46,12 @@ class ScheduleAddViewModelTest {
     }
 
     @Test
-    fun `날짜와 시간이 둘 다 있어야 저장할 수 있다`() {
+    fun `병원 날짜 시간이 다 있어야 저장할 수 있다`() {
         val viewModel = addViewModel()
 
+        assertFalse(viewModel.uiState.value.canSave)
+
+        viewModel.onHospitalPicked("서울OO병원 내과")
         assertFalse(viewModel.uiState.value.canSave)
 
         viewModel.onDateConfirm(LocalDate.of(2026, 9, 26))
@@ -59,13 +62,11 @@ class ScheduleAddViewModelTest {
     }
 
     @Test
-    fun `병원이 없어도 저장할 수 있다`() {
-        val viewModel = addViewModel()
+    fun `카드와 할 일은 없어도 저장할 수 있다`() {
+        // 필수는 셋뿐이다. 나머지는 선택이다.
+        val viewModel = filled()
 
-        viewModel.onDateConfirm(LocalDate.of(2026, 9, 26))
-        viewModel.onTimeConfirm(LocalTime.of(10, 30))
-
-        assertNull(viewModel.uiState.value.hospital)
+        assertTrue(viewModel.uiState.value.cards.none { it.picked })
         assertTrue(viewModel.uiState.value.canSave)
     }
 
@@ -197,10 +198,7 @@ class ScheduleAddViewModelTest {
     @Test
     fun `저장하면 고른 날짜와 시각으로 일정을 만든다`() {
         val repository = RecordingAppointmentRepository()
-        val viewModel = addViewModel(repository)
-        viewModel.onHospitalPicked("서울OO병원 내과")
-        viewModel.onDateConfirm(LocalDate.of(2026, 9, 26))
-        viewModel.onTimeConfirm(LocalTime.of(10, 30))
+        val viewModel = filled(repository)
 
         viewModel.onSaveClick {}
 
@@ -209,7 +207,7 @@ class ScheduleAddViewModelTest {
     }
 
     @Test
-    fun `날짜나 시각이 없으면 보내지 않는다`() {
+    fun `필수 칸이 비면 보내지 않는다`() {
         val repository = RecordingAppointmentRepository()
 
         addViewModel(repository).onSaveClick {}
@@ -218,30 +216,58 @@ class ScheduleAddViewModelTest {
     }
 
     @Test
-    fun `두 번 눌러도 한 번만 만든다`() {
-        // 느린 연결에서 두 번 누르면 같은 일정이 둘 생긴다.
-        val repository = RecordingAppointmentRepository()
-        val viewModel = addViewModel(repository)
+    fun `필수 칸이 비면 어느 칸인지 알린다`() {
+        // 비활성 버튼으로 막지 않는다. 눌러야 무엇이 비었는지 알 수 있다.
+        val viewModel = addViewModel()
+
+        viewModel.onSaveClick {}
+
+        val state = viewModel.uiState.value
+        assertTrue(state.hospitalMissing)
+        assertTrue(state.dateMissing)
+        assertTrue(state.timeMissing)
+    }
+
+    @Test
+    fun `병원만 비면 그 칸만 알린다`() {
+        val viewModel = addViewModel()
         viewModel.onDateConfirm(LocalDate.of(2026, 9, 26))
         viewModel.onTimeConfirm(LocalTime.of(10, 30))
 
         viewModel.onSaveClick {}
-        viewModel.onSaveClick {}
 
-        assertEquals(2, repository.createCount)
+        val state = viewModel.uiState.value
+        assertTrue(state.hospitalMissing)
+        assertFalse(state.dateMissing)
+        assertFalse(state.timeMissing)
+    }
+
+    @Test
+    fun `화면을 열자마자 붉히지 않는다`() {
+        // 채울 기회가 없었는데 틀렸다고 하는 셈이다.
+        val state = addViewModel().uiState.value
+
+        assertFalse(state.hospitalMissing)
+        assertFalse(state.dateMissing)
+        assertFalse(state.timeMissing)
     }
 
     @Test
     fun `저장이 끝나야 화면을 옮긴다`() {
-        val viewModel = addViewModel()
-        viewModel.onDateConfirm(LocalDate.of(2026, 9, 26))
-        viewModel.onTimeConfirm(LocalTime.of(10, 30))
         var saved = false
 
-        viewModel.onSaveClick { saved = true }
+        filled().onSaveClick { saved = true }
 
         assertTrue(saved)
     }
+
+    /** 필수 셋을 채운 상태. */
+    private fun filled(repository: RecordingAppointmentRepository = RecordingAppointmentRepository()) =
+        addViewModel(repository).apply {
+            onHospitalPicked("서울OO병원 내과")
+            onDateConfirm(LocalDate.of(2026, 9, 26))
+            onTimeConfirm(LocalTime.of(10, 30))
+        }
 }
 private fun addViewModel(repository: RecordingAppointmentRepository = RecordingAppointmentRepository()) =
     ScheduleAddViewModel(repository, FakeCardRepository(list = ApiResult.Success(pickableCards)))

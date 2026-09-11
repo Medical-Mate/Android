@@ -4,6 +4,7 @@ import androidx.annotation.DrawableRes
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -42,6 +43,10 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
  * [trailingIcon]을 받는 이유는 1r-4가 세 필드에 다른 아이콘을 쓰기 때문이다. 병원은
  * 마스터의 `chevron-right`, 날짜는 달력, 시간은 시계다. 어디로 가는지가 아이콘으로
  * 먼저 읽힌다.
+ *
+ * [errorText]는 필수인데 비워 둔 채로 넘어가려 할 때 쓴다. `Text Field`가 같은 자리에
+ * 같은 모양으로 오류를 적고 있어 그 처리를 그대로 가져왔다. 문서가 "오류는 색만으로
+ * 알리지 말고 지침을 함께 표시"하라고 해서 테두리만 붉히지 않고 문구를 함께 둔다.
  */
 @Composable
 fun MedicalMatePickerField(
@@ -51,18 +56,51 @@ fun MedicalMatePickerField(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     @DrawableRes trailingIcon: Int = MedicalMateIcons.ChevronRight,
+    errorText: String? = null,
 ) {
     val colors = MedicalMateTheme.colors
     val filled = !value.isNullOrBlank()
     val border =
         when {
             !enabled -> colors.borderSubtle
+            errorText != null -> colors.fgDanger
             filled -> colors.fgDefault
             else -> colors.borderStrong
         }
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8)) {
+        PickerRow(
+            value = value,
+            placeholder = placeholder,
+            onClick = onClick,
+            enabled = enabled,
+            filled = filled,
+            border = border,
+            trailingIcon = trailingIcon,
+        )
+        if (errorText != null) {
+            Text(
+                text = errorText,
+                style = MedicalMateTheme.typography.bodyS,
+                color = colors.fgDanger,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PickerRow(
+    value: String?,
+    placeholder: String,
+    onClick: () -> Unit,
+    enabled: Boolean,
+    filled: Boolean,
+    border: androidx.compose.ui.graphics.Color,
+    @DrawableRes trailingIcon: Int,
+) {
+    val colors = MedicalMateTheme.colors
     Row(
         modifier =
-        modifier
+        Modifier
             .fillMaxWidth()
             .heightIn(min = MedicalMateSize.controlLg)
             .border(width = BorderWidth, color = border, shape = MedicalMateRadius.md)

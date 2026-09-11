@@ -174,6 +174,10 @@
     <!-- Figma 1r-4(1062:3031) 일정 추가. -->
     <string name="schedule_add_title">일정 추가</string>
     <string name="schedule_add_hospital">병원</string>
+    <!-- 필수 칸을 비우고 저장을 눌렀을 때. 문서가 오류를 색만으로 알리지 말라고 한다. -->
+    <string name="schedule_add_hospital_required">병원을 골라주세요</string>
+    <string name="schedule_add_date_required">날짜를 골라주세요</string>
+    <string name="schedule_add_time_required">시간을 골라주세요</string>
     <string name="schedule_add_hospital_placeholder">진료받을 병원을 찾아주세요</string>
     <string name="schedule_add_datetime">날짜 · 시간</string>
     <string name="schedule_add_date_placeholder">날짜</string>

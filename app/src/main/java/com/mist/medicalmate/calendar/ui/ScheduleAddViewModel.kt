@@ -104,6 +104,8 @@ internal constructor(
      *
      * 고른 카드가 있으면 첫 장만 싣는다. 서버의 `cardId`가 단수이고 시안도 한 장이다.
      *
+     * 병원·날짜·시간이 필수다. 하나라도 비면 보내지 않고 그 칸에 안내를 띄운다.
+     *
      * **할 일은 보내지 않는다.** `AppointmentResponse`에 자리가 없다. 여러 줄에 줄마다 체크
      * 상태까지 있어서 `purpose` 하나로 담을 수 없다. 화면에만 남는다(#141).
      *
@@ -111,6 +113,12 @@ internal constructor(
      */
     fun onSaveClick(onSaved: () -> Unit) {
         val state = mutableUiState.value
+        if (!state.canSave) {
+            // 비활성 버튼으로 막지 않는다. 문서가 비활성만으로 필요한 행동을 숨기지 말라고 한다.
+            // 무엇이 비었는지 그 칸에서 알린다.
+            mutableUiState.update { it.copy(showErrors = true) }
+            return
+        }
         val date = state.date
         val time = state.time
         if (date == null || time == null || saving) return
