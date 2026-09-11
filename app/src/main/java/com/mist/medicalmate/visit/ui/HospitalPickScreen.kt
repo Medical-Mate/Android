@@ -82,13 +82,15 @@ fun HospitalPickScreen(
             onQueryChange = onQueryChange,
             onHospitalClick = onHospitalClick,
         )
-        MedicalMateBottomCtaBar {
-            MedicalMateButton(
-                label = stringResource(submitLabel),
-                onClick = onSubmitClick,
-                enabled = state.canSubmit,
-                modifier = Modifier.fillMaxWidth(),
-            )
+        if (state.showSubmit) {
+            MedicalMateBottomCtaBar {
+                MedicalMateButton(
+                    label = stringResource(submitLabel),
+                    onClick = onSubmitClick,
+                    enabled = state.canSubmit,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         }
     }
 }
