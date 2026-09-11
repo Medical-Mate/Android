@@ -143,6 +143,37 @@ class HospitalPickViewModelTest {
         assertFalse(loaded().uiState.value.canSubmit)
     }
 
+    @Test
+    fun `진료 전 입력 전에는 하단 바를 두지 않는다`() {
+        // 시안의 1m-B 입력 전 프레임(1092:3858)에 Footer가 없다.
+        assertFalse(loadedBefore().uiState.value.showSubmit)
+    }
+
+    @Test
+    fun `진료 전에 검색해서 결과가 나오면 하단 바가 생긴다`() {
+        val viewModel = loadedBefore()
+
+        viewModel.onQueryChange("서울")
+
+        assertTrue(viewModel.uiState.value.showSubmit)
+    }
+
+    @Test
+    fun `진료 후에는 처음부터 하단 바가 있다`() {
+        assertTrue(loaded().uiState.value.showSubmit)
+    }
+
+    @Test
+    fun `찾은 것이 없으면 하단 바가 사라진다`() {
+        // 비활성 버튼을 남기지 않는다. 결과가 비면 고른 것도 함께 풀린다.
+        val viewModel = loaded()
+
+        viewModel.onQueryChange("없는병원이름")
+
+        assertFalse(viewModel.uiState.value.showSubmit)
+        assertFalse(viewModel.uiState.value.canSubmit)
+    }
+
     private fun loaded() = HospitalPickViewModel().apply { load() }
 
     private fun loadedBefore() = HospitalPickViewModel().apply { load(HospitalPickPurpose.BEFORE_VISIT) }

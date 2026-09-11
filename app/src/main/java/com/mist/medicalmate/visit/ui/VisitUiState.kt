@@ -52,6 +52,21 @@ data class HospitalPickUiState(
      * 살려 뒀고, 옆의 `건너뛰기`와 같은 곳으로 간다. 병원은 진료 후에도 등록할 수 있다.
      */
     val canSubmit: Boolean = selectedId != null || purpose != HospitalPickPurpose.AFTER_VISIT
+
+    /**
+     * 하단 CTA 바를 그리는지.
+     *
+     * 시안은 결과가 없는 동안 바를 비활성으로 두지 않고 아예 없앤다. `1m-B`의 입력 전
+     * 프레임(`1092:3858`)에 `Footer`가 없고 그 자리를 `Empty State`가 496으로 늘어 채운다.
+     * 결과가 있는 `1m-B`(`1041:3687`)와 `1m`(`489:5447`)에는 있다.
+     *
+     * [results]가 비면 [selectedId]도 항상 비어 있다. 검색어가 바뀔 때 결과에서 빠진 선택을
+     * 지우기 때문이다. 그래서 고른 것이 있는지 따로 보지 않는다.
+     *
+     * 진료 전에는 이 바가 사라지면 앞으로 갈 길이 상단의 `건너뛰기`뿐이다. 시안은 그
+     * 문구까지 지웠는데 대신 갈 자리가 없어서 남겨 뒀다. #119에 올린 확인 대기 항목이다.
+     */
+    val showSubmit: Boolean = results.isNotEmpty()
 }
 
 /**
