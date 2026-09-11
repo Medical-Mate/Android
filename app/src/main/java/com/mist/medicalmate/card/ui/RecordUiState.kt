@@ -11,6 +11,8 @@ package com.mist.medicalmate.card.ui
 sealed interface RecordUiState {
     data object Loading : RecordUiState
 
+    data object Failed : RecordUiState
+
     /**
      * [groups]가 비어 있으면 화면이 빈 상태(1j-2)가 된다.
      *
