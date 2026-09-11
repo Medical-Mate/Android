@@ -7,13 +7,25 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
@@ -41,6 +53,10 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
  * 필드를 띄우는 대신 목록에 빈 항목이 하나 생기는 것이 문서의 추가 방식이고,
  * [MedicalMateAddRow]의 설명과 같은 규칙이다. 값 아래 `border/strong` 밑줄은
  * `KV Row`의 편집 상태와 같은 표시다.
+ *
+ * 적기로 들어가면 커서를 그 줄에 놓고 키보드를 띄운다. 목록에 빈 줄만 생기고 다시 눌러야
+ * 적을 수 있으면 "그 자리에서 적는다"가 아니다. 끝내는 것은 [onEditDone]이 받는다. 키보드의
+ * 완료를 누르거나 다른 곳으로 초점이 넘어가면 부른다.
  */
 @Composable
 fun MedicalMateTodoRow(
@@ -51,6 +67,7 @@ fun MedicalMateTodoRow(
     enabled: Boolean = true,
     delete: MedicalMateRowDelete? = null,
     onLabelChange: ((String) -> Unit)? = null,
+    onEditDone: (() -> Unit)? = null,
     labelPlaceholder: String = "",
 ) {
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -69,6 +86,7 @@ fun MedicalMateTodoRow(
                 label = label,
                 placeholder = labelPlaceholder,
                 onLabelChange = onLabelChange,
+                onEditDone = onEditDone ?: {},
                 enabled = enabled,
                 modifier = Modifier.weight(1f),
             )
@@ -103,10 +121,10 @@ private fun EditingLabel(
     label: String,
     placeholder: String,
     onLabelChange: (String) -> Unit,
+    onEditDone: () -> Unit,
     enabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val colors = MedicalMateTheme.colors
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12),
@@ -125,39 +143,83 @@ private fun EditingLabel(
                 .heightIn(min = MedicalMateSize.touchMin),
             contentAlignment = Alignment.CenterStart,
         ) {
-            Box(
-                modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .drawBehind {
-                        val y = size.height - UnderlineWidth.toPx() / 2
-                        drawLine(
-                            color = colors.borderStrong,
-                            start = Offset(0f, y),
-                            end = Offset(size.width, y),
-                            strokeWidth = UnderlineWidth.toPx(),
-                        )
-                    }
-                    .padding(bottom = MedicalMateSpace.s2),
-            ) {
-                if (label.isEmpty()) {
-                    Text(
-                        text = placeholder,
-                        style = MedicalMateTheme.typography.bodyL,
-                        color = colors.fgSubtle,
-                    )
-                }
-                BasicTextField(
-                    value = label,
-                    onValueChange = onLabelChange,
-                    enabled = enabled,
-                    textStyle = MedicalMateTheme.typography.bodyL.copy(color = colors.fgDefault),
-                    cursorBrush = SolidColor(colors.borderFocus),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+            UnderlinedField(
+                label = label,
+                placeholder = placeholder,
+                onLabelChange = onLabelChange,
+                onEditDone = onEditDone,
+                enabled = enabled,
+            )
+        }
+    }
+}
+
+/**
+ * 밑줄 있는 한 줄 입력.
+ *
+ * 밑줄은 글자 아래에만 그린다. 바깥 상자가 행 높이를 채워서 누를 수 있는 높이는 48을
+ * 지키고, 선은 시안(`1092:4042`)의 `Value Wrap` 29와 같은 자리에 온다.
+ */
+@Composable
+private fun UnderlinedField(
+    label: String,
+    placeholder: String,
+    onLabelChange: (String) -> Unit,
+    onEditDone: () -> Unit,
+    enabled: Boolean,
+) {
+    val colors = MedicalMateTheme.colors
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    var everFocused by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+    Box(
+        modifier =
+        Modifier
+            .fillMaxWidth()
+            .drawBehind {
+                val y = size.height - UnderlineWidth.toPx() / 2
+                drawLine(
+                    color = colors.borderStrong,
+                    start = Offset(0f, y),
+                    end = Offset(size.width, y),
+                    strokeWidth = UnderlineWidth.toPx(),
                 )
             }
+            .padding(bottom = MedicalMateSpace.s2),
+    ) {
+        if (label.isEmpty()) {
+            Text(
+                text = placeholder,
+                style = MedicalMateTheme.typography.bodyL,
+                color = colors.fgSubtle,
+            )
         }
+        BasicTextField(
+            value = label,
+            onValueChange = onLabelChange,
+            enabled = enabled,
+            textStyle = MedicalMateTheme.typography.bodyL.copy(color = colors.fgDefault),
+            cursorBrush = SolidColor(colors.borderFocus),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+            modifier =
+            Modifier
+                .fillMaxWidth()
+                .focusRequester(focusRequester)
+                // 처음 한 번은 초점이 오기 전이라 잃은 것이 아니다. 받은 적이 있는
+                // 줄만 끝난 것으로 본다.
+                .onFocusChanged { focus ->
+                    if (focus.isFocused) {
+                        everFocused = true
+                    } else if (everFocused) {
+                        onEditDone()
+                    }
+                },
+        )
     }
 }
 

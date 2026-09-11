@@ -201,6 +201,7 @@ private fun ColumnScope.TodoSection(state: ScheduleAddUiState, todo: ScheduleAdd
                 onClick = { todo.onDeleteClick(item.id) },
             ),
             onLabelChange = if (item.editing) ({ value: String -> todo.onLabelChange(item.id, value) }) else null,
+            onEditDone = { todo.onEditDone(item.id) },
             labelPlaceholder = stringResource(R.string.schedule_add_todo_placeholder),
         )
     }
