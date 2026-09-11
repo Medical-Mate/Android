@@ -89,11 +89,11 @@ internal fun NavGraphBuilder.entryDestinations(
  */
 internal fun NavGraphBuilder.intakeDestinations(navController: NavHostController) {
     intakeDestination(
-        onCompleted = { navController.navigate(IntakeDoneDestination) },
+        onCompleted = { sessionId -> navController.navigate(IntakeDoneDestination(sessionId)) },
         onExit = { navController.popBackStack() },
     )
     intakeDoneDestination(
-        onCardClick = { navController.navigate(BriefCardDestination(cardId = NEW_CARD_ID)) },
+        onCardCreated = { cardId -> navController.navigate(BriefCardDestination(cardId = cardId)) },
         onHospitalClick = {
             navController.navigate(HospitalPickDestination(purpose = HospitalPickPurpose.BEFORE_VISIT))
         },

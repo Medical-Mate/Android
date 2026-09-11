@@ -1,31 +1,33 @@
 package com.mist.medicalmate.card.ui
 
 import androidx.lifecycle.ViewModel
-import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
+import androidx.lifecycle.viewModelScope
+import com.mist.medicalmate.card.data.CardRepository
+import com.mist.medicalmate.core.network.ApiResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 /**
  * 브리핑 카드 상태 보유자.
  *
- * **카드 내용이 픽스처다.** 실제로는 문답에서 주고받은 말을 AI가 카드 모양으로 정리해서
- * 넘겨준다. 지금은 Figma 1e-1의 내용을 그 모양으로 채워 뒀고, 연동하면 [load]가 그
- * 응답을 받는다. 화면과 상태 모델은 그대로 쓴다.
+ * `GET /api/cards/{id}`가 카드를 준다. 알러지는 AI가 만드는 값이 아니라 신상정보에 저장된
+ * 것이 카드에 실려 온다.
  *
- * 알러지는 AI가 만드는 값이 아니다. 신상정보에 저장된 것이 올라온다. 지금은 픽스처에
- * 함께 들어 있고, 연동하면 프로필 조회에서 온다.
+ * 편집은 원본을 두고 사본을 따로 들고 있다가 확인할 때 서버로 보낸다. 취소하면 사본만
+ * 버린다. 사본을 고치는 조작은 [editActions]에 있다.
  *
- * 편집은 원본을 두고 사본을 따로 들고 있다가 확인할 때 옮긴다. 취소하면 사본만 버린다.
- * 사본을 고치는 조작은 [editActions]에 있다.
+ * **확정한 카드를 고치면 서버가 새 버전을 만든다.** 응답의 `cardId`가 달라지므로 확인 뒤에는
+ * 응답으로 온 카드로 갈아탄다. 옛 id를 들고 있으면 다음 수정이 엉뚱한 카드로 간다.
  */
 @HiltViewModel
 class BriefCardViewModel
 @Inject
-constructor() : ViewModel() {
+internal constructor(private val repository: CardRepository) : ViewModel() {
     private val mutableUiState = MutableStateFlow<BriefCardUiState>(BriefCardUiState.Loading)
     val uiState: StateFlow<BriefCardUiState> = mutableUiState.asStateFlow()
 
@@ -41,12 +43,18 @@ constructor() : ViewModel() {
     /**
      * [hospital]은 라우트가 들고 온 값이다. 진료 전 병원 찾기(1m-B)에서 고른 것이다.
      *
-     * null이면 픽스처의 병원을 그대로 쓴다. 서버가 붙으면 카드에 저장된 병원이 응답에 담겨
-     * 오고, 이 파라미터는 방금 고른 것을 즉시 반영하는 자리로만 남는다.
+     * 서버 카드 응답에는 병원이 없다. 목록 응답에만 `clinicName`이 있어서 상세를 열면 그
+     * 값을 채울 곳이 없다(#139). 그래서 지금은 방금 고른 것만 얹는다.
      */
-    fun load(hospital: BriefCardHospital? = null) {
-        val card = if (hospital == null) fixture else fixture.copy(hospital = hospital)
-        mutableUiState.value = BriefCardUiState.Content(card = card)
+    fun load(cardId: Long, hospital: BriefCardHospital? = null) {
+        mutableUiState.value = BriefCardUiState.Loading
+        viewModelScope.launch {
+            mutableUiState.value =
+                when (val result = repository.card(cardId)) {
+                    is ApiResult.Success -> BriefCardUiState.Content(card = result.value.copy(hospital = hospital))
+                    is ApiResult.Rejected, is ApiResult.NetworkUnavailable -> BriefCardUiState.Failed
+                }
+        }
     }
 
     /** Nav 우측 `편집`. 카드 안의 모든 값을 한 번에 연다. */
@@ -57,18 +65,62 @@ constructor() : ViewModel() {
     }
 
     /**
-     * Nav 우측 `확인`. 사본을 카드에 옮기고 편집 모드를 닫는다.
+     * Nav 우측 `확인`. 고친 값을 보내고 편집 모드를 닫는다.
      *
-     * 서버 저장은 아직 없다. `PATCH /api/cards/{cardId}`를 붙이면 여기서 호출하고 실패
-     * 상태를 하나 더 둔다.
+     * **응답으로 온 카드로 갈아탄다.** 확정된 카드를 고치면 서버가 새 버전을 만들고 id가
+     * 달라진다. 화면이 옛 id를 들고 있으면 다음 수정이 엉뚱한 카드로 간다.
+     *
+     * 지금 보내는 것은 질문 목록뿐이다. 카드 본문은 서버가 고정 필드에서 가변 목록으로
+     * 바꾸는 중이라 보낼 모양이 정해지지 않았다(#139). 본문 사본은 화면에만 반영한다.
      */
     fun onEditDoneClick() {
-        mutableUiState.update { state ->
-            val draft = (state as? BriefCardUiState.Content)?.draft ?: return@update state
-            state.copy(
-                card = state.card.copy(items = draft.items, questions = draft.questions),
-                draft = null,
-            )
+        val state = mutableUiState.value as? BriefCardUiState.Content ?: return
+        val draft = state.draft
+        val cardId = state.card.id.toLongOrNull()
+        if (draft == null || cardId == null) return
+
+        viewModelScope.launch {
+            when (val result = repository.update(cardId, draft.questions)) {
+                is ApiResult.Success ->
+                    mutableUiState.value =
+                        BriefCardUiState.Content(
+                            card = result.value.copy(items = draft.items, hospital = state.card.hospital),
+                        )
+
+                is ApiResult.Rejected, is ApiResult.NetworkUnavailable ->
+                    mutableUiState.value = state.copy(saveFailed = true)
+            }
+        }
+    }
+
+    /**
+     * 하단 `진료실에서 보여주기`. 전달 화면으로 가기 전에 카드를 확정한다.
+     *
+     * 전달 경로는 확정한 카드만 연다. 초안이면 400이다. 이미 확정한 카드를 다시 확정해도
+     * 400이므로 그때는 그냥 넘어간다. 확정 상태를 화면이 들고 있어서 다시 부를 일이 없다.
+     *
+     * [onConfirmed]는 화면 이동이다. 확정에 실패하면 부르지 않는다. 전달 화면이 열리자마자
+     * 400으로 비어 버리는 것보다 여기서 멈추는 편이 낫다.
+     */
+    fun onHandoffClick(onConfirmed: (String) -> Unit) {
+        val state = mutableUiState.value as? BriefCardUiState.Content ?: return
+        val cardId = state.card.id.toLongOrNull()
+        if (cardId == null || state.card.status == BriefCard.Status.CONFIRMED) {
+            // 이미 확정했으면 그대로 간다. 다시 확정하면 400이다.
+            if (cardId != null) onConfirmed(state.card.id)
+            return
+        }
+
+        viewModelScope.launch {
+            when (val result = repository.confirm(cardId)) {
+                is ApiResult.Success -> {
+                    mutableUiState.value = state.copy(card = result.value.copy(hospital = state.card.hospital))
+                    onConfirmed(result.value.id)
+                }
+
+                is ApiResult.Rejected, is ApiResult.NetworkUnavailable ->
+                    mutableUiState.value = state.copy(saveFailed = true)
+            }
         }
     }
 
@@ -106,37 +158,5 @@ constructor() : ViewModel() {
         mutableUiState.update { state ->
             if (state !is BriefCardUiState.Content) state else state.copy(deleteRequested = false, draft = null)
         }
-    }
-
-    private companion object {
-        /** Figma 1e-1(404:1679)의 내용. AI 응답이 들어오면 삭제한다. */
-        val fixture =
-            BriefCard(
-                id = "card-1",
-                title = "복부 통증 · 3주",
-                status = BriefCard.Status.BEFORE_VISIT,
-                patientLine = "김OO · 32세 여 · 2026.09.04 작성",
-                items =
-                listOf(
-                    BriefCardItem(key = "부위", value = "복부 (명치 아래 · 배꼽 위)"),
-                    BriefCardItem(key = "기간", value = "3주 전 시작 · 최근 악화", emphasized = true),
-                    BriefCardItem(key = "양상", value = "식후 30분 뒤 쓰림 · 밤에 심해짐"),
-                    BriefCardItem(key = "복용약", value = "혈압약 · 진통제(증상 시)"),
-                    BriefCardItem(key = "기저질환", value = "고혈압"),
-                ),
-                severity = MedicalMateSeverity.LEVEL_3,
-                allergies = listOf("페니실린"),
-                questions =
-                listOf(
-                    "검사를 받아야 하나요?",
-                    "지금 진통제 계속 먹어도 되나요?",
-                    "어떤 증상이면 바로 다시 와야 하나요?",
-                ),
-                hospital =
-                BriefCardHospital(
-                    name = "서울OO병원 내과",
-                    address = "서울 관악구 남부순환로 1820, 3층",
-                ),
-            )
     }
 }

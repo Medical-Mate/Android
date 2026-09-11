@@ -1,30 +1,44 @@
 package com.mist.medicalmate.card.ui
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.mist.medicalmate.card.data.CardListItem
+import com.mist.medicalmate.card.data.CardRepository
+import com.mist.medicalmate.core.network.ApiResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /**
  * 브리핑 카드 전체 상태 보유자.
  *
- * 목록이 픽스처다. Figma 1j-4의 내용을 그대로 옮겼다. `GET /api/cards`가 붙으면 [load]가
- * 그 응답을 월별로 묶는다.
+ * `GET /api/me/cards`가 최근 작성 순으로 준다. 월별로 묶는 것은 화면이 할 일이라 여기서
+ * 한다. 서버가 묶어 주면 그 기준을 바꿀 때마다 배포해야 한다.
  *
  * 편집 조작이 [RecordViewModel]과 같다. 두 화면이 같은 CRUD 규칙을 쓰기 때문이다. 그래도
- * 상태 타입이 달라 합치지 않았다. 서버가 붙으면 각자 다른 엔드포인트를 부른다.
+ * 상태 타입이 달라 합치지 않았다. 각자 다른 엔드포인트를 부른다.
  */
 @HiltViewModel
 class BriefCardListViewModel
 @Inject
-constructor() : ViewModel() {
+internal constructor(private val repository: CardRepository) : ViewModel() {
     private val mutableUiState = MutableStateFlow<BriefCardListUiState>(BriefCardListUiState.Loading)
     val uiState: StateFlow<BriefCardListUiState> = mutableUiState.asStateFlow()
 
     fun load() {
-        mutableUiState.value = BriefCardListUiState.Content(groups = previewBriefCardGroups)
+        mutableUiState.value = BriefCardListUiState.Loading
+        viewModelScope.launch {
+            mutableUiState.value =
+                when (val result = repository.cards()) {
+                    is ApiResult.Success -> BriefCardListUiState.Content(groups = result.value.toGroups())
+                    is ApiResult.Rejected, is ApiResult.NetworkUnavailable -> BriefCardListUiState.Failed
+                }
+        }
     }
 
     fun onEditStart() {
@@ -72,6 +86,40 @@ constructor() : ViewModel() {
         mutableUiState.value = change(content)
     }
 }
+
+/**
+ * 응답을 월별 묶음으로.
+ *
+ * 서버가 최근 작성 순으로 주므로 순서를 다시 세우지 않는다. 같은 달끼리 이어 붙이기만 한다.
+ */
+private fun List<CardListItem>.toGroups(): List<RecordGroup> = groupBy { it.writtenOn.format(MONTH_LABEL) }
+    .map { (label, items) -> RecordGroup(monthLabel = label, items = items.map { it.toRow() }) }
+
+/**
+ * 목록의 한 줄.
+ *
+ * 상태가 세 갈래다. 확정 전이면 `DRAFT`, 확정했지만 아직 진료를 안 갔으면 `BEFORE_VISIT`,
+ * 진료를 마쳤으면 `CONFIRMED`다. 문서가 "진료 완료" 뱃지는 `visited`로 판단하라고 적었다.
+ * 병원명은 선택 입력이라 진료를 마쳤어도 비어 있을 수 있다.
+ *
+ * 보조 줄([RecordItem.detail])은 비워 둔다. 목록 응답에 본문이 담기지 않아서 카드가 무엇을
+ * 담았는지 알 수 없다. 상세를 열어야 나온다.
+ */
+private fun CardListItem.toRow() = RecordItem(
+    id = id,
+    title = title,
+    status =
+    when {
+        visited -> RecordItem.Status.CONFIRMED
+        confirmed -> RecordItem.Status.BEFORE_VISIT
+        else -> RecordItem.Status.DRAFT
+    },
+    meta = listOfNotNull(writtenOn.format(WRITTEN_ON) + " 작성", clinic).joinToString(" · "),
+)
+
+private val MONTH_LABEL: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy년 M월", Locale.KOREAN)
+
+private val WRITTEN_ON: DateTimeFormatter = DateTimeFormatter.ofPattern("MM.dd", Locale.KOREAN)
 
 /**
  * Figma 1j-4(`1122:4830`)의 목록. Preview와 픽스처가 함께 쓴다.

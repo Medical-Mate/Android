@@ -53,6 +53,7 @@ private fun BriefCardListRoute(
             onDeleteClick = viewModel::onDeleteClick,
             onDeleteConfirm = viewModel::onDeleteConfirm,
             onDeleteDismiss = viewModel::onDeleteDismiss,
+            onRetryClick = viewModel::load,
         ),
         modifier = modifier,
     )

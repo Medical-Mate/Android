@@ -15,6 +15,8 @@ package com.mist.medicalmate.card.ui
 sealed interface BriefCardListUiState {
     data object Loading : BriefCardListUiState
 
+    data object Failed : BriefCardListUiState
+
     data class Content(
         val groups: List<RecordGroup>,
         val selectedIds: Set<String>? = null,

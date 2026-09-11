@@ -22,9 +22,14 @@ import kotlinx.serialization.Serializable
 @Serializable
 internal data class IntakeDestination(val sessionId: Long? = null)
 
-/** 와이어프레임 1c-5. 문답을 마친 뒤의 갈림길. */
+/**
+ * 와이어프레임 1c-5. 문답을 마친 뒤의 갈림길.
+ *
+ * @param sessionId 방금 마친 문답. 카드를 만들 때 `POST /api/sessions/{id}/card`에 쓴다.
+ *   세션 만들기가 실패했으면 `null`이고, 그때는 카드를 만들 수 없다.
+ */
 @Serializable
-internal data object IntakeDoneDestination
+internal data class IntakeDoneDestination(val sessionId: Long? = null)
 
 /**
  * 그래프 등록.
@@ -33,7 +38,7 @@ internal data object IntakeDoneDestination
  * 갔는데, 시안이 그 사이에 카드와 병원 찾기로 갈리는 화면을 뒀다. [onExit]는 첫 단계에서
  * 뒤로 갈 때다.
  */
-internal fun NavGraphBuilder.intakeDestination(onCompleted: () -> Unit, onExit: () -> Unit) {
+internal fun NavGraphBuilder.intakeDestination(onCompleted: (Long?) -> Unit, onExit: () -> Unit) {
     composable<IntakeDestination> { entry ->
         IntakeRoute(
             sessionId = entry.toRoute<IntakeDestination>().sessionId,
@@ -49,13 +54,45 @@ internal fun NavGraphBuilder.intakeDestination(onCompleted: () -> Unit, onExit: 
  * 상태가 없어서 Route를 두지 않는다. 두 버튼과 뒤로가 전부다.
  */
 internal fun NavGraphBuilder.intakeDoneDestination(
-    onCardClick: () -> Unit,
+    onCardCreated: (String) -> Unit,
     onHospitalClick: () -> Unit,
     onExit: () -> Unit,
 ) {
-    composable<IntakeDoneDestination> {
-        IntakeDoneScreen(onCardClick = onCardClick, onHospitalClick = onHospitalClick, onBackClick = onExit)
+    composable<IntakeDoneDestination> { entry ->
+        IntakeDoneRoute(
+            sessionId = entry.toRoute<IntakeDoneDestination>().sessionId,
+            onCardCreated = onCardCreated,
+            onHospitalClick = onHospitalClick,
+            onExit = onExit,
+        )
     }
+}
+
+/**
+ * 1c-5의 진입점.
+ *
+ * "브리핑 카드 만들기"를 누르면 문답을 카드로 만든다. 만들어진 카드 id로 카드 화면을 연다.
+ * 카드는 `DRAFT`로 만들어지고 확정은 진료실에서 보여줄 때 한다.
+ */
+@Composable
+private fun IntakeDoneRoute(
+    sessionId: Long?,
+    onCardCreated: (String) -> Unit,
+    onHospitalClick: () -> Unit,
+    onExit: () -> Unit,
+    viewModel: IntakeCardViewModel = hiltViewModel(),
+) {
+    val createdId by viewModel.createdCardId.collectAsStateWithLifecycle()
+
+    LaunchedEffect(createdId) {
+        createdId?.let(onCardCreated)
+    }
+
+    IntakeDoneScreen(
+        onCardClick = { sessionId?.let(viewModel::create) },
+        onHospitalClick = onHospitalClick,
+        onBackClick = onExit,
+    )
 }
 
 /**
@@ -67,7 +104,7 @@ internal fun NavGraphBuilder.intakeDoneDestination(
 @Composable
 private fun IntakeRoute(
     sessionId: Long?,
-    onCompleted: () -> Unit,
+    onCompleted: (Long?) -> Unit,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: IntakeViewModel = hiltViewModel(),
@@ -80,7 +117,7 @@ private fun IntakeRoute(
     }
 
     LaunchedEffect(state.completed) {
-        if (state.completed) onCompleted()
+        if (state.completed) onCompleted(state.sessionId)
     }
 
     IntakeScreen(

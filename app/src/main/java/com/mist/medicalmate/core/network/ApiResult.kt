@@ -23,3 +23,15 @@ sealed interface ApiResult<out T> {
     /** 서버에 닿지 못한 경우. 응답이 없으므로 에러 코드가 없다. */
     data class NetworkUnavailable(val cause: IOException) : ApiResult<Nothing>
 }
+
+/**
+ * 성공 값만 바꾼다. 실패 갈래는 그대로 흘려보낸다.
+ *
+ * Repository가 응답 DTO를 도메인 타입으로 옮길 때마다 쓰는 모양이라 여기 둔다. 갈래마다
+ * `when`을 다시 쓰면 실패를 옮겨 담다 한 갈래를 빠뜨린다.
+ */
+inline fun <T, R> ApiResult<T>.map(transform: (T) -> R): ApiResult<R> = when (this) {
+    is ApiResult.Success -> ApiResult.Success(transform(value))
+    is ApiResult.Rejected -> this
+    is ApiResult.NetworkUnavailable -> this
+}

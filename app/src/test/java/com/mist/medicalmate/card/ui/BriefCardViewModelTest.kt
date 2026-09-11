@@ -1,27 +1,50 @@
 package com.mist.medicalmate.card.ui
 
+import com.mist.medicalmate.card.data.CardListItem
+import com.mist.medicalmate.card.data.CardRepository
+import com.mist.medicalmate.core.network.ApiResult
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class BriefCardViewModelTest {
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
     @Test
     fun `처음은 Loading이고 불러오면 카드가 나온다`() {
-        val viewModel = BriefCardViewModel()
+        val viewModel = BriefCardViewModel(FakeCardRepository())
 
         assertEquals(BriefCardUiState.Loading, viewModel.uiState.value)
 
-        viewModel.load()
+        viewModel.load(1)
 
         assertTrue(viewModel.uiState.value is BriefCardUiState.Content)
     }
 
     @Test
-    fun `AI가 세운 항목이 하나뿐이다`() {
+    fun `강조한 항목은 많아야 하나다`() {
+        // 서버가 어느 항목을 세울지 주지 않아 지금은 아무 데도 붙지 않는다. 문서의 컴포넌트
+        // 규격이 카드마다 하나를 넘기지 말라고 해서, 값이 생겨도 이 선은 지켜야 한다.
         val card = loadedContent().card
 
-        assertEquals(1, card.items.count { it.emphasized })
+        assertTrue(card.items.count { it.emphasized } <= 1)
     }
 
     @Test
@@ -122,8 +145,8 @@ class BriefCardViewModelTest {
 
     @Test
     fun `편집 모드가 아니면 사본 조작이 아무것도 바꾸지 않는다`() {
-        val viewModel = BriefCardViewModel()
-        viewModel.load()
+        val viewModel = BriefCardViewModel(FakeCardRepository())
+        viewModel.load(1)
         val before = viewModel.uiState.value
 
         viewModel.editActions.onItemValueChange(0, "값")
@@ -167,13 +190,19 @@ class BriefCardViewModelTest {
     }
 
     @Test
-    fun `읽기 상태에서도 카드에 진료받을 병원이 있다`() {
-        assertEquals("서울OO병원 내과", loadedContent().card.hospital?.name)
+    fun `병원은 라우트가 넘긴 값이 카드에 얹힌다`() {
+        // 서버 카드 응답에 병원이 없다. 1m-B에서 방금 고른 것만 실린다(#139).
+        val viewModel = BriefCardViewModel(FakeCardRepository())
+
+        viewModel.load(1, BriefCardHospital(name = "서울OO병원 내과", address = "서울 관악구"))
+
+        val content = viewModel.uiState.value as BriefCardUiState.Content
+        assertEquals("서울OO병원 내과", content.card.hospital?.name)
     }
 
     private fun editing(): BriefCardViewModel {
-        val viewModel = BriefCardViewModel()
-        viewModel.load()
+        val viewModel = BriefCardViewModel(FakeCardRepository())
+        viewModel.load(1)
         viewModel.onEditClick()
         return viewModel
     }
@@ -181,8 +210,58 @@ class BriefCardViewModelTest {
     private fun BriefCardViewModel.content(): BriefCardUiState.Content = uiState.value as BriefCardUiState.Content
 
     private fun loadedContent(): BriefCardUiState.Content {
-        val viewModel = BriefCardViewModel()
-        viewModel.load()
+        val viewModel = BriefCardViewModel(FakeCardRepository())
+        viewModel.load(1)
         return viewModel.uiState.value as BriefCardUiState.Content
     }
 }
+
+/** 픽스처 카드 하나를 돌려주는 저장소. 시험마다 응답을 바꿀 수 있다. */
+internal class FakeCardRepository(
+    private val card: BriefCard = testCard,
+    private val result: ApiResult<BriefCard>? = null,
+    private val list: ApiResult<List<CardListItem>> = ApiResult.Success(emptyList()),
+) : CardRepository {
+    var updatedQuestions: List<String>? = null
+    var confirmedId: Long? = null
+
+    override suspend fun createFromSession(sessionId: Long) = result ?: ApiResult.Success(card)
+
+    override suspend fun cards() = list
+
+    override suspend fun card(cardId: Long) = result ?: ApiResult.Success(card)
+
+    override suspend fun update(cardId: Long, questions: List<String>): ApiResult<BriefCard> {
+        updatedQuestions = questions
+        return result ?: ApiResult.Success(card)
+    }
+
+    override suspend fun confirm(cardId: Long): ApiResult<BriefCard> {
+        confirmedId = cardId
+        return result ?: ApiResult.Success(card.copy(status = BriefCard.Status.CONFIRMED))
+    }
+
+    override suspend fun handoff(cardId: Long) = result ?: ApiResult.Success(card)
+}
+
+internal val testCard =
+    BriefCard(
+        id = "1",
+        title = "복부 통증 · 3주",
+        status = BriefCard.Status.BEFORE_VISIT,
+        patientLine = "김OO · 32세 여 · 2026.09.04 작성",
+        items =
+        listOf(
+            BriefCardItem(key = "부위", value = "복부 (명치 아래)"),
+            BriefCardItem(key = "기간", value = "3주 전 시작"),
+            BriefCardItem(key = "양상", value = "식후 쓰림"),
+        ),
+        severity = null,
+        allergies = listOf("페니실린"),
+        questions =
+        listOf(
+            "검사를 받아야 하나요?",
+            "지금 진통제 계속 먹어도 되나요?",
+            "어떤 증상이면 바로 다시 와야 하나요?",
+        ),
+    )
