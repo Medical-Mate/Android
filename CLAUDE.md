@@ -450,7 +450,7 @@ com.mist.medicalmate/
 
 | 항목 | 상태 |
 | -- | -- |
-| 유닛 테스트 | `IntakeViewModel` 33건, `VisitRecordViewModel` 25건, `SessionViewModel` 23건, `ScheduleAddViewModel` 19건, `HospitalPickViewModel` 19건, `BriefCardViewModel` 19건, `RecordViewModel` 17건, `BodyMapGeometry` 17건, `CalendarViewModel` 15건, `HomeRepository` 14건, `CalendarDayViewModel` 16건, `BriefCardListViewModel` 14건, `LoginViewModel` 13건, `RecordDetailViewModel` 12건, `RecordDetailFixtures` 12건, `DesignToken` 12건, `VectorParity` 11건, `HealthEditViewModel` 11건, `CardMapping` 11건, `IntakeSessionActions` 10건, `BodyMapLayout` 10건, `AppointmentRepository` 8건, `TokenAuthenticator` 7건, `ProfileSetupViewModel` 7건, `MedicalMateSeverity` 7건, `HomeViewModel` 7건, `VisitNoteViewModel` 6건, `MyProfileViewModel` 5건, `ProgressIndicator` 4건, `PretendardFont` 4건, `HomeSchedule` 4건, `SegmentedControl` 3건, 템플릿 1개 |
+| 유닛 테스트 | `IntakeViewModel` 33건, `VisitRecordViewModel` 25건, `SessionViewModel` 23건, `BriefCardViewModel` 19건, `HospitalPickViewModel` 19건, `ScheduleAddViewModel` 19건, `BodyMapGeometry` 17건, `HealthEditViewModel` 17건, `RecordViewModel` 17건, `CalendarDayViewModel` 16건, `CalendarViewModel` 15건, `BriefCardListViewModel` 14건, `HomeRepository` 14건, `ProfileSetupViewModel` 14건, `LoginViewModel` 13건, `DesignToken` 12건, `RecordDetailFixtures` 12건, `RecordDetailViewModel` 12건, `CardMapping` 11건, `VectorParity` 11건, `BodyMapLayout` 10건, `IntakeSessionActions` 10건, `AppointmentRepository` 8건, `HomeViewModel` 7건, `MedicalMateSeverity` 7건, `MyProfileViewModel` 7건, `TokenAuthenticator` 7건, `VisitNoteViewModel` 6건, `HomeSchedule` 4건, `PretendardFont` 4건, `ProgressIndicator` 4건, `SegmentedControl` 3건, 템플릿 1개 |
 | 네비게이션 테스트 | 없음. `NavHost`는 계측 테스트가 필요하고 CI가 androidTest를 실행하지 않음 |
 | 아키텍처 패턴 | MVVM 확정. UseCase는 필요할 때만 |
 | DI | Hilt 확정 |
@@ -473,7 +473,7 @@ com.mist.medicalmate/
 | 로그인 화면(1o) | 카카오 버튼 + 서버 토큰 교환 구현 완료. 토큰 적용 완료 |
 | 홈 화면(1n) | Figma 1n-1·1n-2 반영. `HomeViewModel`이 픽스처를 노출. 서버 미연동 |
 | 진입 · 온보딩 | 스플래시와 온보딩 네 장(`V2-00`~`V2-03`) 구현 완료. **시안이 `A` 섹션을 통째로 교체했다.** `1a-1`·`1o`·`ONB-00`~`ONB-03` 프레임이 모두 삭제되고 `V2` 여섯 장이 들어왔으며 섹션 이름도 `A · 진입 — 스플래시 → 로그인 → 온보딩 v2 — 문구와 일러스트`가 됐다. 스플래시와 로그인은 `V2 · 스플래시`(`1320:4553`)·`V2 · 로그인`(`1320:4558`)이 문구와 구조까지 지금 구현과 같아 손대지 않았다. 온보딩 네 장은 문구·순서·그림이 전부 달라 다시 썼다(#131). 네 장이 한 목적지 안에서 넘어간다. 뒤로 갈 곳이 로그인이라 상단 바를 두지 않고 진행 표시만 둔다. 그림은 네 장을 통째로 벡터로 내보냈다. v1과 달리 v2 일러스트에는 글자가 없어서 Compose로 나눠 그릴 이유가 없어졌고, 그때 만든 `OnboardingIllustrations`·`OnboardingIllustrationParts`·`img_onboarding_body`를 지웠다. 그림 폭은 자연 크기 352에서 멈춘다. 화면 폭을 채우게 두면 시안(360)보다 넓은 기기에서 함께 커져 304 칸을 넘는다. `widthIn`은 `fillMaxWidth` 앞에 둬야 걸린다. 스플래시는 최소 2초 노출, 세션 복구를 기다리는 상한은 6초. 상한을 넘기거나 연결이 없으면 `SessionUiState.RestoreFailed`로 로그인 화면에 보내고 카카오 버튼 위에 이유를 적는다. 시안에 없는 문구다. 상한을 넘기면 진행 중인 재발급 요청도 취소한다 |
-| 신상정보 입력(1b) | 1b-1~1b-3 화면과 1b-4 완료 모션, 홈 등록 완료 토스트까지 구현. **서버 저장 미연동** |
+| 신상정보 입력(1b) | 1b-1~1b-3 화면과 1b-4 완료 모션, 홈 등록 완료 토스트까지 구현. 마지막 단계의 완료가 `PUT /api/me/health-profile`이고 성공해야 1b-4로 넘어간다. **단계별 저장이 없다.** 서버가 부분 갱신을 주지 않고 여섯 필드를 모두 요구해서 세 단계를 모아 한 번에 보낸다. 중간에 나가면 아무것도 남지 않는, 임시저장이 없는 유일한 흐름이다. 이름·출생연도·성별은 1b가 묻지 않고 카카오 값을 읽어 그대로 되돌려 보낸다 |
 | 증상 정리(1l·1c·1d·1i) | 네 단계 화면 구현. AI 응답과 음성 인식 미연동 |
 | 아픈 부위(1l) | 인체도 구현 완료. **시안에 이 화면의 프레임이 없다.** 옛 `1l-1`~`1l-3`도, 재설계본이라던 `1c · 증상 문답 · 아픈부위 선택`(`1074:7302`)도 지워졌고 '부위'라는 이름은 온보딩 `ONB-01`의 일러스트뿐이다. 흐름에서 빠진 것은 아니다. `1c-1`에 여전히 "짚은 부위" 텍스트가 있고 `1d`가 "복부가 얼마나 아프세요?"로 부위를 받아 쓴다. **지금 구현이 이 화면의 유일한 기준이므로 지우지 않는다.** 왜 프레임이 없는지 디자인 트랙 확인 필요. 앞뒤 전환 · 앵커 9개 · 확대 후 구역 25개 · 팔·다리 좌우 반전 · 전신·피부 칩 · 목록 대안까지 들어 있다. 부위 id는 AI 트랙의 온톨로지(`ANC:*` · `SUR:*`)를 쓰고 이름과 진료과는 `BodyMapOntologyFixture.kt`가 픽스처로 들고 있다. 서버 연동 시 그 파일만 지운다 |
 | 부위 선택 개수 | 한 곳만 고른다. 다중선택을 넣었다가 되돌렸다 |
@@ -488,7 +488,7 @@ com.mist.medicalmate/
 | 진료 후 기록(1m·1p·1q·1k) | 네 화면 구현. 캘린더 일자의 "진료 후 기록하기"에서 들어간다. 1q-1의 저장이 `POST /api/cards/{cardId}/visit`이고, 그 요청에 들어갈 값(병원 이름·붙일 카드·원문 메모)이 라우트를 타고 1m → 1p → 1q-1로 따라간다. **AI 분류는 미연동이라 1q-1의 네 줄이 빈 채로 열린다.** 픽스처 문장을 넣어 두면 손대지 않고 저장했을 때 듣지 않은 소견이 서버에 남는다. 병원 검색은 여전히 픽스처(심평원 키 대기)이고 고른 이름만 서버로 간다. 1k 정리 화면도 픽스처 |
 | 기록·캘린더(1j·1r) | G·H 섹션 대조 완료(#121). 기록 목록·비어 있음·상세와 상세의 두 상태(카드 펼침 1j-3-X · 재방문 누적 1j-3-R), 목록 편집과 여러 건 삭제(1j-1-D·D2·DC), 캘린더 월·일자와 카드만 있는 날 시트(1r-1-S), 일정 추가 여덟 장(1r-4 계열), 일자 편집과 일정 삭제(1r-2-E·E2·DC), 다녀온 날과 다음 일정(1r-2-A·A2)까지 구현. 기록 목록은 `GET /api/me/visits`를 달로 묶고, 상세는 `GET /api/visits/{id}`다. **상세 타임라인이 한 단계다.** 응답이 진료에서 들은 것만 주고 카드 단계를 채우려면 그 카드를 따로 읽어야 한다. 여러 단계 타임라인은 Preview 픽스처에 남아 있고 `RecordDetailFixturesTest`가 그 모양을 지킨다. 목록 삭제와 일자 화면의 할 일·기록·다음 일정은 아직 서버에 나가지 않는다. `1r-2-C`는 `1r-1-S`와 같은 상황을 다르게 그려서 어느 쪽을 쓸지 확인 대기다 |
 | 하단 탭 | 기록·홈·캘린더 세 탭 연결 완료. 내 정보는 탭이 아니라 홈 헤더 아바타로 진입 |
-| 내 정보(1s) | 두 화면 구현. 프로필·건강 요약·설정 토글·로그아웃. 내용은 픽스처이고 설정과 건강 정보 저장은 미연동 |
+| 내 정보(1s) | 두 화면 구현. 1s-1의 건강 요약과 1s-2가 `GET`·`PUT /api/me/health-profile`이다. 1s-2에서 고치고 돌아오면 1s-1이 다시 읽는다(`ON_RESUME`). 한 번만 읽으면 방금 고친 값 대신 들어올 때 읽은 값이 남는다. 프로필 줄(이름·생년·로그인)과 설정 토글은 아직 픽스처다. 설정은 서버에 자리가 없다 |
 | 로그아웃 · 회원탈퇴 | 구현 완료. 1s-1 하단으로 옮김. 회원탈퇴는 시안에 자리가 없어 로그아웃 아래 텍스트로 뒀다 |
 | 계정 전환 시 이전 데이터 | 해결. 로그아웃 시 홈 엔트리가 pop되면서 `HomeViewModel`도 정리됨 |
 | 401 재발급 Authenticator | 도입 완료. `TokenAuthenticator`가 401을 받으면 refresh 토큰으로 재발급하고 원래 요청을 한 번 더 보낸다. 재발급 호출은 인터셉터·Authenticator가 없는 `@AuthFree` 클라이언트로 나간다. 재발급이 거절되면 토큰을 지우고 `TokenStore.hasSession`이 false를 흘려 `SessionViewModel`이 로그인 화면으로 보낸다 |
@@ -506,7 +506,7 @@ com.mist.medicalmate/
 | 스크린샷 테스트 (Paparazzi/Roborazzi) | 미도입 |
 | E2E (Maestro) | 미도입 |
 | `scripts/verify.sh` | 미작성. 1장의 Gradle 명령을 직접 사용 |
-| 디자인 트랙 확인 대기 | 여섯 건이다. (1) 인체도 화면의 프레임이 시안에 없는 이유 (2) `Card`의 최소 높이 116과 시안 1j-1-D의 줄 높이 80 중 어느 쪽 (3) 선택 건수를 알리는 자리 — 1j-1은 하단 버튼 글자, 1j-4는 `Select Bar`까지 (4) 기록 상세 타임라인 차례 — `1j-3`은 오래된 것부터, `1j-3-R`은 최신부터인데 코드는 최신부터 (5) `1r-4` 상단 왼쪽이 ×인지 ‹인지 — 네 프레임 중 셋이 ×라 ×를 따랐다 (6) `1r-2-C`와 `1r-1-S` 중 어느 쪽. 목록은 #119와 #121에 있다 |
+| 디자인 트랙 확인 대기 | 일곱 건이다. (1) 인체도 화면의 프레임이 시안에 없는 이유 (2) `Card`의 최소 높이 116과 시안 1j-1-D의 줄 높이 80 중 어느 쪽 (3) 선택 건수를 알리는 자리 — 1j-1은 하단 버튼 글자, 1j-4는 `Select Bar`까지 (4) 기록 상세 타임라인 차례 — `1j-3`은 오래된 것부터, `1j-3-R`은 최신부터인데 코드는 최신부터 (5) `1r-4` 상단 왼쪽이 ×인지 ‹인지 — 네 프레임 중 셋이 ×라 ×를 따랐다 (6) `1r-2-C`와 `1r-1-S` 중 어느 쪽 (7) 1b의 "잘 모르겠어요 · 없어요" 보조 버튼. 우리가 뺐는데(#67) 서버가 `NONE`과 `UNKNOWN`을 다른 값으로 받아서 다시 봐야 한다. 다만 그 버튼은 한 개에 두 뜻이 묶여 있어 그대로 넣어도 갈리지 않는다. 목록은 #119·#121·#150에 있다 |
 | org 공통 문서 위치 | `GIT_CONVENTION.md`가 저장소별 사본으로 존재. 어긋나면 `.github` 저장소로 통합 필요 |
 
 `local.properties`는 `.gitignore` 대상입니다. 로컬에서는 Android SDK 경로가 필요하고, CI는
