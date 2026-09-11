@@ -20,7 +20,10 @@ internal object ProfileApiModule {
 @Module
 @InstallIn(SingletonComponent::class)
 internal abstract class ProfileRepositoryModule {
+    @Binds
+    abstract fun bindHealthProfileRepository(impl: DefaultHealthProfileRepository): HealthProfileRepository
+
     /** 홈이 `profile`을 직접 참조하지 않도록 `core`의 인터페이스로 연결한다. */
     @Binds
-    abstract fun bindCurrentUserProvider(impl: HealthProfileRepository): CurrentUserProvider
+    abstract fun bindCurrentUserProvider(impl: DefaultHealthProfileRepository): CurrentUserProvider
 }
