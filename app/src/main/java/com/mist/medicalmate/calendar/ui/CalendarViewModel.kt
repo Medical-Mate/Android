@@ -57,15 +57,34 @@ constructor() : ViewModel() {
         mutableUiState.update { it.copy(cardSheet = null) }
     }
 
-    /** 고른 날의 일자 화면 상태. 목적지가 열릴 때 화면이 받는다. */
+    /**
+     * 고른 날의 일자 화면 상태. 목적지가 열릴 때 화면이 받는다.
+     *
+     * 진료를 다녀왔는지로 화면이 갈린다(1r-2-A). 오늘이 진료일을 지났으면 할 일이 없어지고
+     * 기록과 다음 일정이 붙는다. 서버가 붙으면 그 날의 기록 유무가 이 판단을 대신한다.
+     */
     fun dayState(date: LocalDate): CalendarDayUiState {
         val today = mutableUiState.value.today
-        return CalendarDayUiState(
-            date = date,
-            schedule = schedulesOn(date, today).firstOrNull(),
-            card = if (date == VisitDate) fixtureCard else null,
-            todos = if (date == VisitDate) fixtureTodos else emptyList(),
-        )
+        return when (date) {
+            PastVisitDate ->
+                CalendarDayUiState(
+                    date = date,
+                    schedule = schedulesOn(date, today).firstOrNull(),
+                    card = fixtureVisitedCard,
+                    record = fixtureRecord,
+                    nextEvent = fixtureNextEvent,
+                )
+
+            VisitDate ->
+                CalendarDayUiState(
+                    date = date,
+                    schedule = schedulesOn(date, today).firstOrNull(),
+                    card = fixtureCard,
+                    todos = fixtureTodos,
+                )
+
+            else -> CalendarDayUiState(date = date, schedule = null, card = null)
+        }
     }
 
     private companion object {
@@ -75,8 +94,16 @@ constructor() : ViewModel() {
         /** Figma가 그린 카드 작성일. 1r-1-S가 이 날의 시트다. */
         val CardDate: LocalDate = LocalDate.of(2026, 9, 4)
 
-        /** 기록이 있는 날. 9월 4일에 브리핑 카드를 썼다. */
-        val RecordDays = setOf(4)
+        /**
+         * 이미 다녀온 진료일. 1r-2-A가 이 날의 화면이다.
+         *
+         * 시안에 날짜가 없어 9월 2일로 잡았다. 다녀온 날의 화면은 진료일이 지나야 나오는데
+         * 픽스처의 진료일(9월 12일)이 앞으로의 날이라 그 상태를 열어 볼 길이 없었다.
+         */
+        val PastVisitDate: LocalDate = LocalDate.of(2026, 9, 2)
+
+        /** 기록이 있는 날. 2일에 다녀왔고 4일에 브리핑 카드를 썼다. */
+        val RecordDays = setOf(2, 4)
 
         /** 앞으로 일정이 있는 날. 12일 진료, 26일 재방문이다. */
         val PlannedDays = setOf(12, 26)
@@ -85,9 +112,27 @@ constructor() : ViewModel() {
             DayCard(
                 id = "card-1",
                 title = "복부 통증 · 3주",
-                status = "진료 전",
                 meta = "2026.09.04 작성 · 5항목",
+                status = "진료 전",
             )
+
+        /** 다녀온 뒤의 같은 카드. 가져갈 일이 끝나 배지가 없고 언제 보여줬는지가 온다. */
+        val fixtureVisitedCard =
+            DayCard(
+                id = "card-1",
+                title = "복부 통증 · 3주",
+                meta = "브리핑 카드 · 진료실에서 보여줌",
+            )
+
+        val fixtureRecord =
+            DayRecord(
+                id = "card-1",
+                title = "진료 후 기록",
+                meta = "위염 초기 · 2주 약 · 09.26 재방문",
+            )
+
+        /** 시간이 아직 정해지지 않은 재방문. 확정하면 칩이 D-day로 바뀐다(1r-2-A2). */
+        val fixtureNextEvent = DayNextEvent(chip = "9월 26일 (토)", title = "재방문 예정")
 
         val fixtureTodos =
             listOf(
@@ -111,18 +156,30 @@ constructor() : ViewModel() {
         /** 그 날에 걸린 카드. 쓴 날과 가져갈 날 양쪽에서 같은 카드가 나온다. */
         fun cardOn(date: LocalDate): DayCard? = if (date == CardDate || date == VisitDate) fixtureCard else null
 
-        fun schedulesOn(date: LocalDate, today: LocalDate): List<CalendarSchedule> = if (date != VisitDate) {
-            emptyList()
-        } else {
-            listOf(
-                CalendarSchedule(
-                    id = "visit-1",
-                    title = "서울OO병원 내과 재진",
-                    time = "오전 10:30",
-                    detail = "복부 통증 브리핑 카드",
-                    dday = ChronoUnit.DAYS.between(today, date),
-                ),
-            )
+        fun schedulesOn(date: LocalDate, today: LocalDate): List<CalendarSchedule> = when (date) {
+            VisitDate ->
+                listOf(
+                    CalendarSchedule(
+                        id = "visit-1",
+                        title = "서울OO병원 내과 재진",
+                        time = "오전 10:30",
+                        detail = "복부 통증 브리핑 카드를 가져가요",
+                        dday = ChronoUnit.DAYS.between(today, date),
+                    ),
+                )
+
+            PastVisitDate ->
+                listOf(
+                    CalendarSchedule(
+                        id = "visit-0",
+                        title = "서울OO병원 내과 초진",
+                        time = "오전 9:30",
+                        detail = "복부 통증 브리핑 카드를 가져갔어요",
+                        dday = ChronoUnit.DAYS.between(today, date),
+                    ),
+                )
+
+            else -> emptyList()
         }
     }
 }
@@ -156,13 +213,44 @@ internal val previewCalendarDayState =
         DayCard(
             id = "card-1",
             title = "복부 통증 · 3주",
-            status = "진료 전",
             meta = "2026.09.04 작성 · 5항목",
+            status = "진료 전",
         ),
         todos =
         listOf(
             DayTodo(id = "todo-1", label = "달라진 증상 있으면 카드 수정", done = true),
             DayTodo(id = "todo-2", label = "복용 중인 약 챙기기", done = false),
             DayTodo(id = "todo-3", label = "지난 검사 결과 사진 준비", done = false),
+        ),
+    )
+
+/** Preview용 다녀온 날. 1r-2-A처럼 시간이 아직 정해지지 않은 재방문이 붙는다. */
+internal val previewCalendarDayVisitedState =
+    CalendarDayUiState(
+        date = LocalDate.of(2026, 9, 12),
+        schedule = previewCalendarState.schedules.first(),
+        card =
+        DayCard(
+            id = "card-1",
+            title = "복부 통증 · 3주",
+            meta = "브리핑 카드 · 진료실에서 보여줌",
+        ),
+        record =
+        DayRecord(
+            id = "card-1",
+            title = "진료 후 기록",
+            meta = "위염 초기 · 2주 약 · 09.26 재방문",
+        ),
+        nextEvent = DayNextEvent(chip = "9월 26일 (토)", title = "재방문 예정"),
+    )
+
+/** Preview용 다음 일정 확정. 1r-2-A2다. 칩이 남은 날수로 바뀌고 날짜와 시간이 온다. */
+internal val previewCalendarDayConfirmedState =
+    previewCalendarDayVisitedState.copy(
+        nextEvent =
+        DayNextEvent(
+            chip = "D-14",
+            title = "서울OO병원 내과 재방문",
+            at = "9월 26일 (토) 오전 10:30",
         ),
     )

@@ -151,6 +151,13 @@
     <string name="calendar_day_record_empty_title">아직 진료 전이에요</string>
     <string name="calendar_day_record_empty_description">진료가 끝나면 들은 내용을 여기에 기록할 수 있어요</string>
     <string name="calendar_day_record_empty_action">진료 후 기록하기</string>
+    <!-- 1r-2-A·A2 다녀온 날. 할 일이 사라지고 기록과 다음 일정이 붙는다. -->
+    <string name="calendar_day_visited">진료 완료</string>
+    <string name="calendar_day_card_done">브리핑 카드</string>
+    <string name="calendar_day_next">다음 일정</string>
+    <string name="calendar_day_next_auto">진료 후 기록에서 자동으로 만들었어요</string>
+    <string name="calendar_day_next_hint">시간을 정하면 하루 전에 알려드려요</string>
+    <string name="calendar_day_next_confirm">시간 정하고 확정하기</string>
 
     <!-- Figma 1r-4(1062:3031) 일정 추가. -->
     <string name="schedule_add_title">일정 추가</string>

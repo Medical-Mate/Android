@@ -44,6 +44,7 @@ internal fun NavGraphBuilder.calendarDestination(
 internal fun NavGraphBuilder.calendarDayDestination(
     onCardOpen: (String) -> Unit,
     onRecordAdd: () -> Unit,
+    onRecordOpen: (String) -> Unit,
     onExit: () -> Unit,
 ) {
     composable<CalendarDayDestination> { entry ->
@@ -52,6 +53,7 @@ internal fun NavGraphBuilder.calendarDayDestination(
             date = date,
             onCardOpen = onCardOpen,
             onRecordAdd = onRecordAdd,
+            onRecordOpen = onRecordOpen,
             onExit = onExit,
         )
     }
@@ -102,6 +104,7 @@ private fun CalendarDayRoute(
     date: LocalDate,
     onCardOpen: (String) -> Unit,
     onRecordAdd: () -> Unit,
+    onRecordOpen: (String) -> Unit,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: CalendarViewModel = hiltViewModel(),
@@ -113,6 +116,7 @@ private fun CalendarDayRoute(
             onBackClick = onExit,
             onCardOpenClick = onCardOpen,
             onRecordAddClick = onRecordAdd,
+            onRecordOpenClick = onRecordOpen,
         ),
         modifier = modifier,
     )

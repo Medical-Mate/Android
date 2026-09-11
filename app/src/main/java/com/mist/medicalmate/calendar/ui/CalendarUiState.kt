@@ -36,26 +36,54 @@ data class CalendarUiState(
 data class CalendarSchedule(val id: String, val title: String, val time: String, val detail: String, val dday: Long)
 
 /**
- * 캘린더 일자 화면의 상태. Figma 1r-2 `406:2514`.
+ * 캘린더 일자 화면의 상태. Figma 1r-2 `406:2514`, 1r-2-A `1060:2879`, 1r-2-A2 `1060:2998`.
  *
- * 네 덩어리다. 이 날 일정, 가져갈 브리핑 카드, 진료 전 할 일, 이 날 기록. 각 덩어리의
- * 머리에 수정·열기·추가가 붙는다.
+ * 진료 전과 후로 화면이 갈린다. [record]가 있으면 다녀온 날이다.
  *
- * [record]가 없으면 아직 진료 전이라는 빈 상태가 나온다.
+ * 진료 전이면 일정·가져갈 카드·진료 전 할 일·빈 기록 넷이다. 다녀오면 할 일이 없어지고
+ * (챙길 일이 끝났다) 기록 자리가 채워지며 다음 일정이 붙는다. 일정 카드의 배지도 남은
+ * 날수에서 "진료 완료"로 바뀐다.
+ *
+ * [nextEvent]는 진료 후 기록의 재방문에서 자동으로 만들어진다. 시간이 정해지기 전과 후가
+ * 다르게 보인다.
  */
 data class CalendarDayUiState(
     val date: LocalDate,
     val schedule: CalendarSchedule?,
     val card: DayCard?,
     val todos: List<DayTodo> = emptyList(),
-    val record: String? = null,
-)
+    val record: DayRecord? = null,
+    val nextEvent: DayNextEvent? = null,
+) {
+    /** 다녀온 날인지. 기록이 있으면 진료가 끝난 것이다. */
+    val visited: Boolean get() = record != null
+}
 
-/** 그 진료에 가져갈 카드. */
-data class DayCard(val id: String, val title: String, val status: String, val meta: String)
+/**
+ * 그 진료에 가져갈 카드.
+ *
+ * [status]는 다녀온 뒤에 없다. 진료 전에는 "진료 전"처럼 언제 쓸 카드인지가 배지로 붙는데,
+ * 끝난 뒤에는 알릴 상태가 없고 언제 보여줬는지가 [meta]로 간다.
+ */
+data class DayCard(val id: String, val title: String, val meta: String, val status: String? = null)
 
 /** 진료 전 할 일 한 줄. */
 data class DayTodo(val id: String, val label: String, val done: Boolean)
+
+/** 그 날 남긴 진료 후 기록. 눌러서 기록 상세로 간다. */
+data class DayRecord(val id: String, val title: String, val meta: String)
+
+/**
+ * 다음 일정. Figma의 `Next Event`.
+ *
+ * [at]이 없으면 아직 시간을 정하지 않은 상태다(1r-2-A). 날짜만 있고 무엇을 더 해야 하는지
+ * 알리는 문구와 확정 버튼이 붙는다. 정해지면(1r-2-A2) 칩이 남은 날수로 바뀌고 그 자리에
+ * 날짜와 시간이 온다.
+ *
+ * [chip]을 문장으로 받는다. 확정 전에는 날짜이고 확정 후에는 D-day라 종류가 달라서, 무엇을
+ * 적을지는 데이터가 정한다.
+ */
+data class DayNextEvent(val chip: String, val title: String, val at: String? = null)
 
 /** 그 날에 찍을 표시. 기록이 예정보다 앞선다. 이미 지난 일은 사실이고 예정은 계획이다. */
 internal fun CalendarUiState.markerOn(day: Int): MedicalMateDateMarker = when (day) {

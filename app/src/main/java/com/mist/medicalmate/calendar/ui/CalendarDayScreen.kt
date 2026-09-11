@@ -15,12 +15,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.mist.medicalmate.R
+import com.mist.medicalmate.core.designsystem.MedicalMateIcons
 import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateScreenPreviews
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateBadgeTone
+import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
+import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonSize
+import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonType
 import com.mist.medicalmate.core.designsystem.component.MedicalMateCheckbox
 import com.mist.medicalmate.core.designsystem.component.MedicalMateEmptyState
 import com.mist.medicalmate.core.designsystem.component.MedicalMateEmptyStateType
@@ -66,6 +70,7 @@ fun CalendarDayScreen(state: CalendarDayUiState, callbacks: CalendarDayCallbacks
             CardSection(state = state, callbacks = callbacks)
             TodoSection(state = state, callbacks = callbacks)
             RecordSection(state = state, callbacks = callbacks)
+            NextEventSection(state = state, callbacks = callbacks)
         }
     }
 }
@@ -73,16 +78,26 @@ fun CalendarDayScreen(state: CalendarDayUiState, callbacks: CalendarDayCallbacks
 /**
  * 일자 화면에서 나가는 길들.
  *
- * 파라미터로 하나씩 받으면 넷이 된다. 덩어리마다 하나씩 있어서 한 덩어리로 묶었다.
+ * 파라미터로 하나씩 받으면 여섯이 된다. 덩어리마다 하나씩 있어서 한 덩어리로 묶었다.
  */
 data class CalendarDayCallbacks(
     val onBackClick: () -> Unit = {},
     val onCardOpenClick: (String) -> Unit = {},
     val onTodoToggle: (String, Boolean) -> Unit = { _, _ -> },
     val onRecordAddClick: () -> Unit = {},
+    val onRecordOpenClick: (String) -> Unit = {},
+    val onNextEventConfirmClick: () -> Unit = {},
 )
 
-/** 이 날 일정. 옅은 브랜드 면에 D-day와 제목, 시간·의사·가져갈 것을 담는다. */
+/**
+ * 이 날 일정. 옅은 브랜드 면에 머리말과 제목, 시간과 가져갈 것을 담는다.
+ *
+ * 머리말이 진료 전후로 갈린다. 전에는 남은 날수, 다녀온 뒤에는 "진료 완료"다. 지난 날의
+ * 카드에 D-day가 남아 있으면 아직 남은 일처럼 읽힌다.
+ *
+ * 시간과 가져갈 것을 한 줄로 잇지 않는다. 시안이 두 줄로 나눠 뒀고, 이어 붙이면 긴 기기
+ * 글꼴에서 어디까지가 시간인지 흐려진다.
+ */
 @Composable
 private fun ColumnScope.ScheduleSection(state: CalendarDayUiState) {
     val schedule = state.schedule ?: return
@@ -96,12 +111,20 @@ private fun ColumnScope.ScheduleSection(state: CalendarDayUiState) {
             .padding(MedicalMateSpace.s16),
         verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4),
     ) {
-        if (schedule.dday >= 0) {
-            Text(
-                text = stringResource(R.string.calendar_day_dday, schedule.dday),
-                style = MedicalMateTheme.typography.labelS,
-                color = MedicalMateTheme.colors.fgSubtle,
-            )
+        when {
+            state.visited ->
+                Text(
+                    text = stringResource(R.string.calendar_day_visited),
+                    style = MedicalMateTheme.typography.labelS,
+                    color = MedicalMateTheme.colors.fgSuccess,
+                )
+
+            schedule.dday >= 0 ->
+                Text(
+                    text = stringResource(R.string.calendar_day_dday, schedule.dday),
+                    style = MedicalMateTheme.typography.labelS,
+                    color = MedicalMateTheme.colors.fgSubtle,
+                )
         }
         Text(
             text = schedule.title,
@@ -109,25 +132,38 @@ private fun ColumnScope.ScheduleSection(state: CalendarDayUiState) {
             color = MedicalMateTheme.colors.fgDefault,
         )
         Text(
-            text = "${schedule.time} · ${schedule.detail}",
+            text = schedule.time,
+            style = MedicalMateTheme.typography.bodyM,
+            color = MedicalMateTheme.colors.fgSubtle,
+        )
+        Text(
+            text = schedule.detail,
             style = MedicalMateTheme.typography.bodyM,
             color = MedicalMateTheme.colors.fgSubtle,
         )
     }
 }
 
-/** 가져갈 브리핑 카드. 줄 자체가 카드로 들어가는 이동이라 헤더에 액션을 두지 않는다. */
+/**
+ * 브리핑 카드. 줄 자체가 카드로 들어가는 이동이라 헤더에 액션을 두지 않는다.
+ *
+ * 제목이 진료 전후로 갈린다. 전에는 "가져갈 브리핑 카드"로 챙길 것을 가리키고, 다녀온
+ * 뒤에는 가져갈 일이 끝나서 "브리핑 카드"다.
+ */
 @Composable
 private fun ColumnScope.CardSection(state: CalendarDayUiState, callbacks: CalendarDayCallbacks) {
     val card = state.card ?: return
 
-    MedicalMateSectionHeader(title = stringResource(R.string.calendar_day_card))
+    MedicalMateSectionHeader(
+        title =
+        stringResource(if (state.visited) R.string.calendar_day_card_done else R.string.calendar_day_card),
+    )
     MedicalMateListRow(
         title = card.title,
         meta = card.meta,
         badge = card.status,
         badgeTone = MedicalMateBadgeTone.NEUTRAL,
-        type = MedicalMateListRowType.BADGE,
+        type = if (card.status == null) MedicalMateListRowType.DEFAULT else MedicalMateListRowType.BADGE,
         onClick = { callbacks.onCardOpenClick(card.id) },
     )
 }
@@ -175,11 +211,78 @@ private fun ColumnScope.RecordSection(state: CalendarDayUiState, callbacks: Cale
         }
         return
     }
-    Text(
-        text = record,
-        style = MedicalMateTheme.typography.bodyM,
-        color = MedicalMateTheme.colors.fgDefault,
+    MedicalMateListRow(
+        title = record.title,
+        meta = record.meta,
+        onClick = { callbacks.onRecordOpenClick(record.id) },
     )
+}
+
+/**
+ * 다음 일정. Figma 1r-2-A `1060:2879`, 1r-2-A2 `1060:2998`.
+ *
+ * 진료 후 기록의 재방문에서 자동으로 만들어진다. 그래서 사용자가 적은 것이 아니라는 말이
+ * 함께 있고, 시간을 정하는 조작이 그 안에 붙는다.
+ *
+ * 면이 브랜드 채움이다. 이 날의 다른 덩어리는 모두 지난 일인데 이것만 앞으로 올 일이라
+ * 무게가 다르다. 한 화면에서 채운 면은 여기 하나뿐이다.
+ */
+@Composable
+private fun ColumnScope.NextEventSection(state: CalendarDayUiState, callbacks: CalendarDayCallbacks) {
+    val next = state.nextEvent ?: return
+
+    MedicalMateSectionHeader(title = stringResource(R.string.calendar_day_next))
+    Column(
+        modifier =
+        Modifier
+            .fillMaxWidth()
+            .background(color = MedicalMateTheme.colors.bgPrimary, shape = MedicalMateRadius.lg)
+            .padding(MedicalMateSpace.s16),
+        verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4),
+    ) {
+        Text(
+            text = next.chip,
+            style = MedicalMateTheme.typography.labelS,
+            color = MedicalMateTheme.colors.fgPrimary,
+            modifier =
+            Modifier
+                .background(color = MedicalMateTheme.colors.bgSurface, shape = MedicalMateRadius.full)
+                .padding(horizontal = MedicalMateSpace.s10, vertical = MedicalMateSpace.s4),
+        )
+        Text(
+            text = next.title,
+            style = MedicalMateTheme.typography.bodyLStrong,
+            color = MedicalMateTheme.colors.fgOnPrimary,
+        )
+        if (next.at == null) {
+            Text(
+                text = stringResource(R.string.calendar_day_next_auto),
+                style = MedicalMateTheme.typography.bodyS,
+                color = MedicalMateTheme.colors.fgOnPrimary,
+            )
+            Text(
+                text = stringResource(R.string.calendar_day_next_hint),
+                style = MedicalMateTheme.typography.bodyS,
+                color = MedicalMateTheme.colors.fgOnPrimary,
+            )
+            MedicalMateButton(
+                label = stringResource(R.string.calendar_day_next_confirm),
+                onClick = callbacks.onNextEventConfirmClick,
+                type = MedicalMateButtonType.TONAL,
+                size = MedicalMateButtonSize.M,
+                leadingIcon = MedicalMateIcons.Clock,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = MedicalMateSpace.s8),
+            )
+        } else {
+            Text(
+                text = next.at,
+                style = MedicalMateTheme.typography.bodyM,
+                color = MedicalMateTheme.colors.fgOnPrimary,
+            )
+        }
+    }
 }
 
 /** "9월 12일 (금)" 형식. 컴포저블 밖에 둬서 기기 로케일을 직접 읽지 않는다. */
@@ -190,5 +293,23 @@ private val dayFormat = DateTimeFormatter.ofPattern("M월 d일 (E)")
 private fun CalendarDayScreenPreview() {
     MedicalMateTheme {
         CalendarDayScreen(state = previewCalendarDayState, callbacks = CalendarDayCallbacks())
+    }
+}
+
+/** 1r-2-A. 다녀온 날이다. 할 일이 없어지고 기록과 다음 일정이 붙는다. */
+@MedicalMateScreenPreviews
+@Composable
+private fun CalendarDayVisitedPreview() {
+    MedicalMateTheme {
+        CalendarDayScreen(state = previewCalendarDayVisitedState, callbacks = CalendarDayCallbacks())
+    }
+}
+
+/** 1r-2-A2. 다음 일정의 시간까지 정해진 상태다. */
+@MedicalMateScreenPreviews
+@Composable
+private fun CalendarDayConfirmedPreview() {
+    MedicalMateTheme {
+        CalendarDayScreen(state = previewCalendarDayConfirmedState, callbacks = CalendarDayCallbacks())
     }
 }

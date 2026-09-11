@@ -144,6 +144,7 @@ internal fun NavGraphBuilder.calendarDestinations(navController: NavHostControll
     calendarDayDestination(
         onCardOpen = { cardId -> navController.navigate(BriefCardDestination(cardId)) },
         onRecordAdd = { navController.navigate(HospitalPickDestination()) },
+        onRecordOpen = { recordId -> navController.navigate(RecordDetailDestination(recordId)) },
         onExit = { navController.popBackStack() },
     )
     scheduleAddDestination(
