@@ -23,6 +23,53 @@ constructor() : ViewModel() {
     fun load() {
         mutableUiState.value = RecordUiState.Content(groups = previewRecordGroups)
     }
+
+    /** 편집으로 들어간다. 아무것도 고르지 않은 채로 시작한다. */
+    fun onEditStart() {
+        updateContent { it.copy(selectedIds = emptySet()) }
+    }
+
+    /** 편집에서 나온다. 고른 것은 버린다. 취소가 실행 취소를 대신한다. */
+    fun onEditCancel() {
+        updateContent { it.copy(selectedIds = null, deleteRequested = false) }
+    }
+
+    fun onSelectChange(id: String, selected: Boolean) {
+        updateContent { content ->
+            val ids = content.selectedIds ?: return@updateContent content
+            content.copy(selectedIds = if (selected) ids + id else ids - id)
+        }
+    }
+
+    fun onDeleteClick() {
+        updateContent { if (it.selectedCount == 0) it else it.copy(deleteRequested = true) }
+    }
+
+    fun onDeleteDismiss() {
+        updateContent { it.copy(deleteRequested = false) }
+    }
+
+    /**
+     * 고른 기록을 지운다.
+     *
+     * 서버에 나가지 않는다. `DELETE /api/cards`가 붙으면 여기서 부른다. 지운 뒤에는 편집을
+     * 빠져나온다. 고른 것이 사라졌는데 편집 상태로 남으면 무엇을 더 하라는 것인지 알 수 없다.
+     */
+    fun onDeleteConfirm() {
+        updateContent { content ->
+            val ids = content.selectedIds.orEmpty()
+            val groups =
+                content.groups
+                    .map { group -> group.copy(items = group.items.filterNot { it.id in ids }) }
+                    .filter { it.items.isNotEmpty() }
+            content.copy(groups = groups, selectedIds = null, deleteRequested = false)
+        }
+    }
+
+    private fun updateContent(change: (RecordUiState.Content) -> RecordUiState.Content) {
+        val content = mutableUiState.value as? RecordUiState.Content ?: return
+        mutableUiState.value = change(content)
+    }
 }
 
 /**

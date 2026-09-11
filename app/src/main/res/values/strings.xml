@@ -33,6 +33,16 @@
     <string name="record_empty_title">아직 진료 기록이 없어요</string>
     <string name="record_empty_description">증상을 정리해두면 진료실에서 바로 보여줄 수 있어요</string>
     <string name="record_empty_action">증상 정리하기</string>
+    <!-- 1j-1-D 편집. Nav 우측이 한 자리에서 이름만 바뀐다. -->
+    <string name="record_edit">편집</string>
+    <string name="record_edit_cancel">취소</string>
+    <string name="record_select">%1$s 선택</string>
+    <!-- 고른 것이 없을 때와 있을 때. 건수가 하단 버튼 라벨에 들어간다. -->
+    <string name="record_delete">삭제</string>
+    <string name="record_delete_count">%1$d건 삭제</string>
+    <string name="record_delete_title">기록 %1$d건을 삭제할까요?</string>
+    <string name="record_delete_body">선택한 기록이 사라지고 되돌릴 수 없어요.</string>
+    <string name="record_delete_confirm">삭제</string>
     <string name="text_area_counter">%1$d / %2$d</string>
     <string name="hospital_pick_title">병원 찾기</string>
     <string name="hospital_pick_question">진료받은 병원을 찾아주세요</string>

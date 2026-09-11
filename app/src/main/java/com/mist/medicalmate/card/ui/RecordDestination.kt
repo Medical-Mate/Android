@@ -43,9 +43,18 @@ private fun RecordRoute(
 
     RecordScreen(
         state = state,
-        onItemClick = onItemClick,
-        onStartIntakeClick = onStartIntakeClick,
-        onTabSelect = onTabSelect,
+        callbacks =
+        RecordCallbacks(
+            onItemClick = onItemClick,
+            onStartIntakeClick = onStartIntakeClick,
+            onTabSelect = onTabSelect,
+            onEditStart = viewModel::onEditStart,
+            onEditCancel = viewModel::onEditCancel,
+            onSelectChange = viewModel::onSelectChange,
+            onDeleteClick = viewModel::onDeleteClick,
+            onDeleteConfirm = viewModel::onDeleteConfirm,
+            onDeleteDismiss = viewModel::onDeleteDismiss,
+        ),
         modifier = modifier,
     )
 }

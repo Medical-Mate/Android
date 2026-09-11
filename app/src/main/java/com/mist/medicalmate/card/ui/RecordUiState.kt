@@ -11,8 +11,22 @@ package com.mist.medicalmate.card.ui
 sealed interface RecordUiState {
     data object Loading : RecordUiState
 
-    /** [groups]가 비어 있으면 화면이 빈 상태(1j-2)가 된다. */
-    data class Content(val groups: List<RecordGroup>) : RecordUiState
+    /**
+     * [groups]가 비어 있으면 화면이 빈 상태(1j-2)가 된다.
+     *
+     * [selectedIds]가 null이 아니면 편집 중이다(1j-1-D). 빈 집합과 null을 나눠 쓴다.
+     * 편집에 막 들어와 아무것도 고르지 않은 상태와 편집이 아닌 상태는 화면이 다르다.
+     * 앞은 탭바 대신 삭제 버튼이 서고, 뒤는 탭바가 선다.
+     */
+    data class Content(
+        val groups: List<RecordGroup>,
+        val selectedIds: Set<String>? = null,
+        val deleteRequested: Boolean = false,
+    ) : RecordUiState {
+        val editing: Boolean get() = selectedIds != null
+
+        val selectedCount: Int get() = selectedIds?.size ?: 0
+    }
 }
 
 /** 한 달 묶음. [count]를 따로 두지 않고 [items]의 크기를 쓴다. */
