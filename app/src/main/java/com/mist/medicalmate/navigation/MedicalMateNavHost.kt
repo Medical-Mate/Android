@@ -87,7 +87,10 @@ internal fun MedicalMateNavHost(
         )
         handoffDestination(onDone = { navController.popBackStack() })
         homeDestination(
-            onStartIntakeClick = { navController.navigate(IntakeDestination) },
+            // 이어서 하기는 서버가 들고 있는 문답 id를 함께 넘긴다. 새로 시작하면 null이다.
+            onIntakeClick = { sessionId ->
+                navController.navigate(IntakeDestination(sessionId?.toLongOrNull()))
+            },
             onCardClick = { cardId -> navController.navigate(BriefCardDestination(cardId)) },
             onAllCardsClick = { navController.navigate(BriefCardListDestination) },
             onProfileClick = { navController.navigate(MyProfileDestination) },

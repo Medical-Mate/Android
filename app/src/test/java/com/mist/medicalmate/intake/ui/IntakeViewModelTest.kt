@@ -2,6 +2,10 @@ package com.mist.medicalmate.intake.ui
 
 import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
+import com.mist.medicalmate.core.network.ApiResult
+import com.mist.medicalmate.intake.data.IntakeSession
+import com.mist.medicalmate.intake.data.IntakeSessionStatus
+import com.mist.medicalmate.intake.data.SessionRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -15,6 +19,39 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+
+/**
+ * 세션 저장소를 세운 ViewModel.
+ *
+ * 세션 만들기는 여기서 늘 성공한다. 실패해도 문답이 그대로 진행된다는 것은
+ * [IntakeSessionActionsTest]가 본다.
+ */
+private fun intakeViewModel(repository: SessionRepository = FakeSessionRepository()) = IntakeViewModel(repository)
+
+/** 부른 것을 기록만 한다. 시험마다 무엇을 보냈는지 확인할 수 있다. */
+private class FakeSessionRepository(private val session: IntakeSession = savedSession) : SessionRepository {
+    var startedCodes: List<String>? = null
+    var startedText: String? = null
+
+    override suspend fun start(siteCodes: List<String>, siteText: String?): ApiResult<IntakeSession> {
+        startedCodes = siteCodes
+        startedText = siteText
+        return ApiResult.Success(session)
+    }
+
+    override suspend fun load(sessionId: Long): ApiResult<IntakeSession> = ApiResult.Success(session)
+}
+
+private val savedSession =
+    IntakeSession(
+        id = 7,
+        status = IntakeSessionStatus.IN_PROGRESS,
+        siteCodes = listOf("SUR:031"),
+        siteText = "명치",
+        answered = 1,
+        total = 4,
+        messages = emptyList(),
+    )
 
 /**
  * 부위를 고르지 않으면 문답이 열리지 않는다. 문답 이후를 보는 시험은 이 헬퍼로 1단계를
@@ -40,7 +77,7 @@ class IntakeViewModelTest {
 
     @Test
     fun `처음은 아픈 부위 단계다`() {
-        val viewModel = IntakeViewModel()
+        val viewModel = intakeViewModel()
 
         assertEquals(IntakeStep.BODY_PART, viewModel.uiState.value.step)
         assertFalse(viewModel.uiState.value.canGoBack)
@@ -48,7 +85,7 @@ class IntakeViewModelTest {
 
     @Test
     fun `부위를 고르지 않으면 다음으로 가지 않는다`() {
-        val viewModel = IntakeViewModel()
+        val viewModel = intakeViewModel()
 
         viewModel.onNext()
 
@@ -58,7 +95,7 @@ class IntakeViewModelTest {
 
     @Test
     fun `앵커를 짚는 것은 확대일 뿐 고른 것이 아니다`() {
-        val viewModel = IntakeViewModel()
+        val viewModel = intakeViewModel()
 
         viewModel.bodyMap.onDotClick("ANC:004@CENTER")
 
@@ -71,7 +108,7 @@ class IntakeViewModelTest {
 
     @Test
     fun `구역을 고른 뒤에도 확대 화면에 머문다`() {
-        val viewModel = IntakeViewModel()
+        val viewModel = intakeViewModel()
         viewModel.bodyMap.onDotClick("ANC:014@LEFT")
 
         viewModel.bodyMap.onDotClick("SUR:091@LEFT")
@@ -85,7 +122,7 @@ class IntakeViewModelTest {
 
     @Test
     fun `확대한 앵커의 좌우가 고른 구역의 좌우에 덮이지 않는다`() {
-        val viewModel = IntakeViewModel()
+        val viewModel = intakeViewModel()
         viewModel.bodyMap.onDotClick("ANC:001@CENTER")
 
         viewModel.bodyMap.onDotClick("SUR:002@LEFT")
@@ -98,7 +135,7 @@ class IntakeViewModelTest {
 
     @Test
     fun `고른 구역은 확대 화면과 목록에서 같은 값으로 표시된다`() {
-        val viewModel = IntakeViewModel()
+        val viewModel = intakeViewModel()
         viewModel.bodyMap.onDotClick("ANC:014@LEFT")
         viewModel.bodyMap.onDotClick("SUR:091@LEFT")
 
@@ -114,7 +151,7 @@ class IntakeViewModelTest {
 
     @Test
     fun `다른 구역을 누르면 앞서 고른 것을 대신한다`() {
-        val viewModel = IntakeViewModel()
+        val viewModel = intakeViewModel()
         viewModel.bodyMap.onDotClick("ANC:014@LEFT")
         viewModel.bodyMap.onDotClick("SUR:091@LEFT")
 
@@ -125,7 +162,7 @@ class IntakeViewModelTest {
 
     @Test
     fun `확대를 닫아도 고른 부위는 남는다`() {
-        val viewModel = IntakeViewModel()
+        val viewModel = intakeViewModel()
         viewModel.bodyMap.onDotClick("ANC:014@LEFT")
         viewModel.bodyMap.onDotClick("SUR:091@LEFT")
 
@@ -139,7 +176,7 @@ class IntakeViewModelTest {
 
     @Test
     fun `목록에서 앵커 줄을 누르면 확대만 되고 골라지지 않는다`() {
-        val viewModel = IntakeViewModel()
+        val viewModel = intakeViewModel()
 
         viewModel.bodyMap.onAnchorFocus(BodyMapSelection("ANC:013", side = BodyMapSide.RIGHT))
 
@@ -150,7 +187,7 @@ class IntakeViewModelTest {
 
     @Test
     fun `구역까지 고르면 부위가 정해지고 첫 마디에 그 이름이 들어간다`() {
-        val viewModel = IntakeViewModel()
+        val viewModel = intakeViewModel()
 
         viewModel.bodyMap.onDotClick("ANC:014@LEFT")
         viewModel.bodyMap.onDotClick("SUR:091@LEFT")
@@ -166,7 +203,7 @@ class IntakeViewModelTest {
 
     @Test
     fun `전신과 피부는 구역이 없어 칩만 누르면 정해진다`() {
-        val viewModel = IntakeViewModel()
+        val viewModel = intakeViewModel()
 
         viewModel.bodyMap.onSideAnchorSelect("ANC:011")
 
@@ -179,7 +216,7 @@ class IntakeViewModelTest {
 
     @Test
     fun `구역 단계에서 뒤로 가면 앵커 화면으로 돌아간다`() {
-        val viewModel = IntakeViewModel()
+        val viewModel = intakeViewModel()
         viewModel.bodyMap.onDotClick("ANC:001@CENTER")
 
         viewModel.onBack()
@@ -192,7 +229,7 @@ class IntakeViewModelTest {
 
     @Test
     fun `앞뒤를 바꿔도 고른 부위는 남는다`() {
-        val viewModel = IntakeViewModel()
+        val viewModel = intakeViewModel()
         viewModel.bodyMap.onSideAnchorSelect("ANC:010")
 
         viewModel.bodyMap.onViewChange(BodyMapView.BACK)
@@ -204,7 +241,7 @@ class IntakeViewModelTest {
 
     @Test
     fun `목록과 인체도를 오가도 고른 부위는 남는다`() {
-        val viewModel = IntakeViewModel()
+        val viewModel = intakeViewModel()
         viewModel.bodyMap.onPartSelect(BodyMapSelection("ANC:003", "SUR:022", BodyMapSide.RIGHT))
 
         viewModel.bodyMap.onListModeToggle()
@@ -219,7 +256,7 @@ class IntakeViewModelTest {
 
     @Test
     fun `보내면 환자 마디가 붙고 기다린 뒤 AI가 답한다`() = runTest {
-        val viewModel = IntakeViewModel()
+        val viewModel = intakeViewModel()
         viewModel.openChatStep()
 
         viewModel.onDraftChange("한 3주쯤 됐어요")
@@ -239,7 +276,7 @@ class IntakeViewModelTest {
 
     @Test
     fun `빈 글은 보내지지 않는다`() {
-        val viewModel = IntakeViewModel()
+        val viewModel = intakeViewModel()
         viewModel.openChatStep()
 
         viewModel.onDraftChange("   ")
@@ -251,7 +288,7 @@ class IntakeViewModelTest {
 
     @Test
     fun `물어볼 것이 남지 않으면 문답이 끝난 것으로 표시된다`() = runTest {
-        val viewModel = IntakeViewModel()
+        val viewModel = intakeViewModel()
         viewModel.openChatStep()
 
         repeat(4) {
@@ -265,7 +302,7 @@ class IntakeViewModelTest {
 
     @Test
     fun `마이크는 대기와 듣는 중을 오간다`() {
-        val viewModel = IntakeViewModel()
+        val viewModel = intakeViewModel()
 
         viewModel.onMicClick()
         assertEquals(MedicalMateVoiceState.LISTENING, viewModel.uiState.value.voice)
@@ -276,7 +313,7 @@ class IntakeViewModelTest {
 
     @Test
     fun `입력 방식을 바꾸면 음성은 대기로 돌아간다`() {
-        val viewModel = IntakeViewModel()
+        val viewModel = intakeViewModel()
         viewModel.onInputModeChange(IntakeInputMode.VOICE)
         viewModel.onMicClick()
 
@@ -288,7 +325,7 @@ class IntakeViewModelTest {
 
     @Test
     fun `부위 이름에 받침이 있으면 조사가 이가 된다`() {
-        val viewModel = IntakeViewModel()
+        val viewModel = intakeViewModel()
 
         viewModel.bodyMap.onDotClick("ANC:014@LEFT")
         viewModel.bodyMap.onDotClick("SUR:091@LEFT")
@@ -300,7 +337,7 @@ class IntakeViewModelTest {
 
     @Test
     fun `받침이 없으면 조사가 가가 된다`() {
-        val viewModel = IntakeViewModel()
+        val viewModel = intakeViewModel()
 
         viewModel.bodyMap.onPartSelect(BodyMapSelection("ANC:001", "SUR:004"))
         viewModel.onNext()
@@ -318,7 +355,7 @@ class IntakeViewModelTest {
 
     @Test
     fun `통증 강도를 고른다`() {
-        val viewModel = IntakeViewModel()
+        val viewModel = intakeViewModel()
 
         viewModel.onSeverityChange(MedicalMateSeverity.LEVEL_5)
 
@@ -327,7 +364,7 @@ class IntakeViewModelTest {
 
     @Test
     fun `질문을 적어 넣고 지운다`() {
-        val viewModel = IntakeViewModel()
+        val viewModel = intakeViewModel()
 
         viewModel.onQuestionDraftChange("검사를 받아야 하나요?")
         viewModel.onAddQuestion()
@@ -344,7 +381,7 @@ class IntakeViewModelTest {
 
     @Test
     fun `빈 질문은 들어가지 않고 없는 자리를 지워도 그대로다`() {
-        val viewModel = IntakeViewModel()
+        val viewModel = intakeViewModel()
 
         viewModel.onQuestionDraftChange("  ")
         viewModel.onAddQuestion()
@@ -355,7 +392,7 @@ class IntakeViewModelTest {
 
     @Test
     fun `네 단계를 지나면 흐름이 끝난다`() {
-        val viewModel = IntakeViewModel()
+        val viewModel = intakeViewModel()
 
         viewModel.openChatStep()
         viewModel.onNext()
@@ -371,7 +408,7 @@ class IntakeViewModelTest {
 
     @Test
     fun `뒤로 가면 앞 단계로 돌아가고 답이 남아 있다`() {
-        val viewModel = IntakeViewModel()
+        val viewModel = intakeViewModel()
         viewModel.openChatStep()
         viewModel.onNext()
         viewModel.onSeverityChange(MedicalMateSeverity.LEVEL_2)

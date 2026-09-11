@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
+import com.mist.medicalmate.intake.data.SessionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.delay
@@ -30,7 +31,7 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class IntakeViewModel
 @Inject
-constructor() : ViewModel() {
+internal constructor(repository: SessionRepository) : ViewModel() {
     private val mutableUiState = MutableStateFlow(IntakeUiState())
     val uiState: StateFlow<IntakeUiState> = mutableUiState.asStateFlow()
 
@@ -39,7 +40,10 @@ constructor() : ViewModel() {
         mutableUiState.update { it.copy(bodyMap = transform(it.bodyMap)) }
     }
 
-    private var nextMessageId = 0L
+    /** 서버와 주고받는 부분. 왜 나눴는지는 [IntakeSessionActions]에 있다. */
+    internal val session = IntakeSessionActions(repository, viewModelScope) { transform ->
+        mutableUiState.update(transform)
+    }
 
     fun onDraftChange(draft: String) {
         mutableUiState.update { it.copy(draft = draft) }
@@ -52,7 +56,7 @@ constructor() : ViewModel() {
 
         mutableUiState.update {
             it.copy(
-                messages = it.messages + IntakeMessage(nextMessageId++, IntakeMessage.Sender.PATIENT, it.draft.trim()),
+                messages = it.messages + it.newMessage(IntakeMessage.Sender.PATIENT, it.draft.trim()),
                 draft = "",
                 awaitingReply = true,
             )
@@ -66,7 +70,7 @@ constructor() : ViewModel() {
                     if (line == null) {
                         current.messages
                     } else {
-                        current.messages + IntakeMessage(nextMessageId++, IntakeMessage.Sender.AI, line)
+                        current.messages + current.newMessage(IntakeMessage.Sender.AI, line)
                     },
                     awaitingReply = false,
                     // 물어볼 것이 남지 않았다. 시안에 문답을 끝내는 조작이 없어서 이 시점에
@@ -143,13 +147,16 @@ constructor() : ViewModel() {
         when {
             state.step == IntakeStep.BODY_PART -> {
                 // 부위를 다 고르기 전에는 문답을 열지 않는다. 화면의 다음 버튼도 꺼져 있다.
-                val part = state.bodyMap.selection?.takeIf { state.canLeaveBodyPart }?.title()
-                if (part != null) {
+                val selection = state.bodyMap.selection?.takeIf { state.canLeaveBodyPart }
+                val part = selection?.title()
+                if (selection != null && part != null) {
+                    // 서버에 세션을 연다. 여기서부터 임시저장이 남는다.
+                    session.start(selection, part)
                     mutableUiState.update {
                         it.copy(
                             bodyPart = part,
                             messages =
-                            listOf(IntakeMessage(nextMessageId++, IntakeMessage.Sender.AI, openingLine(part))),
+                            listOf(it.newMessage(IntakeMessage.Sender.AI, intakeOpeningLine(part))),
                             step = IntakeStep.SYMPTOM_CHAT,
                         )
                     }
@@ -198,4 +205,4 @@ constructor() : ViewModel() {
  * LLM이 붙으면 사라진다. 그때까지도 부위 이름은 고른 값이어야 한다. "복부가"로 고정해
  * 두면 무릎을 짚고도 복부를 묻는다.
  */
-private fun openingLine(part: String): String = "${withSubjectParticle(part)} 불편하시군요. 언제부터 그러셨어요? 정확하지 않아도 괜찮아요."
+internal fun intakeOpeningLine(part: String): String = "${withSubjectParticle(part)} 불편하시군요. 언제부터 그러셨어요? 정확하지 않아도 괜찮아요."
