@@ -161,31 +161,29 @@ internal fun NavGraphBuilder.calendarDestinations(navController: NavHostControll
 internal fun NavGraphBuilder.visitDestinations(navController: NavHostController) {
     hospitalPickDestination(
         onPicked = { hospitalId -> navController.navigate(VisitNoteDestination(hospitalId)) },
-        // 진료 전(1m-B)에서 카드로. cardId가 있으면 카드의 `변경`에서 온 것이라 그 카드
-        // 엔트리를 새 병원을 담은 것으로 갈아치운다. 그러지 않으면 뒤로 갔을 때 병원이 없던
-        // 카드가 다시 나온다. 없으면 문답을 마치고 온 것이라 새 카드를 만든다.
+        // 진료 전(1m-B)에서 카드로. cardId가 있으면 카드의 `변경`에서 온 것이라 고른
+        // 병원만 남기고 그 카드로 돌아간다. 엔트리를 갈아치우면 그 화면이 편집 중이던 값을
+        // 잃는다. cardId가 없으면 문답을 마치고 온 것이라 새 카드를 연다.
         onCardRequested = { cardId, hospital ->
-            val destination =
-                BriefCardDestination(
-                    cardId = cardId ?: NEW_CARD_ID,
-                    hospitalName = hospital?.name,
-                    hospitalAddress = hospital?.address,
-                )
             if (cardId == null) {
-                navController.navigate(destination)
+                navController.navigate(
+                    BriefCardDestination(
+                        cardId = NEW_CARD_ID,
+                        hospitalName = hospital?.name,
+                        hospitalAddress = hospital?.address,
+                    ),
+                )
             } else {
-                navController.navigate(destination) {
-                    popUpTo<BriefCardDestination> { inclusive = true }
-                }
+                navController.popWithResult(
+                    NavResult.HOSPITAL_NAME to hospital?.name,
+                    NavResult.HOSPITAL_ADDRESS to hospital?.address,
+                )
             }
         },
-        // 일정 추가(1r-4)의 병원 필드에서 온 것. 만들던 일정으로 돌아가야 해서 그 엔트리를
-        // 병원 이름을 담은 것으로 갈아치운다. 새로 쌓으면 뒤로 갔을 때 병원이 없던 폼이
-        // 다시 나오고, 적어 둔 날짜와 할 일이 그쪽에 남는다.
+        // 일정 추가(1r-4)의 병원 필드에서 온 것. 고른 이름만 남기고 뒤로 간다. 엔트리를
+        // 갈아치우면 그 화면의 ViewModel이 정리되면서 적어 둔 날짜·시간·할 일이 사라진다.
         onScheduleRequested = { hospital ->
-            navController.navigate(ScheduleAddDestination(hospitalName = hospital?.name)) {
-                popUpTo<ScheduleAddDestination> { inclusive = true }
-            }
+            navController.popWithResult(NavResult.HOSPITAL_NAME to hospital?.name)
         },
         onExit = { navController.popBackStack() },
     )

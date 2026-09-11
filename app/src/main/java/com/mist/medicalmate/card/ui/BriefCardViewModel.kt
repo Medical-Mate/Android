@@ -57,6 +57,23 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
         }
     }
 
+    /**
+     * 병원 `변경`에서 골라 돌아왔다.
+     *
+     * 주소는 함께 오지 않는다. 이름만으로 그 자리를 채우고, 주소는 서버가 카드에 병원을
+     * 싣기 시작하면 응답에서 온다(#139).
+     */
+    fun onHospitalPicked(name: String?) {
+        if (name.isNullOrBlank()) return
+        mutableUiState.update { state ->
+            if (state !is BriefCardUiState.Content) {
+                state
+            } else {
+                state.copy(card = state.card.copy(hospital = BriefCardHospital(name = name, address = "")))
+            }
+        }
+    }
+
     /** Nav 우측 `편집`. 카드 안의 모든 값을 한 번에 연다. */
     fun onEditClick() {
         mutableUiState.update { state ->
