@@ -55,7 +55,8 @@ internal val fixtureRecord =
     )
 
 /** 시간이 아직 정해지지 않은 재방문. 확정하면 칩이 D-day로 바뀐다(1r-2-A2). */
-internal val fixtureNextEvent = DayNextEvent(chip = "9월 26일 (토)", title = "재방문 예정")
+internal val fixtureNextEvent =
+    DayNextEvent(chip = "9월 26일 (토)", title = "재방문 예정", clinic = "서울OO병원 내과")
 
 internal val fixtureTodos =
     listOf(

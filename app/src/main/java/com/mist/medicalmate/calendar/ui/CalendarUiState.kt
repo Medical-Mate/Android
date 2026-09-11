@@ -110,7 +110,19 @@ data class DayRecord(val id: String, val title: String, val meta: String)
  * [chip]을 문장으로 받는다. 확정 전에는 날짜이고 확정 후에는 D-day라 종류가 달라서, 무엇을
  * 적을지는 데이터가 정한다.
  */
-data class DayNextEvent(val chip: String, val title: String, val at: String? = null)
+data class DayNextEvent(
+    val chip: String,
+    val title: String,
+    val at: String? = null,
+    /**
+     * 재방문할 병원.
+     *
+     * [at]이 없을 때 "시간 정하고 확정하기"가 일정 추가(1r-4-B)를 여는데, 그 화면의 병원
+     * 필드가 이 값으로 채워진 상태가 시안의 `1r-4-B`다. 제목에서 떼어내지 않는다. 제목은
+     * "서울OO병원 내과 재방문"처럼 말이 붙어 있어 자르는 규칙이 생긴다.
+     */
+    val clinic: String? = null,
+)
 
 /** 그 날에 찍을 표시. 기록이 예정보다 앞선다. 이미 지난 일은 사실이고 예정은 계획이다. */
 internal fun CalendarUiState.markerOn(day: Int): MedicalMateDateMarker = when (day) {

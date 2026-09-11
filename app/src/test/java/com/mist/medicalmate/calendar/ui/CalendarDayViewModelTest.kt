@@ -187,6 +187,27 @@ class CalendarDayViewModelTest {
         assertEquals(1L, repository.deletedId)
         assertTrue(left)
     }
+
+    @Test
+    fun `다음 일정에 재방문할 병원이 함께 온다`() {
+        // 시간을 확정하러 갈 때 일정 추가의 병원 필드가 이 값으로 채워진다(1r-4-B).
+        // 제목에서 떼어내지 않는다. "서울OO병원 내과 재방문"처럼 말이 붙어 있다.
+        val viewModel = dayViewModel()
+
+        viewModel.load(PastVisitDate)
+
+        assertEquals("서울OO병원 내과", viewModel.uiState.value?.nextEvent?.clinic)
+    }
+
+    @Test
+    fun `시간이 정해지면 확정 조작이 사라진다`() {
+        // 1r-2-A는 시간이 비어 조작이 붙고, A2는 확정된 상태다.
+        val viewModel = dayViewModel()
+
+        viewModel.load(PastVisitDate)
+
+        assertNull(viewModel.uiState.value?.nextEvent?.at)
+    }
 }
 
 /** 그 날 일정을 하나 돌려주는 저장소. */

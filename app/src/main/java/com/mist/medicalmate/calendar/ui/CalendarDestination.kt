@@ -46,6 +46,7 @@ internal fun NavGraphBuilder.calendarDayDestination(
     onCardOpen: (String) -> Unit,
     onRecordAdd: () -> Unit,
     onRecordOpen: (String) -> Unit,
+    onScheduleConfirm: (String?) -> Unit,
     onExit: () -> Unit,
 ) {
     composable<CalendarDayDestination> { entry ->
@@ -53,6 +54,7 @@ internal fun NavGraphBuilder.calendarDayDestination(
         CalendarDayRoute(
             date = date,
             onCardOpen = onCardOpen,
+            onScheduleConfirm = onScheduleConfirm,
             onRecordAdd = onRecordAdd,
             onRecordOpen = onRecordOpen,
             onExit = onExit,
@@ -109,6 +111,7 @@ private fun CalendarMonthRoute(
 private fun CalendarDayRoute(
     date: LocalDate,
     onCardOpen: (String) -> Unit,
+    onScheduleConfirm: (String?) -> Unit,
     onRecordAdd: () -> Unit,
     onRecordOpen: (String) -> Unit,
     onExit: () -> Unit,
@@ -135,6 +138,8 @@ private fun CalendarDayRoute(
             onScheduleDeleteClick = viewModel::onScheduleDeleteClick,
             onScheduleDeleteConfirm = { viewModel.onScheduleDeleteConfirm(onExit) },
             onScheduleDeleteDismiss = viewModel::onScheduleDeleteDismiss,
+            // 1r-2-A의 "시간 정하고 확정하기". 병원이 채워진 일정 추가(1r-4-B)로 간다.
+            onNextEventConfirmClick = { onScheduleConfirm(state?.nextEvent?.clinic) },
         ),
         modifier = modifier,
     )
