@@ -1,6 +1,7 @@
 package com.mist.medicalmate.calendar.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -96,8 +97,10 @@ private fun CalendarMonthRoute(
 /**
  * 일자 화면의 진입점.
  *
- * 할 일 체크는 아직 저장되지 않는다. 화면 안에서 켜고 끄는 것까지가 지금 범위이고, 서버에
- * 남기려면 그 API가 필요하다(#75).
+ * 할 일 체크와 편집은 아직 저장되지 않는다. 화면 안에서 고치는 것까지가 지금 범위이고,
+ * 서버에 남기려면 그 API가 필요하다(#75).
+ *
+ * 일정을 지우면 이 날의 화면이 있을 이유가 없어져 캘린더로 돌아간다.
  */
 @Composable
 private fun CalendarDayRoute(
@@ -107,16 +110,28 @@ private fun CalendarDayRoute(
     onRecordOpen: (String) -> Unit,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: CalendarViewModel = hiltViewModel(),
+    viewModel: CalendarDayViewModel = hiltViewModel(),
 ) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(date) { viewModel.load(date) }
+
     CalendarDayScreen(
-        state = viewModel.dayState(date),
+        state = state ?: return,
         callbacks =
         CalendarDayCallbacks(
             onBackClick = onExit,
             onCardOpenClick = onCardOpen,
+            onTodoToggle = viewModel::onTodoToggle,
             onRecordAddClick = onRecordAdd,
             onRecordOpenClick = onRecordOpen,
+            onEditClick = viewModel::onEditStart,
+            onEditCancelClick = viewModel::onEditCancel,
+            onEditDoneClick = viewModel::onEditDone,
+            onTodoDeleteClick = viewModel::onTodoDelete,
+            onScheduleDeleteClick = viewModel::onScheduleDeleteClick,
+            onScheduleDeleteConfirm = onExit,
+            onScheduleDeleteDismiss = viewModel::onScheduleDeleteDismiss,
         ),
         modifier = modifier,
     )

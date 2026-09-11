@@ -158,6 +158,15 @@
     <string name="calendar_day_next_auto">진료 후 기록에서 자동으로 만들었어요</string>
     <string name="calendar_day_next_hint">시간을 정하면 하루 전에 알려드려요</string>
     <string name="calendar_day_next_confirm">시간 정하고 확정하기</string>
+    <!-- 1r-2-E·DC 일자 편집. Nav 우측이 한 자리에서 셋으로 갈린다. -->
+    <string name="calendar_day_edit">편집</string>
+    <string name="calendar_day_edit_cancel">취소</string>
+    <string name="calendar_day_edit_done">확인</string>
+    <string name="calendar_day_todo_delete">%1$s 지우기</string>
+    <string name="calendar_day_schedule_delete">일정 삭제</string>
+    <string name="calendar_day_schedule_delete_title">이 일정을 삭제할까요?</string>
+    <string name="calendar_day_schedule_delete_body">캘린더와 하루 전 알림이 함께 사라져요</string>
+    <string name="calendar_day_schedule_delete_confirm">삭제</string>
 
     <!-- Figma 1r-4(1062:3031) 일정 추가. -->
     <string name="schedule_add_title">일정 추가</string>

@@ -46,6 +46,10 @@ data class CalendarSchedule(val id: String, val title: String, val time: String,
  *
  * [nextEvent]는 진료 후 기록의 재방문에서 자동으로 만들어진다. 시간이 정해지기 전과 후가
  * 다르게 보인다.
+ *
+ * [todoDraft]가 있으면 편집 중이다(1r-2-E). 문서의 CRUD 규칙대로 사본을 고치고 취소하면
+ * 버린다. 지울 수 있는 것은 할 일 줄과 이 날 일정 자체 둘이고, 일정 삭제는 하단 Danger
+ * 버튼과 확인 대화상자를 거친다.
  */
 data class CalendarDayUiState(
     val date: LocalDate,
@@ -54,9 +58,25 @@ data class CalendarDayUiState(
     val todos: List<DayTodo> = emptyList(),
     val record: DayRecord? = null,
     val nextEvent: DayNextEvent? = null,
+    val todoDraft: List<DayTodo>? = null,
+    val deleteRequested: Boolean = false,
 ) {
     /** 다녀온 날인지. 기록이 있으면 진료가 끝난 것이다. */
     val visited: Boolean get() = record != null
+
+    /** 편집 중인지(1r-2-E). 사본이 있으면 편집이다. */
+    val editing: Boolean get() = todoDraft != null
+
+    /** 화면에 그릴 할 일. 편집 중이면 사본, 아니면 본값이다. */
+    val shownTodos: List<DayTodo> get() = todoDraft ?: todos
+
+    /**
+     * 편집에서 바뀐 것이 있는지. Nav 우측이 `취소`와 `확인`으로 갈린다.
+     *
+     * 체크는 세지 않는다. 체크는 편집 밖에서도 누를 수 있는 조작이라 편집으로 바꾼 것이
+     * 아니다. 여기서 세는 것은 지운 줄이다.
+     */
+    val changed: Boolean get() = todoDraft != null && todoDraft.size != todos.size
 }
 
 /**
