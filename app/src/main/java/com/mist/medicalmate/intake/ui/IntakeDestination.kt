@@ -8,16 +8,19 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import androidx.navigation.toRoute
 import kotlinx.serialization.Serializable
 
 /**
  * 와이어프레임 1l·1c·1d·1i. 증상 정리 네 단계가 한 목적지 안에서 넘어간다.
  *
- * 홈의 "증상 정리 시작하기"와 "이어서 하기"가 이 목적지로 들어온다. 이어서 하기는 서버에
- * 저장된 진행 상태를 불러와야 해서 아직 시작과 같게 동작한다(#69).
+ * 홈의 "증상 정리 시작하기"와 "이어서 하기"가 이 목적지로 들어온다.
+ *
+ * @param sessionId 이어서 할 문답. 홈의 `inProgressSession`에서 온다. `null`이면 새로
+ *   시작하는 것이고, 부위를 고르고 다음을 누를 때 세션이 만들어진다.
  */
 @Serializable
-internal data object IntakeDestination
+internal data class IntakeDestination(val sessionId: Long? = null)
 
 /** 와이어프레임 1c-5. 문답을 마친 뒤의 갈림길. */
 @Serializable
@@ -31,8 +34,12 @@ internal data object IntakeDoneDestination
  * 뒤로 갈 때다.
  */
 internal fun NavGraphBuilder.intakeDestination(onCompleted: () -> Unit, onExit: () -> Unit) {
-    composable<IntakeDestination> {
-        IntakeRoute(onCompleted = onCompleted, onExit = onExit)
+    composable<IntakeDestination> { entry ->
+        IntakeRoute(
+            sessionId = entry.toRoute<IntakeDestination>().sessionId,
+            onCompleted = onCompleted,
+            onExit = onExit,
+        )
     }
 }
 
@@ -59,12 +66,18 @@ internal fun NavGraphBuilder.intakeDoneDestination(
  */
 @Composable
 private fun IntakeRoute(
+    sessionId: Long?,
     onCompleted: () -> Unit,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: IntakeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // 목적지 스코프라 화면을 떠나면 ViewModel도 사라진다. 다시 들어오면 다시 불러온다.
+    LaunchedEffect(sessionId) {
+        if (sessionId != null) viewModel.session.restore(sessionId)
+    }
 
     LaunchedEffect(state.completed) {
         if (state.completed) onCompleted()

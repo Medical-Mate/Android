@@ -125,7 +125,7 @@ private val ToastTop = 68.dp
  */
 data class HomeCallbacks(
     val onStartIntakeClick: () -> Unit = {},
-    val onResumeClick: () -> Unit = {},
+    val onResumeClick: (String?) -> Unit = {},
     val onSavedCardClick: (String) -> Unit = {},
     val onAllCardsClick: () -> Unit = {},
     val onScheduleClick: (String) -> Unit = {},
@@ -196,7 +196,7 @@ private fun HomeContent(
         item { StartIntakeButton(onClick = callbacks.onStartIntakeClick) }
 
         content.resume?.let { resume ->
-            item { ResumeCard(resume = resume, onClick = callbacks.onResumeClick) }
+            item { ResumeCard(resume = resume, onClick = { callbacks.onResumeClick(resume.intakeId) }) }
         }
 
         savedCardsSection(content = content, callbacks = callbacks)

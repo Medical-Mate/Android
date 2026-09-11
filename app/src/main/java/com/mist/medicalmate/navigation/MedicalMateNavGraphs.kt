@@ -152,7 +152,7 @@ internal fun NavGraphBuilder.calendarDestinations(navController: NavHostControll
             navController.navigate(HospitalPickDestination(purpose = HospitalPickPurpose.SCHEDULE))
         },
         // 새 카드는 증상 문답부터다. 만들고 나면 그 카드가 목록에 들어온다.
-        onCardNew = { navController.navigate(IntakeDestination) },
+        onCardNew = { navController.navigate(IntakeDestination()) },
         onSaved = { navController.popBackStack() },
         onExit = { navController.popBackStack() },
     )
@@ -216,7 +216,7 @@ internal fun NavGraphBuilder.visitDestinations(navController: NavHostController)
 internal fun NavGraphBuilder.recordDestinations(navController: NavHostController) {
     recordDestination(
         onItemClick = { recordId -> navController.navigate(RecordDetailDestination(recordId)) },
-        onStartIntakeClick = { navController.navigate(IntakeDestination) },
+        onStartIntakeClick = { navController.navigate(IntakeDestination()) },
         onTabSelect = navController::selectTab,
     )
     recordDetailDestination(onBackClick = { navController.popBackStack() })
@@ -224,7 +224,7 @@ internal fun NavGraphBuilder.recordDestinations(navController: NavHostController
     // 짜임이라 여기 함께 둔다.
     briefCardListDestination(
         onCardClick = { cardId -> navController.navigate(BriefCardDestination(cardId)) },
-        onStartIntakeClick = { navController.navigate(IntakeDestination) },
+        onStartIntakeClick = { navController.navigate(IntakeDestination()) },
         onExit = { navController.popBackStack() },
     )
 }

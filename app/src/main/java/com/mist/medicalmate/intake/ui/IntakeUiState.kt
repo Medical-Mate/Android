@@ -46,6 +46,13 @@ enum class IntakeInputMode { TEXT, VOICE }
  * 네 단계가 한 상태에 모여 있다. 단계를 오가도 앞 단계의 답이 남아 있어야 하고, 마지막에
  * 카드 한 장으로 묶여야 한다.
  */
+/**
+ * @param sessionId 서버가 들고 있는 문답 id. 부위를 고르고 다음을 누를 때 받는다.
+ *   임시저장의 열쇠라서, 없으면 앱을 나갔다 와도 이어 할 자리가 없다. 세션 만들기가
+ *   실패해도 문답은 그대로 진행하므로 `null`일 수 있다.
+ * @param restoring 홈의 "이어서 하기"로 들어와 서버에서 불러오는 중인지.
+ * @param restoreFailed 불러오지 못했는지. 부위 선택부터 다시 하게 두는 대신 이유를 알린다.
+ */
 data class IntakeUiState(
     val step: IntakeStep = IntakeStep.BODY_PART,
     val bodyPart: String? = null,
@@ -60,6 +67,9 @@ data class IntakeUiState(
     val questions: List<String> = emptyList(),
     val chatFinished: Boolean = false,
     val completed: Boolean = false,
+    val sessionId: Long? = null,
+    val restoring: Boolean = false,
+    val restoreFailed: Boolean = false,
 ) {
     /**
      * 첫 단계에서 뒤로 가면 흐름을 벗어난다. 그 판단은 호출자가 한다.
@@ -85,6 +95,16 @@ data class IntakeUiState(
     val canSend: Boolean get() = draft.isNotBlank() && !awaitingReply
 
     val canAddQuestion: Boolean get() = questionDraft.isNotBlank()
+
+    /**
+     * 다음 마디. id를 지금 있는 것들에서 이어 붙인다.
+     *
+     * 세는 값을 따로 들면 서버에서 불러온 마디와 겹친다. 불러온 마디의 id는 서버가 매긴
+     * `seq`라 0부터 시작하지 않고, 이어 답한 마디가 같은 번호를 받으면 목록의 key가 겹쳐
+     * 화면이 엉뚱한 줄을 다시 쓴다.
+     */
+    internal fun newMessage(sender: IntakeMessage.Sender, text: String): IntakeMessage =
+        IntakeMessage(id = (messages.maxOfOrNull { it.id } ?: 0L) + 1, sender = sender, text = text)
 }
 
 /**
