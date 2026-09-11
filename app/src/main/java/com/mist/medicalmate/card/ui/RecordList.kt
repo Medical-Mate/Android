@@ -27,6 +27,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateBadge
 import com.mist.medicalmate.core.designsystem.component.MedicalMateCard
 import com.mist.medicalmate.core.designsystem.component.MedicalMateCheckbox
+import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 
 /**
  * 기록 목록의 묶음 머리와 줄. Figma 1j-1 `406:2569`, 1j-1-D `1121:4527`.
@@ -93,26 +94,13 @@ internal fun ColumnScope.GroupList(
     }
 }
 
+/** 묶음 머리. 개수는 누를 수 없는 표시라 `Section Header`의 캡션 자리에 둔다. */
 @Composable
 private fun GroupHeader(group: RecordGroup, @StringRes countRes: Int) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = MedicalMateSpace.s10, bottom = MedicalMateSpace.s2),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = group.monthLabel,
-            style = MedicalMateTheme.typography.headingS,
-            color = MedicalMateTheme.colors.fgDefault,
-            modifier = Modifier.weight(1f),
-        )
-        Text(
-            text = stringResource(countRes, group.items.size),
-            style = MedicalMateTheme.typography.bodyS,
-            color = MedicalMateTheme.colors.fgSubtle,
-        )
-    }
+    MedicalMateSectionHeader(
+        title = group.monthLabel,
+        caption = stringResource(countRes, group.items.size),
+    )
 }
 
 /**

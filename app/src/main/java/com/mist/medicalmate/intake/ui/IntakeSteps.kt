@@ -26,6 +26,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNotice
+import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSeveritySlider
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTextField
 
@@ -136,7 +137,10 @@ internal fun QuestionsStep(state: IntakeUiState, callbacks: IntakeCallbacks, mod
             },
         )
         if (state.questions.isNotEmpty()) {
-            QuestionsHeader(count = state.questions.size)
+            MedicalMateSectionHeader(
+                title = stringResource(R.string.intake_questions_saved),
+                caption = stringResource(R.string.intake_questions_count, state.questions.size),
+            )
             Text(
                 text = stringResource(R.string.intake_questions_ai_hint),
                 style = MedicalMateTheme.typography.bodyS,
@@ -150,30 +154,6 @@ internal fun QuestionsStep(state: IntakeUiState, callbacks: IntakeCallbacks, mod
                 )
             }
         }
-    }
-}
-
-/**
- * 적어둔 질문 목록의 머리. 개수는 누를 수 없는 표시라 `Section Header`의 액션 자리에 두지
- * 않는다. 그 자리는 눌리는 라벨이고, 개수를 넣으면 눌러 볼 것처럼 보인다.
- */
-@Composable
-private fun QuestionsHeader(count: Int) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(top = MedicalMateSpace.s10),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = stringResource(R.string.intake_questions_saved),
-            style = MedicalMateTheme.typography.headingS,
-            color = MedicalMateTheme.colors.fgDefault,
-            modifier = Modifier.weight(1f),
-        )
-        Text(
-            text = stringResource(R.string.intake_questions_count, count),
-            style = MedicalMateTheme.typography.bodyS,
-            color = MedicalMateTheme.colors.fgSubtle,
-        )
     }
 }
 
