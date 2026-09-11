@@ -1,34 +1,61 @@
 package com.mist.medicalmate.calendar.ui
-
+import com.mist.medicalmate.calendar.data.Appointment
+import com.mist.medicalmate.calendar.data.AppointmentStatus
+import com.mist.medicalmate.card.data.CardListItem
+import com.mist.medicalmate.card.ui.FakeCardRepository
+import com.mist.medicalmate.core.network.ApiResult
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.YearMonth
+import java.time.ZoneId
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class CalendarViewModelTest {
-    @Test
-    fun `처음에는 진료 예정일이 있는 달을 열고 그 날을 고른다`() {
-        val state = CalendarViewModel().uiState.value
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+    }
 
-        assertEquals(YearMonth.of(2026, 9), state.month)
-        assertEquals(LocalDate.of(2026, 9, 12), state.selected)
-        assertTrue(state.schedules.isNotEmpty())
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
     }
 
     @Test
-    fun `일정이 있는 날에 점이 찍힌다`() {
-        val state = CalendarViewModel().uiState.value
+    fun `처음에는 오늘이 있는 달을 열고 오늘을 고른다`() {
+        // 서버가 어느 달을 보여줄지 정하지 않는다. 화면이 열린 날이 기준이다.
+        val state = monthViewModel().uiState.value
 
-        assertEquals(setOf(2, 4), state.recordDays)
-        assertEquals(setOf(12, 26), state.plannedDays)
+        assertEquals(java.time.YearMonth.of(2026, 9), state.month)
+        assertEquals(LocalDate.of(2026, 9, 11), state.selected)
+    }
+
+    @Test
+    fun `카드를 쓴 날에 채운 점이 찍힌다`() {
+        // 채운 점은 기록, 빈 원은 앞으로의 일정이다. 서버가 그 둘을 다른 경로로 준다.
+        val state = monthViewModel().uiState.value
+
+        assertEquals(setOf(4), state.recordDays)
+        assertEquals(setOf(12), state.plannedDays)
     }
 
     @Test
     fun `달을 넘기면 고른 날은 그대로 둔다`() {
-        val viewModel = CalendarViewModel()
+        val viewModel = monthViewModel()
         val selected = viewModel.uiState.value.selected
 
         viewModel.onNextMonth()
@@ -43,7 +70,7 @@ class CalendarViewModelTest {
 
     @Test
     fun `일정 없는 날을 고르면 목록이 빈다`() {
-        val viewModel = CalendarViewModel()
+        val viewModel = monthViewModel()
 
         viewModel.onDaySelect(LocalDate.of(2026, 9, 13))
 
@@ -53,18 +80,17 @@ class CalendarViewModelTest {
 
     @Test
     fun `카드만 쓴 날을 고르면 시트가 뜬다`() {
-        val viewModel = CalendarViewModel()
+        // 일정이 없고 카드만 쓴 날은 갈 화면이 없다.
+        val viewModel = monthViewModel()
 
         viewModel.onDaySelect(LocalDate.of(2026, 9, 4))
 
-        val state = viewModel.uiState.value
-        assertEquals(emptyList<CalendarSchedule>(), state.schedules)
-        assertEquals("card-1", state.cardSheet?.id)
+        assertEquals("card-1", viewModel.uiState.value.cardSheet?.id)
     }
 
     @Test
     fun `일정이 있는 날은 시트를 띄우지 않는다`() {
-        val viewModel = CalendarViewModel()
+        val viewModel = monthViewModel()
 
         viewModel.onDaySelect(LocalDate.of(2026, 9, 12))
 
@@ -74,7 +100,7 @@ class CalendarViewModelTest {
 
     @Test
     fun `카드도 일정도 없는 날은 시트를 띄우지 않는다`() {
-        val viewModel = CalendarViewModel()
+        val viewModel = monthViewModel()
 
         viewModel.onDaySelect(LocalDate.of(2026, 9, 13))
 
@@ -83,7 +109,7 @@ class CalendarViewModelTest {
 
     @Test
     fun `시트를 닫으면 고른 날은 그대로 둔다`() {
-        val viewModel = CalendarViewModel()
+        val viewModel = monthViewModel()
         viewModel.onDaySelect(LocalDate.of(2026, 9, 4))
 
         viewModel.onCardSheetDismiss()
@@ -94,7 +120,7 @@ class CalendarViewModelTest {
 
     @Test
     fun `다른 날로 옮기면 앞서 뜬 시트가 닫힌다`() {
-        val viewModel = CalendarViewModel()
+        val viewModel = monthViewModel()
         viewModel.onDaySelect(LocalDate.of(2026, 9, 4))
 
         viewModel.onDaySelect(LocalDate.of(2026, 9, 13))
@@ -149,11 +175,64 @@ class CalendarViewModelTest {
 
     @Test
     fun `D-day는 오늘을 기준으로 센다`() {
-        val viewModel = CalendarViewModel()
-        val today = viewModel.uiState.value.today
-        val schedule = viewModel.uiState.value.schedules.first()
+        val viewModel = monthViewModel()
 
-        val expected = LocalDate.of(2026, 9, 12).toEpochDay() - today.toEpochDay()
-        assertEquals(expected, schedule.dday)
+        viewModel.onDaySelect(LocalDate.of(2026, 9, 12))
+
+        assertEquals(1L, viewModel.uiState.value.schedules.single().dday)
     }
+}
+
+/** 9월 12일 하나를 돌려주는 저장소로 세운다. 오늘은 9월 11일이다. */
+private fun monthViewModel(appointments: List<Appointment> = listOf(monthAppointment)) = CalendarViewModel(
+    repository = FakeMonthRepository(appointments),
+    cardRepository = FakeCardRepository(list = ApiResult.Success(monthCards)),
+    clock = Clock.fixed(Instant.parse("2026-09-11T00:00:00Z"), ZoneId.of("Asia/Seoul")),
+).apply { load() }
+
+/** 9월 4일에 쓴 카드 한 장. 그 날 일정은 없다. */
+private val monthCards =
+    listOf(
+        CardListItem(
+            id = "card-1",
+            title = "복부 통증 · 3주",
+            confirmed = true,
+            visited = false,
+            clinic = "서울OO병원 내과",
+            writtenOn = LocalDate.of(2026, 9, 4),
+        ),
+    )
+
+private val monthAppointment =
+    Appointment(
+        id = 1,
+        title = "서울OO병원 내과 재진",
+        at = LocalDateTime.of(2026, 9, 12, 10, 30),
+        status = AppointmentStatus.SCHEDULED,
+        cardId = 1,
+        cardTitle = "복부 통증 · 3주",
+    )
+
+private class FakeMonthRepository(private val appointments: List<Appointment>) :
+    com.mist.medicalmate.calendar.data.AppointmentRepository {
+    override suspend fun month(month: java.time.YearMonth) =
+        com.mist.medicalmate.core.network.ApiResult.Success(appointments)
+
+    override suspend fun day(date: java.time.LocalDate) =
+        com.mist.medicalmate.core.network.ApiResult.Success(appointments)
+
+    override suspend fun upcoming() = com.mist.medicalmate.core.network.ApiResult.Success(appointments)
+
+    override suspend fun create(
+        clinicName: String?,
+        department: String?,
+        purpose: String?,
+        at: LocalDateTime,
+        cardId: Long?,
+    ) = com.mist.medicalmate.core.network.ApiResult.Success(appointments.first())
+
+    override suspend fun update(id: Long, at: LocalDateTime?, purpose: String?, cardId: Long?, clearCard: Boolean) =
+        com.mist.medicalmate.core.network.ApiResult.Success(appointments.first())
+
+    override suspend fun delete(id: Long) = com.mist.medicalmate.core.network.ApiResult.Success(Unit)
 }

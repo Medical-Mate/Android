@@ -57,6 +57,8 @@ private fun ScheduleAddRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
+    LaunchedEffect(Unit) { viewModel.load() }
+
     LaunchedEffect(hospitalName) { viewModel.onHospitalPicked(hospitalName) }
 
     ScheduleAddScreen(
@@ -72,7 +74,7 @@ private fun ScheduleAddRoute(
             onTimeConfirm = viewModel::onTimeConfirm,
             onCardPickChange = viewModel::onCardPickChange,
             onCardNewClick = onCardNew,
-            onSaveClick = onSaved,
+            onSaveClick = { viewModel.onSaveClick(onSaved) },
         ),
         modifier = modifier,
     )

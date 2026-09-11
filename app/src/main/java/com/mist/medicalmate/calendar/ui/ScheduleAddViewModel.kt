@@ -1,12 +1,18 @@
 package com.mist.medicalmate.calendar.ui
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.mist.medicalmate.calendar.data.AppointmentRepository
+import com.mist.medicalmate.card.data.CardListItem
+import com.mist.medicalmate.card.data.CardRepository
+import com.mist.medicalmate.core.network.ApiResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
 
@@ -22,9 +28,23 @@ import java.time.LocalTime
 @HiltViewModel
 class ScheduleAddViewModel
 @Inject
-constructor() : ViewModel() {
-    private val mutableUiState = MutableStateFlow(ScheduleAddUiState(cards = fixtureCards))
+internal constructor(
+    private val repository: AppointmentRepository,
+    private val cardRepository: CardRepository,
+) : ViewModel() {
+    /** 두 번 눌러 일정이 둘 생기는 것을 막는다. */
+    private var saving = false
+
+    private val mutableUiState = MutableStateFlow(ScheduleAddUiState())
     val uiState: StateFlow<ScheduleAddUiState> = mutableUiState.asStateFlow()
+
+    /** 가져갈 카드로 고를 수 있는 것들. 저장된 카드 전부다. */
+    fun load() {
+        viewModelScope.launch {
+            val cards = (cardRepository.cards() as? ApiResult.Success)?.value.orEmpty()
+            mutableUiState.update { state -> state.copy(cards = cards.map { it.toPick() }) }
+        }
+    }
 
     private var nextTodo = 1
 
@@ -78,7 +98,52 @@ constructor() : ViewModel() {
                 ),
             )
     }
+
+    /**
+     * 하단 `저장하기`. 서버에 일정을 만든다.
+     *
+     * 고른 카드가 있으면 첫 장만 싣는다. 서버의 `cardId`가 단수이고 시안도 한 장이다.
+     *
+     * **할 일은 보내지 않는다.** `AppointmentResponse`에 자리가 없다. 여러 줄에 줄마다 체크
+     * 상태까지 있어서 `purpose` 하나로 담을 수 없다. 화면에만 남는다(#141).
+     *
+     * [onSaved]는 저장이 끝난 뒤의 화면 이동이다. 실패하면 부르지 않는다.
+     */
+    fun onSaveClick(onSaved: () -> Unit) {
+        val state = mutableUiState.value
+        val date = state.date
+        val time = state.time
+        if (date == null || time == null || saving) return
+
+        saving = true
+        viewModelScope.launch {
+            val result =
+                repository.create(
+                    clinicName = state.hospital,
+                    department = null,
+                    purpose = null,
+                    at = date.atTime(time),
+                    cardId = state.cards.firstOrNull { it.picked }?.id?.toLongOrNull(),
+                )
+            saving = false
+            if (result is ApiResult.Success) onSaved()
+        }
+    }
 }
+
+/**
+ * 고를 수 있는 카드 한 줄.
+ *
+ * 보조 문구는 작성일과 병원이다. 병원은 확정 전 카드에 없어서 그때는 작성일만 적는다.
+ */
+private fun CardListItem.toPick() = ScheduleAddCard(
+    id = id,
+    title = title,
+    meta = listOfNotNull(writtenOn.format(CARD_DATE) + " 작성", clinic).joinToString(" · "),
+)
+
+private val CARD_DATE: java.time.format.DateTimeFormatter =
+    java.time.format.DateTimeFormatter.ofPattern("MM.dd", java.util.Locale.KOREAN)
 
 /** Preview용 일정 추가 상태. 시안 1r-4-C와 같은 지점이다. */
 internal val previewScheduleAddState =

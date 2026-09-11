@@ -1,5 +1,7 @@
 package com.mist.medicalmate.calendar.ui
 
+import com.mist.medicalmate.calendar.data.Appointment
+import com.mist.medicalmate.card.data.CardListItem
 import com.mist.medicalmate.core.designsystem.component.MedicalMateDateMarker
 import java.time.LocalDate
 import java.time.YearMonth
@@ -16,6 +18,9 @@ import java.time.YearMonth
  *
  * [cardSheet]가 있으면 카드만 있는 날 시트(1r-1-S `1226:4669`)가 떠 있다. 일정이 있는
  * 날은 일자 화면으로 넘어가고, 카드만 쓴 날은 갈 화면이 없어서 그 자리에서 시트로 보여준다.
+ *
+ * [appointments]는 그 달에서 받아 온 원본이다. 날을 고를 때마다 서버를 다시 부르지 않으려고
+ * 들고 있는다. 화면이 그리는 것은 [schedules]이고 그것은 고른 날 것만이다.
  */
 data class CalendarUiState(
     val month: YearMonth,
@@ -25,6 +30,8 @@ data class CalendarUiState(
     val plannedDays: Set<Int> = emptySet(),
     val schedules: List<CalendarSchedule> = emptyList(),
     val cardSheet: DayCard? = null,
+    val appointments: List<Appointment> = emptyList(),
+    val cards: List<CardListItem> = emptyList(),
 )
 
 /**

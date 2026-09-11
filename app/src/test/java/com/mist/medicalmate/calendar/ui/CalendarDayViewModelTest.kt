@@ -1,19 +1,45 @@
 package com.mist.medicalmate.calendar.ui
-
+import com.mist.medicalmate.calendar.data.Appointment
+import com.mist.medicalmate.calendar.data.AppointmentRepository
+import com.mist.medicalmate.calendar.data.AppointmentStatus
+import com.mist.medicalmate.core.network.ApiResult
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
+import java.time.Clock
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class CalendarDayViewModelTest {
-    private fun loaded(): CalendarDayViewModel = CalendarDayViewModel().apply { load(VisitDate) }
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    private fun loaded(): CalendarDayViewModel = dayViewModel().apply { load(VisitDate) }
 
     private fun CalendarDayViewModel.state(): CalendarDayUiState = uiState.value!!
 
     @Test
     fun `불러오기 전에는 상태가 없다`() {
-        assertNull(CalendarDayViewModel().uiState.value)
+        assertNull(dayViewModel().uiState.value)
     }
 
     @Test
@@ -119,11 +145,88 @@ class CalendarDayViewModelTest {
 
     @Test
     fun `다녀온 날은 할 일이 없어 편집해도 지울 줄이 없다`() {
-        val viewModel = CalendarDayViewModel().apply { load(PastVisitDate) }
+        val viewModel = dayViewModel().apply { load(PastVisitDate) }
 
         viewModel.onEditStart()
 
         assertTrue(viewModel.state().editing)
         assertEquals(emptyList<DayTodo>(), viewModel.state().shownTodos)
+    }
+
+    @Test
+    fun `그 날 일정을 서버에서 읽는다`() {
+        val viewModel = dayViewModel()
+
+        viewModel.load(LocalDate.of(2026, 9, 12))
+
+        val schedule = requireNotNull(viewModel.uiState.value?.schedule)
+        assertEquals("1", schedule.id)
+        assertEquals("서울OO병원 내과 재진", schedule.title)
+        assertEquals(1L, schedule.dday)
+    }
+
+    @Test
+    fun `그 날 일정이 없으면 비운다`() {
+        // 없는 일정을 남겨 두면 삭제를 눌렀을 때 지울 것이 없다.
+        val viewModel = dayViewModel(emptyList())
+
+        viewModel.load(LocalDate.of(2026, 9, 12))
+
+        assertNull(viewModel.uiState.value?.schedule)
+    }
+
+    @Test
+    fun `삭제를 확정하면 그 일정을 서버에서 지운다`() {
+        val repository = FakeAppointmentRepository(listOf(testAppointment))
+        val viewModel = CalendarDayViewModel(repository, fixedClock)
+        viewModel.load(LocalDate.of(2026, 9, 12))
+        var left = false
+
+        viewModel.onScheduleDeleteConfirm { left = true }
+
+        assertEquals(1L, repository.deletedId)
+        assertTrue(left)
+    }
+}
+
+/** 그 날 일정을 하나 돌려주는 저장소. */
+private fun dayViewModel(appointments: List<Appointment> = listOf(testAppointment)) =
+    CalendarDayViewModel(FakeAppointmentRepository(appointments), fixedClock)
+
+private val fixedClock: Clock = Clock.fixed(Instant.parse("2026-09-11T00:00:00Z"), ZoneId.of("Asia/Seoul"))
+
+private val testAppointment =
+    Appointment(
+        id = 1,
+        title = "서울OO병원 내과 재진",
+        at = LocalDateTime.of(2026, 9, 12, 10, 30),
+        status = AppointmentStatus.SCHEDULED,
+        cardId = 1,
+        cardTitle = "복부 통증 · 3주",
+    )
+
+private class FakeAppointmentRepository(private val appointments: List<Appointment>) : AppointmentRepository {
+    var deletedId: Long? = null
+
+    override suspend fun month(month: java.time.YearMonth) = ApiResult.Success(appointments)
+
+    override suspend fun day(date: java.time.LocalDate) = ApiResult.Success(appointments)
+
+    override suspend fun upcoming() = ApiResult.Success(appointments)
+
+    override suspend fun create(
+        clinicName: String?,
+        department: String?,
+        purpose: String?,
+        at: LocalDateTime,
+        cardId: Long?,
+    ) = ApiResult.Success(appointments.first())
+
+    override suspend fun update(id: Long, at: LocalDateTime?, purpose: String?, cardId: Long?, clearCard: Boolean) =
+        ApiResult.Success(appointments.first())
+
+    override suspend fun delete(id: Long): ApiResult<Unit> {
+        deletedId = id
+        return ApiResult.Success(Unit)
     }
 }
