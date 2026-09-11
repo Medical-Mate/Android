@@ -130,7 +130,7 @@ class CalendarViewModelTest {
 
     @Test
     fun `진료 예정일의 일자 화면에는 일정과 카드와 할 일이 있다`() {
-        val day = CalendarViewModel().dayState(LocalDate.of(2026, 9, 12))
+        val day = dayState(LocalDate.of(2026, 9, 12))
 
         assertNotNull(day.schedule)
         assertNotNull(day.card)
@@ -140,7 +140,7 @@ class CalendarViewModelTest {
 
     @Test
     fun `다른 날의 일자 화면은 비어 있다`() {
-        val day = CalendarViewModel().dayState(LocalDate.of(2026, 9, 13))
+        val day = dayState(LocalDate.of(2026, 9, 13))
 
         assertNull(day.schedule)
         assertNull(day.card)

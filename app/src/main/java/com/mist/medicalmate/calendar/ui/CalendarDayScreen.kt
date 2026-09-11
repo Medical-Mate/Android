@@ -17,21 +17,23 @@ import androidx.compose.ui.res.stringResource
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
 import com.mist.medicalmate.core.designsystem.MedicalMateRadius
-import com.mist.medicalmate.core.designsystem.MedicalMateScreenPreviews
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateBadgeTone
+import com.mist.medicalmate.core.designsystem.component.MedicalMateBottomCtaBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonSize
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonType
-import com.mist.medicalmate.core.designsystem.component.MedicalMateCheckbox
+import com.mist.medicalmate.core.designsystem.component.MedicalMateDialog
 import com.mist.medicalmate.core.designsystem.component.MedicalMateEmptyState
 import com.mist.medicalmate.core.designsystem.component.MedicalMateEmptyStateType
 import com.mist.medicalmate.core.designsystem.component.MedicalMateListRow
 import com.mist.medicalmate.core.designsystem.component.MedicalMateListRowType
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
+import com.mist.medicalmate.core.designsystem.component.MedicalMateRowDelete
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
+import com.mist.medicalmate.core.designsystem.component.MedicalMateTodoRow
 import java.time.format.DateTimeFormatter
 
 /**
@@ -56,6 +58,8 @@ fun CalendarDayScreen(state: CalendarDayUiState, callbacks: CalendarDayCallbacks
         MedicalMateNavBar(
             title = state.date.format(dayFormat),
             onLeadingClick = callbacks.onBackClick,
+            actionLabel = stringResource(navActionLabel(state)),
+            onActionClick = { onNavAction(state, callbacks) },
         )
         Column(
             modifier =
@@ -72,6 +76,47 @@ fun CalendarDayScreen(state: CalendarDayUiState, callbacks: CalendarDayCallbacks
             RecordSection(state = state, callbacks = callbacks)
             NextEventSection(state = state, callbacks = callbacks)
         }
+        if (state.editing) {
+            MedicalMateBottomCtaBar {
+                MedicalMateButton(
+                    label = stringResource(R.string.calendar_day_schedule_delete),
+                    onClick = callbacks.onScheduleDeleteClick,
+                    type = MedicalMateButtonType.DANGER,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+    }
+
+    if (state.deleteRequested) {
+        MedicalMateDialog(
+            title = stringResource(R.string.calendar_day_schedule_delete_title),
+            message = stringResource(R.string.calendar_day_schedule_delete_body),
+            confirmLabel = stringResource(R.string.calendar_day_schedule_delete_confirm),
+            onConfirm = callbacks.onScheduleDeleteConfirm,
+            dismissLabel = stringResource(R.string.calendar_day_edit_cancel),
+            onDismissRequest = callbacks.onScheduleDeleteDismiss,
+        )
+    }
+}
+
+/**
+ * Nav 우측 버튼의 이름. 한 자리에서 셋으로 갈린다.
+ *
+ * 편집 중이 아니면 `편집`, 편집 중이고 바뀐 것이 없으면 `취소`, 바뀐 것이 있으면 `확인`이다.
+ * 브리핑 카드(1e-1)와 진료 후 기록(1q-1)이 쓰는 것과 같은 규칙이다.
+ */
+private fun navActionLabel(state: CalendarDayUiState): Int = when {
+    !state.editing -> R.string.calendar_day_edit
+    state.changed -> R.string.calendar_day_edit_done
+    else -> R.string.calendar_day_edit_cancel
+}
+
+private fun onNavAction(state: CalendarDayUiState, callbacks: CalendarDayCallbacks) {
+    when {
+        !state.editing -> callbacks.onEditClick()
+        state.changed -> callbacks.onEditDoneClick()
+        else -> callbacks.onEditCancelClick()
     }
 }
 
@@ -87,6 +132,13 @@ data class CalendarDayCallbacks(
     val onRecordAddClick: () -> Unit = {},
     val onRecordOpenClick: (String) -> Unit = {},
     val onNextEventConfirmClick: () -> Unit = {},
+    val onEditClick: () -> Unit = {},
+    val onEditCancelClick: () -> Unit = {},
+    val onEditDoneClick: () -> Unit = {},
+    val onTodoDeleteClick: (String) -> Unit = {},
+    val onScheduleDeleteClick: () -> Unit = {},
+    val onScheduleDeleteConfirm: () -> Unit = {},
+    val onScheduleDeleteDismiss: () -> Unit = {},
 )
 
 /**
@@ -171,18 +223,28 @@ private fun ColumnScope.CardSection(state: CalendarDayUiState, callbacks: Calend
 /**
  * 진료 전 할 일. 체크는 그 자리에서 켜고 끈다.
  *
- * 추가와 삭제는 이 상태에 없다. 시안이 둘 다 편집 상태(1r-2-E)에만 두었다.
+ * 삭제 ×는 편집 상태(1r-2-E)에만 붙는다. 추가는 시안의 어느 상태에도 보이지 않는다.
  */
 @Composable
 private fun ColumnScope.TodoSection(state: CalendarDayUiState, callbacks: CalendarDayCallbacks) {
-    if (state.todos.isEmpty()) return
+    val todos = state.shownTodos
+    if (todos.isEmpty()) return
 
     MedicalMateSectionHeader(title = stringResource(R.string.calendar_day_todo))
-    state.todos.forEach { todo ->
-        MedicalMateCheckbox(
+    todos.forEach { todo ->
+        MedicalMateTodoRow(
             checked = todo.done,
             onCheckedChange = { callbacks.onTodoToggle(todo.id, it) },
             label = todo.label,
+            delete =
+            if (state.editing) {
+                MedicalMateRowDelete(
+                    contentDescription = stringResource(R.string.calendar_day_todo_delete, todo.label),
+                    onClick = { callbacks.onTodoDeleteClick(todo.id) },
+                )
+            } else {
+                null
+            },
         )
     }
 }
@@ -287,29 +349,3 @@ private fun ColumnScope.NextEventSection(state: CalendarDayUiState, callbacks: C
 
 /** "9월 12일 (금)" 형식. 컴포저블 밖에 둬서 기기 로케일을 직접 읽지 않는다. */
 private val dayFormat = DateTimeFormatter.ofPattern("M월 d일 (E)")
-
-@MedicalMateScreenPreviews
-@Composable
-private fun CalendarDayScreenPreview() {
-    MedicalMateTheme {
-        CalendarDayScreen(state = previewCalendarDayState, callbacks = CalendarDayCallbacks())
-    }
-}
-
-/** 1r-2-A. 다녀온 날이다. 할 일이 없어지고 기록과 다음 일정이 붙는다. */
-@MedicalMateScreenPreviews
-@Composable
-private fun CalendarDayVisitedPreview() {
-    MedicalMateTheme {
-        CalendarDayScreen(state = previewCalendarDayVisitedState, callbacks = CalendarDayCallbacks())
-    }
-}
-
-/** 1r-2-A2. 다음 일정의 시간까지 정해진 상태다. */
-@MedicalMateScreenPreviews
-@Composable
-private fun CalendarDayConfirmedPreview() {
-    MedicalMateTheme {
-        CalendarDayScreen(state = previewCalendarDayConfirmedState, callbacks = CalendarDayCallbacks())
-    }
-}
