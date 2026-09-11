@@ -38,7 +38,7 @@ constructor() : ViewModel() {
     fun load(purpose: HospitalPickPurpose = HospitalPickPurpose.AFTER_VISIT) {
         mutableUiState.value =
             HospitalPickUiState(
-                results = if (purpose == HospitalPickPurpose.BEFORE_VISIT) emptyList() else previewHospitals,
+                results = if (purpose.beforeVisit) emptyList() else previewHospitals,
                 purpose = purpose,
             )
     }
@@ -52,7 +52,7 @@ constructor() : ViewModel() {
     fun onQueryChange(query: String) {
         val blank = query.isBlank()
         val results =
-            if (blank && mutableUiState.value.purpose == HospitalPickPurpose.BEFORE_VISIT) {
+            if (blank && mutableUiState.value.purpose.beforeVisit) {
                 emptyList()
             } else {
                 previewHospitals.filter { it.matches(query) }

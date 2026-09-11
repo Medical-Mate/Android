@@ -352,14 +352,9 @@ private fun ColumnScope.SelectedDay(state: CalendarUiState, onScheduleClick: (St
         color = MedicalMateTheme.colors.fgDefault,
         modifier = Modifier.padding(top = MedicalMateSpace.s10),
     )
-    if (state.schedules.isEmpty()) {
-        Text(
-            text = stringResource(R.string.calendar_day_empty),
-            style = MedicalMateTheme.typography.bodyM,
-            color = MedicalMateTheme.colors.fgSubtle,
-        )
-        return
-    }
+    // 시안 `1185:13797`이 일정 없는 날에 제목만 두고 아래를 비운다. 그 날 무엇을 할지는
+    // 아래 + 버튼이 이미 말하고 있어서 "일정이 없어요"를 한 줄 더 적을 자리가 아니다.
+    if (state.schedules.isEmpty()) return
     state.schedules.forEach { schedule ->
         MedicalMateCard(onClick = { onScheduleClick(schedule.id) }) {
             Row(
@@ -409,9 +404,11 @@ private fun ColumnScope.SelectedDay(state: CalendarUiState, onScheduleClick: (St
  * `DayOfWeek.getDisplayName`을 쓰지 않는다. 컴포저블 안에서 기기 로케일을 직접 읽으면
  * 언어가 바뀌어도 다시 그리지 않고, lint가 그것을 잡는다. 번역 대상이기도 해서 리소스에
  * 둔다.
+ *
+ * 날짜 선택 시트(1r-4-D)의 격자도 같은 머리글을 쓴다.
  */
 @Composable
-private fun weekdayLabels(): List<String> = stringArrayResource(R.array.calendar_weekdays).toList()
+internal fun weekdayLabels(): List<String> = stringArrayResource(R.array.calendar_weekdays).toList()
 
 private const val DAYS_IN_WEEK = 7
 

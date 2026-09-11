@@ -52,6 +52,7 @@ internal data class VisitSummaryDestination(val visitId: String)
 internal fun NavGraphBuilder.hospitalPickDestination(
     onPicked: (String) -> Unit,
     onCardRequested: (cardId: String?, hospital: Hospital?) -> Unit,
+    onScheduleRequested: (Hospital?) -> Unit,
     onExit: () -> Unit,
 ) {
     composable<HospitalPickDestination> { entry ->
@@ -61,6 +62,7 @@ internal fun NavGraphBuilder.hospitalPickDestination(
             cardId = route.cardId,
             onPicked = onPicked,
             onCardRequested = onCardRequested,
+            onScheduleRequested = onScheduleRequested,
             onExit = onExit,
         )
     }
@@ -90,6 +92,7 @@ private fun HospitalPickRoute(
     cardId: String?,
     onPicked: (String) -> Unit,
     onCardRequested: (cardId: String?, hospital: Hospital?) -> Unit,
+    onScheduleRequested: (Hospital?) -> Unit,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HospitalPickViewModel = hiltViewModel(),
@@ -98,22 +101,28 @@ private fun HospitalPickRoute(
 
     LaunchedEffect(purpose) { viewModel.load(purpose) }
 
-    val before = purpose == HospitalPickPurpose.BEFORE_VISIT
+    val beforeCard = purpose == HospitalPickPurpose.BEFORE_VISIT
     val selected = state.results.firstOrNull { it.id == state.selectedId }
 
     HospitalPickScreen(
         state = state,
         onQueryChange = viewModel::onQueryChange,
         onHospitalClick = viewModel::onHospitalClick,
-        // 진료 후에는 고른 병원의 id만 다음 화면으로 간다. 진료 전에는 카드가 이름과 주소를
-        // 바로 그려야 해서 병원을 그대로 넘긴다.
+        // 목적마다 돌아가는 자리가 다르다. 진료 후에는 고른 병원의 id만 다음 화면으로 가고,
+        // 진료 전에는 카드가 이름과 주소를 바로 그려야 해서 병원을 그대로 넘긴다. 일정
+        // 추가는 필드에 이름만 채우고 돌아간다.
         onSubmitClick = {
-            if (before) onCardRequested(cardId, selected) else state.selectedId?.let(onPicked)
+            when (purpose) {
+                HospitalPickPurpose.AFTER_VISIT -> state.selectedId?.let(onPicked)
+                HospitalPickPurpose.BEFORE_VISIT -> onCardRequested(cardId, selected)
+                HospitalPickPurpose.SCHEDULE -> onScheduleRequested(selected)
+            }
         },
         onBackClick = onExit,
         modifier = modifier,
-        // 건너뛰기는 병원 없이 카드로 간다. 진료 전에만 있다.
-        onSkipClick = if (before) {
+        // 건너뛰기는 병원 없이 카드로 간다. 1m-B에만 있다. 일정 추가에서는 뒤로 가는 것이
+        // 그대로 "정하지 않음"이라 따로 두지 않는다.
+        onSkipClick = if (beforeCard) {
             { onCardRequested(cardId, null) }
         } else {
             null

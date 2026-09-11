@@ -1,0 +1,239 @@
+package com.mist.medicalmate.navigation
+
+import androidx.compose.runtime.getValue
+import androidx.navigation.NavGraphBuilder
+import androidx.navigation.NavHostController
+import com.mist.medicalmate.auth.ui.SessionUiState
+import com.mist.medicalmate.auth.ui.loginDestination
+import com.mist.medicalmate.calendar.ui.CalendarDayDestination
+import com.mist.medicalmate.calendar.ui.ScheduleAddDestination
+import com.mist.medicalmate.calendar.ui.calendarDayDestination
+import com.mist.medicalmate.calendar.ui.calendarDestination
+import com.mist.medicalmate.calendar.ui.scheduleAddDestination
+import com.mist.medicalmate.card.ui.BriefCardDestination
+import com.mist.medicalmate.card.ui.RecordDetailDestination
+import com.mist.medicalmate.card.ui.recordDestination
+import com.mist.medicalmate.card.ui.recordDetailDestination
+import com.mist.medicalmate.home.ui.HomeDestination
+import com.mist.medicalmate.intake.ui.IntakeDestination
+import com.mist.medicalmate.intake.ui.IntakeDoneDestination
+import com.mist.medicalmate.intake.ui.intakeDestination
+import com.mist.medicalmate.intake.ui.intakeDoneDestination
+import com.mist.medicalmate.profile.ui.AccountActionCallbacks
+import com.mist.medicalmate.profile.ui.HealthEditDestination
+import com.mist.medicalmate.profile.ui.ProfileCompleteDestination
+import com.mist.medicalmate.profile.ui.ProfileSetupDestination
+import com.mist.medicalmate.profile.ui.healthEditDestination
+import com.mist.medicalmate.profile.ui.myProfileDestination
+import com.mist.medicalmate.profile.ui.onboardingIntroDestination
+import com.mist.medicalmate.profile.ui.profileCompleteDestination
+import com.mist.medicalmate.profile.ui.profileSetupDestination
+import com.mist.medicalmate.visit.ui.HospitalPickDestination
+import com.mist.medicalmate.visit.ui.HospitalPickPurpose
+import com.mist.medicalmate.visit.ui.VisitNoteDestination
+import com.mist.medicalmate.visit.ui.VisitRecordDestination
+import com.mist.medicalmate.visit.ui.VisitSummaryDestination
+import com.mist.medicalmate.visit.ui.hospitalPickDestination
+import com.mist.medicalmate.visit.ui.visitNoteDestination
+import com.mist.medicalmate.visit.ui.visitRecordDestination
+import com.mist.medicalmate.visit.ui.visitSummaryDestination
+
+/**
+ * 그래프 등록을 도메인별로 나눈 확장 함수들.
+ *
+ * `MedicalMateNavHost`에서 옮겼다. 목적지가 열아홉이 되면서 한 파일에 함수가 열하나가
+ * 됐고 detekt의 파일당 상한에 닿았다. `NavHost` 파일에는 그래프 본체와 세션 경계 처리만
+ * 남긴다.
+ *
+ * 이 함수들이 `navigation`에 있는 이유는 목적지 사이의 이동을 알아야 하기 때문이다. 라우트
+ * 타입과 `composable` 등록은 기능 패키지에 있고, 여기서는 어느 화면에서 어느 화면으로
+ * 가는지만 정한다. 조합 루트라서 모든 기능을 참조해도 되는 유일한 패키지다.
+ */
+/**
+ * 진입과 온보딩. Figma 흐름은 `1o → 1a-2 → 1b-1~1b-4`다.
+ *
+ * [session]을 받는 곳은 로그인 화면 하나다. 자동 로그인을 확인하지 못하고 왔는지에 따라
+ * 문구가 달라서, 그 판단을 화면이 아니라 세션 상태가 한다.
+ */
+internal fun NavGraphBuilder.entryDestinations(
+    navController: NavHostController,
+    session: SessionUiState,
+    onAuthenticated: (onboardingRequired: Boolean) -> Unit,
+    onOnboardingCompleted: () -> Unit,
+) {
+    loginDestination(
+        restoreFailed = session == SessionUiState.RestoreFailed,
+        onAuthenticated = onAuthenticated,
+    )
+    onboardingIntroDestination(
+        onStartClick = { navController.navigate(ProfileSetupDestination) },
+    )
+    profileSetupDestination(
+        onCompleted = { navController.navigate(ProfileCompleteDestination) },
+        onExit = { navController.popBackStack() },
+    )
+    profileCompleteDestination(
+        onFinished = {
+            onOnboardingCompleted()
+            navController.resetTo(HomeDestination(justRegistered = true))
+        },
+    )
+}
+
+/**
+ * 증상 문답과 그 끝의 갈림길. Figma 흐름은 `1l·1c·1d·1i → 1c-5`다.
+ *
+ * 1c-5에서 브리핑 카드와 진료 전 병원 찾기로 갈린다. 병원을 먼저 찾아도 결국 카드로 오므로
+ * 두 길이 같은 곳에서 만난다.
+ */
+internal fun NavGraphBuilder.intakeDestinations(navController: NavHostController) {
+    intakeDestination(
+        onCompleted = { navController.navigate(IntakeDoneDestination) },
+        onExit = { navController.popBackStack() },
+    )
+    intakeDoneDestination(
+        onCardClick = { navController.navigate(BriefCardDestination(cardId = NEW_CARD_ID)) },
+        onHospitalClick = {
+            navController.navigate(HospitalPickDestination(purpose = HospitalPickPurpose.BEFORE_VISIT))
+        },
+        onExit = { navController.popBackStack() },
+    )
+}
+
+/**
+ * 내 정보와 건강 정보 수정. Figma 흐름은 `1s-1 → 1s-2`다.
+ *
+ * 홈 헤더의 아바타에서 들어온다. 하단 탭이 세 개로 확정돼서 내 정보는 탭이 아니다.
+ *
+ * 계정 동작(로그아웃·회원탈퇴)이 여기로 내려온다. 홈에 임시로 붙어 있던 것이고 1s-1이
+ * 그 자리다. 수행은 `SessionViewModel`이 하고 `MainActivity`가 연결한다.
+ */
+internal fun NavGraphBuilder.profileDestinations(
+    navController: NavHostController,
+    accountActions: AccountActionCallbacks,
+) {
+    myProfileDestination(
+        accountActions = accountActions,
+        onHealthEdit = { navController.navigate(HealthEditDestination) },
+        onExit = { navController.popBackStack() },
+    )
+    healthEditDestination(
+        onSaved = { navController.popBackStack() },
+        onExit = { navController.popBackStack() },
+    )
+}
+
+/**
+ * 진료 후 기록 플로우. Figma 흐름은 `1m → 1p → 1q-1 → 1k`다.
+ *
+ * 캘린더 일자 화면의 "진료 후 기록하기"에서 들어온다. 진료가 끝난 날에 그 날짜를 열어
+ * 적는 것이 자연스러운 경로다.
+ *
+ * 마지막 화면에서 홈으로 나갈 때 백스택을 비운다. 저장이 끝난 흐름을 뒤로 가기로 다시
+ * 밟으면 같은 기록을 두 번 저장하게 된다.
+ */
+/** 캘린더 세 목적지. 월(1r-1) · 일자(1r-2) · 일정 추가(1r-4)다. */
+internal fun NavGraphBuilder.calendarDestinations(navController: NavHostController) {
+    calendarDestination(
+        onDayOpen = { date -> navController.navigate(CalendarDayDestination(date.toString())) },
+        onCardOpen = { cardId -> navController.navigate(BriefCardDestination(cardId)) },
+        onAddClick = { navController.navigate(ScheduleAddDestination()) },
+        onTabSelect = navController::selectTab,
+    )
+    calendarDayDestination(
+        onCardOpen = { cardId -> navController.navigate(BriefCardDestination(cardId)) },
+        onRecordAdd = { navController.navigate(HospitalPickDestination()) },
+        onExit = { navController.popBackStack() },
+    )
+    scheduleAddDestination(
+        onHospitalPick = {
+            navController.navigate(HospitalPickDestination(purpose = HospitalPickPurpose.SCHEDULE))
+        },
+        // 새 카드는 증상 문답부터다. 만들고 나면 그 카드가 목록에 들어온다.
+        onCardNew = { navController.navigate(IntakeDestination) },
+        onSaved = { navController.popBackStack() },
+        onExit = { navController.popBackStack() },
+    )
+}
+
+internal fun NavGraphBuilder.visitDestinations(navController: NavHostController) {
+    hospitalPickDestination(
+        onPicked = { hospitalId -> navController.navigate(VisitNoteDestination(hospitalId)) },
+        // 진료 전(1m-B)에서 카드로. cardId가 있으면 카드의 `변경`에서 온 것이라 그 카드
+        // 엔트리를 새 병원을 담은 것으로 갈아치운다. 그러지 않으면 뒤로 갔을 때 병원이 없던
+        // 카드가 다시 나온다. 없으면 문답을 마치고 온 것이라 새 카드를 만든다.
+        onCardRequested = { cardId, hospital ->
+            val destination =
+                BriefCardDestination(
+                    cardId = cardId ?: NEW_CARD_ID,
+                    hospitalName = hospital?.name,
+                    hospitalAddress = hospital?.address,
+                )
+            if (cardId == null) {
+                navController.navigate(destination)
+            } else {
+                navController.navigate(destination) {
+                    popUpTo<BriefCardDestination> { inclusive = true }
+                }
+            }
+        },
+        // 일정 추가(1r-4)의 병원 필드에서 온 것. 만들던 일정으로 돌아가야 해서 그 엔트리를
+        // 병원 이름을 담은 것으로 갈아치운다. 새로 쌓으면 뒤로 갔을 때 병원이 없던 폼이
+        // 다시 나오고, 적어 둔 날짜와 할 일이 그쪽에 남는다.
+        onScheduleRequested = { hospital ->
+            navController.navigate(ScheduleAddDestination(hospitalName = hospital?.name)) {
+                popUpTo<ScheduleAddDestination> { inclusive = true }
+            }
+        },
+        onExit = { navController.popBackStack() },
+    )
+    visitNoteDestination(
+        onSaved = { navController.navigate(VisitRecordDestination(hospitalId = NEW_VISIT_ID)) },
+        onExit = { navController.popBackStack() },
+    )
+    visitRecordDestination(
+        onSaved = { navController.navigate(VisitSummaryDestination(visitId = NEW_VISIT_ID)) },
+        // 지운 기록의 화면에 남을 수 없다. 한 단계만 pop하면 방금 적은 메모 화면(1p)으로
+        // 돌아가는데, 거기서 저장하면 지운 것을 다시 만든다. 그래서 흐름이 시작된 캘린더
+        // 일자까지 되돌린다.
+        onDeleted = { navController.popBackStack<CalendarDayDestination>(inclusive = false) },
+        onExit = { navController.popBackStack() },
+    )
+    visitSummaryDestination(
+        onHome = { navController.resetTo(HomeDestination()) },
+        onExit = { navController.popBackStack() },
+    )
+}
+
+/**
+ * 기록 탭과 그 아래 화면.
+ *
+ * 목록에서 상세로, 상세의 "카드 열기"에서 브리핑 카드로 이어진다. 이 묶음만 따로 뺀 이유는
+ * [MedicalMateNavHost]의 길이다. 화면이 늘면 도메인별로 이렇게 나눈다.
+ */
+internal fun NavGraphBuilder.recordDestinations(navController: NavHostController) {
+    recordDestination(
+        onItemClick = { recordId -> navController.navigate(RecordDetailDestination(recordId)) },
+        onStartIntakeClick = { navController.navigate(IntakeDestination) },
+        onTabSelect = navController::selectTab,
+    )
+    recordDetailDestination(
+        onBackClick = { navController.popBackStack() },
+        onBriefCardClick = { cardId -> navController.navigate(BriefCardDestination(cardId)) },
+    )
+}
+
+/**
+ * 방금 만든 카드의 임시 id.
+ *
+ * 문답을 마치면 서버가 카드를 만들고 그 id를 준다. 그 호출이 아직 없어서 자리만 채운다.
+ * 카드 화면은 지금 id를 보지 않고 픽스처를 그린다.
+ */
+private const val NEW_CARD_ID = "new"
+
+/**
+ * 방금 만든 방문의 임시 id.
+ *
+ * 메모를 저장하면 서버가 방문을 만들고 그 id를 준다. 그 호출이 아직 없어서 자리만 채운다.
+ */
+private const val NEW_VISIT_ID = "new"

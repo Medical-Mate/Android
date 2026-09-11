@@ -15,6 +15,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateRadius
@@ -50,6 +51,10 @@ enum class MedicalMateDateMarker { NONE, RECORD, PLANNED }
  *
  * 접근성 이름은 날짜와 상태를 한 번에 읽는다. 점만 두면 스크린 리더에 기록 유무가
  * 전달되지 않는다.
+ *
+ * [size]는 시트에 들어가는 작은 격자를 위해 열어 뒀다. 1r-4-D의 날짜 선택 시트가 34를
+ * 쓴다. 시트는 가로 폭이 화면과 같은데 위아래로 버튼과 제목까지 들어가서 42로는 한 달이
+ * 다 보이지 않는다.
  */
 @Composable
 fun MedicalMateDateCell(
@@ -60,6 +65,7 @@ fun MedicalMateDateCell(
     isToday: Boolean = false,
     marker: MedicalMateDateMarker = MedicalMateDateMarker.NONE,
     enabled: Boolean = true,
+    size: Dp = MedicalMateDateCellSize,
 ) {
     val colors = MedicalMateTheme.colors
     val spoken = dateCellDescription(day = day, isToday = isToday, marker = marker)
@@ -73,7 +79,7 @@ fun MedicalMateDateCell(
     Box(
         modifier =
         modifier
-            .size(MedicalMateDateCellSize)
+            .size(size)
             .selectable(
                 selected = selected,
                 enabled = enabled,
@@ -177,6 +183,9 @@ private fun DayMarker(marker: MedicalMateDateMarker, selected: Boolean) {
  * 46이면 칸을 넘친다. 격자의 빈 칸도 같은 값을 써야 요일이 어긋나지 않아 공개한다.
  */
 val MedicalMateDateCellSize = 42.dp
+
+/** 시트 안의 작은 격자. 1r-4-D의 마스터 값이다. */
+val MedicalMateDateCellSizeCompact = 34.dp
 
 /** 문서의 "5px dot". */
 private val RecordDotSize = 5.dp
