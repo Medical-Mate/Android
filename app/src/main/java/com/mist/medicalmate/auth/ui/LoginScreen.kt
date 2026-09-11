@@ -25,7 +25,9 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateSocialLoginBu
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSocialProvider
 
 /**
- * 와이어프레임 1o. Figma `397:1192`을 옮겼다.
+ * 와이어프레임 로그인. Figma `V2 · 로그인`(`1320:4558`)을 옮겼다. 시안이 온보딩을 v2로
+ * 바꾸면서 옛 `1o`(`397:1192`) 프레임이 삭제되고 이 프레임이 그 자리다. 문구와 구조는
+ * 그대로여서 화면은 손대지 않았다.
  *
  * 상태를 갖지 않아 Preview로 모든 분기를 볼 수 있다.
  *
@@ -69,7 +71,7 @@ fun LoginScreen(
     }
 }
 
-/** 로고, 제목, 설명. Figma Hero(`397:1195`) 350x192이고 세 요소 사이 간격이 20이다. */
+/** 로고, 제목, 설명. Figma Hero(`1320:4561`) 320x192이고 세 요소 사이 간격이 20이다. */
 @Composable
 private fun Hero() {
     Column(verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s20)) {
@@ -92,7 +94,7 @@ private fun Hero() {
     }
 }
 
-/** 버튼과 하단 문구. Figma Actions(`397:1206`) 350x116이고 사이 간격이 20이다. */
+/** 버튼과 하단 문구. Figma Actions(`1320:4566`) 320x116이고 사이 간격이 20이다. */
 @Composable
 private fun Actions(state: LoginUiState, restoreFailed: Boolean, onKakaoLoginClick: () -> Unit) {
     Column(

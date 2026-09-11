@@ -33,7 +33,8 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
 /**
- * 와이어프레임 1a-1. Figma `397:1179`.
+ * 와이어프레임 스플래시. Figma `V2 · 스플래시`(`1320:4553`). 옛 `1a-1`(`397:1179`)이
+ * 삭제되고 이 프레임이 그 자리다. 내용은 그대로다.
  *
  * 저장된 토큰으로 세션을 복구하는 동안 보이는 화면이다. `auth`에 두는 이유는 이 화면이
  * 세션 복구 상태([SessionUiState.Checking])의 그림이기 때문이다. Figma는 진입 플로우의

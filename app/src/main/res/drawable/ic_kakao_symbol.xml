@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Figma 383:1290 Social Login Button / Provider=Kakao 의 말풍선. 카카오 디자인 가이드가 정한 심볼이라 모양을 바꾸지 말 것. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="20dp"
+    android:height="18.6667dp"
+    android:viewportWidth="20"
+    android:viewportHeight="18.6667">
+    <path android:pathData="M10.0001 0C4.47688 0 0 3.45884 0 7.72476C0 10.3778 1.73157 12.7166 4.36838 14.1077L3.25893 18.1606C3.16091 18.5187 3.57047 18.8041 3.88498 18.5966L8.74819 15.3869C9.1586 15.4265 9.57568 15.4496 10.0001 15.4496C15.5228 15.4496 20 11.9909 20 7.72476C20 3.45884 15.5228 0 10.0001 0" android:fillColor="#FF000000" />
+</vector>

@@ -1,42 +1,47 @@
 package com.mist.medicalmate.profile.ui
 
+import androidx.annotation.DrawableRes
 import androidx.annotation.Keep
 import androidx.annotation.StringRes
 import com.mist.medicalmate.R
 
 /**
- * 온보딩 네 장. Figma `A2 · 온보딩`(`1157:4246`~`1157:4249`).
+ * 온보딩 네 장. Figma `V2-00`~`V2-03`(`1320:4570` · `1320:4605` · `1320:4635` · `1320:4675`).
  *
- * 로그인 뒤 한 번 지나가는 흐름이다. 첫 장은 무엇을 하는 앱인지 글로 말하고, 나머지 셋은
- * 그림 하나에 한 가지씩 보여준다.
+ * 로그인 뒤 한 번 지나가는 흐름이다. 장마다 제목 한 마디와 설명 세 줄, 그림 하나다.
  *
  * 문구를 열거형이 들고 있다. 장마다 자리가 같고 들어가는 글자만 달라서, 화면이 장 번호로
  * 분기하면 같은 `when`이 자리마다 하나씩 생긴다.
  *
- * [INTRO]만 그림이 없고 아래에 단계 셋이 붙는다. 그래서 화면이 첫 장과 나머지를 나눠
- * 그린다. 시안도 그 장만 구조가 다르다.
+ * 시안이 v1을 걷어내면서 장 위의 작은 말(eyebrow)과 첫 장의 단계 셋이 없어졌다. 네 장이
+ * 같은 구조가 됐고, 첫 장만 제목이 두 줄이라 [PREPARE]의 Copy가 182, 나머지가 142다.
+ * 그 차이는 화면이 남는 공간으로 흡수한다.
  */
 @Keep
-enum class OnboardingPage(@StringRes val eyebrow: Int, @StringRes val title: Int, @StringRes val description: Int) {
-    INTRO(
-        eyebrow = R.string.onboarding_intro_eyebrow,
-        title = R.string.onboarding_intro_title,
-        description = R.string.onboarding_intro_lead,
+enum class OnboardingPage(
+    @StringRes val title: Int,
+    @StringRes val description: Int,
+    @DrawableRes val illustration: Int,
+) {
+    PREPARE(
+        title = R.string.onboarding_prepare_title,
+        description = R.string.onboarding_prepare_description,
+        illustration = R.drawable.img_onboarding_prepare,
     ),
-    BODY(
-        eyebrow = R.string.onboarding_body_eyebrow,
-        title = R.string.onboarding_body_title,
-        description = R.string.onboarding_body_description,
+    POINT(
+        title = R.string.onboarding_point_title,
+        description = R.string.onboarding_point_description,
+        illustration = R.drawable.img_onboarding_point,
     ),
     CARD(
-        eyebrow = R.string.onboarding_card_eyebrow,
         title = R.string.onboarding_card_title,
         description = R.string.onboarding_card_description,
+        illustration = R.drawable.img_onboarding_card,
     ),
-    TIMELINE(
-        eyebrow = R.string.onboarding_timeline_eyebrow,
-        title = R.string.onboarding_timeline_title,
-        description = R.string.onboarding_timeline_description,
+    FOLLOW(
+        title = R.string.onboarding_follow_title,
+        description = R.string.onboarding_follow_description,
+        illustration = R.drawable.img_onboarding_follow,
     ),
     ;
 
