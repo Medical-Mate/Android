@@ -1,16 +1,28 @@
 package com.mist.medicalmate.visit.ui
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.mist.medicalmate.core.network.ApiResult
+import com.mist.medicalmate.visit.data.NewVisit
+import com.mist.medicalmate.visit.data.VisitRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import java.time.Clock
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /**
  * 자동 분류 결과 상태 보유자.
  *
- * 내용이 픽스처다. AI 연동에서는 [load]가 메모를 보내고 나눈 결과를 받는다.
+ * **분류가 아직 없다.** 메모를 소견·검사·약·재방문으로 나누는 것은 폰 안 모델이 할 일이고
+ * 엔진이 붙지 않았다(#142). 그래서 [load]는 네 줄의 자리만 만들고 값을 비워 둔다. 환자가
+ * 편집에서 채우거나, 엔진이 붙으면 그 자리가 채워진 채로 온다. 픽스처 문장을 넣어 두지
+ * 않는 이유는 저장이 실제 서버로 나가기 때문이다. 듣지 않은 소견이 기록에 남으면 안 된다.
  *
  * 편집은 [VisitRecordDraft]에 담는다. 원본을 바로 고치면 취소했을 때 되돌릴 것이 없다.
  * 확인하면 사본을 원본으로 옮긴다. 사본을 고치는 조작은 [editActions]에 있다.
@@ -18,7 +30,13 @@ import kotlinx.coroutines.flow.asStateFlow
 @HiltViewModel
 class VisitRecordViewModel
 @Inject
-constructor() : ViewModel() {
+internal constructor(
+    private val repository: VisitRepository,
+    private val clock: Clock,
+) : ViewModel() {
+    /** 저장 요청이 나가 있는 동안. 저장하기를 두 번 누르면 기록이 두 개 생긴다. */
+    private var saving = false
+
     private val mutableUiState = MutableStateFlow<VisitRecordUiState>(VisitRecordUiState.Loading)
     val uiState: StateFlow<VisitRecordUiState> = mutableUiState.asStateFlow()
 
@@ -31,8 +49,9 @@ constructor() : ViewModel() {
             }
         }
 
-    fun load() {
-        mutableUiState.value = VisitRecordUiState.Content(record = previewVisitRecord)
+    fun load(clinic: String?, note: String) {
+        mutableUiState.value =
+            VisitRecordUiState.Content(record = newRecord(clinic, note, LocalDate.now(clock)))
     }
 
     /** Nav 우측 `편집`. 카드 안의 모든 값을 한 번에 연다. */
@@ -62,11 +81,29 @@ constructor() : ViewModel() {
     }
 
     /**
-     * 읽는 중의 저장하기. 화면을 나가는 조작이고 나가는 판단은 그래프가 한다.
+     * 읽는 중의 저장하기. `POST /api/cards/{cardId}/visit`.
      *
      * 편집 중에는 하단에 이 버튼이 없다. 그 자리가 삭제이고 사본을 옮기는 것은 `확인`이 한다.
+     *
+     * [cardId]가 없으면 붙일 곳이 없어 아무것도 하지 않는다. 서버가 카드에 매달린 기록만
+     * 받는다. 캘린더 일자에 카드가 걸린 일정이 없으면 여기까지 온 것 자체가 길을 잘못 든
+     * 것이고, 그 자리를 막는 것은 캘린더 쪽 일이다.
+     *
+     * 실패하면 화면에 남는다. 일정 추가(1r-4)와 같다. 나가 버리면 적은 것이 사라지고 다시
+     * 누를 수도 없다.
      */
-    fun onSaveClick() = Unit
+    fun onSaveClick(cardId: String?, onSaved: (visitId: String) -> Unit) {
+        val content = mutableUiState.value as? VisitRecordUiState.Content
+        val card = cardId?.toLongOrNull()
+        if (content == null || card == null || saving) return
+
+        saving = true
+        viewModelScope.launch {
+            val result = repository.create(card, content.record.toNewVisit(LocalDate.now(clock)))
+            saving = false
+            if (result is ApiResult.Success) onSaved(result.value.id)
+        }
+    }
 
     /**
      * 하단 `진료 후 기록 삭제`. 대화상자를 띄우는 것까지만 한다.
@@ -95,3 +132,62 @@ constructor() : ViewModel() {
         mutableUiState.value = transform(content)
     }
 }
+
+/**
+ * 빈 분류 결과 한 장.
+ *
+ * 네 줄의 이름을 여기 둔다. 편집에서 줄을 새로 만들 수 없어서(×로 지우기만 한다) 자리는
+ * 미리 있어야 한다. 그리고 [VisitRecordItem.key]가 저장할 때 어느 서버 필드인지를 가리키는
+ * 이름이기도 하다. 위치로 찾으면 한 줄을 지운 뒤에 어긋난다.
+ *
+ * 재방문 줄은 서버로 가지 않는다. `POST /api/cards/{id}/visit`에 재방문 날짜 자리가 없다.
+ * 하단의 "캘린더에 재방문 일정 등록" 체크와 함께 정해야 할 자리라 #148에 적어 뒀다.
+ *
+ * [VisitRecord.caption]은 비워 둔다. "AI가 메모를 4가지로 나눴어요"라고 적을 근거가 아직
+ * 없다. 빈 값이면 화면이 그 줄을 그리지 않는다.
+ */
+private fun newRecord(clinic: String?, note: String, today: LocalDate) = VisitRecord(
+    id = "",
+    clinic = clinic,
+    clinicLine = listOfNotNull(clinic, today.format(VISITED_ON)).joinToString(" · "),
+    items =
+    listOf(
+        VisitRecordItem(key = KEY_RESULT, value = ""),
+        VisitRecordItem(key = KEY_DONE, value = ""),
+        VisitRecordItem(key = KEY_PRESCRIPTION, value = ""),
+        VisitRecordItem(key = KEY_REVISIT, value = "", tone = VisitRecordItem.Tone.LINK),
+    ),
+    memo = note,
+    caption = "",
+)
+
+/**
+ * 화면의 네 줄을 서버의 세 필드로.
+ *
+ * 지운 줄과 비운 줄은 보내지 않는다. 안 적은 것과 빈 문자열은 다르다.
+ */
+private fun VisitRecord.toNewVisit(today: LocalDate) = NewVisit(
+    clinicName = clinic,
+    visitedOn = today,
+    whatWasDone = valueOf(KEY_DONE),
+    result = valueOf(KEY_RESULT),
+    prescription = valueOf(KEY_PRESCRIPTION),
+    rawNote = memo,
+)
+
+private fun VisitRecord.valueOf(key: String): String? =
+    items.firstOrNull { it.key == key }?.value?.takeIf { it.isNotBlank() }
+
+/** 진료에서 들은 것. 서버의 `result`. */
+private const val KEY_RESULT = "소견"
+
+/** 진료에서 한 것. 서버의 `whatWasDone`. */
+private const val KEY_DONE = "검사"
+
+/** 서버의 `prescription`. */
+private const val KEY_PRESCRIPTION = "약"
+
+/** 서버에 대응하는 자리가 없다. */
+private const val KEY_REVISIT = "재방문"
+
+private val VISITED_ON: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy.MM.dd", Locale.KOREAN)

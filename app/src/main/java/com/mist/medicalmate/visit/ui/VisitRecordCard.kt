@@ -67,7 +67,7 @@ internal fun VisitRecordCard(state: VisitRecordUiState.Content, callbacks: Visit
         }
         MedicalMateDivider()
         Memo(memo = state.record.memo)
-        if (!state.editing) Caption(state.record.caption)
+        if (!state.editing && state.record.caption.isNotBlank()) Caption(state.record.caption)
     }
 }
 

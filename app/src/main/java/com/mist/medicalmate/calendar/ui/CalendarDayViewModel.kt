@@ -40,25 +40,24 @@ internal constructor(
     /**
      * 그 날을 읽는다.
      *
-     * **일정만 서버 값이다.** 가져갈 카드·진료 후 기록·다음 일정·진료 전 할 일은 아직
-     * 픽스처다. 기록과 다음 일정은 `/api/me/visits`가 붙는 다음 단계에서 오고, 할 일은
-     * 서버에 자리가 없다(#141). 그것들까지 지우면 화면이 일정 한 줄만 남는다.
+     * **일정과 그 일정에 걸린 카드가 서버 값이다.** 진료 후 기록·다음 일정·진료 전 할 일은
+     * 아직 픽스처다. 기록과 다음 일정은 기록 상세를 함께 읽어야 나오고, 할 일은 서버에
+     * 자리가 없다(#141). 그것들까지 지우면 화면이 일정 한 줄만 남는다.
      *
      * 서버에 그 날 일정이 없으면 픽스처의 일정도 지운다. 없는 일정을 남겨 두면 삭제를
      * 눌렀을 때 지울 것이 없다.
      */
     fun load(date: LocalDate) {
         viewModelScope.launch {
-            val schedule =
-                when (val result = repository.day(date)) {
-                    is ApiResult.Success ->
-                        result.value
-                            .firstOrNull { it.status != AppointmentStatus.CANCELED }
-                            ?.toDaySchedule(LocalDate.now(clock))
-
-                    is ApiResult.Rejected, is ApiResult.NetworkUnavailable -> null
-                }
-            mutableUiState.value = dayState(date).copy(schedule = schedule)
+            val appointment =
+                (repository.day(date) as? ApiResult.Success)
+                    ?.value
+                    ?.firstOrNull { it.status != AppointmentStatus.CANCELED }
+            mutableUiState.value =
+                dayState(date).copy(
+                    schedule = appointment?.toDaySchedule(LocalDate.now(clock)),
+                    card = appointment?.toDayCard(),
+                )
         }
     }
 
@@ -123,6 +122,19 @@ internal constructor(
 }
 
 /** 일자 화면의 일정 줄. 월 화면과 같은 모양이라 값만 옮긴다. */
+/**
+ * 일정에 걸린 카드.
+ *
+ * 픽스처 카드를 쓰지 않는다. 그 id로는 카드를 열 수 없어서 눌러도 빈 화면이 나왔다.
+ *
+ * 작성일·항목 수·상태는 일정 응답에 없다. 카드를 따로 읽어야 나오는데, 이 줄은 카드로
+ * 들어가는 길이라 그 값들이 없어도 제 일을 한다.
+ */
+private fun Appointment.toDayCard(): DayCard? {
+    val id = cardId ?: return null
+    return DayCard(id = id.toString(), title = cardTitle.orEmpty())
+}
+
 private fun Appointment.toDaySchedule(today: LocalDate) = CalendarSchedule(
     id = id.toString(),
     title = title,

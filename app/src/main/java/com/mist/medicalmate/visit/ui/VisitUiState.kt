@@ -152,10 +152,14 @@ data class VisitRecordDraft(val items: List<VisitRecordItem>) {
  * AI가 메모를 나눈 결과.
  *
  * [items]는 소견·검사·약·재방문 넷이다. 개수를 고정하지 않는 이유는 AI가 찾지 못한 항목이
- * 빠질 수 있기 때문이다. [caption]이 몇 가지로 나눴는지 알린다.
+ * 빠질 수 있기 때문이다. [caption]이 몇 가지로 나눴는지 알리고, 알릴 것이 없으면 비어 있다.
+ *
+ * [clinic]은 병원 이름만이고 [clinicLine]은 화면에 그리는 "서울OO병원 · 2026.09.12"다. 저장할
+ * 때 이름만 필요해서 날짜가 붙기 전 값을 따로 든다.
  */
 data class VisitRecord(
     val id: String,
+    val clinic: String?,
     val clinicLine: String,
     val items: List<VisitRecordItem>,
     val memo: String,
