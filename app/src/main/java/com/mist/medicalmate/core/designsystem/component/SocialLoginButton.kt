@@ -1,5 +1,6 @@
 package com.mist.medicalmate.core.designsystem.component
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -9,15 +10,18 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.AppleContainer
 import com.mist.medicalmate.core.designsystem.AppleLabel
 import com.mist.medicalmate.core.designsystem.GoogleBorder
@@ -45,8 +49,9 @@ enum class MedicalMateSocialProvider(
     internal val container: Color,
     internal val label: Color,
     internal val border: Color?,
+    @DrawableRes internal val symbol: Int? = null,
 ) {
-    KAKAO(KakaoContainer, KakaoLabel, null),
+    KAKAO(KakaoContainer, KakaoLabel, null, R.drawable.ic_kakao_symbol),
     NAVER(NaverContainer, NaverLabel, null),
     APPLE(AppleContainer, AppleLabel, null),
     GOOGLE(GoogleContainer, GoogleLabel, GoogleBorder),
@@ -60,9 +65,9 @@ enum class MedicalMateSocialProvider(
  * 카카오 가이드는 radius 12를 적는다. DESIGN.md의 컴포넌트 규격이 16으로 정하고 같은 항목을 브랜드
  * 가이드 예외로 표시했으며, #39에서 문서 값으로 결정했다.
  *
- * **로고 자리가 비어 있다.** Figma의 로고는 임시 사각형이고 각 사 공식
- * 개발자 키트에서 받아 교체해야 한다. 임의로 그린 로고를 넣으면 가이드 위반이라, 받기
- * 전까지는 라벨만 둔다.
+ * 심볼은 각 사 공식 키트에서 받은 것만 넣는다. 임의로 그리면 가이드 위반이다. 카카오는
+ * 디자인 시스템의 `Provider=Kakao` 마스터(`383:1290`)에 말풍선이 들어 있어 그것을 내보내
+ * 썼다. 나머지 셋은 아직 없어서 라벨만 둔다.
  *
  * [contentDescription]을 따로 받는다. 라벨이 "카카오 로그인"이어도 스크린 리더에는
  * "카카오로 로그인"처럼 동작이 드러나는 문장이 낫다.
@@ -102,7 +107,14 @@ fun MedicalMateSocialLoginButton(
                     modifier = Modifier.size(MedicalMateSize.iconMd),
                 )
             } else {
-                // 로고 자리. 각 사 공식 asset을 받으면 여기에 Icon을 넣는다.
+                provider.symbol?.let { symbol ->
+                    Icon(
+                        painter = painterResource(symbol),
+                        contentDescription = null,
+                        tint = provider.label,
+                        modifier = Modifier.size(width = SymbolWidth, height = SymbolHeight),
+                    )
+                }
                 Text(text = label, style = MedicalMateTheme.typography.labelL)
             }
         }
@@ -146,3 +158,8 @@ fun MedicalMateSocialLoginStack(
 }
 
 private val ProgressStroke = 2.dp
+
+/** 카카오 말풍선. 마스터에서 20x18.67로 놓인다. 가로세로가 달라 size 하나로 못 쓴다. */
+private val SymbolWidth = 20.dp
+
+private val SymbolHeight = 18.67.dp
