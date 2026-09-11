@@ -1,5 +1,6 @@
 package com.mist.medicalmate.card.ui
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -18,7 +19,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
 import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
@@ -41,8 +41,28 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateCheckbox
  * 묶음 머리에 개수를 함께 둔다. 몇 건인지가 먼저 보이면 그 달에 무슨 일이 있었는지
  * 가늠된다.
  */
+/**
+ * 월별 묶음 목록.
+ *
+ * 기록(1j-1)과 브리핑 카드 전체(1j-4)가 함께 쓴다. 두 화면의 줄이 제목·배지·메타·보조 한
+ * 줄로 같고 편집 방식도 같다. 다른 것은 세는 단위뿐이라 [countRes]로 받는다. 기록은 "건",
+ * 카드는 "장"이다.
+ *
+ * [selectedIds]가 null이면 편집이 아니다. 그때 줄을 누르면 [onItemClick]이 이동을 맡고,
+ * 편집 중이면 [onSelectChange]가 고르고 푼다.
+ *
+ * [header]로 목록 위에 한 덩어리를 끼울 수 있다. 1j-4의 `Select Bar`가 그 자리다. 목록과
+ * 함께 스크롤돼야 해서 화면이 위에 따로 두지 않고 `LazyColumn` 안에 넣는다.
+ */
 @Composable
-internal fun ColumnScope.GroupList(state: RecordUiState.Content, callbacks: RecordCallbacks) {
+internal fun ColumnScope.GroupList(
+    groups: List<RecordGroup>,
+    @StringRes countRes: Int,
+    onItemClick: (String) -> Unit,
+    selectedIds: Set<String>? = null,
+    onSelectChange: (String, Boolean) -> Unit = { _, _ -> },
+    header: (@Composable () -> Unit)? = null,
+) {
     LazyColumn(
         modifier = Modifier.weight(1f),
         contentPadding =
@@ -54,19 +74,18 @@ internal fun ColumnScope.GroupList(state: RecordUiState.Content, callbacks: Reco
         ),
         verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s10),
     ) {
-        state.groups.forEach { group ->
-            item(key = group.monthLabel) { GroupHeader(group) }
+        if (header != null) {
+            item(key = "header") { header() }
+        }
+        groups.forEach { group ->
+            item(key = group.monthLabel) { GroupHeader(group = group, countRes = countRes) }
             items(items = group.items, key = { it.id }) { item ->
-                val selected = state.selectedIds?.contains(item.id)
+                val selected = selectedIds?.contains(item.id)
                 RecordRow(
                     item = item,
                     selected = selected,
                     onClick = {
-                        if (selected == null) {
-                            callbacks.onItemClick(item.id)
-                        } else {
-                            callbacks.onSelectChange(item.id, !selected)
-                        }
+                        if (selected == null) onItemClick(item.id) else onSelectChange(item.id, !selected)
                     },
                 )
             }
@@ -75,7 +94,7 @@ internal fun ColumnScope.GroupList(state: RecordUiState.Content, callbacks: Reco
 }
 
 @Composable
-private fun GroupHeader(group: RecordGroup) {
+private fun GroupHeader(group: RecordGroup, @StringRes countRes: Int) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -89,7 +108,7 @@ private fun GroupHeader(group: RecordGroup) {
             modifier = Modifier.weight(1f),
         )
         Text(
-            text = stringResource(R.string.record_count, group.items.size),
+            text = stringResource(countRes, group.items.size),
             style = MedicalMateTheme.typography.bodyS,
             color = MedicalMateTheme.colors.fgSubtle,
         )
