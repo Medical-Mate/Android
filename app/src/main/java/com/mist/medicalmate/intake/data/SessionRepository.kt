@@ -2,6 +2,7 @@ package com.mist.medicalmate.intake.data
 
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.core.network.apiCall
+import com.mist.medicalmate.core.network.map
 import jakarta.inject.Inject
 import kotlinx.serialization.json.Json
 
@@ -79,10 +80,3 @@ private fun statusOf(value: String?): IntakeSessionStatus = when (value) {
 }
 
 private const val ROLE_USER = "USER"
-
-/** 성공 값만 바꾼다. 실패 갈래는 그대로 흘려보낸다. */
-private inline fun <T, R> ApiResult<T>.map(transform: (T) -> R): ApiResult<R> = when (this) {
-    is ApiResult.Success -> ApiResult.Success(transform(value))
-    is ApiResult.Rejected -> this
-    is ApiResult.NetworkUnavailable -> this
-}

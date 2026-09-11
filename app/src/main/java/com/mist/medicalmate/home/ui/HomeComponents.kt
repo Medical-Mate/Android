@@ -190,12 +190,15 @@ internal fun ResumeCard(resume: HomeResume, onClick: () -> Unit) {
 /**
  * 저장된 브리핑 카드 한 줄.
  *
- * 확정된 카드는 상태 배지와 병원·진료과를, 작성 중인 카드는 카드만 작성됐다는 메타를
+ * 진료를 다녀온 카드는 상태 배지와 병원·진료과를, 아직인 카드는 카드만 작성됐다는 메타를
  * 보여준다. Figma `1n-1`의 두 행이 각각 그 경우다.
+ *
+ * 배지는 카드의 확정 여부가 아니라 진료를 다녀왔는지로 붙인다. 확정만 하고 아직 안 간 카드에
+ * "진료 완료"가 붙으면 안 된다.
  */
 @Composable
 internal fun SavedCardRow(card: SavedCardSummary, onClick: () -> Unit) {
-    val confirmed = card.status == SavedCardSummary.Status.CONFIRMED
+    val visited = card.visited
     val written = card.writtenOn.format(cardDate)
 
     MedicalMateListRow(
@@ -203,10 +206,10 @@ internal fun SavedCardRow(card: SavedCardSummary, onClick: () -> Unit) {
         meta =
         card.clinic?.let { stringResource(R.string.home_card_meta, written, it) }
             ?: stringResource(R.string.home_card_meta_draft, written),
-        badge = if (confirmed) stringResource(R.string.home_card_confirmed) else null,
+        badge = if (visited) stringResource(R.string.home_card_confirmed) else null,
         badgeTone = MedicalMateBadgeTone.SUCCESS,
         type =
-        if (confirmed) MedicalMateListRowType.BADGE else MedicalMateListRowType.DEFAULT,
+        if (visited) MedicalMateListRowType.BADGE else MedicalMateListRowType.DEFAULT,
         onClick = onClick,
     )
 }

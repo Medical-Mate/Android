@@ -47,6 +47,8 @@ internal fun NavGraphBuilder.briefCardDestination(
     composable<BriefCardDestination> { entry ->
         val route = entry.toRoute<BriefCardDestination>()
         BriefCardRoute(
+            // 라우트는 문자열로 들고 다닌다. 서버 id는 숫자라 여기서 바꾼다.
+            cardId = route.cardId.toLongOrNull() ?: return@composable,
             hospital = briefCardHospital(route),
             onSaved = onSaved,
             onDeleted = onDeleted,
@@ -58,8 +60,9 @@ internal fun NavGraphBuilder.briefCardDestination(
 }
 
 internal fun NavGraphBuilder.handoffDestination(onDone: () -> Unit) {
-    composable<HandoffDestination> {
-        HandoffRoute(onDone = onDone)
+    composable<HandoffDestination> { entry ->
+        val cardId = entry.toRoute<HandoffDestination>().cardId.toLongOrNull() ?: return@composable
+        HandoffRoute(cardId = cardId, onDone = onDone)
     }
 }
 
@@ -74,6 +77,7 @@ internal fun NavGraphBuilder.handoffDestination(onDone: () -> Unit) {
  */
 @Composable
 private fun BriefCardRoute(
+    cardId: Long,
     hospital: BriefCardHospital?,
     onSaved: () -> Unit,
     onDeleted: () -> Unit,
@@ -85,7 +89,7 @@ private fun BriefCardRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(hospital) { viewModel.load(hospital) }
+    LaunchedEffect(cardId, hospital) { viewModel.load(cardId, hospital) }
 
     val content = state as? BriefCardUiState.Content
 
@@ -106,8 +110,8 @@ private fun BriefCardRoute(
                 onDeleted()
             },
             onHospitalChangeClick = { content?.card?.id?.let(onHospitalChange) },
-            onHandoffClick = { content?.card?.id?.let(onHandoff) },
-            onRetryClick = { viewModel.load(hospital) },
+            onHandoffClick = { viewModel.onHandoffClick(onHandoff) },
+            onRetryClick = { viewModel.load(cardId, hospital) },
         ),
         modifier = modifier,
     )
@@ -127,18 +131,19 @@ private fun briefCardHospital(route: BriefCardDestination): BriefCardHospital? {
 /**
  * 진료실 화면의 진입점.
  *
- * 카드를 다시 불러온다. 브리핑 카드 화면과 목적지가 달라 ViewModel도 다른 것을 쓴다.
- * 서버 연동에서는 같은 카드를 두 번 부르지 않도록 저장된 카드를 넘겨받는 편이 낫다.
+ * 카드 조회가 아니라 전달 경로를 부른다. 여는 순간이 서버에 전달 시각으로 기록되기
+ * 때문이다. 그래서 브리핑 카드 화면과 ViewModel도 다르다.
  */
 @Composable
 private fun HandoffRoute(
+    cardId: Long,
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: BriefCardViewModel = hiltViewModel(),
+    viewModel: HandoffViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(Unit) { viewModel.load() }
+    LaunchedEffect(cardId) { viewModel.load(cardId) }
 
     val card = (state as? BriefCardUiState.Content)?.card ?: return
 

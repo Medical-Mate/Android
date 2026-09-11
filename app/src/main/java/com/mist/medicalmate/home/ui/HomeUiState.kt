@@ -53,20 +53,20 @@ data class HomeResume(val intakeId: String, val symptomTitle: String, val answer
 /**
  * 저장된 브리핑 카드 요약.
  *
- * [status]는 백엔드의 카드 상태 `draft` / `confirmed`에 대응한다. [clinic]은 Figma의
- * "서울OO병원 내과"처럼 병원과 진료과를 합친 표시용 문자열이다. 확정 전 카드에는 없다.
+ * **[visited]가 "진료 완료" 배지의 기준이다.** 카드의 확정 여부(`DRAFT`/`CONFIRMED`)와 다른
+ * 축이다. 확정은 카드를 더 고치지 않겠다는 뜻이고, 진료를 다녀왔는지는 진료 기록이 붙었는지로
+ * 정해진다. 문서가 그 둘을 섞지 말라고 적었다.
  *
- * 카드 화면(1e)을 만들 때 `card` 도메인으로 옮기거나 그쪽 모델을 참조하게 된다.
+ * [clinic]은 Figma의 "서울OO병원 내과"처럼 병원과 진료과를 합친 표시용 문자열이다. 병원명이
+ * 선택 입력이라 진료를 마쳤어도 비어 있을 수 있어서, 이 값으로 진료 여부를 판단하면 안 된다.
  */
 data class SavedCardSummary(
     val id: String,
     val title: String,
-    val status: Status,
+    val visited: Boolean,
     val writtenOn: LocalDate,
     val clinic: String?,
-) {
-    enum class Status { DRAFT, CONFIRMED }
-}
+)
 
 /**
  * 다가오는 진료 일정.

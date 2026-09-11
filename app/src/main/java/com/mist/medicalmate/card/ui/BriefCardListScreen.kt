@@ -58,6 +58,7 @@ fun BriefCardListScreen(
         )
         when (state) {
             BriefCardListUiState.Loading -> MedicalMateLoadingSpinner(modifier = Modifier.weight(1f))
+            BriefCardListUiState.Failed -> FailedContent(onRetryClick = callbacks.onRetryClick)
             is BriefCardListUiState.Content ->
                 if (state.groups.isEmpty()) {
                     EmptyContent(onStartIntakeClick = callbacks.onStartIntakeClick)
@@ -93,6 +94,7 @@ data class BriefCardListCallbacks(
     val onDeleteClick: () -> Unit = {},
     val onDeleteConfirm: () -> Unit = {},
     val onDeleteDismiss: () -> Unit = {},
+    val onRetryClick: () -> Unit = {},
 )
 
 /** 목록이 비어 있으면 편집을 두지 않는다. 지울 것이 없는데 들어갈 수 있으면 안 된다. */
@@ -136,6 +138,27 @@ private fun DeleteBar(count: Int, onDeleteClick: () -> Unit) {
             type = MedicalMateButtonType.DANGER,
             enabled = count > 0,
             modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+/** 불러오지 못했을 때. 빈 목록과 다르게 다시 시도를 준다. */
+@Composable
+private fun ColumnScope.FailedContent(onRetryClick: () -> Unit) {
+    Column(
+        modifier =
+        Modifier
+            .fillMaxWidth()
+            .weight(1f)
+            .padding(horizontal = MedicalMateSize.gutter),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        MedicalMateEmptyState(
+            type = MedicalMateEmptyStateType.NO_RESULT,
+            title = stringResource(R.string.brief_card_list_failed_title),
+            description = stringResource(R.string.brief_card_list_failed_description),
+            actionLabel = stringResource(R.string.brief_card_list_retry),
+            onActionClick = onRetryClick,
         )
     }
 }

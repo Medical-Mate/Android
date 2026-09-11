@@ -3,11 +3,11 @@ package com.mist.medicalmate.home.data
 import com.mist.medicalmate.core.model.CurrentUserProvider
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.home.ui.HomeTodayLine
-import com.mist.medicalmate.home.ui.SavedCardSummary
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -70,13 +70,21 @@ class HomeRepositoryTest {
     }
 
     @Test
-    fun `카드 상태는 확정과 임시로 갈린다`() = runTest {
+    fun `진료 완료 배지는 확정이 아니라 다녀왔는지로 갈린다`() = runTest {
+        // 확정은 카드를 더 안 고친다는 뜻이고, 진료를 다녀왔는지는 다른 축이다.
+        // 확정만 한 카드에 "진료 완료"가 붙으면 안 된다.
         val snapshot = load(HomeResponse(recentCards = listOf(confirmedCard, draftCard)))
 
-        assertEquals(
-            listOf(SavedCardSummary.Status.CONFIRMED, SavedCardSummary.Status.DRAFT),
-            snapshot.savedCards.map { it.status },
-        )
+        assertEquals(listOf(true, false), snapshot.savedCards.map { it.visited })
+    }
+
+    @Test
+    fun `확정했지만 안 다녀온 카드는 배지가 없다`() = runTest {
+        val confirmedNotVisited = draftCard.copy(status = "CONFIRMED", visited = false)
+
+        val snapshot = load(HomeResponse(recentCards = listOf(confirmedNotVisited)))
+
+        assertFalse(snapshot.savedCards.single().visited)
     }
 
     @Test
@@ -170,6 +178,7 @@ class HomeRepositoryTest {
                 cardId = 1,
                 title = "복부 통증 · 3주",
                 status = "CONFIRMED",
+                visited = true,
                 clinicName = "서울OO병원 내과",
                 createdAt = "2026-09-04T09:00:00+09:00",
             )

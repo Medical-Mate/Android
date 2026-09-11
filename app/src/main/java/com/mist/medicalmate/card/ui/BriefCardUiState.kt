@@ -86,9 +86,16 @@ sealed interface BriefCardUiState {
      *
      * [deleteRequested]는 삭제 확인 대화상자(1e-1-DC)가 떠 있는지다. 편집 상태와 분리한다.
      * 삭제를 취소하면 편집 모드는 그대로 남아 있어야 한다.
+     *
+     * [saveFailed]는 확인을 눌렀는데 서버가 받지 못한 경우다. 편집 모드를 그대로 두고
+     * 알리기만 한다. 닫아 버리면 방금 고친 것이 사라진다.
      */
-    data class Content(val card: BriefCard, val draft: BriefCardDraft? = null, val deleteRequested: Boolean = false) :
-        BriefCardUiState {
+    data class Content(
+        val card: BriefCard,
+        val draft: BriefCardDraft? = null,
+        val deleteRequested: Boolean = false,
+        val saveFailed: Boolean = false,
+    ) : BriefCardUiState {
         val editing: Boolean get() = draft != null
 
         /** 화면에 그릴 항목. 편집 중이면 사본, 아니면 원본이다. */

@@ -56,6 +56,9 @@
     <string name="brief_card_list_delete_title">브리핑 카드 %1$d장을 삭제할까요?</string>
     <string name="brief_card_list_delete_body">연결된 진료 기록은 남고 카드만 사라져요.</string>
     <string name="brief_card_list_delete_confirm">삭제</string>
+    <string name="brief_card_list_failed_title">카드를 불러오지 못했어요</string>
+    <string name="brief_card_list_failed_description">인터넷 연결을 확인하고 다시 시도해주세요</string>
+    <string name="brief_card_list_retry">다시 시도</string>
     <string name="brief_card_list_empty_title">아직 브리핑 카드가 없어요</string>
     <string name="brief_card_list_empty_description">증상을 정리해두면 진료실에서 바로 보여줄 수 있어요</string>
     <string name="brief_card_list_empty_action">증상 정리하기</string>

@@ -1,20 +1,43 @@
 package com.mist.medicalmate.card.ui
-
+import com.mist.medicalmate.card.data.CardListItem
+import com.mist.medicalmate.core.network.ApiResult
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
+import java.time.LocalDate
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class BriefCardListViewModelTest {
-    private fun loaded(): BriefCardListViewModel = BriefCardListViewModel().apply { load() }
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    private fun loaded(): BriefCardListViewModel =
+        BriefCardListViewModel(FakeCardRepository(list = ApiResult.Success(testItems))).apply {
+            load()
+        }
 
     private fun BriefCardListViewModel.content(): BriefCardListUiState.Content =
         uiState.value as BriefCardListUiState.Content
 
     @Test
     fun `불러오기 전에는 편집으로 들어갈 수 없다`() {
-        val viewModel = BriefCardListViewModel()
+        val viewModel = BriefCardListViewModel(FakeCardRepository(list = ApiResult.Success(testItems)))
 
         viewModel.onEditStart()
 
@@ -167,3 +190,31 @@ class BriefCardListViewModelTest {
         assertEquals(emptyList<RecordGroup>(), viewModel.content().groups)
     }
 }
+
+private val testItems =
+    listOf(
+        CardListItem(
+            id = "card-1",
+            title = "복부 통증 · 3주",
+            confirmed = true,
+            visited = true,
+            clinic = "서울OO병원 내과",
+            writtenOn = LocalDate.of(2026, 9, 4),
+        ),
+        CardListItem(
+            id = "card-3",
+            title = "무릎 통증",
+            confirmed = false,
+            visited = false,
+            clinic = null,
+            writtenOn = LocalDate.of(2026, 9, 20),
+        ),
+        CardListItem(
+            id = "card-2",
+            title = "두통 · 잦은 어지러움",
+            confirmed = true,
+            visited = false,
+            clinic = null,
+            writtenOn = LocalDate.of(2026, 8, 21),
+        ),
+    )
