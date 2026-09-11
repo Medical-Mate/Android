@@ -1,5 +1,6 @@
 package com.mist.medicalmate.card.ui
 
+import com.mist.medicalmate.card.data.AxisEdit
 import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
 
 /**
@@ -49,7 +50,21 @@ data class BriefCardHospital(val name: String, val address: String)
  * [emphasized]는 그 진료에서 가장 중요한 한 항목이다. 문서의 컴포넌트 규격이 카드마다 하나를 넘기지
  * 말라고 한다. 전부 강조하면 아무것도 강조되지 않는다. 어느 항목을 세울지는 AI가 정한다.
  */
-data class BriefCardItem(val key: String, val value: String, val emphasized: Boolean = false)
+data class BriefCardItem(
+    val key: String,
+    val value: String,
+    val emphasized: Boolean = false,
+    /**
+     * 서버의 축 id(`onset`·`site` 같은 것).
+     *
+     * 고친 값을 보낼 때 어느 축인지 알아야 한다. 서버가 `{"axes":[{"axis":"onset",
+     * "value":"3주 전"}]}` 모양으로 받고, 줄 이름("시작")은 우리가 붙인 표시용이라 그것으로는
+     * 못 찾는다.
+     *
+     * 축에서 오지 않은 줄은 `null`이다. 그런 줄은 고쳐도 보낼 곳이 없다.
+     */
+    val axis: String? = null,
+)
 
 /**
  * 편집 중인 사본.
@@ -110,5 +125,20 @@ sealed interface BriefCardUiState {
          * CRUD 규칙이 그래서 바꾼 게 있을 때만 확인을 띄우라고 한다.
          */
         val changed: Boolean get() = draft != null && draft != BriefCardDraft.of(card)
+
+        /**
+         * 값이 달라진 축만.
+         *
+         * 안 바뀐 축을 함께 보내면 서버가 그것도 환자가 고친 값으로 남긴다. 원본과 사본을
+         * 축 id로 맞춰 비교한다. 차례가 같더라도 줄이 지워질 수 있어 자리로 맞추지 않는다.
+         */
+        fun changedAxes(): List<AxisEdit> {
+            val before = card.items.mapNotNull { item -> item.axis?.let { it to item.value } }.toMap()
+            return draft?.items.orEmpty()
+                .mapNotNull { item ->
+                    val axis = item.axis ?: return@mapNotNull null
+                    AxisEdit(axis = axis, value = item.value).takeIf { before[axis] != item.value }
+                }
+        }
     }
 }

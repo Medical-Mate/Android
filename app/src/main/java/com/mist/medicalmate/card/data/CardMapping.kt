@@ -83,7 +83,7 @@ private fun Map<String, AxisResponse>.toItems(): List<BriefCardItem> = AXIS_ORDE
             STATUS_AMBIGUOUS -> field.value?.let { "$it $AMBIGUOUS_SUFFIX" } ?: UNKNOWN_LABEL
             else -> return@mapNotNull null
         }
-    BriefCardItem(key = axisLabel(axis), value = value)
+    BriefCardItem(key = axisLabel(axis), value = value, axis = axis)
 }
 
 /**

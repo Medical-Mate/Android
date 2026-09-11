@@ -70,8 +70,11 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
      * **응답으로 온 카드로 갈아탄다.** 확정된 카드를 고치면 서버가 새 버전을 만들고 id가
      * 달라진다. 화면이 옛 id를 들고 있으면 다음 수정이 엉뚱한 카드로 간다.
      *
-     * 지금 보내는 것은 질문 목록뿐이다. 카드 본문은 서버가 고정 필드에서 가변 목록으로
-     * 바꾸는 중이라 보낼 모양이 정해지지 않았다(#139). 본문 사본은 화면에만 반영한다.
+     * **바뀐 축만 보낸다.** PATCH라 보낸 것만 바뀌고, 손대지 않은 축까지 실어 보내면 서버가
+     * 그것도 환자가 고친 값(`PATIENT_EDIT`)으로 남긴다.
+     *
+     * 축에서 오지 않은 줄은 보낼 곳이 없어 건너뛴다. 지금은 그런 줄이 없지만 카드에 축 밖의
+     * 값이 생기면 조용히 사라지는 대신 화면에만 남는다.
      */
     fun onEditDoneClick() {
         val state = mutableUiState.value as? BriefCardUiState.Content ?: return
@@ -80,7 +83,7 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
         if (draft == null || cardId == null) return
 
         viewModelScope.launch {
-            when (val result = repository.update(cardId, draft.questions)) {
+            when (val result = repository.update(cardId, state.changedAxes(), draft.questions)) {
                 is ApiResult.Success ->
                     mutableUiState.value =
                         BriefCardUiState.Content(

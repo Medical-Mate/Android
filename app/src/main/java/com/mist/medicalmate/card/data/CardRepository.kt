@@ -28,7 +28,7 @@ interface CardRepository {
      * **응답의 카드로 갈아타야 한다.** 확정된 카드를 고치면 서버가 새 버전을 만들고 id가
      * 달라진다. 옛 id를 들고 있으면 다음 수정이 엉뚱한 카드로 간다.
      */
-    suspend fun update(cardId: Long, questions: List<String>): ApiResult<BriefCard>
+    suspend fun update(cardId: Long, axes: List<AxisEdit>, questions: List<String>): ApiResult<BriefCard>
 
     suspend fun confirm(cardId: Long): ApiResult<BriefCard>
 
@@ -55,14 +55,21 @@ constructor(private val api: CardApi, private val json: Json) :
         apiCall(json) { api.card(cardId) }.map { it.toBriefCard() }
 
     /**
-     * 지금은 질문 목록만 보낸다.
+     * 바뀐 축과 질문만 보낸다.
      *
-     * 축 수정은 `{"axes":[{"axis":"onset","value":"3주 전"}]}` 모양으로 보내야 하는데, 화면의
-     * 편집이 아직 줄 단위 값만 들고 있고 그 줄이 어느 축인지 모른다. 축 id를
-     * `BriefCardItem`에 실어야 열린다. 제목과 진료과는 서버가 수정을 받지 않는다.
+     * 제목과 진료과는 서버가 수정을 받지 않는다. 안 바뀐 축을 함께 보내지 않는 이유는 그것이
+     * PATCH이기 때문이다. 보낸 것만 바뀐다.
      */
-    override suspend fun update(cardId: Long, questions: List<String>): ApiResult<BriefCard> =
-        apiCall(json) { api.update(cardId, UpdateCardRequest(questions = questions)) }.map { it.toBriefCard() }
+    override suspend fun update(cardId: Long, axes: List<AxisEdit>, questions: List<String>): ApiResult<BriefCard> =
+        apiCall(json) {
+            api.update(
+                cardId,
+                UpdateCardRequest(
+                    axes = axes.map { AxisEditRequest(axis = it.axis, value = it.value) }.takeIf { it.isNotEmpty() },
+                    questions = questions,
+                ),
+            )
+        }.map { it.toBriefCard() }
 
     override suspend fun confirm(cardId: Long): ApiResult<BriefCard> =
         apiCall(json) { api.confirm(cardId) }.map { it.toBriefCard() }
@@ -70,6 +77,9 @@ constructor(private val api: CardApi, private val json: Json) :
     override suspend fun handoff(cardId: Long): ApiResult<BriefCard> =
         apiCall(json) { api.handoff(cardId) }.map { it.toBriefCard(cardId) }
 }
+
+/** 고친 축 하나. 서버가 `{"axis":"onset","value":"3주 전"}`으로 받는다. */
+data class AxisEdit(val axis: String, val value: String)
 
 /**
  * 목록의 카드 한 줄. 본문은 담기지 않는다.
