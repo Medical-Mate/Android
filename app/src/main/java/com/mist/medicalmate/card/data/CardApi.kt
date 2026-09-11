@@ -49,7 +49,9 @@ internal interface CardApi {
 @Serializable
 internal data class CardSummaryResponse(
     val cardId: Long,
+    /** 아직 `null`이다. 목록 제목은 [chiefComplaint]를 쓴다. 환자가 말한 원문이라 길 수 있다. */
     val title: String? = null,
+    val chiefComplaint: String? = null,
     val status: String? = null,
     val visited: Boolean = false,
     val clinicName: String? = null,
@@ -61,6 +63,13 @@ internal data class CardSummaryResponse(
  * @param rejectedFields 검증에 걸려 `UNKNOWN`으로 저장된 필드 이름. 카드 만들기 자체는
  *   성공한다. 통째로 실패시키면 환자가 답한 문답이 날아간다.
  */
+/**
+ * @param title 아직 서버가 내려주지 않는다(`null`). 카드 제목은 [chiefComplaint]를 쓴다.
+ * @param axes 8축이 늘 자리를 차지한다. 없는 축을 만들지 않는다.
+ * @param version 확정 뒤 수정할 때마다 오른다. [parentCardId]가 이어받은 앞 카드다.
+ * @param rejectedFields 검증에 걸려 저장되지 않은 필드 이름. 카드 만들기 자체는 성공한다.
+ *   통째로 실패시키면 환자가 답한 문답이 날아간다.
+ */
 @Serializable
 internal data class CardResponse(
     val cardId: Long,
@@ -70,62 +79,73 @@ internal data class CardResponse(
     val sessionId: Long? = null,
     val patient: PatientResponse? = null,
     val title: String? = null,
-    val onset: TextFieldResponse? = null,
-    val pattern: TextFieldResponse? = null,
-    val site: SiteResponse? = null,
-    val medications: MedicationsResponse? = null,
-    val allergies: TextFieldResponse? = null,
+    val chiefComplaint: String? = null,
+    val axes: Map<String, AxisResponse> = emptyMap(),
+    val redFlags: List<String> = emptyList(),
+    val patientNotes: List<String> = emptyList(),
     val questions: List<String> = emptyList(),
-    val suggestedDepartment: String? = null,
+    val departmentGuidance: DepartmentGuidanceResponse? = null,
+    val completeness: Double? = null,
+    val minimallyComplete: Boolean = false,
     val rejectedFields: List<String> = emptyList(),
     val createdAt: String? = null,
     val confirmedAt: String? = null,
 )
 
-/** 전달 화면. `evidence`·`pipelineVersion` 같은 내부 추적값이 빠져 있다. */
+/**
+ * 축 하나.
+ *
+ * @param status `NOT_ASKED` · `FILLED` · `UNKNOWN` · `SKIPPED` · `AMBIGUOUS`. 1턴째는 대부분
+ *   `NOT_ASKED`다.
+ * @param evidence 환자가 실제로 한 말. 지어낸 값과 들은 값을 가르는 자리다.
+ */
+@Serializable
+internal data class AxisResponse(
+    val axis: String? = null,
+    val status: String? = null,
+    val value: String? = null,
+    val evidence: List<String> = emptyList(),
+    val source: String? = null,
+)
+
+/**
+ * 진료과 안내.
+ *
+ * 배열이다. 하나로 좁히지 않는다. 비어 있으면 줄을 숨긴다. [source]("의료인 자문 확인 전")를
+ * 화면에 함께 보여야 하고 "추천"이라는 말은 쓰지 않는다.
+ */
+@Serializable
+internal data class DepartmentGuidanceResponse(val departments: List<String> = emptyList(), val source: String? = null)
+
+/** 전달 화면. 카드 조회와 본문이 같고 내부 추적값만 빠져 있다. */
 @Serializable
 internal data class HandoffResponse(
     val patient: PatientResponse? = null,
     val title: String? = null,
-    val onset: TextFieldResponse? = null,
-    val pattern: TextFieldResponse? = null,
-    val site: SiteResponse? = null,
-    val medications: MedicationsResponse? = null,
-    val allergies: TextFieldResponse? = null,
+    val chiefComplaint: String? = null,
+    val axes: Map<String, AxisResponse> = emptyMap(),
+    val redFlags: List<String> = emptyList(),
+    val patientNotes: List<String> = emptyList(),
     val questions: List<String> = emptyList(),
-    val suggestedDepartment: String? = null,
+    val departmentGuidance: DepartmentGuidanceResponse? = null,
     val confirmedAt: String? = null,
 )
 
 @Serializable
 internal data class PatientResponse(val name: String? = null, val age: Int? = null, val sex: String? = null)
 
-/** @param status `KNOWN` · `NONE` · `UNKNOWN`. 셋을 같게 그리면 안 된다. */
-@Serializable
-internal data class TextFieldResponse(val status: String? = null, val text: String? = null)
-
-@Serializable
-internal data class SiteResponse(
-    val status: String? = null,
-    val text: String? = null,
-    val codes: List<String> = emptyList(),
-)
-
-@Serializable
-internal data class MedicationsResponse(val status: String? = null, val items: List<MedicationResponse> = emptyList())
-
-@Serializable
-internal data class MedicationResponse(val name: String? = null, val note: String? = null)
-
-/** 보낸 필드만 바뀐다. 건드리지 않은 것은 `null`로 두어 직렬화에서 빠지게 한다. */
+/**
+ * 보낸 필드만 바뀐다. 건드리지 않은 것은 `null`로 두어 직렬화에서 빠지게 한다.
+ *
+ * 제목과 진료과는 고칠 수 없다. 서버가 받지 않는다.
+ */
 @Serializable
 internal data class UpdateCardRequest(
-    val title: String? = null,
-    val onset: TextFieldRequest? = null,
-    val pattern: TextFieldRequest? = null,
-    val allergies: TextFieldRequest? = null,
+    val chiefComplaint: String? = null,
+    val axes: List<AxisEditRequest>? = null,
     val questions: List<String>? = null,
+    val patientNotes: List<String>? = null,
 )
 
 @Serializable
-internal data class TextFieldRequest(val status: String, val text: String? = null)
+internal data class AxisEditRequest(val axis: String, val value: String)
