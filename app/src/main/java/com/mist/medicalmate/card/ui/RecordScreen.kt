@@ -60,6 +60,7 @@ fun RecordScreen(state: RecordUiState, callbacks: RecordCallbacks, modifier: Mod
         )
         when (state) {
             RecordUiState.Loading -> MedicalMateLoadingSpinner(modifier = Modifier.weight(1f))
+            RecordUiState.Failed -> FailedContent(onRetryClick = callbacks.onRetryClick)
             is RecordUiState.Content ->
                 if (state.groups.isEmpty()) {
                     EmptyContent(onStartIntakeClick = callbacks.onStartIntakeClick)
@@ -96,6 +97,7 @@ fun RecordScreen(state: RecordUiState, callbacks: RecordCallbacks, modifier: Mod
 data class RecordCallbacks(
     val onItemClick: (String) -> Unit = {},
     val onStartIntakeClick: () -> Unit = {},
+    val onRetryClick: () -> Unit = {},
     val onTabSelect: (MedicalMateTab) -> Unit = {},
     val onEditStart: () -> Unit = {},
     val onEditCancel: () -> Unit = {},
@@ -143,6 +145,27 @@ private fun DeleteBar(count: Int, onDeleteClick: () -> Unit) {
 }
 
 /** 1j-2. 빈 상태를 화면 위쪽에 둔다. Figma가 가운데가 아니라 1/4 지점에 놓았다. */
+@Composable
+private fun ColumnScope.FailedContent(onRetryClick: () -> Unit) {
+    Column(
+        modifier =
+        Modifier
+            .fillMaxWidth()
+            .weight(1f)
+            .padding(horizontal = MedicalMateSize.gutter),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        MedicalMateEmptyState(
+            type = MedicalMateEmptyStateType.NO_RESULT,
+            title = stringResource(R.string.record_failed_title),
+            description = stringResource(R.string.record_failed_description),
+            actionLabel = stringResource(R.string.record_retry),
+            onActionClick = onRetryClick,
+        )
+    }
+}
+
+/** 기록이 하나도 없을 때. */
 @Composable
 private fun ColumnScope.EmptyContent(onStartIntakeClick: () -> Unit) {
     Column(

@@ -47,6 +47,7 @@ private fun RecordRoute(
         RecordCallbacks(
             onItemClick = onItemClick,
             onStartIntakeClick = onStartIntakeClick,
+            onRetryClick = viewModel::load,
             onTabSelect = onTabSelect,
             onEditStart = viewModel::onEditStart,
             onEditCancel = viewModel::onEditCancel,

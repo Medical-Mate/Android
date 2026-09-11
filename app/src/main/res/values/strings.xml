@@ -30,6 +30,9 @@
     <string name="record_status_draft">작성 중</string>
     <string name="record_status_before_visit">진료 전</string>
     <string name="record_status_confirmed">진료 완료</string>
+    <string name="record_failed_title">기록을 불러오지 못했어요</string>
+    <string name="record_failed_description">인터넷 연결을 확인하고 다시 시도해주세요</string>
+    <string name="record_retry">다시 시도</string>
     <string name="record_empty_title">아직 진료 기록이 없어요</string>
     <string name="record_empty_description">증상을 정리해두면 진료실에서 바로 보여줄 수 있어요</string>
     <string name="record_empty_action">증상 정리하기</string>

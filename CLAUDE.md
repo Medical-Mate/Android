@@ -450,7 +450,7 @@ com.mist.medicalmate/
 
 | 항목 | 상태 |
 | -- | -- |
-| 유닛 테스트 | `IntakeViewModel` 27건, `SessionViewModel` 23건, `RecordDetailViewModel` 17건, `BodyMapGeometry` 17건, `VisitRecordViewModel` 16건, `BriefCardViewModel` 16건, `HospitalPickViewModel` 15건, `CalendarViewModel` 15건, `BriefCardListViewModel` 14건, `ScheduleAddViewModel` 13건, `RecordViewModel` 13건, `LoginViewModel` 13건, `DesignToken` 12건, `HealthEditViewModel` 11건, `CalendarDayViewModel` 11건, `BodyMapLayout` 10건, `HomeViewModel` 9건, `TokenAuthenticator` 7건, `ProfileSetupViewModel` 7건, `MedicalMateSeverity` 7건, `VisitNoteViewModel` 6건, `MyProfileViewModel` 5건, `ProgressIndicator` 4건, `PretendardFont` 4건, `HomeSchedule` 4건, `SegmentedControl` 3건, 템플릿 1개 |
+| 유닛 테스트 | `IntakeViewModel` 33건, `VisitRecordViewModel` 25건, `SessionViewModel` 23건, `ScheduleAddViewModel` 19건, `HospitalPickViewModel` 19건, `BriefCardViewModel` 19건, `RecordViewModel` 17건, `BodyMapGeometry` 17건, `CalendarViewModel` 15건, `HomeRepository` 14건, `CalendarDayViewModel` 16건, `BriefCardListViewModel` 14건, `LoginViewModel` 13건, `RecordDetailViewModel` 12건, `RecordDetailFixtures` 12건, `DesignToken` 12건, `VectorParity` 11건, `HealthEditViewModel` 11건, `CardMapping` 11건, `IntakeSessionActions` 10건, `BodyMapLayout` 10건, `AppointmentRepository` 8건, `TokenAuthenticator` 7건, `ProfileSetupViewModel` 7건, `MedicalMateSeverity` 7건, `HomeViewModel` 7건, `VisitNoteViewModel` 6건, `MyProfileViewModel` 5건, `ProgressIndicator` 4건, `PretendardFont` 4건, `HomeSchedule` 4건, `SegmentedControl` 3건, 템플릿 1개 |
 | 네비게이션 테스트 | 없음. `NavHost`는 계측 테스트가 필요하고 CI가 androidTest를 실행하지 않음 |
 | 아키텍처 패턴 | MVVM 확정. UseCase는 필요할 때만 |
 | DI | Hilt 확정 |
@@ -485,8 +485,8 @@ com.mist.medicalmate/
 | 진료과 안내 | 없다. 응답(`docs/examples/body-map.json`)이 부위별 진료과를 함께 주지만 화면에 넣지 않았고, 픽스처에도 담지 않았다. 넣게 되면 응답에서 다시 가져온다 |
 | 부위 이름 조사 | 물음의 주격 조사를 문자열 리소스에 박지 않는다. 부위가 25가지라 `%1$s가`로 고정하면 "무릎가"가 된다. 문구는 리소스에, 조사는 `withSubjectParticle`이 계산해 `IntakeUiState.bodyPartSubject`로 넘긴다 |
 | 브리핑 카드(1e·1f·1j-4) | 카드 읽기·전체 수정·진료실 화면과 카드 전체 목록(1j-4) 구현. 목록은 홈의 "전체 보기"에서 들어가고 편집으로 여러 장을 골라 지운다. 내용은 픽스처이고 AI 응답과 저장은 미연동 |
-| 진료 후 기록(1m·1p·1q·1k) | 네 화면 구현. 병원 검색·메모·자동 분류·정리. 내용은 픽스처이고 AI 분류와 저장은 미연동. 캘린더 일자의 "진료 후 기록하기"에서 들어간다 |
-| 기록·캘린더(1j·1r) | G·H 섹션 대조 완료(#121). 기록 목록·비어 있음·상세와 상세의 두 상태(카드 펼침 1j-3-X · 재방문 누적 1j-3-R), 목록 편집과 여러 건 삭제(1j-1-D·D2·DC), 캘린더 월·일자와 카드만 있는 날 시트(1r-1-S), 일정 추가 여덟 장(1r-4 계열), 일자 편집과 일정 삭제(1r-2-E·E2·DC), 다녀온 날과 다음 일정(1r-2-A·A2)까지 구현. 목록·상세·일정은 픽스처이고 저장은 미연동. `1r-2-C`는 `1r-1-S`와 같은 상황을 다르게 그려서 어느 쪽을 쓸지 확인 대기다 |
+| 진료 후 기록(1m·1p·1q·1k) | 네 화면 구현. 캘린더 일자의 "진료 후 기록하기"에서 들어간다. 1q-1의 저장이 `POST /api/cards/{cardId}/visit`이고, 그 요청에 들어갈 값(병원 이름·붙일 카드·원문 메모)이 라우트를 타고 1m → 1p → 1q-1로 따라간다. **AI 분류는 미연동이라 1q-1의 네 줄이 빈 채로 열린다.** 픽스처 문장을 넣어 두면 손대지 않고 저장했을 때 듣지 않은 소견이 서버에 남는다. 병원 검색은 여전히 픽스처(심평원 키 대기)이고 고른 이름만 서버로 간다. 1k 정리 화면도 픽스처 |
+| 기록·캘린더(1j·1r) | G·H 섹션 대조 완료(#121). 기록 목록·비어 있음·상세와 상세의 두 상태(카드 펼침 1j-3-X · 재방문 누적 1j-3-R), 목록 편집과 여러 건 삭제(1j-1-D·D2·DC), 캘린더 월·일자와 카드만 있는 날 시트(1r-1-S), 일정 추가 여덟 장(1r-4 계열), 일자 편집과 일정 삭제(1r-2-E·E2·DC), 다녀온 날과 다음 일정(1r-2-A·A2)까지 구현. 기록 목록은 `GET /api/me/visits`를 달로 묶고, 상세는 `GET /api/visits/{id}`다. **상세 타임라인이 한 단계다.** 응답이 진료에서 들은 것만 주고 카드 단계를 채우려면 그 카드를 따로 읽어야 한다. 여러 단계 타임라인은 Preview 픽스처에 남아 있고 `RecordDetailFixturesTest`가 그 모양을 지킨다. 목록 삭제와 일자 화면의 할 일·기록·다음 일정은 아직 서버에 나가지 않는다. `1r-2-C`는 `1r-1-S`와 같은 상황을 다르게 그려서 어느 쪽을 쓸지 확인 대기다 |
 | 하단 탭 | 기록·홈·캘린더 세 탭 연결 완료. 내 정보는 탭이 아니라 홈 헤더 아바타로 진입 |
 | 내 정보(1s) | 두 화면 구현. 프로필·건강 요약·설정 토글·로그아웃. 내용은 픽스처이고 설정과 건강 정보 저장은 미연동 |
 | 로그아웃 · 회원탈퇴 | 구현 완료. 1s-1 하단으로 옮김. 회원탈퇴는 시안에 자리가 없어 로그아웃 아래 텍스트로 뒀다 |

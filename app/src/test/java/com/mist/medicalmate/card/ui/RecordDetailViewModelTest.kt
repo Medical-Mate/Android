@@ -1,86 +1,117 @@
 package com.mist.medicalmate.card.ui
 
+import com.mist.medicalmate.core.network.ApiResult
+import com.mist.medicalmate.visit.data.FakeVisitRepository
+import com.mist.medicalmate.visit.data.Visit
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
+import java.time.LocalDate
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class RecordDetailViewModelTest {
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
     @Test
     fun `처음에는 불러오는 중이다`() {
-        assertEquals(RecordDetailUiState.Loading, RecordDetailViewModel().uiState.value)
+        assertEquals(RecordDetailUiState.Loading, viewModel().uiState.value)
     }
 
     @Test
-    fun `기록을 불러오면 타임라인이 시간순으로 나온다`() {
-        val detail = content("card-1").detail
-
-        assertEquals("복부 통증 · 3주", detail.title)
-        // 최신 날짜가 위다
-        assertEquals(
-            listOf(
-                "09.26 예정",
-                "09.12 · 진료 후 기록",
-                "09.04 작성 · 09.12 진료실에서 보여줌",
-            ),
-            detail.steps.map { it.at },
-        )
-    }
-
-    @Test
-    fun `모르는 id는 실패다`() {
-        val viewModel = RecordDetailViewModel()
+    fun `숫자가 아닌 id는 서버를 부르지 않고 실패다`() {
+        // 목록에서만 들어오는 경로라 지금은 나지 않는다. 지워진 기록의 링크가 이 자리다.
+        val repository = FakeVisitRepository()
+        val viewModel = RecordDetailViewModel(repository)
 
         viewModel.load("card-없음")
+
+        assertEquals(RecordDetailUiState.Failed, viewModel.uiState.value)
+        assertNull(repository.requestedId)
+    }
+
+    @Test
+    fun `불러오면 그 id로 읽는다`() {
+        val repository = FakeVisitRepository()
+
+        RecordDetailViewModel(repository).load("77")
+
+        assertEquals(77L, repository.requestedId)
+    }
+
+    @Test
+    fun `진료에서 들은 것이 한 단계로 나온다`() {
+        val detail = content(FULL).detail
+
+        assertEquals("서울OO병원 내과", detail.title)
+        assertEquals("2026.09.12 · 서울OO병원 내과", detail.clinicLine)
+        assertEquals(RecordItem.Status.CONFIRMED, detail.status)
+
+        val step = detail.steps.single() as RecordStep.Block
+        assertEquals("09.12 · 진료 후 기록", step.at)
+        assertEquals("진료에서 들은 것", step.title)
+        assertEquals(listOf("한 것", "결과", "처방"), step.items.map { it.key })
+        assertEquals(listOf("혈액검사", "위염 초기", "2주분"), step.items.map { it.value })
+    }
+
+    @Test
+    fun `원문은 인용으로 따로 남는다`() {
+        // AI가 나눈 것과 환자가 말한 것을 가르는 자리다.
+        val step = content(FULL).detail.steps.single() as RecordStep.Block
+
+        assertEquals("내가 적은 그대로", step.quote?.label)
+        assertEquals("배가 아파서 갔더니 위염이래요", step.quote?.text)
+    }
+
+    @Test
+    fun `값이 없는 줄은 만들지 않는다`() {
+        val step = content(FULL.copy(result = null, prescription = "  ")).detail.steps.single() as RecordStep.Block
+
+        assertEquals(listOf("한 것"), step.items.map { it.key })
+    }
+
+    @Test
+    fun `원문이 없으면 인용을 넣지 않는다`() {
+        val step = content(FULL.copy(rawNote = null)).detail.steps.single() as RecordStep.Block
+
+        assertNull(step.quote)
+    }
+
+    @Test
+    fun `날짜가 없으면 병원만 적는다`() {
+        val detail = content(FULL.copy(visitedOn = null)).detail
+
+        assertEquals("서울OO병원 내과", detail.clinicLine)
+        assertEquals(" · 진료 후 기록", (detail.steps.single() as RecordStep.Block).at)
+    }
+
+    @Test
+    fun `읽지 못하면 실패다`() {
+        val viewModel = RecordDetailViewModel(FakeVisitRepository(detail = FakeVisitRepository.OFFLINE))
+
+        viewModel.load("77")
 
         assertEquals(RecordDetailUiState.Failed, viewModel.uiState.value)
     }
 
     @Test
-    fun `목록의 네 건이 모두 열린다`() {
-        val ids = previewRecordGroups.flatMap { group -> group.items.map { it.id } }
-
-        ids.forEach { id ->
-            val viewModel = RecordDetailViewModel()
-            viewModel.load(id)
-            assertTrue(id, viewModel.uiState.value is RecordDetailUiState.Content)
-        }
-    }
-
-    @Test
-    fun `상세의 상태와 제목은 목록과 같다`() {
-        val items = previewRecordGroups.flatMap { it.items }
-
-        items.forEach { item ->
-            val detail = content(item.id).detail
-            assertEquals(item.id, item.title, detail.title)
-            assertEquals(item.id, item.status, detail.status)
-        }
-    }
-
-    @Test
-    fun `브리핑 카드 단계만 펼 수 있다`() {
-        val steps = content("card-1").detail.steps.filterIsInstance<RecordStep.Block>()
-
-        assertEquals(listOf("브리핑 카드"), steps.filter { it.card != null }.map { it.title })
-        assertTrue(steps.filter { it.title != "브리핑 카드" }.all { it.card == null })
-    }
-
-    @Test
-    fun `접혀 있을 때는 앞 세 줄만 보인다`() {
-        val card = content("card-1").detail.steps
-            .filterIsInstance<RecordStep.Block>()
-            .first { it.card != null }
-
-        assertEquals(5, card.items.size)
-        assertEquals(3, card.card?.collapsedItemCount)
-        assertEquals(listOf("부위", "기간", "양상"), card.items.take(3).map { it.key })
-    }
-
-    @Test
     fun `펼침은 자리마다 따로 켜고 끈다`() {
-        val viewModel = RecordDetailViewModel()
-        viewModel.load("card-1")
+        val viewModel = viewModel()
+        viewModel.load("77")
 
         viewModel.onExpandToggle(2)
         assertEquals(setOf(2), viewModel.expandedSteps.value)
@@ -94,97 +125,47 @@ class RecordDetailViewModelTest {
 
     @Test
     fun `다른 건을 열면 펼친 것이 접힌다`() {
-        val viewModel = RecordDetailViewModel()
-        viewModel.load("card-1")
+        val viewModel = viewModel()
+        viewModel.load("77")
         viewModel.onExpandToggle(2)
 
-        viewModel.load("card-0")
+        viewModel.load("78")
 
         assertEquals(emptySet<Int>(), viewModel.expandedSteps.value)
     }
 
     @Test
-    fun `재방문까지 간 건은 배지와 병원 줄이 다르다`() {
-        val detail = content("card-4").detail
-
-        assertEquals("진료 2회", detail.badge)
-        assertEquals("서울OO병원 내과 · 09.12 초진 · 09.26 재방문", detail.clinicLine)
-        assertEquals(
-            listOf("진료 후 기록", "진료 후 기록", "브리핑 카드"),
-            detail.steps.filterIsInstance<RecordStep.Block>().map { it.title },
-        )
-    }
-
-    @Test
-    fun `재방문 건에는 예정 단계가 없다`() {
-        val steps = content("card-4").detail.steps
-
-        assertTrue(steps.none { it is RecordStep.Pending })
-    }
-
-    @Test
-    fun `진료 전 건은 첫 단계가 예정이다`() {
-        val steps = content("card-2").detail.steps
-
-        // 최신순이라 아직 오지 않은 일이 맨 위다
-        assertTrue(steps.first() is RecordStep.Pending)
-        assertEquals(1, steps.count { it is RecordStep.Pending })
-    }
-
-    @Test
-    fun `타임라인에 증상 정리 단계를 넣지 않는다`() {
-        val titles =
-            previewRecordGroups
-                .flatMap { it.items }
-                .flatMap { content(it.id).detail.steps.filterIsInstance<RecordStep.Block>() }
-                .map { it.title }
-
-        assertEquals(emptyList<String>(), titles.filter { it == "내가 입력한 증상" })
-        assertEquals(setOf("브리핑 카드", "진료 후 기록"), titles.toSet())
-    }
-
-    @Test
-    fun `작성 중인 건은 예정 한 단계뿐이다`() {
-        val steps = content("card-3").detail.steps
-
-        assertEquals(1, steps.size)
-        assertTrue(steps.single() is RecordStep.Pending)
-    }
-
-    @Test
-    fun `재방문이 없는 건은 예정 단계가 없다`() {
-        val steps = content("card-0").detail.steps
-
-        assertNull(steps.firstOrNull { it is RecordStep.Pending })
-    }
-
-    @Test
-    fun `알러지는 카드를 펼쳤을 때 경고 블록으로 나온다`() {
-        val card = content("card-1").detail.steps
-            .filterIsInstance<RecordStep.Block>()
-            .first { it.card != null }
-            .card
-
-        // 시안 1j-3-X가 알러지를 KV 줄이 아니라 노란 경고 블록으로 그린다. 줄로 두면
-        // 다른 값과 같은 무게가 되고, 처방 전에 꼭 봐야 하는 값이 묻힌다.
-        assertEquals(listOf("페니실린"), card?.allergies)
-        assertTrue(card?.severity != null)
-    }
-
-    @Test
     fun `다시 불러와도 같은 기록이 나온다`() {
-        val viewModel = RecordDetailViewModel()
+        val viewModel = viewModel()
 
-        viewModel.load("card-1")
+        viewModel.load("77")
         val first = viewModel.uiState.value
-        viewModel.load("card-1")
+        viewModel.load("77")
 
         assertEquals(first, viewModel.uiState.value)
     }
 
-    private fun content(recordId: String): RecordDetailUiState.Content {
-        val viewModel = RecordDetailViewModel()
-        viewModel.load(recordId)
+    private fun viewModel(visit: Visit? = null) = RecordDetailViewModel(
+        FakeVisitRepository(detail = visit?.let { ApiResult.Success(it) } ?: ApiResult.Success(FULL)),
+    )
+
+    private fun content(visit: Visit): RecordDetailUiState.Content {
+        val viewModel = viewModel(visit)
+        viewModel.load("77")
         return viewModel.uiState.value as RecordDetailUiState.Content
+    }
+
+    private companion object {
+        val FULL =
+            Visit(
+                id = "77",
+                cardId = 3,
+                clinic = "서울OO병원 내과",
+                visitedOn = LocalDate.of(2026, 9, 12),
+                whatWasDone = "혈액검사",
+                result = "위염 초기",
+                prescription = "2주분",
+                rawNote = "배가 아파서 갔더니 위염이래요",
+            )
     }
 }

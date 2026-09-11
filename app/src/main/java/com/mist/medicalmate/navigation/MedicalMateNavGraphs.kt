@@ -143,7 +143,8 @@ internal fun NavGraphBuilder.calendarDestinations(navController: NavHostControll
     )
     calendarDayDestination(
         onCardOpen = { cardId -> navController.navigate(BriefCardDestination(cardId)) },
-        onRecordAdd = { navController.navigate(HospitalPickDestination()) },
+        // 이 날 일정에 걸린 카드에 기록이 붙는다. 서버가 카드 하나에 기록 하나를 받는다.
+        onRecordAdd = { cardId -> navController.navigate(HospitalPickDestination(cardId = cardId)) },
         onRecordOpen = { recordId -> navController.navigate(RecordDetailDestination(recordId)) },
         // 1r-2-A의 다음 일정이 시간만 비어 있는 상태다. 확정하러 가면 병원이 이미 채워진
         // 일정 추가(1r-4-B)가 열린다.
@@ -163,7 +164,10 @@ internal fun NavGraphBuilder.calendarDestinations(navController: NavHostControll
 
 internal fun NavGraphBuilder.visitDestinations(navController: NavHostController) {
     hospitalPickDestination(
-        onPicked = { hospitalId -> navController.navigate(VisitNoteDestination(hospitalId)) },
+        // 진료 후(1m). 고른 병원 이름과 붙일 카드를 메모 화면으로 넘긴다.
+        onPicked = { cardId, hospital ->
+            navController.navigate(VisitNoteDestination(clinic = hospital.name, cardId = cardId))
+        },
         // 진료 전(1m-B)에서 카드로. cardId가 있으면 카드의 `변경`에서 온 것이라 고른
         // 병원만 남기고 그 카드로 돌아간다. 엔트리를 갈아치우면 그 화면이 편집 중이던 값을
         // 잃는다. cardId가 없으면 문답을 마치고 온 것이라 새 카드를 연다.
@@ -191,11 +195,14 @@ internal fun NavGraphBuilder.visitDestinations(navController: NavHostController)
         onExit = { navController.popBackStack() },
     )
     visitNoteDestination(
-        onSaved = { navController.navigate(VisitRecordDestination(hospitalId = NEW_VISIT_ID)) },
+        onSaved = { clinic, cardId, note ->
+            navController.navigate(VisitRecordDestination(clinic = clinic, cardId = cardId, note = note))
+        },
         onExit = { navController.popBackStack() },
     )
     visitRecordDestination(
-        onSaved = { navController.navigate(VisitSummaryDestination(visitId = NEW_VISIT_ID)) },
+        // 저장이 끝난 뒤라 서버가 매긴 기록 id가 있다.
+        onSaved = { visitId -> navController.navigate(VisitSummaryDestination(visitId = visitId)) },
         // 지운 기록의 화면에 남을 수 없다. 한 단계만 pop하면 방금 적은 메모 화면(1p)으로
         // 돌아가는데, 거기서 저장하면 지운 것을 다시 만든다. 그래서 흐름이 시작된 캘린더
         // 일자까지 되돌린다.
@@ -243,4 +250,3 @@ private const val NEW_CARD_ID = "new"
  *
  * 메모를 저장하면 서버가 방문을 만들고 그 id를 준다. 그 호출이 아직 없어서 자리만 채운다.
  */
-private const val NEW_VISIT_ID = "new"

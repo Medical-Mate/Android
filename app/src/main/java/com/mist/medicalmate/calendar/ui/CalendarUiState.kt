@@ -92,7 +92,15 @@ data class CalendarDayUiState(
  * [status]는 다녀온 뒤에 없다. 진료 전에는 "진료 전"처럼 언제 쓸 카드인지가 배지로 붙는데,
  * 끝난 뒤에는 알릴 상태가 없고 언제 보여줬는지가 [meta]로 간다.
  */
-data class DayCard(val id: String, val title: String, val meta: String, val status: String? = null)
+/**
+ * 그 날 일정에 걸린 카드.
+ *
+ * [id]는 서버 카드 id다. 눌러서 카드로 가는 길이고, "진료 후 기록하기"가 기록을 붙이는
+ * 자리이기도 하다. 서버가 확정한 카드 하나에 기록 하나를 받는다.
+ *
+ * [meta]와 [status]는 일정 응답에 없다. 카드를 따로 읽어야 나오는 값이라 비어 있을 수 있다.
+ */
+data class DayCard(val id: String, val title: String, val meta: String? = null, val status: String? = null)
 
 /** 진료 전 할 일 한 줄. */
 data class DayTodo(val id: String, val label: String, val done: Boolean)

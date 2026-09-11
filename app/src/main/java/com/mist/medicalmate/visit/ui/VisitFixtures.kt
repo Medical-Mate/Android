@@ -46,6 +46,7 @@ internal const val PREVIEW_VISIT_NOTE =
 internal val previewVisitRecord =
     VisitRecord(
         id = "visit-1",
+        clinic = "서울OO병원 내과",
         clinicLine = "서울OO병원 내과 · 2026.09.12",
         items =
         listOf(
