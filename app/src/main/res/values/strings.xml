@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">진료메이트</string>
 
-    <!-- Figma 1o(397:1192)의 Hero 문구. 제목과 설명 모두 두 줄이다. -->
+    <!-- Figma V2 · 로그인(1320:4558)의 Hero 문구. 제목과 설명 모두 두 줄이다. -->
     <string name="login_title">진료실에서 하고 싶은 말,\n미리 정리해요</string>
     <string name="login_subtitle">증상을 기억하지 못해도, 말이 잘 안 나와도 괜찮아요.\nAI와 대화하면 진료 전에 정리해드려요.</string>
     <!--
@@ -274,10 +274,9 @@
     <string name="intake_questions_count">%1$d개</string>
     <string name="intake_questions_remove">%1$d번째 질문 지우기</string>
 
-    <!-- Figma 1a-1(397:1179) 스플래시. -->
+    <!-- Figma V2 · 스플래시(1320:4553). -->
     <string name="splash_tagline">진료실에서 하고 싶은 말, 미리 정리해요</string>
 
-    <!-- Figma A2 온보딩(1157:4246~4249). 로그인 뒤 네 장이다. -->
     <!--
       Figma V2-00(1320:4570)~V2-03(1320:4675) 온보딩. 시안이 v1 네 장을 걷어내고 다시
       썼다. 장 위의 작은 말과 첫 장의 단계 셋이 없어져 그 문자열도 함께 지웠다.
