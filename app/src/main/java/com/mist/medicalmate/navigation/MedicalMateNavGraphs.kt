@@ -145,6 +145,9 @@ internal fun NavGraphBuilder.calendarDestinations(navController: NavHostControll
         onCardOpen = { cardId -> navController.navigate(BriefCardDestination(cardId)) },
         onRecordAdd = { navController.navigate(HospitalPickDestination()) },
         onRecordOpen = { recordId -> navController.navigate(RecordDetailDestination(recordId)) },
+        // 1r-2-A의 다음 일정이 시간만 비어 있는 상태다. 확정하러 가면 병원이 이미 채워진
+        // 일정 추가(1r-4-B)가 열린다.
+        onScheduleConfirm = { clinic -> navController.navigate(ScheduleAddDestination(hospitalName = clinic)) },
         onExit = { navController.popBackStack() },
     )
     scheduleAddDestination(
