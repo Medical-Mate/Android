@@ -111,16 +111,19 @@ private fun HomeResponse.upcoming(at: OffsetDateTime?): List<HomeSchedule> = lis
     },
 )
 
-/** 병원 이름은 확정 전 카드에 없다. */
+/**
+ * 병원 이름은 진료를 마쳤어도 비어 있을 수 있다. 선택 입력이라서다.
+ *
+ * `status`를 쓰지 않는다. 카드를 확정했는지와 진료를 다녀왔는지는 다른 축이고, "진료 완료"
+ * 배지는 `visited`로 판단하라고 문서가 적었다.
+ */
 private fun CardSummaryResponse.toSummary() = SavedCardSummary(
     id = cardId.toString(),
     title = title.orEmpty(),
-    status = if (status == CARD_CONFIRMED) SavedCardSummary.Status.CONFIRMED else SavedCardSummary.Status.DRAFT,
+    visited = visited,
     writtenOn = OffsetDateTime.parse(createdAt).toLocalDate(),
     clinic = clinicName,
 )
-
-private const val CARD_CONFIRMED = "CONFIRMED"
 
 /**
  * 시안의 "오전 10:30".

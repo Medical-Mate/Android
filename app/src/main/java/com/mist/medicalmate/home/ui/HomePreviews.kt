@@ -46,14 +46,14 @@ private val previewContent =
             SavedCardSummary(
                 id = "card-1",
                 title = "복부 통증 · 3주",
-                status = SavedCardSummary.Status.CONFIRMED,
+                visited = true,
                 writtenOn = LocalDate.of(2026, 9, 4),
                 clinic = "서울OO병원 내과",
             ),
             SavedCardSummary(
                 id = "card-2",
                 title = "두통 · 잦은 어지러움",
-                status = SavedCardSummary.Status.DRAFT,
+                visited = false,
                 writtenOn = LocalDate.of(2026, 8, 21),
                 clinic = null,
             ),

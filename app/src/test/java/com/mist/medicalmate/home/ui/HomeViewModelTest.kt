@@ -136,7 +136,7 @@ class HomeViewModelTest {
                     SavedCardSummary(
                         id = "1",
                         title = "복부 통증 · 3주",
-                        status = SavedCardSummary.Status.CONFIRMED,
+                        visited = true,
                         writtenOn = LocalDate.of(2026, 9, 4),
                         clinic = "서울OO병원 내과",
                     ),
