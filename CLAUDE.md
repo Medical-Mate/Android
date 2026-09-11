@@ -132,7 +132,7 @@ MedicalMate/
 │       │   │   └── network/               Retrofit·OkHttp 설정, ApiResult
 │       │   ├── navigation/                단일 NavHost, 도메인별 그래프 등록, 세션 경계
 │       │   ├── auth/  data/ ui/           1o 로그인, 1a-1 스플래시, 세션 복구
-│       │   ├── profile/  data/ ui/        1a-2 온보딩, 1b 신상정보, 1s 내 정보, 계정 동작
+│       │   ├── profile/  data/ ui/        ONB 온보딩, 1b 신상정보, 1s 내 정보, 계정 동작
 │       │   ├── intake/  ui/               1l 인체도, 1c·1d·1i 증상 정리
 │       │   ├── card/  ui/                 1e 브리핑 카드, 1f 진료실 화면, 1j 기록
 │       │   ├── calendar/  ui/             1r 캘린더
@@ -303,7 +303,7 @@ com.mist.medicalmate/
 ├── navigation/
 ├── auth/      ui/ data/    1o 로그인
 ├── home/      ui/ data/    1n 홈
-├── profile/   ui/ data/    1a 1b 온보딩
+├── profile/   ui/ data/    ONB 온보딩, 1b 신상정보, 1s 내 정보
 ├── intake/    ui/ data/    1l 1c 1d 1i 문답
 ├── card/      ui/ data/    1e 브리핑 카드, 1j 기록
 ├── calendar/  ui/           1r 캘린더
@@ -450,19 +450,19 @@ com.mist.medicalmate/
 
 | 항목 | 상태 |
 | -- | -- |
-| 유닛 테스트 | `IntakeViewModel` 27건, `SessionViewModel` 23건, `BodyMapGeometry` 17건, `BriefCardViewModel` 16건, `VisitRecordViewModel` 16건, `HospitalPickViewModel` 15건, `LoginViewModel` 13건, `ScheduleAddViewModel` 13건, `CalendarViewModel` 12건, `RecordDetailViewModel` 12건, `DesignToken` 12건, `HealthEditViewModel` 11건, `BodyMapLayout` 10건, `HomeViewModel` 9건, `MedicalMateSeverity` 7건, `ProfileSetupViewModel` 7건, `TokenAuthenticator` 7건, `VisitNoteViewModel` 6건, `MyProfileViewModel` 5건, `HomeSchedule` 4건, `PretendardFont` 4건, `ProgressIndicator` 4건, `SegmentedControl` 3건, 템플릿 1개 |
+| 유닛 테스트 | `IntakeViewModel` 27건, `SessionViewModel` 23건, `RecordDetailViewModel` 17건, `BodyMapGeometry` 17건, `VisitRecordViewModel` 16건, `BriefCardViewModel` 16건, `HospitalPickViewModel` 15건, `CalendarViewModel` 15건, `BriefCardListViewModel` 14건, `ScheduleAddViewModel` 13건, `RecordViewModel` 13건, `LoginViewModel` 13건, `DesignToken` 12건, `HealthEditViewModel` 11건, `CalendarDayViewModel` 11건, `BodyMapLayout` 10건, `HomeViewModel` 9건, `TokenAuthenticator` 7건, `ProfileSetupViewModel` 7건, `MedicalMateSeverity` 7건, `VisitNoteViewModel` 6건, `MyProfileViewModel` 5건, `ProgressIndicator` 4건, `PretendardFont` 4건, `HomeSchedule` 4건, `SegmentedControl` 3건, 템플릿 1개 |
 | 네비게이션 테스트 | 없음. `NavHost`는 계측 테스트가 필요하고 CI가 androidTest를 실행하지 않음 |
 | 아키텍처 패턴 | MVVM 확정. UseCase는 필요할 때만 |
 | DI | Hilt 확정 |
 | 패키지 구조 | 기능 우선 확정. 도메인명은 Backend와 일치 |
-| 네비게이션 | Navigation Compose 2.10.0 확정. 단일 `NavHost` + 타입 세이프 라우트. 목적지 20개 |
+| 네비게이션 | Navigation Compose 2.10.0 확정. 단일 `NavHost` + 타입 세이프 라우트. 목적지 21개. 그래프 등록은 도메인별 확장 함수로 나눠 `MedicalMateNavGraphs.kt`에 있고 `NavHost` 파일에는 그래프 본체와 세션 경계 처리만 남는다 |
 | 화면 전환 | `MedicalMateNavHost`. `MainActivity`는 세션 확인 중 로딩만 담당 |
 | ViewModel 스코프 | 화면 ViewModel은 목적지 스코프. `SessionViewModel`만 Activity 스코프 |
 | 디자인 시스템 | DESIGN.md 3.0의 토큰·타이포·아이콘 반영 완료. 시맨틱 41개, 타이포 15종, 아이콘 46개(arrow-up 추가), 로고 4개, Pretendard 4무게. 3.0이 확정한 `layout/tabbar-h` 79와 Date Cell 42는 코드와 같다. Badge를 `Label/M`으로 적었던 2.0의 오기는 3.0에서 사라졌다 |
 | 컴포넌트 | 51종 구현. Figma 마스터 대응은 `COMPONENT_MAP.md`. `Severity Scale`은 Figma에서 마스터가 삭제돼 함께 지웠는데 3.0 문서에는 아직 남아 있다. 디자인 트랙 확인 필요 |
-| 컴포넌트 v2 | Figma `06 · 추가`가 9종을 v2로 재등록. KV Row·Tab Bar·Nav Bar·Date Cell·Text Field·Segmented Control 반영 완료. Text Area의 Footer Row(카운터·마이크), Toast의 Timer, List Row의 Summary는 모두 기본 false라 미구현. Ghost→Outline은 구현된 화면에서 해당 지점이 여전히 텍스트형이라 적용 대상 없음(F·H 플로우에서 화면별로 확인) |
-| 컴포넌트 3.0 신규 | 7종 구현(`Add Row` · `Todo Row` · `Picker Field` · `Card Pick` · `Hospital Card` · `Select Bar` · `Onboarding Progress`). 다섯이 화면에 붙었다. `Hospital Card`는 1e-1·1k, 나머지 넷은 1r-4다. `Select Bar`와 `Onboarding Progress`는 쓰는 화면이 없다. `Select Bar`는 시안이 1j-1-D·1j-4-D에서 프레임을 지워 갈 자리가 미정이다(#119). `Hospital Card`·`Card Pick`·`Select Bar` 마스터는 채움이 묶여 있지 않아 카드 둘은 `bg/surface`를 넣었고 `Select Bar`는 면 없이 뒀다. 디자인 트랙 확인 필요 |
-| CRUD 규칙 | 3.0이 장으로 확정. 편집 상태는 `편집 → 취소 → 확인` 한 자리에서 이름만 바뀌고, 삭제는 세 갈래(개체=하단 Danger CTA+Dialog / 항목=행 × 확인 없음 / 목록=체크 다중선택+Dialog)다. 토스트와 스와이프는 쓰지 않는다. 미반영이고 #92가 이 규칙을 쓴다 |
+| 컴포넌트 v2 | Figma `06 · 추가`가 9종을 v2로 재등록. KV Row·Tab Bar·Nav Bar·Date Cell·Text Field·Segmented Control 반영 완료. Text Area의 Footer Row(카운터·마이크)와 Toast의 Timer는 기본 false라 미구현. List Row의 Summary도 미구현인데 시안 `1j-1`의 줄이 104(Summary 있는 높이)라 이 자리가 그 변이일 수 있다. 지금 그 줄은 `Card`로 짜여 있고 어느 쪽이 맞는지가 확인 대기 항목이다. Ghost→Outline은 F·H 플로우를 대조한 결과 해당 지점이 여전히 텍스트형이라 적용 대상이 없다 |
+| 컴포넌트 3.0 신규 | 7종 모두 화면에 붙었다. `Hospital Card`는 1e-1·1k, `Picker Field`·`Card Pick`은 1r-4, `Add Row`는 1r-4, `Todo Row`는 1r-2·1r-4, `Select Bar`는 1j-4, `Onboarding Progress`는 ONB다. `Select Bar`의 면색은 마스터에 채움이 없었는데 `1j-4-D2` 인스턴스가 `#F2F4FE`로 칠해져 있어 `bg/primary-faint`로 넣었다. `Hospital Card`·`Card Pick` 마스터도 채움이 묶여 있지 않아 `bg/surface`를 넣었다. 디자인 트랙 확인 필요 |
+| CRUD 규칙 | 3.0이 장으로 확정. 편집 상태는 `편집 → 취소 → 확인` 한 자리에서 이름만 바뀌고, 삭제는 세 갈래(개체=하단 Danger CTA+Dialog / 항목=행 × 확인 없음 / 목록=체크 다중선택+Dialog)다. 토스트와 스와이프는 쓰지 않는다. 여섯 화면에 들어갔다. 1e-1·1q-1·1r-2가 편집 상태와 개체 삭제를, 1j-1·1j-4가 목록 삭제를, 1r-4가 항목 삭제를 쓴다 |
 | 반경 13 · 14 | 3.0이 둘 다 스케일 밖 값으로 잡고 `radius/sm` 12 · `radius/md` 16 통일안을 적었다. 코드의 `MedicalMateRadius.dateCell`(13)과 `buttonM`(14)이 그 값이다. Figma가 바뀌면 함께 바꾼다 |
 | Elevation/Card | Figma가 2겹(y3 r10 8% + y1 r2 5%)으로 바뀜. 코드는 `Modifier.shadow` 한 겹 근사 |
 | Body Map | 구현 완료(#51). `core/designsystem/component`가 아니라 `intake/ui`에 있다. 화면 하나에서만 쓰고 좌표표·이미지 9장이 딸려 있어서 디자인 시스템에 올리지 않았다 |
@@ -472,10 +472,10 @@ com.mist.medicalmate/
 | Search Field | 구현 완료(1m 병원 찾기에서 사용). 2.0 문서에 항목이 없어 Figma 마스터를 따랐고, 3.0이 항목을 올렸다 |
 | 로그인 화면(1o) | 카카오 버튼 + 서버 토큰 교환 구현 완료. 토큰 적용 완료 |
 | 홈 화면(1n) | Figma 1n-1·1n-2 반영. `HomeViewModel`이 픽스처를 노출. 서버 미연동 |
-| 진입 · 온보딩(1a) | 스플래시(1a-1)와 온보딩 인트로(1a-2) 구현 완료. **시안에서 `1a-2`가 없어지고 `A2 · 온보딩 High Fidelity v6`에 `ONB-00`~`ONB-03` 4장이 신설됐다.** 아직 프로토타입 단계라 시안이 더 다듬어진 뒤에 옮긴다. 지금 구현은 그대로 둔다. 스플래시는 최소 2초 노출, 세션 복구를 기다리는 상한은 6초. 상한을 넘기거나 연결이 없으면 `SessionUiState.RestoreFailed`로 로그인 화면에 보내고 카카오 버튼 위에 이유를 적는다. 시안에 없는 문구다. 상한을 넘기면 진행 중인 재발급 요청도 취소한다 |
+| 진입 · 온보딩(1a) | 스플래시(1a-1)와 온보딩 네 장(`ONB-00`~`ONB-03`) 구현 완료. 시안에서 `1a-2` 인트로 프레임이 삭제돼 그 화면(`OnboardingIntroScreen`)도 지웠다. 네 장이 한 목적지 안에서 넘어간다. 뒤로 갈 곳이 로그인이라 상단 바를 두지 않고 진행 표시만 둔다. 그림은 몸 그림만 Figma SVG를 옮긴 벡터이고(`img_onboarding_body`) 말풍선·작은 카드·타임라인은 Compose로 그린다. 일러스트 안에 한글이 있어 이미지로 굳으면 번역과 글꼴 배율을 따라가지 못한다. 스플래시는 최소 2초 노출, 세션 복구를 기다리는 상한은 6초. 상한을 넘기거나 연결이 없으면 `SessionUiState.RestoreFailed`로 로그인 화면에 보내고 카카오 버튼 위에 이유를 적는다. 시안에 없는 문구다. 상한을 넘기면 진행 중인 재발급 요청도 취소한다 |
 | 신상정보 입력(1b) | 1b-1~1b-3 화면과 1b-4 완료 모션, 홈 등록 완료 토스트까지 구현. **서버 저장 미연동** |
 | 증상 정리(1l·1c·1d·1i) | 네 단계 화면 구현. AI 응답과 음성 인식 미연동 |
-| 아픈 부위(1l) | 인체도 구현 완료. **시안이 `1c · 증상 문답 · 아픈부위 선택`(`1074:7302`, 360x847)으로 이름을 바꿔 재설계했다.** 앞뒤 전환이 세그먼트에서 판 위 아이콘 버튼으로, 하단이 CTA 하나에서 `선택한 부위로 계속하기` + `어디인지 잘 모르겠어요` 둘로, 설명이 "여러 곳을 눌러주세요"(다중 선택)로 바뀌었고 좌우 라벨 방향이 우리와 반대다. 전신·피부 칩과 목록 대안은 새 프레임에 없다. **지금 구현을 그대로 쓰기로 정했고 나중에 손댄다.** 다중 선택 여부와 좌우 라벨은 미결이다. 앞뒤 전환 · 앵커 9개 · 확대 후 구역 25개 · 팔·다리 좌우 반전 · 전신·피부 칩 · 진료과 안내 · 목록 대안. 부위 id는 AI 트랙의 온톨로지(`ANC:*` · `SUR:*`)를 쓰고 이름과 진료과는 `BodyMapOntologyFixture.kt`가 픽스처로 들고 있다. 서버 연동 시 그 파일만 지운다 |
+| 아픈 부위(1l) | 인체도 구현 완료. **시안에 이 화면의 프레임이 없다.** 옛 `1l-1`~`1l-3`도, 재설계본이라던 `1c · 증상 문답 · 아픈부위 선택`(`1074:7302`)도 지워졌고 '부위'라는 이름은 온보딩 `ONB-01`의 일러스트뿐이다. 흐름에서 빠진 것은 아니다. `1c-1`에 여전히 "짚은 부위" 텍스트가 있고 `1d`가 "복부가 얼마나 아프세요?"로 부위를 받아 쓴다. **지금 구현이 이 화면의 유일한 기준이므로 지우지 않는다.** 왜 프레임이 없는지 디자인 트랙 확인 필요. 앞뒤 전환 · 앵커 9개 · 확대 후 구역 25개 · 팔·다리 좌우 반전 · 전신·피부 칩 · 목록 대안까지 들어 있다. 부위 id는 AI 트랙의 온톨로지(`ANC:*` · `SUR:*`)를 쓰고 이름과 진료과는 `BodyMapOntologyFixture.kt`가 픽스처로 들고 있다. 서버 연동 시 그 파일만 지운다 |
 | 부위 선택 개수 | 한 곳만 고른다. 다중선택을 넣었다가 되돌렸다 |
 | 고른 부위 표시 | 상태를 `focus`(확대한 앵커)와 `selection`(고른 부위)으로 나눈다. 하나로 두면 구역을 고르는 순간 화면이 앵커 단계로 돌아가 고른 점도 고른 줄도 보이지 않는다. 확대 화면의 제목과 좌우 반전도 `focus`를 봐야 맞는다 |
 | 인체도 화면 배치 | 판이 505dp라 상태바·하단 버튼까지 빼면 판 위에 쓸 수 있는 높이가 131dp뿐이다. 앵커 화면에 설명 문구를 두지 않는 이유이고, 전신·피부 칩과 목록 전환을 한 줄에 합친 이유다. 이 둘을 판 아래에 두면 첫 화면에서 보이지 않고 다리 앵커가 하단 버튼 뒤로 들어간다 |
@@ -484,9 +484,9 @@ com.mist.medicalmate/
 | 목록에서 고르기 | 고르는 줄은 `MedicalMateRadio`다. 라디오가 역할과 선택 상태를 시맨틱에 실어 스크린 리더가 "선택됨"을 읽는다. 앵커 줄은 하위 목록으로 들어가는 이동이라 `List Row`이고, 그 안에서 고른 부위 이름을 보조 텍스트에 적는다 |
 | 진료과 안내 | 없다. 응답(`docs/examples/body-map.json`)이 부위별 진료과를 함께 주지만 화면에 넣지 않았고, 픽스처에도 담지 않았다. 넣게 되면 응답에서 다시 가져온다 |
 | 부위 이름 조사 | 물음의 주격 조사를 문자열 리소스에 박지 않는다. 부위가 25가지라 `%1$s가`로 고정하면 "무릎가"가 된다. 문구는 리소스에, 조사는 `withSubjectParticle`이 계산해 `IntakeUiState.bodyPartSubject`로 넘긴다 |
-| 브리핑 카드(1e·1f) | 카드 읽기·전체 수정·진료실 화면 구현. 카드 내용은 픽스처. AI 응답과 저장 미연동 |
+| 브리핑 카드(1e·1f·1j-4) | 카드 읽기·전체 수정·진료실 화면과 카드 전체 목록(1j-4) 구현. 목록은 홈의 "전체 보기"에서 들어가고 편집으로 여러 장을 골라 지운다. 내용은 픽스처이고 AI 응답과 저장은 미연동 |
 | 진료 후 기록(1m·1p·1q·1k) | 네 화면 구현. 병원 검색·메모·자동 분류·정리. 내용은 픽스처이고 AI 분류와 저장은 미연동. 캘린더 일자의 "진료 후 기록하기"에서 들어간다 |
-| 기록·캘린더(1j·1r) | 일곱 화면 구현. 목록에서 기록 상세(1j-3)로, 상세의 카드 열기에서 브리핑 카드로 이어짐. 카드만 있는 날은 월 화면에서 시트(1r-1-S)로 열린다. 일정 추가(1r-4)는 병원·날짜·시간·가져갈 카드·할 일을 받고 병원 필드는 1m-B로 나갔다 돌아온다. 목록·상세·일정은 픽스처이고 저장은 미연동. G 섹션 미구현 열한 장은 #121 |
+| 기록·캘린더(1j·1r) | G·H 섹션 대조 완료(#121). 기록 목록·비어 있음·상세와 상세의 두 상태(카드 펼침 1j-3-X · 재방문 누적 1j-3-R), 목록 편집과 여러 건 삭제(1j-1-D·D2·DC), 캘린더 월·일자와 카드만 있는 날 시트(1r-1-S), 일정 추가 여덟 장(1r-4 계열), 일자 편집과 일정 삭제(1r-2-E·E2·DC), 다녀온 날과 다음 일정(1r-2-A·A2)까지 구현. 목록·상세·일정은 픽스처이고 저장은 미연동. `1r-2-C`는 `1r-1-S`와 같은 상황을 다르게 그려서 어느 쪽을 쓸지 확인 대기다 |
 | 하단 탭 | 기록·홈·캘린더 세 탭 연결 완료. 내 정보는 탭이 아니라 홈 헤더 아바타로 진입 |
 | 내 정보(1s) | 두 화면 구현. 프로필·건강 요약·설정 토글·로그아웃. 내용은 픽스처이고 설정과 건강 정보 저장은 미연동 |
 | 로그아웃 · 회원탈퇴 | 구현 완료. 1s-1 하단으로 옮김. 회원탈퇴는 시안에 자리가 없어 로그아웃 아래 텍스트로 뒀다 |
@@ -497,7 +497,7 @@ com.mist.medicalmate/
 | 탈퇴 후 재가입 | 온보딩 기록을 지우지 않아 온보딩이 건너뛰어진다. 서버 `onboardingCompleted`가 정본이 되면 사라지는 문제 |
 | Apple · 전화번호 로그인 | 백엔드 미지원. `User` 엔티티 식별자가 `kakaoId` 단독 |
 | 카카오 말풍선 심볼 에셋 | 없음. 콘솔의 도구 > 리소스 다운로드에서 받아야 함 |
-| 디자인 캔버스 | 360dp 재단 완료(활성 화면 전부 360x812, 콘텐츠 320, 거터 20). 화면은 fill-width라 코드 영향은 토큰뿐이었다. `1e-2`·`1q-2`·`1f-1`은 시안에서 삭제됐다(`1f-1`은 흐름 주석에만 남아 있고 우리 `HandoffScreen`이 그 화면이다). `1l-1`~`1l-3`은 390으로 남아 D 섹션 밖에 있고, 재단본은 `1c · 증상 문답 · 아픈부위 선택`이다 |
+| 디자인 캔버스 | 360dp 재단 완료(활성 화면 전부 360x812, 콘텐츠 320, 거터 20). 화면은 fill-width라 코드 영향은 토큰뿐이었다. `1e-2`·`1q-2`·`1f-1`·`1a-2`·`1l-*`은 시안에서 삭제됐다(`1f-1`은 흐름 주석에만 남아 있고 우리 `HandoffScreen`이 그 화면이다) |
 | 소셜 로그인 버튼 규격 | 2.0 문서는 radius 16, 카카오 가이드는 12. 색은 가이드, 크기는 문서를 따름. 3.0은 반경을 적지 않는다 |
 | `mipmap-*` 래스터 아이콘 | 템플릿 그대로. API 24~25에서 쓰인다. Android Studio Image Asset으로 교체 필요 |
 | 오픈소스 고지 화면 | 없음. Pretendard가 OFL이라 스토어 배포 시 필요 |
@@ -506,6 +506,7 @@ com.mist.medicalmate/
 | 스크린샷 테스트 (Paparazzi/Roborazzi) | 미도입 |
 | E2E (Maestro) | 미도입 |
 | `scripts/verify.sh` | 미작성. 1장의 Gradle 명령을 직접 사용 |
+| 디자인 트랙 확인 대기 | 여섯 건이다. (1) 인체도 화면의 프레임이 시안에 없는 이유 (2) `Card`의 최소 높이 116과 시안 1j-1-D의 줄 높이 80 중 어느 쪽 (3) 선택 건수를 알리는 자리 — 1j-1은 하단 버튼 글자, 1j-4는 `Select Bar`까지 (4) 기록 상세 타임라인 차례 — `1j-3`은 오래된 것부터, `1j-3-R`은 최신부터인데 코드는 최신부터 (5) `1r-4` 상단 왼쪽이 ×인지 ‹인지 — 네 프레임 중 셋이 ×라 ×를 따랐다 (6) `1r-2-C`와 `1r-1-S` 중 어느 쪽. 목록은 #119와 #121에 있다 |
 | org 공통 문서 위치 | `GIT_CONVENTION.md`가 저장소별 사본으로 존재. 어긋나면 `.github` 저장소로 통합 필요 |
 
 `local.properties`는 `.gitignore` 대상입니다. 로컬에서는 Android SDK 경로가 필요하고, CI는
