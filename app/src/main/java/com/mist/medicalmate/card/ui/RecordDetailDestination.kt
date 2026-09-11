@@ -20,23 +20,17 @@ import kotlinx.serialization.Serializable
 internal data class RecordDetailDestination(val recordId: String)
 
 /**
- * [onBriefCardClick]은 단계 안의 "카드 열기"다.
+ * 나가는 길은 뒤로가기뿐이다.
  *
- * 시안의 다른 두 단계에도 여는 줄이 있지만 목적지가 없어 데이터에 넣지 않았다. 문답 전체
- * 보기는 1c-1이 지난 대화를 다시 보여주는 화면이 아니고(지금은 새 문답을 시작한다), 진료
- * 후 기록 화면(1q-1)은 F 플로우라 아직 없다. 눌러도 아무 일이 없는 줄을 두지 않았다(#79).
+ * 전에는 카드 단계에서 브리핑 카드 화면으로 건너갔다. 시안 1j-3-X가 그 자리에서 펴 보는
+ * 것으로 바꿔서 나갈 일이 없어졌다. 다른 두 단계의 여는 줄도 목적지가 없어 데이터에 넣지
+ * 않았다. 눌러도 아무 일이 없는 줄을 두지 않는다(#79).
  */
-internal fun NavGraphBuilder.recordDetailDestination(onBackClick: () -> Unit, onBriefCardClick: (String) -> Unit) {
+internal fun NavGraphBuilder.recordDetailDestination(onBackClick: () -> Unit) {
     composable<RecordDetailDestination> { entry ->
-        val recordId = entry.toRoute<RecordDetailDestination>().recordId
         RecordDetailRoute(
-            recordId = recordId,
+            recordId = entry.toRoute<RecordDetailDestination>().recordId,
             onBackClick = onBackClick,
-            onActionClick = { target ->
-                when (target) {
-                    RecordStepAction.Target.BRIEF_CARD -> onBriefCardClick(recordId)
-                }
-            },
         )
     }
 }
@@ -45,18 +39,19 @@ internal fun NavGraphBuilder.recordDetailDestination(onBackClick: () -> Unit, on
 private fun RecordDetailRoute(
     recordId: String,
     onBackClick: () -> Unit,
-    onActionClick: (RecordStepAction.Target) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: RecordDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val expandedSteps by viewModel.expandedSteps.collectAsStateWithLifecycle()
 
     LaunchedEffect(recordId) { viewModel.load(recordId) }
 
     RecordDetailScreen(
         state = state,
         onBackClick = onBackClick,
-        onActionClick = onActionClick,
+        expandedSteps = expandedSteps,
+        onExpandToggle = viewModel::onExpandToggle,
         onRetryClick = { viewModel.load(recordId) },
         modifier = modifier,
     )

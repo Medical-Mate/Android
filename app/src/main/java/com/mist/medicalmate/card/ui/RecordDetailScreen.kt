@@ -49,7 +49,8 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
 fun RecordDetailScreen(
     state: RecordDetailUiState,
     onBackClick: () -> Unit,
-    onActionClick: (RecordStepAction.Target) -> Unit,
+    expandedSteps: Set<Int>,
+    onExpandToggle: (Int) -> Unit,
     onRetryClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -72,13 +73,17 @@ fun RecordDetailScreen(
                 FailedContent(onRetryClick = onRetryClick, modifier = Modifier.weight(1f))
 
             is RecordDetailUiState.Content ->
-                DetailContent(detail = state.detail, onActionClick = onActionClick)
+                DetailContent(
+                    detail = state.detail,
+                    expandedSteps = expandedSteps,
+                    onExpandToggle = onExpandToggle,
+                )
         }
     }
 }
 
 @Composable
-private fun ColumnScope.DetailContent(detail: RecordDetail, onActionClick: (RecordStepAction.Target) -> Unit) {
+private fun ColumnScope.DetailContent(detail: RecordDetail, expandedSteps: Set<Int>, onExpandToggle: (Int) -> Unit) {
     Column(
         modifier =
         Modifier
@@ -93,7 +98,7 @@ private fun ColumnScope.DetailContent(detail: RecordDetail, onActionClick: (Reco
             ),
     ) {
         Head(detail)
-        Timeline(steps = detail.steps, onActionClick = onActionClick)
+        Timeline(steps = detail.steps, expandedSteps = expandedSteps, onExpandToggle = onExpandToggle)
     }
 }
 
@@ -113,7 +118,12 @@ private fun Head(detail: RecordDetail) {
                 style = MedicalMateTheme.typography.headingL,
                 color = MedicalMateTheme.colors.fgDefault,
             )
-            MedicalMateBadge(label = recordStatusLabel(detail.status), tone = recordStatusTone(detail.status))
+            MedicalMateBadge(
+                // 재방문이 쌓이면 "진료 완료" 대신 "진료 2회"가 온다. 몇 번인지는 상태가
+                // 아니라 세어 봐야 아는 값이라 데이터가 문장으로 준다.
+                label = detail.badge ?: recordStatusLabel(detail.status),
+                tone = recordStatusTone(detail.status),
+            )
         }
         Text(
             text = detail.clinicLine,
@@ -134,7 +144,7 @@ private fun Head(detail: RecordDetail) {
  * 높이에 따라 달라져 고정값으로 둘 수 없기 때문이다.
  */
 @Composable
-private fun Timeline(steps: List<RecordStep>, onActionClick: (RecordStepAction.Target) -> Unit) {
+private fun Timeline(steps: List<RecordStep>, expandedSteps: Set<Int>, onExpandToggle: (Int) -> Unit) {
     val railColor = MedicalMateTheme.colors.borderSubtle
     Column(modifier = Modifier.fillMaxWidth()) {
         steps.forEachIndexed { index, step ->
@@ -150,7 +160,12 @@ private fun Timeline(steps: List<RecordStep>, onActionClick: (RecordStepAction.T
                 WhenRow(step)
                 Box(modifier = Modifier.padding(start = IndentStart)) {
                     when (step) {
-                        is RecordStep.Block -> RecordStepBlock(step = step, onActionClick = onActionClick)
+                        is RecordStep.Block ->
+                            RecordStepBlock(
+                                step = step,
+                                expanded = index in expandedSteps,
+                                onExpandToggle = { onExpandToggle(index) },
+                            )
                         is RecordStep.Pending -> RecordStepPending(step)
                     }
                 }
@@ -237,6 +252,36 @@ private val RailTop = 9.dp
 /** 점과 세로선 오른쪽에서 블록이 시작하는 자리. */
 private val IndentStart = 20.dp
 
+/** 1j-3-X. 브리핑 카드를 펼친 상태다. */
+@MedicalMateScreenPreviews
+@Composable
+private fun RecordDetailExpandedPreview() {
+    MedicalMateTheme {
+        RecordDetailScreen(
+            state = RecordDetailUiState.Content(previewRecordDetail),
+            onBackClick = {},
+            expandedSteps = setOf(2),
+            onExpandToggle = {},
+            onRetryClick = {},
+        )
+    }
+}
+
+/** 1j-3-R. 재방문까지 다녀와 진료 후 기록이 둘인 상태다. */
+@MedicalMateScreenPreviews
+@Composable
+private fun RecordDetailRevisitedPreview() {
+    MedicalMateTheme {
+        RecordDetailScreen(
+            state = RecordDetailUiState.Content(recordDetailFixtures.getValue("card-4")),
+            onBackClick = {},
+            expandedSteps = emptySet(),
+            onExpandToggle = {},
+            onRetryClick = {},
+        )
+    }
+}
+
 @MedicalMateScreenPreviews
 @Composable
 private fun RecordDetailScreenPreview() {
@@ -244,7 +289,8 @@ private fun RecordDetailScreenPreview() {
         RecordDetailScreen(
             state = RecordDetailUiState.Content(detail = previewRecordDetail),
             onBackClick = {},
-            onActionClick = {},
+            expandedSteps = emptySet(),
+            onExpandToggle = {},
             onRetryClick = {},
         )
     }
