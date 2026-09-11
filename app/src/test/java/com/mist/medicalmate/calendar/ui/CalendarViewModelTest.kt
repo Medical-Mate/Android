@@ -22,7 +22,7 @@ class CalendarViewModelTest {
     fun `일정이 있는 날에 점이 찍힌다`() {
         val state = CalendarViewModel().uiState.value
 
-        assertEquals(setOf(4), state.recordDays)
+        assertEquals(setOf(2, 4), state.recordDays)
         assertEquals(setOf(12, 26), state.plannedDays)
     }
 
@@ -100,6 +100,32 @@ class CalendarViewModelTest {
         viewModel.onDaySelect(LocalDate.of(2026, 9, 13))
 
         assertNull(viewModel.uiState.value.cardSheet)
+    }
+
+    @Test
+    fun `다녀온 날은 할 일이 없고 기록과 다음 일정이 붙는다`() {
+        // 진료일이 지난 시점을 만들 수 없어(오늘은 기기가 준다) 픽스처 상태로 확인한다.
+        val day = previewCalendarDayVisitedState
+
+        assertTrue(day.visited)
+        assertEquals(emptyList<DayTodo>(), day.todos)
+        assertEquals("진료 후 기록", day.record?.title)
+        assertEquals("9월 26일 (토)", day.nextEvent?.chip)
+        assertNull(day.nextEvent?.at)
+    }
+
+    @Test
+    fun `다녀온 날의 카드에는 배지가 없다`() {
+        assertNull(previewCalendarDayVisitedState.card?.status)
+        assertEquals("진료 전", previewCalendarDayState.card?.status)
+    }
+
+    @Test
+    fun `다음 일정이 확정되면 칩과 시간이 바뀐다`() {
+        val next = previewCalendarDayConfirmedState.nextEvent
+
+        assertEquals("D-14", next?.chip)
+        assertEquals("9월 26일 (토) 오전 10:30", next?.at)
     }
 
     @Test
