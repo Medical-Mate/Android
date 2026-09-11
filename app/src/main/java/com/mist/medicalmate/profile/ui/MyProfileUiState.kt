@@ -2,6 +2,7 @@ package com.mist.medicalmate.profile.ui
 
 import androidx.annotation.StringRes
 import com.mist.medicalmate.R
+import com.mist.medicalmate.profile.data.HealthField
 
 /**
  * 내 정보 화면의 상태. Figma 1s-1 `407:2375`.
@@ -29,8 +30,17 @@ data class MyProfileUiState(
  */
 data class MyProfile(val initial: String, val name: String, val meta: String, val login: String)
 
-/** 건강 정보 요약 3줄. 값이 없으면 "없음"이 오고, 그 문구도 서버가 정한다. */
-data class HealthSummary(val medications: String, val conditions: String, val allergies: String)
+/**
+ * 건강 정보 요약 3줄.
+ *
+ * 문구가 아니라 값을 담는다. "없어요"와 "잘 모르겠어요"는 문자열 리소스에 있고 화면이
+ * 고른다. 상태가 문구를 들면 지금이 어느 상태인지 코드가 알 수 없다.
+ */
+data class HealthSummary(
+    val medications: HealthField = HealthField(),
+    val conditions: HealthField = HealthField(),
+    val allergies: HealthField = HealthField(),
+)
 
 /**
  * 설정 토글.
@@ -59,6 +69,10 @@ data class HealthEditUiState(
     val extras: Map<ProfileSetupStep, List<String>> = emptyMap(),
     val adding: ProfileSetupStep? = null,
     val draft: String = "",
+    val loading: Boolean = false,
+    val saving: Boolean = false,
+    /** 저장이 안 된 채로 저장하기를 눌렀는지. 하단에 한 줄이 붙는다. 시안에 없는 문구다. */
+    val saveFailed: Boolean = false,
 ) {
     fun chosenIn(step: ProfileSetupStep): Set<String> = chosen[step].orEmpty()
 

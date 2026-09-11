@@ -33,6 +33,8 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
 import com.mist.medicalmate.core.designsystem.component.MedicalMateToggle
+import com.mist.medicalmate.profile.data.HealthField
+import com.mist.medicalmate.profile.data.HealthStatus
 
 /**
  * 와이어프레임 1s-1. Figma `407:2375`.
@@ -158,18 +160,32 @@ private fun HealthCard(health: HealthSummary) {
     RowCard {
         MedicalMateKvRow(
             key = stringResource(R.string.my_profile_health_medications),
-            value = health.medications,
+            value = summaryText(health.medications),
         )
         MedicalMateKvRow(
             key = stringResource(R.string.my_profile_health_conditions),
-            value = health.conditions,
+            value = summaryText(health.conditions),
         )
         MedicalMateKvRow(
             key = stringResource(R.string.my_profile_health_allergies),
-            value = health.allergies,
+            value = summaryText(health.allergies),
             type = MedicalMateKvRowType.LINK,
         )
     }
+}
+
+/**
+ * 요약 한 줄의 문구.
+ *
+ * 적어 둔 것이 없을 때 "없어요"와 "잘 모르겠어요"를 가른다. 알러지에서 둘은 처방이
+ * 달라지는 값이라 같은 말로 뭉뚱그리면 안 된다. 지금 화면에는 "없어요"를 말할 자리가
+ * 없어서 서버가 그렇게 들고 있을 때만 나온다(#150).
+ */
+@Composable
+private fun summaryText(field: HealthField): String = when (field.status) {
+    HealthStatus.KNOWN -> field.items.joinToString(" · ")
+    HealthStatus.NONE -> stringResource(R.string.my_profile_health_none)
+    HealthStatus.UNKNOWN -> stringResource(R.string.my_profile_health_unknown)
 }
 
 /**

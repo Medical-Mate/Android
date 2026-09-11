@@ -56,8 +56,11 @@ enum class ProfileSetupStep(
 /**
  * 한 단계의 답.
  *
- * 없다고 답한 것을 따로 두지 않는다. 고를 것이 없으면 아무것도 고르지 않고 넘어가고, 빈
- * 답이 곧 없다는 뜻이다. 서버에 보낼 때도 빈 목록으로 나간다.
+ * 없다고 답한 것을 따로 두지 않는다. 고를 것이 없으면 아무것도 고르지 않고 넘어간다.
+ *
+ * **빈 답을 "없다"로 보내지 않는다.** 서버는 `NONE`("없다")과 `UNKNOWN`("모른다")을 가르는데
+ * 아무것도 고르지 않고 넘어간 것이 둘 중 어느 쪽인지 화면이 알 수 없다. 그래서 빈 답은
+ * 모른다로 나간다. 자세한 사정은 `HealthField`에 적었다.
  */
 data class ProfileSetupAnswer(val chosen: Set<String> = emptySet(), val note: String = "")
 
@@ -71,6 +74,14 @@ data class ProfileSetupUiState(
     val step: ProfileSetupStep = ProfileSetupStep.MEDICATIONS,
     val answers: Map<ProfileSetupStep, ProfileSetupAnswer> = emptyMap(),
     val completed: Boolean = false,
+    val saving: Boolean = false,
+    /**
+     * 저장이 안 된 채로 완료를 눌렀는지.
+     *
+     * 다음 단계가 없는 화면이라 조용히 실패하면 버튼이 죽은 것처럼 보인다. 하단에 한 줄을
+     * 띄워 다시 누를 수 있다는 것을 알린다. 시안에 없는 문구다.
+     */
+    val saveFailed: Boolean = false,
 ) {
     val answer: ProfileSetupAnswer get() = answers[step] ?: ProfileSetupAnswer()
 

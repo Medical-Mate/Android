@@ -26,6 +26,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonType
 import com.mist.medicalmate.core.designsystem.component.MedicalMateChip
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButton
+import com.mist.medicalmate.core.designsystem.component.MedicalMateLoadingSpinner
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavLeading
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNotice
@@ -58,11 +59,23 @@ fun HealthEditScreen(state: HealthEditUiState, callbacks: HealthEditCallbacks, m
             onLeadingClick = callbacks.onCloseClick,
             surface = MedicalMateSurfaceStyle.GLASS,
         )
-        EditContent(state = state, callbacks = callbacks)
+        if (state.loading) {
+            MedicalMateLoadingSpinner(modifier = Modifier.weight(1f))
+        } else {
+            EditContent(state = state, callbacks = callbacks)
+        }
         MedicalMateBottomCtaBar {
+            if (state.saveFailed) {
+                Text(
+                    text = stringResource(R.string.profile_setup_save_failed),
+                    style = MedicalMateTheme.typography.bodyS,
+                    color = MedicalMateTheme.colors.fgDanger,
+                )
+            }
             MedicalMateButton(
                 label = stringResource(R.string.health_edit_save),
                 onClick = callbacks.onSaveClick,
+                enabled = !state.loading && !state.saving,
                 modifier = Modifier.fillMaxWidth(),
             )
             MedicalMateButton(
@@ -109,7 +122,9 @@ private fun ColumnScope.EditContent(state: HealthEditUiState, callbacks: HealthE
 @Composable
 private fun EditGroup(step: ProfileSetupStep, state: HealthEditUiState, callbacks: HealthEditCallbacks) {
     val chosen = state.chosenIn(step)
-    val options = stringArrayResource(step.optionsRes).toList() + state.extrasIn(step)
+    // 읽어 온 값에는 기본 목록에 있는 것도 섞여 있다. 겹치면 같은 칩이 두 번 그려지고
+    // 어느 쪽이 골라졌는지 알 수 없다.
+    val options = (stringArrayResource(step.optionsRes).toList() + state.extrasIn(step)).distinct()
 
     Column(verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s10)) {
         Text(
