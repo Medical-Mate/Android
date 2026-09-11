@@ -30,7 +30,7 @@ val backendBaseUrl: String =
         }
         .filter(String::isNotBlank)
         .orElse(providers.environmentVariable("BACKEND_BASE_URL"))
-        .getOrElse("https://jinryomate-backend.onrender.com/")
+        .getOrElse("https://d3f36x6ccm838d.cloudfront.net/")
 
 val kakaoNativeAppKey: String =
     providers
