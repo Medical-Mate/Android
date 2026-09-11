@@ -93,7 +93,7 @@ fun ProfileSetupScreen(
                 helperText = stringResource(R.string.profile_setup_other_helper),
             )
         }
-        Footer(isLast = state.step.isLast, onNextClick = onNextClick)
+        Footer(state = state, onNextClick = onNextClick)
     }
 }
 
@@ -158,9 +158,16 @@ private fun Options(step: ProfileSetupStep, chosen: Set<String>, onOptionToggle:
  * **Figma에는 "잘 모르겠어요 · 없어요" 보조 버튼이 하나 더 있는데 넣지 않았다.** 고를 것이
  * 없으면 아무것도 고르지 않고 다음을 누르면 되고, 같은 뜻의 길이 두 개면 어느 쪽을
  * 눌러야 하는지 고민하게 된다. 시안과 어긋나는 지점이라 디자인 트랙에 남겼다(#67).
+ *
+ * 그 판단을 다시 봐야 한다. 서버가 "없다"와 "모른다"를 다른 값으로 받는데(`NONE`·`UNKNOWN`)
+ * 지금은 둘을 구별할 자리가 없어 빈 답을 모두 모른다로 보낸다. 시안의 보조 버튼도 한 개에
+ * 두 뜻을 묶어 둬서 그대로 넣어서는 갈리지 않는다(#150).
+ *
+ * 저장에 실패하면 버튼 위에 한 줄이 붙는다. 마지막 단계에는 다음 화면이 없어서, 조용히
+ * 실패하면 버튼이 죽은 것으로 보인다.
  */
 @Composable
-private fun Footer(isLast: Boolean, onNextClick: () -> Unit) {
+private fun Footer(state: ProfileSetupUiState, onNextClick: () -> Unit) {
     Column(
         modifier =
         Modifier
@@ -172,13 +179,22 @@ private fun Footer(isLast: Boolean, onNextClick: () -> Unit) {
                 top = MedicalMateSpace.s12,
                 bottom = MedicalMateSpace.s8,
             ),
+        verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8),
     ) {
+        if (state.saveFailed) {
+            Text(
+                text = stringResource(R.string.profile_setup_save_failed),
+                style = MedicalMateTheme.typography.bodyS,
+                color = MedicalMateTheme.colors.fgDanger,
+            )
+        }
         MedicalMateButton(
             onClick = onNextClick,
             label =
             stringResource(
-                if (isLast) R.string.profile_setup_done else R.string.profile_setup_next,
+                if (state.step.isLast) R.string.profile_setup_done else R.string.profile_setup_next,
             ),
+            enabled = !state.saving,
             modifier = Modifier.fillMaxWidth(),
         )
     }

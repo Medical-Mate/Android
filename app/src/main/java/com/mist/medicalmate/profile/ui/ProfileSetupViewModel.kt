@@ -1,12 +1,18 @@
 package com.mist.medicalmate.profile.ui
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.mist.medicalmate.core.network.ApiResult
+import com.mist.medicalmate.profile.data.HealthEdit
+import com.mist.medicalmate.profile.data.HealthField
+import com.mist.medicalmate.profile.data.HealthProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 /**
  * 신상정보 입력 상태 보유자.
@@ -21,7 +27,8 @@ import kotlinx.coroutines.flow.update
 @HiltViewModel
 class ProfileSetupViewModel
 @Inject
-constructor() : ViewModel() {
+internal constructor(private val repository: HealthProfileRepository) :
+    ViewModel() {
     private val mutableUiState = MutableStateFlow(ProfileSetupUiState())
     val uiState: StateFlow<ProfileSetupUiState> = mutableUiState.asStateFlow()
 
@@ -54,8 +61,33 @@ constructor() : ViewModel() {
         }
     }
 
+    /**
+     * 세 단계를 한 번에 저장한다. `PUT /api/me/health-profile`.
+     *
+     * 단계마다 보내지 않는다. 서버가 부분 갱신을 주지 않고, 그 전에 이 흐름은 중간에 나가면
+     * 아무것도 남지 않는 자리다. 다른 화면과 달리 임시저장이 없다.
+     *
+     * 저장은 통째로 덮어쓰기라 먼저 읽는다. 이름·출생연도·성별을 그대로 되돌려 보내야 하는데
+     * 그 셋은 카카오에서 오고 이 화면이 묻지 않는다.
+     *
+     * 성공해야 [ProfileSetupUiState.completed]가 선다. 저장되지 않았는데 완료 화면(1b-4)이
+     * 나오면 등록됐다고 읽힌다.
+     */
     private fun complete() {
-        mutableUiState.update { it.copy(completed = true) }
+        if (mutableUiState.value.saving) return
+        mutableUiState.update { it.copy(saving = true, saveFailed = false) }
+        viewModelScope.launch {
+            val saved = save()
+            mutableUiState.update {
+                it.copy(saving = false, completed = saved, saveFailed = !saved)
+            }
+        }
+    }
+
+    private suspend fun save(): Boolean {
+        val profile = (repository.profile() as? ApiResult.Success)?.value ?: return false
+        val saved = repository.save(profile, mutableUiState.value.toHealthEdit())
+        return saved is ApiResult.Success
     }
 
     private fun updateAnswer(transform: (ProfileSetupAnswer) -> ProfileSetupAnswer) {
@@ -64,4 +96,23 @@ constructor() : ViewModel() {
             state.copy(answers = state.answers + (state.step to next))
         }
     }
+}
+
+/** 세 단계의 답을 서버가 받는 모양으로. */
+private fun ProfileSetupUiState.toHealthEdit() = HealthEdit(
+    medications = field(ProfileSetupStep.MEDICATIONS),
+    conditions = field(ProfileSetupStep.CONDITIONS),
+    allergies = field(ProfileSetupStep.ALLERGIES),
+)
+
+/**
+ * 고른 칩과 직접 적은 것을 한 목록으로.
+ *
+ * 직접 입력 칸은 쉼표로 나눈다. "혈압약, 아스피린"을 한 항목으로 두면 목록에서 약 하나로
+ * 세어진다. 읽어 올 때도 같은 규칙으로 되돌린다.
+ */
+private fun ProfileSetupUiState.field(step: ProfileSetupStep): HealthField {
+    val answer = answers[step] ?: return HealthField()
+    val written = answer.note.split(",").map(String::trim).filter(String::isNotEmpty)
+    return HealthField((answer.chosen + written).toList())
 }

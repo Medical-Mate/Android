@@ -311,6 +311,7 @@
     <string name="profile_setup_title">내 정보 등록</string>
     <string name="profile_setup_next">다음</string>
     <string name="profile_setup_done">완료</string>
+    <string name="profile_setup_save_failed">저장하지 못했어요. 다시 눌러주세요.</string>
     <string name="profile_setup_other_label">직접 입력</string>
     <string name="profile_setup_other_placeholder">목록에 없으면 여기에 적어주세요</string>
     <string name="profile_setup_other_helper">정확한 이름을 몰라도 괜찮아요</string>
@@ -326,6 +327,8 @@
     <string name="my_profile_health_medications">복용약</string>
     <string name="my_profile_health_conditions">기저질환</string>
     <string name="my_profile_health_allergies">알러지</string>
+    <string name="my_profile_health_none">없어요</string>
+    <string name="my_profile_health_unknown">잘 모르겠어요</string>
     <string name="my_profile_settings">설정</string>
     <string name="my_profile_setting_visit_reminder">진료 하루 전 알림</string>
     <string name="my_profile_setting_card_auto_save">브리핑 카드 자동 저장</string>
