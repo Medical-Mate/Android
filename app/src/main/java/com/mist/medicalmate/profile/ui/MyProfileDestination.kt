@@ -5,6 +5,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
@@ -44,6 +46,9 @@ private fun MyProfileRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
+    // 1s-2에서 고치고 돌아오는 자리라 들어올 때 한 번이 아니라 보일 때마다 읽는다.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.load() }
+
     MyProfileScreen(
         state = state,
         accountActions = accountActions,
@@ -79,7 +84,7 @@ private fun HealthEditRoute(
             onAddClick = viewModel::onAddClick,
             onDraftChange = viewModel::onDraftChange,
             onDraftSubmit = viewModel::onDraftSubmit,
-            onSaveClick = onSaved,
+            onSaveClick = { viewModel.onSaveClick(onSaved) },
         ),
         modifier = modifier,
     )
