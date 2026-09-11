@@ -9,27 +9,28 @@ import java.util.Locale
 /**
  * 응답을 화면 값으로 옮긴다.
  *
- * **이 파일만 갈아 끼우면 되게 한 곳에 모았다.** 서버가 카드 본문을 고정 필드에서 가변
- * 목록으로 바꾸는 중이다. 지금 계약은 `onset`·`pattern`·`site`·`medications`가 각각 필드로
- * 있고, 화면은 이미 `List<BriefCardItem>`이라 여기서 펴서 넘긴다. 가변으로 바뀌면 이 파일의
- * [items]만 응답 목록을 그대로 옮기는 것으로 줄어들고 다른 곳은 건드릴 것이 없다.
+ * **이 파일만 갈아 끼우면 되게 한 곳에 모았다.** 실제로 2026-09-11에 서버가 카드 본문을
+ * 고정 필드(`onset`·`pattern`·`site`·`medications`)에서 `axes` 맵으로 바꿨고, 고친 곳은
+ * 여기뿐이다. 화면과 ViewModel은 그대로다.
  */
 internal fun CardResponse.toBriefCard(): BriefCard = BriefCard(
     id = cardId.toString(),
-    title = title.orEmpty(),
+    // 서버가 `title`을 아직 내려주지 않는다. 환자가 말한 것이 제목 자리를 대신한다.
+    title = title ?: chiefComplaint.orEmpty(),
     status = if (status == STATUS_CONFIRMED) BriefCard.Status.CONFIRMED else BriefCard.Status.BEFORE_VISIT,
     patientLine = patientLine(),
-    items = items(),
-    // 서버 카드에 통증 강도 자리가 없다. 문답 3단계가 받는 값인데 실을 곳이 없어 비워 둔다(#139).
+    items = axes.toItems(),
+    // 강도가 축 하나가 됐다. 따로 받지 않고 [items]에 줄로 들어간다.
     severity = null,
-    allergies = allergies.toLines(),
+    // 새 스키마에 알러지가 없다. 신상정보에서 오던 값인데 카드가 더 이상 싣지 않는다.
+    allergies = emptyList(),
     questions = questions,
-    // `CardResponse`에 병원이 없다. 목록 응답에만 `clinicName`이 있다(#139).
+    // `CardResponse`에 병원이 없다. 목록 응답에만 `clinicName`이 있다.
     hospital = null,
 )
 
 /**
- * 전달 화면의 응답. 카드 조회와 본문이 같고 내부 추적값만 빠져 있다.
+ * 전달 화면의 응답.
  *
  * id가 응답에 없어서 부른 쪽이 넘긴다. 상태는 확정이다. 확정한 카드만 열리는 경로다.
  */
@@ -38,13 +39,12 @@ internal fun HandoffResponse.toBriefCard(cardId: Long): BriefCard = CardResponse
     status = STATUS_CONFIRMED,
     patient = patient,
     title = title,
-    onset = onset,
-    pattern = pattern,
-    site = site,
-    medications = medications,
-    allergies = allergies,
+    chiefComplaint = chiefComplaint,
+    axes = axes,
+    redFlags = redFlags,
+    patientNotes = patientNotes,
     questions = questions,
-    suggestedDepartment = suggestedDepartment,
+    departmentGuidance = departmentGuidance,
     createdAt = confirmedAt,
 ).toBriefCard()
 
@@ -62,59 +62,71 @@ private fun sexLabel(sex: String?): String = when (sex) {
 }
 
 /**
- * 고정 필드를 KV 줄로 편다.
+ * 축을 KV 줄로 편다.
  *
- * `status`가 `KNOWN`이 아닌 필드는 줄을 만들되 글이 다르다. `NONE`("없어요")과
- * `UNKNOWN`("잘 모르겠어요")을 같게 그리면 의사용 카드에 "본인 확인 못 함"을 찍을 수 없다.
- * 값이 아예 안 온 필드는 줄도 만들지 않는다.
+ * **아직 묻지 않은 축은 줄을 만들지 않는다.** 8축이 늘 자리를 차지하고 1턴째는 대부분
+ * `NOT_ASKED`라, 그대로 그리면 빈 줄 여덟 개가 먼저 보인다. 건너뛴 축도 같다. 환자가
+ * 넘어가기로 한 것을 카드에 남길 이유가 없다.
  *
- * 강조는 한 줄만 붙일 수 있는데 서버가 어느 것인지 주지 않는다. 아무 데도 붙이지 않는다.
- * 임의로 고르면 그 진료에서 중요한 것과 어긋난다.
+ * `UNKNOWN`("잘 모르겠다")은 남긴다. 확인하지 못했다는 것이 의사에게는 정보다. `AMBIGUOUS`는
+ * 값이 있어도 확실하지 않다는 뜻이라 그 사실을 함께 적는다.
+ *
+ * 차례는 서버가 준 순서가 아니라 [AXIS_ORDER]다. 맵이라 순서가 보장되지 않고, 카드에서
+ * 부위가 먼저 오는 것은 읽는 차례의 문제다.
  */
-private fun CardResponse.items(): List<BriefCardItem> = listOfNotNull(
-    site?.let { BriefCardItem(key = "부위", value = it.status.textOr(it.text)) },
-    onset?.let { BriefCardItem(key = "기간", value = it.status.textOr(it.text)) },
-    pattern?.let { BriefCardItem(key = "양상", value = it.status.textOr(it.text)) },
-    medications?.let { meds ->
-        BriefCardItem(
-            key = "복용약",
-            value = meds.status.textOr(
-                meds.items.joinToString(" · ") {
-                    listOfNotNull(it.name, it.note).joinToString(" ")
-                },
-            ),
-        )
-    },
-)
+private fun Map<String, AxisResponse>.toItems(): List<BriefCardItem> = AXIS_ORDER.mapNotNull { axis ->
+    val field = this[axis] ?: return@mapNotNull null
+    val value =
+        when (field.status) {
+            STATUS_FILLED -> field.value.orEmpty()
+            STATUS_UNKNOWN -> UNKNOWN_LABEL
+            STATUS_AMBIGUOUS -> field.value?.let { "$it $AMBIGUOUS_SUFFIX" } ?: UNKNOWN_LABEL
+            else -> return@mapNotNull null
+        }
+    BriefCardItem(key = axisLabel(axis), value = value, axis = axis)
+}
 
 /**
- * 알러지는 경고 면에 얹히는 목록이다.
+ * 축 이름.
  *
- * `NONE`이면 줄 자체를 두지 않는다. 없다는 것은 경고할 일이 아니다. `UNKNOWN`은 남긴다.
- * 확인하지 못했다는 사실이 의사에게는 정보다.
+ * 문자열 리소스가 아니라 여기 둔다. `data` 계층이라 `Context`가 없고, 축 이름은 서버 계약에
+ * 묶인 값이라 화면 카피와 성격이 다르다. 번역이 필요해지면 화면으로 올린다.
  */
-private fun TextFieldResponse?.toLines(): List<String> = when (this?.status) {
-    STATUS_KNOWN -> text?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }.orEmpty()
-    STATUS_UNKNOWN -> listOf(UNKNOWN_LABEL)
-    else -> emptyList()
+private fun axisLabel(axis: String): String = when (axis) {
+    "site" -> "부위"
+    "onset" -> "시작"
+    "character" -> "양상"
+    "radiation" -> "뻗치는 곳"
+    "associated" -> "같이 있는 증상"
+    "time_course" -> "경과"
+    "exacerbating_relieving" -> "심해질 때·나아질 때"
+    "severity" -> "강도"
+    else -> axis
 }
 
-private fun String?.textOr(text: String?): String = when (this) {
-    STATUS_KNOWN -> text.orEmpty()
-    STATUS_NONE -> NONE_LABEL
-    else -> UNKNOWN_LABEL
-}
+/** 카드에서 읽는 차례. SOCRATES 8축이다. */
+private val AXIS_ORDER =
+    listOf(
+        "site",
+        "onset",
+        "character",
+        "radiation",
+        "associated",
+        "time_course",
+        "exacerbating_relieving",
+        "severity",
+    )
 
-private const val STATUS_KNOWN = "KNOWN"
-
-private const val STATUS_NONE = "NONE"
+private const val STATUS_FILLED = "FILLED"
 
 private const val STATUS_UNKNOWN = "UNKNOWN"
 
+private const val STATUS_AMBIGUOUS = "AMBIGUOUS"
+
 private const val STATUS_CONFIRMED = "CONFIRMED"
 
-private const val NONE_LABEL = "없음"
-
 private const val UNKNOWN_LABEL = "잘 모르겠어요"
+
+private const val AMBIGUOUS_SUFFIX = "(확실하지 않아요)"
 
 private val WRITTEN_ON: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy.MM.dd", Locale.KOREAN)

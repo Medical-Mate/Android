@@ -28,7 +28,7 @@ interface CardRepository {
      * **응답의 카드로 갈아타야 한다.** 확정된 카드를 고치면 서버가 새 버전을 만들고 id가
      * 달라진다. 옛 id를 들고 있으면 다음 수정이 엉뚱한 카드로 간다.
      */
-    suspend fun update(cardId: Long, questions: List<String>): ApiResult<BriefCard>
+    suspend fun update(cardId: Long, axes: List<AxisEdit>, questions: List<String>): ApiResult<BriefCard>
 
     suspend fun confirm(cardId: Long): ApiResult<BriefCard>
 
@@ -55,13 +55,21 @@ constructor(private val api: CardApi, private val json: Json) :
         apiCall(json) { api.card(cardId) }.map { it.toBriefCard() }
 
     /**
-     * 지금은 질문 목록만 보낸다.
+     * 바뀐 축과 질문만 보낸다.
      *
-     * 카드 본문(`onset`·`pattern` 등)은 서버가 고정 필드에서 가변 목록으로 바꾸는 중이라
-     * 보낼 모양이 정해지지 않았다. 질문은 그 변경과 무관한 `List<String>`이라 먼저 붙였다.
+     * 제목과 진료과는 서버가 수정을 받지 않는다. 안 바뀐 축을 함께 보내지 않는 이유는 그것이
+     * PATCH이기 때문이다. 보낸 것만 바뀐다.
      */
-    override suspend fun update(cardId: Long, questions: List<String>): ApiResult<BriefCard> =
-        apiCall(json) { api.update(cardId, UpdateCardRequest(questions = questions)) }.map { it.toBriefCard() }
+    override suspend fun update(cardId: Long, axes: List<AxisEdit>, questions: List<String>): ApiResult<BriefCard> =
+        apiCall(json) {
+            api.update(
+                cardId,
+                UpdateCardRequest(
+                    axes = axes.map { AxisEditRequest(axis = it.axis, value = it.value) }.takeIf { it.isNotEmpty() },
+                    questions = questions,
+                ),
+            )
+        }.map { it.toBriefCard() }
 
     override suspend fun confirm(cardId: Long): ApiResult<BriefCard> =
         apiCall(json) { api.confirm(cardId) }.map { it.toBriefCard() }
@@ -69,6 +77,9 @@ constructor(private val api: CardApi, private val json: Json) :
     override suspend fun handoff(cardId: Long): ApiResult<BriefCard> =
         apiCall(json) { api.handoff(cardId) }.map { it.toBriefCard(cardId) }
 }
+
+/** 고친 축 하나. 서버가 `{"axis":"onset","value":"3주 전"}`으로 받는다. */
+data class AxisEdit(val axis: String, val value: String)
 
 /**
  * 목록의 카드 한 줄. 본문은 담기지 않는다.
@@ -86,11 +97,22 @@ data class CardListItem(
     val writtenOn: LocalDate,
 )
 
-private fun CardSummaryResponse.toListItem() = CardListItem(
+/**
+ * 목록 한 줄.
+ *
+ * 서버가 `title`을 아직 내려주지 않는다. 대신 환자가 말한 원문이 오는데 길 수 있어서 줄인다.
+ * 목록의 줄은 한 줄짜리라 넘치면 잘리기만 하고 무엇인지 알 수 없게 된다.
+ */
+internal fun CardSummaryResponse.toListItem() = CardListItem(
     id = cardId.toString(),
-    title = title.orEmpty(),
+    title = (title ?: chiefComplaint)?.shorten().orEmpty(),
     confirmed = status == "CONFIRMED",
     visited = visited,
     clinic = clinicName,
     writtenOn = OffsetDateTime.parse(createdAt).toLocalDate(),
 )
+
+/** 목록 제목의 길이 상한. 넘으면 말줄임을 붙인다. */
+private fun String.shorten(): String = if (length <= TITLE_MAX) this else take(TITLE_MAX).trimEnd() + "…"
+
+private const val TITLE_MAX = 24

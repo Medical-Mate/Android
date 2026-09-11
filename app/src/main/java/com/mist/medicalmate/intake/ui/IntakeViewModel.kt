@@ -4,10 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
+import com.mist.medicalmate.core.network.ApiResult
+import com.mist.medicalmate.intake.data.IntakeSessionMessage
 import com.mist.medicalmate.intake.data.SessionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,13 +18,10 @@ import kotlinx.coroutines.launch
 /**
  * 증상 정리 상태 보유자.
  *
- * **AI 응답이 픽스처다.** 환자가 보내면 [REPLY_SCRIPT]의 다음 줄이 나온다. Figma 1c-1의
- * 대화를 그대로 옮긴 것이고, LLM을 붙이면 이 자리가 실제 호출로 바뀐다. 화면과 상태
- * 모델은 그대로 쓴다.
+ * 문답이 서버에서 진행된다. 보낸 말과 다음 질문이 `POST /api/sessions/{id}/messages`로
+ * 오간다. 응답이 대화 전체를 주므로 화면은 그것으로 갈아 끼운다.
  *
- * 응답 전에 [IntakeUiState.awaitingReply]를 세우고 잠깐 기다린다. 1c-4의 점 세 개가 그
- * 상태이고, 기다림이 없으면 그 표시를 볼 수 없다. 실제 호출이 들어오면 이 지연은 사라지고
- * 응답이 올 때까지가 그 자리를 대신한다.
+ * 보내는 동안 [IntakeUiState.awaitingReply]가 선다. 1c-4의 점 세 개가 그 상태다.
  *
  * **음성 인식도 붙이지 않았다.** [onMicClick]이 대기와 듣는 중을 오갈 뿐이고 받아쓴 글은
  * 없다. STT가 들어오면 멈출 때 그 결과를 [IntakeUiState.draft]에 넣고 보내면 된다.
@@ -31,7 +29,7 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class IntakeViewModel
 @Inject
-internal constructor(repository: SessionRepository) : ViewModel() {
+internal constructor(private val repository: SessionRepository) : ViewModel() {
     private val mutableUiState = MutableStateFlow(IntakeUiState())
     val uiState: StateFlow<IntakeUiState> = mutableUiState.asStateFlow()
 
@@ -49,34 +47,45 @@ internal constructor(repository: SessionRepository) : ViewModel() {
         mutableUiState.update { it.copy(draft = draft) }
     }
 
-    /** 환자의 말을 붙이고 다음 AI 마디를 기다린다. */
+    /**
+     * 환자의 말을 보내고 다음 질문을 받는다.
+     *
+     * 보낸 말을 먼저 화면에 붙인다. 서버 응답을 기다렸다 한꺼번에 그리면 방금 누른 것이
+     * 사라진 것처럼 보인다.
+     *
+     * 응답이 대화 전체를 주므로 그것으로 갈아 끼운다. 우리가 붙인 줄과 서버가 센 줄이
+     * 어긋나는 일이 없다.
+     *
+     * 세션이 없으면 보내지 않는다. 세션 만들기가 실패했다는 뜻이고, 보낼 곳이 없다.
+     */
     fun onSend() {
         val state = mutableUiState.value
-        if (!state.canSend) return
+        val sessionId = state.sessionId
+        if (!state.canSend || sessionId == null) return
 
+        val text = state.draft.trim()
+        val byVoice = state.inputMode == IntakeInputMode.VOICE
         mutableUiState.update {
             it.copy(
-                messages = it.messages + it.newMessage(IntakeMessage.Sender.PATIENT, it.draft.trim()),
+                messages = it.messages + it.newMessage(IntakeMessage.Sender.PATIENT, text),
                 draft = "",
                 awaitingReply = true,
             )
         }
         viewModelScope.launch {
-            delay(REPLY_DELAY_MILLIS)
-            mutableUiState.update { current ->
-                val line = REPLY_SCRIPT.getOrNull(current.messages.count { it.sender == IntakeMessage.Sender.AI } - 1)
-                current.copy(
-                    messages =
-                    if (line == null) {
-                        current.messages
-                    } else {
-                        current.messages + current.newMessage(IntakeMessage.Sender.AI, line)
-                    },
-                    awaitingReply = false,
-                    // 물어볼 것이 남지 않았다. 시안에 문답을 끝내는 조작이 없어서 이 시점에
-                    // 다음으로 가는 버튼을 띄운다. LLM이 붙으면 그쪽이 끝을 알린다(#69).
-                    chatFinished = line == null,
-                )
+            when (val result = repository.send(sessionId, text, byVoice)) {
+                is ApiResult.Success ->
+                    mutableUiState.update { current ->
+                        current.copy(
+                            messages = result.value.messages.map { it.toMessage() },
+                            awaitingReply = false,
+                            chatFinished = result.value.ended,
+                        )
+                    }
+
+                is ApiResult.Rejected, is ApiResult.NetworkUnavailable ->
+                    // 보낸 말은 화면에 남긴다. 지우면 다시 적어야 한다.
+                    mutableUiState.update { it.copy(awaitingReply = false, sendFailed = true) }
             }
         }
     }
@@ -142,8 +151,15 @@ internal constructor(repository: SessionRepository) : ViewModel() {
      * 아픈 부위를 지날 때 고른 부위 이름을 [IntakeUiState.bodyPart]에 넣고 대화를 연다.
      * 문답의 첫 마디가 부위를 부르며 시작하고, 통증 강도 화면의 물음도 그 이름을 쓴다.
      */
-    fun onNext() {
+    fun onNext(severityLabel: String) {
         val state = mutableUiState.value
+        // 단계를 떠날 때 그 단계의 값을 서버에 남긴다. 고를 때마다 보내면 슬라이더를 끄는
+        // 동안 요청이 줄줄이 나간다. 둘 다 끝난 문답에도 보낼 수 있어 시점이 자유롭다.
+        when (state.step) {
+            IntakeStep.SEVERITY -> session.saveSeverity(state, severityLabel)
+            IntakeStep.QUESTIONS -> session.saveQuestions(state)
+            else -> Unit
+        }
         when {
             state.step == IntakeStep.BODY_PART -> {
                 // 부위를 다 고르기 전에는 문답을 열지 않는다. 화면의 다음 버튼도 꺼져 있다.
@@ -184,19 +200,6 @@ internal constructor(repository: SessionRepository) : ViewModel() {
         }
         mutableUiState.update { it.copy(step = IntakeStep.entries[it.step.ordinal - 1]) }
     }
-
-    private companion object {
-        /** 그 다음 마디들. LLM이 붙으면 사라진다. */
-        val REPLY_SCRIPT =
-            listOf(
-                "3주 전부터 점점 심해지셨네요. 어떨 때 더 아프세요?",
-                "명치가 얼마나 아프세요?",
-                "알겠어요. 조금 더 알려주실 것이 있으면 말씀해 주세요.",
-            )
-
-        /** 응답을 기다리는 시간. 픽스처가 즉시 답하면 기다리는 표시를 볼 수 없다. */
-        const val REPLY_DELAY_MILLIS = 700L
-    }
 }
 
 /**
@@ -206,3 +209,10 @@ internal constructor(repository: SessionRepository) : ViewModel() {
  * 두면 무릎을 짚고도 복부를 묻는다.
  */
 internal fun intakeOpeningLine(part: String): String = "${withSubjectParticle(part)} 불편하시군요. 언제부터 그러셨어요? 정확하지 않아도 괜찮아요."
+
+/** 서버가 준 마디를 화면 마디로. `seq`를 id로 쓴다. */
+private fun IntakeSessionMessage.toMessage() = IntakeMessage(
+    id = seq,
+    sender = if (fromPatient) IntakeMessage.Sender.PATIENT else IntakeMessage.Sender.AI,
+    text = text,
+)

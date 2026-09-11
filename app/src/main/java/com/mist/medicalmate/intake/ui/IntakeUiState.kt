@@ -52,6 +52,7 @@ enum class IntakeInputMode { TEXT, VOICE }
  *   실패해도 문답은 그대로 진행하므로 `null`일 수 있다.
  * @param restoring 홈의 "이어서 하기"로 들어와 서버에서 불러오는 중인지.
  * @param restoreFailed 불러오지 못했는지. 부위 선택부터 다시 하게 두는 대신 이유를 알린다.
+ * @param sendFailed 보낸 말이 서버에 닿지 못했는지.
  */
 data class IntakeUiState(
     val step: IntakeStep = IntakeStep.BODY_PART,
@@ -70,6 +71,12 @@ data class IntakeUiState(
     val sessionId: Long? = null,
     val restoring: Boolean = false,
     val restoreFailed: Boolean = false,
+    /**
+     * 보낸 말이 서버에 닿지 못했는지.
+     *
+     * 보낸 말은 화면에 남긴다. 지우면 다시 적어야 한다. 다시 보내는 조작은 아직 없다.
+     */
+    val sendFailed: Boolean = false,
 ) {
     /**
      * 첫 단계에서 뒤로 가면 흐름을 벗어난다. 그 판단은 호출자가 한다.

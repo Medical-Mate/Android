@@ -9,64 +9,71 @@ import org.junit.Test
 /**
  * 응답을 카드로 옮기는 부분.
  *
- * 서버가 본문을 고정 필드에서 가변 목록으로 바꾸는 중이라 [CardMapping]만 갈아 끼우면 되게
- * 모아 뒀다. 이 시험도 그때 함께 바뀐다.
+ * 2026-09-11에 서버가 본문을 고정 필드에서 `axes` 맵으로 바꿨다. 이 시험도 그때 함께
+ * 바뀌었다.
  */
 class CardMappingTest {
     @Test
-    fun `고정 필드를 KV 줄로 편다`() {
+    fun `채워진 축만 줄이 된다`() {
+        // 8축이 늘 자리를 차지하고 1턴째는 대부분 NOT_ASKED다. 그대로 그리면 빈 줄 여덟 개다.
         val card = response().toBriefCard()
 
-        assertEquals(listOf("부위", "기간", "양상", "복용약"), card.items.map { it.key })
-        assertEquals("복부 (명치 아래)", card.items.first().value)
+        assertEquals(listOf("부위", "시작"), card.items.map { it.key })
+        assertEquals("왼쪽 무릎", card.items.first().value)
     }
 
     @Test
-    fun `값이 안 온 필드는 줄도 만들지 않는다`() {
-        val card = CardResponse(cardId = 1, onset = known("3주 전")).toBriefCard()
-
-        assertEquals(listOf("기간"), card.items.map { it.key })
-    }
-
-    @Test
-    fun `없어요와 모르겠어요를 다르게 적는다`() {
-        // 둘을 같게 그리면 의사용 카드에 "본인 확인 못 함"을 찍을 수 없다.
+    fun `묻지 않은 축과 건너뛴 축은 줄을 만들지 않는다`() {
         val card =
-            CardResponse(
-                cardId = 1,
-                onset = TextFieldResponse(status = "NONE"),
-                pattern = TextFieldResponse(status = "UNKNOWN"),
+            response(
+                axes = mapOf(
+                    "onset" to axis("NOT_ASKED"),
+                    "character" to axis("SKIPPED"),
+                ),
             ).toBriefCard()
 
-        assertEquals("없음", card.items.first { it.key == "기간" }.value)
-        assertEquals("잘 모르겠어요", card.items.first { it.key == "양상" }.value)
+        assertTrue(card.items.isEmpty())
     }
 
     @Test
-    fun `복용약은 이름과 메모를 한 줄로 잇는다`() {
-        val card = response().toBriefCard()
+    fun `모르겠다는 남긴다`() {
+        // 확인하지 못했다는 것이 의사에게는 정보다.
+        val card = response(axes = mapOf("onset" to axis("UNKNOWN"))).toBriefCard()
 
-        assertEquals("혈압약 아침", card.items.first { it.key == "복용약" }.value)
+        assertEquals("잘 모르겠어요", card.items.single().value)
     }
 
     @Test
-    fun `알러지는 쉼표로 나눈다`() {
-        assertEquals(listOf("페니실린", "아스피린"), response().toBriefCard().allergies)
+    fun `확실하지 않은 값은 그 사실을 함께 적는다`() {
+        val card = response(axes = mapOf("onset" to axis("AMBIGUOUS", "3주 전"))).toBriefCard()
+
+        assertEquals("3주 전 (확실하지 않아요)", card.items.single().value)
     }
 
     @Test
-    fun `알러지가 없으면 경고 줄도 없다`() {
-        // 없다는 것은 경고할 일이 아니다.
-        val card = CardResponse(cardId = 1, allergies = TextFieldResponse(status = "NONE")).toBriefCard()
+    fun `축 차례는 서버 순서가 아니라 읽는 차례다`() {
+        // 맵이라 순서가 보장되지 않는다. 카드에서 부위가 먼저 온다.
+        val card =
+            response(
+                axes = mapOf(
+                    "severity" to axis("FILLED", "9점"),
+                    "site" to axis("FILLED", "왼쪽 무릎"),
+                ),
+            ).toBriefCard()
 
-        assertTrue(card.allergies.isEmpty())
+        assertEquals(listOf("부위", "강도"), card.items.map { it.key })
     }
 
     @Test
-    fun `알러지를 확인 못 했으면 그 사실을 남긴다`() {
-        val card = CardResponse(cardId = 1, allergies = TextFieldResponse(status = "UNKNOWN")).toBriefCard()
+    fun `제목이 없으면 환자가 말한 것을 쓴다`() {
+        // 서버가 title을 아직 내려주지 않는다.
+        assertEquals("왼쪽 무릎이 아파요", response().toBriefCard().title)
+    }
 
-        assertEquals(listOf("잘 모르겠어요"), card.allergies)
+    @Test
+    fun `확정 여부가 상태가 된다`() {
+        assertEquals(BriefCard.Status.CONFIRMED, response(status = "CONFIRMED").toBriefCard().status)
+        assertEquals(BriefCard.Status.BEFORE_VISIT, response(status = "DRAFT").toBriefCard().status)
     }
 
     @Test
@@ -75,49 +82,63 @@ class CardMappingTest {
     }
 
     @Test
-    fun `확정 여부가 상태가 된다`() {
-        assertEquals(BriefCard.Status.CONFIRMED, response("CONFIRMED").toBriefCard().status)
-        assertEquals(BriefCard.Status.BEFORE_VISIT, response("DRAFT").toBriefCard().status)
-    }
-
-    @Test
-    fun `강도와 병원은 서버에 자리가 없어 비운다`() {
+    fun `알러지와 병원은 새 스키마에 없어 비운다`() {
         val card = response().toBriefCard()
 
-        assertNull(card.severity)
+        assertTrue(card.allergies.isEmpty())
         assertNull(card.hospital)
+        assertNull(card.severity)
     }
 
     @Test
     fun `전달 응답은 넘겨받은 id와 확정 상태를 쓴다`() {
-        // 전달 경로는 확정한 카드만 열린다. 응답에 id가 없어 부른 쪽이 넘긴다.
         val card =
             HandoffResponse(
                 patient = PatientResponse(name = "김OO", age = 32, sex = "FEMALE"),
-                title = "복부 통증",
-                onset = known("3주 전"),
+                chiefComplaint = "왼쪽 무릎이 아파요",
+                axes = mapOf("site" to axis("FILLED", "왼쪽 무릎")),
                 confirmedAt = "2026-09-04T09:00:00+09:00",
             ).toBriefCard(cardId = 42)
 
         assertEquals("42", card.id)
         assertEquals(BriefCard.Status.CONFIRMED, card.status)
-        assertEquals("복부 통증", card.title)
+        assertEquals("왼쪽 무릎", card.items.single().value)
     }
 
-    private fun known(text: String) = TextFieldResponse(status = "KNOWN", text = text)
+    @Test
+    fun `목록 제목이 길면 줄인다`() {
+        // 서버가 환자 원문을 제목 자리에 준다. 목록 줄은 한 줄이라 넘치면 무엇인지 알 수 없다.
+        val long = "왼쪽 무릎이 계단 내려갈 때마다 시큰거리고 밤에도 욱신거려요"
 
-    private fun response(status: String = "DRAFT") = CardResponse(
+        val item = CardSummaryResponse(cardId = 1, chiefComplaint = long, createdAt = CREATED_AT).toListItem()
+
+        assertTrue(item.title.length < long.length)
+        assertTrue(item.title.endsWith("…"))
+        // 자른 자리에 공백이 걸리면 함께 턴다. 말줄임 앞이 어색하게 벌어지지 않게.
+        assertTrue(item.title.dropLast(1) == item.title.dropLast(1).trimEnd())
+    }
+
+    private fun axis(status: String, value: String? = null) =
+        AxisResponse(status = status, value = value, evidence = listOfNotNull(value))
+
+    private fun response(
+        status: String = "DRAFT",
+        axes: Map<String, AxisResponse> = mapOf(
+            "site" to axis("FILLED", "왼쪽 무릎"),
+            "onset" to axis("FILLED", "3주 전"),
+            "character" to axis("NOT_ASKED"),
+        ),
+    ) = CardResponse(
         cardId = 1,
         status = status,
         patient = PatientResponse(name = "김OO", age = 32, sex = "FEMALE"),
-        title = "복부 통증 · 3주",
-        onset = known("3주 전 시작"),
-        pattern = known("식후 쓰림"),
-        site = SiteResponse(status = "KNOWN", text = "복부 (명치 아래)"),
-        medications =
-        MedicationsResponse(status = "KNOWN", items = listOf(MedicationResponse(name = "혈압약", note = "아침"))),
-        allergies = known("페니실린, 아스피린"),
+        chiefComplaint = "왼쪽 무릎이 아파요",
+        axes = axes,
         questions = listOf("검사를 받아야 하나요?"),
-        createdAt = "2026-09-04T09:00:00+09:00",
+        createdAt = CREATED_AT,
     )
+
+    private companion object {
+        const val CREATED_AT = "2026-09-04T09:00:00+09:00"
+    }
 }

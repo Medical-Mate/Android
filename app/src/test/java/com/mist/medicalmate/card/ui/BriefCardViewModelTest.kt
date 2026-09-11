@@ -1,5 +1,6 @@
 package com.mist.medicalmate.card.ui
 
+import com.mist.medicalmate.card.data.AxisEdit
 import com.mist.medicalmate.card.data.CardListItem
 import com.mist.medicalmate.card.data.CardRepository
 import com.mist.medicalmate.core.network.ApiResult
@@ -214,6 +215,47 @@ class BriefCardViewModelTest {
         viewModel.load(1)
         return viewModel.uiState.value as BriefCardUiState.Content
     }
+
+    @Test
+    fun `고친 축만 보낸다`() {
+        // PATCH라 보낸 것만 바뀐다. 안 건드린 축까지 실어 보내면 서버가 그것도 환자가 고친
+        // 값으로 남긴다.
+        val repository = FakeCardRepository()
+        val viewModel = BriefCardViewModel(repository)
+        viewModel.load(1)
+        viewModel.onEditClick()
+
+        viewModel.editActions.onItemValueChange(1, "2주 전 시작")
+        viewModel.onEditDoneClick()
+
+        assertEquals(listOf(AxisEdit("onset", "2주 전 시작")), repository.updatedAxes)
+    }
+
+    @Test
+    fun `아무것도 안 고치면 축을 보내지 않는다`() {
+        val repository = FakeCardRepository()
+        val viewModel = BriefCardViewModel(repository)
+        viewModel.load(1)
+        viewModel.onEditClick()
+
+        viewModel.onEditDoneClick()
+
+        assertEquals(emptyList<AxisEdit>(), repository.updatedAxes)
+    }
+
+    @Test
+    fun `줄을 지워도 남은 축의 자리가 밀리지 않는다`() {
+        // 원본과 사본을 자리로 맞추면 첫 줄을 지웠을 때 나머지가 한 칸씩 밀려 전부 바뀐 것이 된다.
+        val repository = FakeCardRepository()
+        val viewModel = BriefCardViewModel(repository)
+        viewModel.load(1)
+        viewModel.onEditClick()
+
+        viewModel.editActions.onItemDeleteClick(0)
+        viewModel.onEditDoneClick()
+
+        assertEquals(emptyList<AxisEdit>(), repository.updatedAxes)
+    }
 }
 
 /** 픽스처 카드 하나를 돌려주는 저장소. 시험마다 응답을 바꿀 수 있다. */
@@ -231,7 +273,10 @@ internal class FakeCardRepository(
 
     override suspend fun card(cardId: Long) = result ?: ApiResult.Success(card)
 
-    override suspend fun update(cardId: Long, questions: List<String>): ApiResult<BriefCard> {
+    var updatedAxes: List<AxisEdit>? = null
+
+    override suspend fun update(cardId: Long, axes: List<AxisEdit>, questions: List<String>): ApiResult<BriefCard> {
+        updatedAxes = axes
         updatedQuestions = questions
         return result ?: ApiResult.Success(card)
     }
@@ -252,9 +297,9 @@ internal val testCard =
         patientLine = "김OO · 32세 여 · 2026.09.04 작성",
         items =
         listOf(
-            BriefCardItem(key = "부위", value = "복부 (명치 아래)"),
-            BriefCardItem(key = "기간", value = "3주 전 시작"),
-            BriefCardItem(key = "양상", value = "식후 쓰림"),
+            BriefCardItem(key = "부위", value = "복부 (명치 아래)", axis = "site"),
+            BriefCardItem(key = "시작", value = "3주 전 시작", axis = "onset"),
+            BriefCardItem(key = "양상", value = "식후 쓰림", axis = "character"),
         ),
         severity = null,
         allergies = listOf("페니실린"),

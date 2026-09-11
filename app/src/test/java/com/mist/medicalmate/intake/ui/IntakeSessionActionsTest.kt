@@ -5,6 +5,7 @@ import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.intake.data.IntakeSession
 import com.mist.medicalmate.intake.data.IntakeSessionMessage
 import com.mist.medicalmate.intake.data.IntakeSessionStatus
+import com.mist.medicalmate.intake.data.IntakeTurn
 import com.mist.medicalmate.intake.data.SessionRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
@@ -156,12 +157,26 @@ class IntakeSessionActionsTest {
         }
 
         override suspend fun load(sessionId: Long): ApiResult<IntakeSession> = ApiResult.Success(savedSession)
+
+        override suspend fun send(sessionId: Long, text: String, byVoice: Boolean) =
+            ApiResult.Success(IntakeTurn(ended = false, messages = emptyList(), answered = 0, total = 0))
+
+        override suspend fun setSeverity(sessionId: Long, level: Int, label: String) = ApiResult.Success(savedSession)
+
+        override suspend fun setQuestions(sessionId: Long, questions: List<String>) = ApiResult.Success(savedSession)
     }
 
     private class FixedRepository(private val result: ApiResult<IntakeSession>) : SessionRepository {
         override suspend fun start(siteCodes: List<String>, siteText: String?) = result
 
         override suspend fun load(sessionId: Long) = result
+
+        override suspend fun send(sessionId: Long, text: String, byVoice: Boolean) =
+            ApiResult.Success(IntakeTurn(ended = false, messages = emptyList(), answered = 0, total = 0))
+
+        override suspend fun setSeverity(sessionId: Long, level: Int, label: String) = result
+
+        override suspend fun setQuestions(sessionId: Long, questions: List<String>) = result
     }
 
     private companion object {
