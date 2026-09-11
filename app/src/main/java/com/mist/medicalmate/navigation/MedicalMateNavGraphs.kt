@@ -12,6 +12,7 @@ import com.mist.medicalmate.calendar.ui.calendarDestination
 import com.mist.medicalmate.calendar.ui.scheduleAddDestination
 import com.mist.medicalmate.card.ui.BriefCardDestination
 import com.mist.medicalmate.card.ui.RecordDetailDestination
+import com.mist.medicalmate.card.ui.briefCardListDestination
 import com.mist.medicalmate.card.ui.recordDestination
 import com.mist.medicalmate.card.ui.recordDetailDestination
 import com.mist.medicalmate.home.ui.HomeDestination
@@ -220,6 +221,13 @@ internal fun NavGraphBuilder.recordDestinations(navController: NavHostController
     recordDetailDestination(
         onBackClick = { navController.popBackStack() },
         onBriefCardClick = { cardId -> navController.navigate(BriefCardDestination(cardId)) },
+    )
+    // 1j-4. 기록 탭이 아니라 홈의 "전체 보기"에서 들어오는데, 목록과 줄이 기록과 같은
+    // 짜임이라 여기 함께 둔다.
+    briefCardListDestination(
+        onCardClick = { cardId -> navController.navigate(BriefCardDestination(cardId)) },
+        onStartIntakeClick = { navController.navigate(IntakeDestination) },
+        onExit = { navController.popBackStack() },
     )
 }
 

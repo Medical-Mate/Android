@@ -64,7 +64,13 @@ fun RecordScreen(state: RecordUiState, callbacks: RecordCallbacks, modifier: Mod
                 if (state.groups.isEmpty()) {
                     EmptyContent(onStartIntakeClick = callbacks.onStartIntakeClick)
                 } else {
-                    GroupList(state = state, callbacks = callbacks)
+                    GroupList(
+                        groups = state.groups,
+                        countRes = R.string.record_count,
+                        onItemClick = callbacks.onItemClick,
+                        selectedIds = state.selectedIds,
+                        onSelectChange = callbacks.onSelectChange,
+                    )
                 }
         }
         if (editing) {

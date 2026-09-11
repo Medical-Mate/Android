@@ -14,6 +14,7 @@ import com.mist.medicalmate.auth.ui.LoginDestination
 import com.mist.medicalmate.auth.ui.SessionUiState
 import com.mist.medicalmate.calendar.ui.CalendarDestination
 import com.mist.medicalmate.card.ui.BriefCardDestination
+import com.mist.medicalmate.card.ui.BriefCardListDestination
 import com.mist.medicalmate.card.ui.HandoffDestination
 import com.mist.medicalmate.card.ui.RecordDestination
 import com.mist.medicalmate.card.ui.briefCardDestination
@@ -88,6 +89,7 @@ internal fun MedicalMateNavHost(
         homeDestination(
             onStartIntakeClick = { navController.navigate(IntakeDestination) },
             onCardClick = { cardId -> navController.navigate(BriefCardDestination(cardId)) },
+            onAllCardsClick = { navController.navigate(BriefCardListDestination) },
             onProfileClick = { navController.navigate(MyProfileDestination) },
             onTabSelect = navController::selectTab,
         )
