@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -104,8 +105,11 @@ private fun ColumnScope.PageContent(page: OnboardingPage) {
  * 장마다 하나씩인 선화.
  *
  * 시안의 그림은 352 폭이라 콘텐츠 320을 넘어 좌우 거터로 16씩 빠져나간다. 그래서 이 블록만
- * 거터를 받지 않고 화면 폭을 쓴다. 360 기준 남는 4씩을 빼고 비율로 그려서 좁은 화면에서는
- * 같은 비율로 함께 줄어든다.
+ * 거터를 받지 않고 화면 폭을 쓴다.
+ *
+ * 폭을 352에서 멈춘다. 화면 폭을 그대로 채우게 두면 시안보다 넓은 기기에서 그림이 함께
+ * 커진다. SM-S928N(411dp)에서 재 보니 1.15배가 되어 304 칸을 29 넘겼다. 352보다 좁은
+ * 기기에서만 비율대로 줄어든다.
  *
  * 그림 안에 글자가 없어서 통째로 내보냈다. 원본 색은 그대로 두고 tint를 씌우지 않는다.
  * 그라디언트가 한 색으로 눌리고, 선이 세 가지 색으로 나뉘어 있다.
@@ -115,8 +119,7 @@ private fun Illustration(page: OnboardingPage) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(IllustrationHeight)
-            .padding(horizontal = ArtSideInset),
+            .height(IllustrationHeight),
     ) {
         Image(
             painter = painterResource(page.illustration),
@@ -124,6 +127,9 @@ private fun Illustration(page: OnboardingPage) {
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .padding(top = ArtTop)
+                // widthIn이 fillMaxWidth보다 앞이어야 한다. 뒤에 두면 fillMaxWidth가 폭을
+                // 고정해 버려서 상한이 최소값에 밀려 무시된다.
+                .widthIn(max = ArtMaxWidth)
                 .fillMaxWidth()
                 .aspectRatio(ART_ASPECT),
         )
@@ -140,8 +146,8 @@ private val IllustrationHeight = 304.dp
 
 private val IllustrationBottom = 80.dp
 
-/** 그림은 352x290.4이고 칸 안에서 y=6.8에 놓인다. 360에서 좌우로 4씩 남는다. */
-private val ArtSideInset = 4.dp
+/** 그림은 352x290.4이고 칸 안에서 y=6.8에 놓인다. 360 화면에서 좌우로 4씩 남는다. */
+private val ArtMaxWidth = 352.dp
 
 private val ArtTop = 6.8.dp
 
