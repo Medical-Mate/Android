@@ -1,5 +1,6 @@
 package com.mist.medicalmate.home.ui
 
+import com.mist.medicalmate.core.model.IntakeStep
 import java.time.LocalDate
 
 sealed interface HomeUiState {
@@ -45,10 +46,13 @@ sealed interface HomeTodayLine {
 /**
  * 작성 중이던 증상 정리.
  *
- * Figma `1n-1`의 "이어서 하기" 카드다. 진행 정도를 [answeredSteps] / [totalSteps]로 갖는다.
- * "3단계 중 2단계까지 답했어요"를 문자열로 받으면 진행률을 다시 계산할 수 없다.
+ * Figma `1n-1`의 "이어서 하기" 카드다. 어디까지 답했는지를 [step]으로 갖는다. "2단계까지
+ * 답했어요"를 문자열로 받으면 진행률을 다시 계산할 수 없다.
+ *
+ * **서버의 왕복 수가 아니라 우리 네 단계다**(#176). 서버는 문답 왕복을 세어 `0 / 20`처럼
+ * 주는데 그것은 2단계 안에서 몇 마디 오갔는지이고 환자가 보는 단계가 아니다.
  */
-data class HomeResume(val intakeId: String, val symptomTitle: String, val answeredSteps: Int, val totalSteps: Int)
+data class HomeResume(val intakeId: String, val symptomTitle: String, val step: IntakeStep)
 
 /**
  * 저장된 브리핑 카드 요약.
