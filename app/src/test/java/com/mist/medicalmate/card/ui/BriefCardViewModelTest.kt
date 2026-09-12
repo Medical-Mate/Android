@@ -259,13 +259,62 @@ class BriefCardViewModelTest {
 }
 
 /** 픽스처 카드 하나를 돌려주는 저장소. 시험마다 응답을 바꿀 수 있다. */
+/** 1e-1의 카드 하나 지우기. */
+class BriefCardDeleteTest {
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    @Test
+    fun `지우면 서버에 나가고 화면을 나간다`() {
+        val cards = FakeCardRepository()
+        val viewModel = BriefCardViewModel(cards).apply { load(testCard.id.toLong()) }
+        var left = false
+
+        viewModel.onDeleteConfirm { left = true }
+
+        assertEquals(listOf(testCard.id.toLong()), cards.deleted)
+        assertTrue(left)
+    }
+
+    @Test
+    fun `못 지우면 화면에 남는다`() {
+        // 나가 버리면 안 지워진 카드를 지운 것으로 알게 된다.
+        val cards = FakeCardRepository(deleteFails = setOf(testCard.id))
+        val viewModel = BriefCardViewModel(cards).apply { load(testCard.id.toLong()) }
+        var left = false
+
+        viewModel.onDeleteConfirm { left = true }
+
+        assertFalse(left)
+    }
+
+    @Test
+    fun `불러오기 전에는 지우지 않는다`() {
+        val cards = FakeCardRepository()
+
+        BriefCardViewModel(cards).onDeleteConfirm {}
+
+        assertEquals(emptyList<Long>(), cards.deleted)
+    }
+}
+
 internal class FakeCardRepository(
     private val card: BriefCard = testCard,
     private val result: ApiResult<BriefCard>? = null,
     private val list: ApiResult<List<CardListItem>> = ApiResult.Success(emptyList()),
+    /** 지우기가 실패해야 하는 시험이 있다. 다른 호출의 [result]와 따로 둔다. */
+    var deleteFails: Set<String> = emptySet(),
 ) : CardRepository {
     var updatedQuestions: List<String>? = null
     var confirmedId: Long? = null
+    var deleted = mutableListOf<Long>()
 
     override suspend fun createFromSession(sessionId: Long) = result ?: ApiResult.Success(card)
 
@@ -287,6 +336,18 @@ internal class FakeCardRepository(
     }
 
     override suspend fun handoff(cardId: Long) = result ?: ApiResult.Success(card)
+
+    override suspend fun delete(cardId: Long): ApiResult<Unit> {
+        deleted += cardId
+        return if (cardId.toString() in deleteFails) OFFLINE else ApiResult.Success(Unit)
+    }
+
+    override suspend fun deleteAll(cardIds: Set<String>): Set<String> =
+        cardIds.filter { id -> id.toLongOrNull()?.let { delete(it) is ApiResult.Success } == true }.toSet()
+
+    private companion object {
+        val OFFLINE = ApiResult.NetworkUnavailable(java.io.IOException("offline"))
+    }
 }
 
 internal val testCard =

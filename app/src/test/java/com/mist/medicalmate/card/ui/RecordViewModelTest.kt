@@ -31,7 +31,7 @@ class RecordViewModelTest {
 
     @Test
     fun `불러오기 전에는 편집으로 들어갈 수 없다`() {
-        val viewModel = RecordViewModel(FakeVisitRepository())
+        val viewModel = RecordViewModel(FakeVisitRepository(), FakeCardRepository())
 
         viewModel.onEditStart()
 
@@ -68,7 +68,7 @@ class RecordViewModelTest {
 
     @Test
     fun `읽지 못하면 실패다`() {
-        val viewModel = RecordViewModel(FakeVisitRepository(list = FakeVisitRepository.OFFLINE))
+        val viewModel = RecordViewModel(FakeVisitRepository(list = FakeVisitRepository.OFFLINE), FakeCardRepository())
 
         viewModel.load()
 
@@ -202,6 +202,35 @@ class RecordViewModelTest {
     }
 
     @Test
+    fun `기록을 지우면 그 카드를 지운다`() {
+        // 기록만 지우는 API가 없다. 서버가 지우는 것은 카드이고 문답도 함께 사라진다.
+        val cards = FakeCardRepository()
+        val viewModel = loaded(cards)
+        viewModel.onEditStart()
+        viewModel.onSelectChange("11", true)
+        viewModel.onDeleteClick()
+
+        viewModel.onDeleteConfirm()
+
+        assertEquals(listOf(101L), cards.deleted)
+    }
+
+    @Test
+    fun `안 지워진 기록은 목록에 남는다`() {
+        val cards = FakeCardRepository(deleteFails = setOf("103"))
+        val viewModel = loaded(cards)
+        viewModel.onEditStart()
+        viewModel.onSelectChange("13", true)
+        viewModel.onSelectChange("11", true)
+        viewModel.onDeleteClick()
+
+        viewModel.onDeleteConfirm()
+
+        val ids = viewModel.content().groups.flatMap { group -> group.items.map { it.id } }
+        assertEquals(listOf("13", "12", "10"), ids)
+    }
+
+    @Test
     fun `다 지우면 빈 상태가 된다`() {
         val viewModel = loaded()
         viewModel.onEditStart()
@@ -213,28 +242,38 @@ class RecordViewModelTest {
         assertEquals(emptyList<RecordGroup>(), viewModel.content().groups)
     }
 
-    private fun loaded() = RecordViewModel(FakeVisitRepository(list = ApiResult.Success(VISITS))).apply { load() }
+    private fun loaded(cards: FakeCardRepository = FakeCardRepository()) =
+        RecordViewModel(FakeVisitRepository(list = ApiResult.Success(VISITS)), cards).apply { load() }
 
     private fun RecordViewModel.content(): RecordUiState.Content = uiState.value as RecordUiState.Content
 
     private companion object {
         val VISITS =
             listOf(
-                VisitListItem(id = "13", cardTitle = "무릎 통증", clinic = null, visitedOn = LocalDate.of(2026, 9, 20)),
+                VisitListItem(
+                    id = "13",
+                    cardId = 103,
+                    cardTitle = "무릎 통증",
+                    clinic = null,
+                    visitedOn = LocalDate.of(2026, 9, 20),
+                ),
                 VisitListItem(
                     id = "12",
+                    cardId = 102,
                     cardTitle = "두통 · 잦은 어지러움",
                     clinic = "OO내과",
                     visitedOn = LocalDate.of(2026, 9, 15),
                 ),
                 VisitListItem(
                     id = "11",
+                    cardId = 101,
                     cardTitle = "복부 통증 · 3주",
                     clinic = "서울OO병원 내과",
                     visitedOn = LocalDate.of(2026, 9, 12),
                 ),
                 VisitListItem(
                     id = "10",
+                    cardId = 100,
                     cardTitle = "목 통증 · 삼킬 때 아픔",
                     clinic = "OO이비인후과",
                     visitedOn = LocalDate.of(2026, 7, 18),

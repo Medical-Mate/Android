@@ -46,6 +46,13 @@ data class RecordGroup(val monthLabel: String, val items: List<RecordItem>)
  */
 data class RecordItem(
     val id: String,
+    /**
+     * 이 기록이 매달린 카드.
+     *
+     * 목록에서 지우면 서버가 지우는 것이 카드다. 기록만 지우는 API가 없다. 카드 없이 만든
+     * 기록은 없지만 응답이 null을 줄 수 있어서 선택으로 둔다.
+     */
+    val cardId: String? = null,
     val title: String,
     val status: Status,
     val meta: String,
