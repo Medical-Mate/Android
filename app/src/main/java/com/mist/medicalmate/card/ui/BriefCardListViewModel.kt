@@ -71,13 +71,12 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
      * 사라지고 편집에서 빠져나온다.
      */
     fun onDeleteConfirm() {
-        updateContent { content ->
-            val ids = content.selectedIds.orEmpty()
-            val groups =
-                content.groups
-                    .map { group -> group.copy(items = group.items.filterNot { it.id in ids }) }
-                    .filter { it.items.isNotEmpty() }
-            content.copy(groups = groups, selectedIds = null, deleteRequested = false)
+        val ids = (mutableUiState.value as? BriefCardListUiState.Content)?.selectedIds.orEmpty()
+        if (ids.isEmpty()) return
+        updateContent { it.copy(deleteRequested = false) }
+        viewModelScope.launch {
+            val gone = repository.deleteAll(ids)
+            updateContent { content -> content.without(gone).copy(selectedIds = null) }
         }
     }
 
@@ -120,6 +119,19 @@ private fun CardListItem.toRow() = RecordItem(
 private val MONTH_LABEL: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy년 M월", Locale.KOREAN)
 
 private val WRITTEN_ON: DateTimeFormatter = DateTimeFormatter.ofPattern("MM.dd", Locale.KOREAN)
+
+/**
+ * 지워진 것만 목록에서 뺀다.
+ *
+ * 여러 장을 한 번에 지울 때 일부만 실패할 수 있다. 실패한 것을 함께 빼면 지워지지 않은
+ * 카드가 지워진 것처럼 보이고, 다시 열었을 때 되살아난 것으로 읽힌다.
+ */
+private fun BriefCardListUiState.Content.without(ids: Set<String>): BriefCardListUiState.Content = copy(
+    groups =
+    groups
+        .map { group -> group.copy(items = group.items.filterNot { it.id in ids }) }
+        .filter { it.items.isNotEmpty() },
+)
 
 /**
  * Figma 1j-4(`1122:4830`)의 목록. Preview와 픽스처가 함께 쓴다.

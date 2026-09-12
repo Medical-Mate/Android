@@ -174,9 +174,22 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
      * 서버 삭제는 아직 없다. `DELETE /api/cards/{cardId}`를 붙이면 여기서 호출한다. 지금은
      * 대화상자를 닫기만 하고, 화면 이동은 `BriefCardRoute`가 상태를 보고 처리한다.
      */
-    fun onDeleteConfirm() {
+    /**
+     * 대화상자의 `삭제`. `DELETE /api/cards/{cardId}`.
+     *
+     * 지운 뒤에 화면을 나간다. 지운 카드의 화면에 남을 수 없다. 실패하면 그대로 있는다 —
+     * 나가 버리면 안 지워진 카드를 지운 것으로 알게 된다.
+     *
+     * **문답과 진료 기록이 함께 지워진다.** 되돌릴 수 없다. 확인 대화상자가 그 사실을 적는다.
+     */
+    fun onDeleteConfirm(onDeleted: () -> Unit) {
+        val cardId = (mutableUiState.value as? BriefCardUiState.Content)?.card?.id?.toLongOrNull()
         mutableUiState.update { state ->
             if (state !is BriefCardUiState.Content) state else state.copy(deleteRequested = false, draft = null)
+        }
+        if (cardId == null) return
+        viewModelScope.launch {
+            if (repository.delete(cardId) is ApiResult.Success) onDeleted()
         }
     }
 }

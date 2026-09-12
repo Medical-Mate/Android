@@ -30,6 +30,20 @@ interface CardRepository {
      */
     suspend fun update(cardId: Long, axes: List<AxisEdit>, questions: List<String>): ApiResult<BriefCard>
 
+    /**
+     * 카드를 지운다. 문답과 진료 기록이 함께 지워지고 일정은 연결만 끊긴다. 되돌릴 수 없다.
+     */
+    suspend fun delete(cardId: Long): ApiResult<Unit>
+
+    /**
+     * 여러 장을 지우고 **실제로 지워진 id만** 돌려준다.
+     *
+     * 한 번에 지우는 API가 없어서 한 장씩 부른다. 일부가 실패해도 나머지는 계속 지운다.
+     * 하나 실패했다고 멈추면 이미 지운 것과 화면이 어긋나고, 다시 누르면 지운 것을 또
+     * 부르게 된다.
+     */
+    suspend fun deleteAll(cardIds: Set<String>): Set<String>
+
     suspend fun confirm(cardId: Long): ApiResult<BriefCard>
 
     /**
@@ -70,6 +84,12 @@ constructor(private val api: CardApi, private val json: Json) :
                 ),
             )
         }.map { it.toBriefCard() }
+
+    override suspend fun delete(cardId: Long): ApiResult<Unit> = apiCall(json) { api.delete(cardId) }
+
+    override suspend fun deleteAll(cardIds: Set<String>): Set<String> = cardIds
+        .mapNotNull { id -> id.toLongOrNull()?.takeIf { delete(it) is ApiResult.Success }?.let { id } }
+        .toSet()
 
     override suspend fun confirm(cardId: Long): ApiResult<BriefCard> =
         apiCall(json) { api.confirm(cardId) }.map { it.toBriefCard() }

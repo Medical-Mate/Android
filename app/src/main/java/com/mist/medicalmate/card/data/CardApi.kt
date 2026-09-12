@@ -2,6 +2,7 @@ package com.mist.medicalmate.card.data
 
 import kotlinx.serialization.Serializable
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.POST
@@ -32,6 +33,19 @@ internal interface CardApi {
      */
     @PATCH("api/cards/{cardId}")
     suspend fun update(@Path("cardId") cardId: Long, @Body request: UpdateCardRequest): CardResponse
+
+    /**
+     * 카드를 지운다.
+     *
+     * **딸린 것이 갈린다.** 문답과 진료 기록은 함께 지워지고, 일정은 남고 연결만 끊긴다.
+     * 증상 대화가 서버에 남아 있는데 카드만 지우면 환자는 지웠다고 생각하면서 증상·복용약이
+     * 계속 보관되고, 반대로 카드를 지웠다고 병원 예약까지 사라지면 진료를 놓친다.
+     *
+     * 같은 문답에서 나온 카드는 버전을 가리지 않고 전부 지워진다. 환자에게는 한 장이고
+     * 버전은 서버 사정이다. 확정·전달한 카드도 지울 수 있고 **되돌릴 수 없다.**
+     */
+    @DELETE("api/cards/{cardId}")
+    suspend fun delete(@Path("cardId") cardId: Long)
 
     /** 이미 확정한 카드를 다시 확정하면 400이다. */
     @POST("api/cards/{cardId}/confirm")

@@ -62,7 +62,18 @@ constructor(private val api: VisitApi, private val json: Json) :
 }
 
 /** 목록의 기록 한 줄. 원문은 담기지 않는다. */
-data class VisitListItem(val id: String, val cardTitle: String, val clinic: String?, val visitedOn: LocalDate)
+data class VisitListItem(
+    val id: String,
+    /**
+     * 이 기록이 매달린 카드.
+     *
+     * 기록 목록(1j-1)에서 지우면 서버가 지우는 것이 그 카드다. 기록만 지우는 API가 없다.
+     */
+    val cardId: Long?,
+    val cardTitle: String,
+    val clinic: String?,
+    val visitedOn: LocalDate,
+)
 
 /**
  * 기록 하나.
@@ -82,6 +93,7 @@ data class Visit(
 
 private fun VisitSummaryResponse.toListItem() = VisitListItem(
     id = visitId.toString(),
+    cardId = cardId,
     cardTitle = cardTitle.orEmpty(),
     clinic = clinicName,
     visitedOn = LocalDate.parse(visitedOn),

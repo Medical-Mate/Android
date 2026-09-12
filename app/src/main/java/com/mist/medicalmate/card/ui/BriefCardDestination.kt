@@ -108,10 +108,7 @@ private fun BriefCardRoute(
             onSaveClick = onSaved,
             onDeleteClick = viewModel::onDeleteClick,
             onDeleteDismiss = viewModel::onDeleteDismiss,
-            onDeleteConfirm = {
-                viewModel.onDeleteConfirm()
-                onDeleted()
-            },
+            onDeleteConfirm = { viewModel.onDeleteConfirm(onDeleted) },
             onHospitalChangeClick = { content?.card?.id?.let(onHospitalChange) },
             onHandoffClick = { viewModel.onHandoffClick(onHandoff) },
             onRetryClick = { viewModel.load(cardId, hospital) },

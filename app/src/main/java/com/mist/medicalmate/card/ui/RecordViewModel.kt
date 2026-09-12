@@ -2,6 +2,7 @@ package com.mist.medicalmate.card.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mist.medicalmate.card.data.CardRepository
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.visit.data.VisitListItem
 import com.mist.medicalmate.visit.data.VisitRepository
@@ -25,7 +26,10 @@ import java.util.Locale
 @HiltViewModel
 class RecordViewModel
 @Inject
-internal constructor(private val repository: VisitRepository) : ViewModel() {
+internal constructor(
+    private val repository: VisitRepository,
+    private val cardRepository: CardRepository,
+) : ViewModel() {
     private val mutableUiState = MutableStateFlow<RecordUiState>(RecordUiState.Loading)
     val uiState: StateFlow<RecordUiState> = mutableUiState.asStateFlow()
 
@@ -77,17 +81,22 @@ internal constructor(private val repository: VisitRepository) : ViewModel() {
     /**
      * 고른 기록을 지운다.
      *
-     * 서버에 나가지 않는다. `DELETE /api/cards`가 붙으면 여기서 부른다. 지운 뒤에는 편집을
-     * 빠져나온다. 고른 것이 사라졌는데 편집 상태로 남으면 무엇을 더 하라는 것인지 알 수 없다.
+     * **지우는 것은 카드다.** `DELETE /api/cards/{cardId}`이고 기록만 지우는 API가 없다.
+     * 그 카드의 문답도 함께 지워진다. 사용자에게는 "기록을 지웠다"인데 실제로 사라지는 것이
+     * 더 많아서 확인 문구가 그 사실을 적는다.
+     *
+     * 지운 뒤에는 편집을 빠져나온다. 고른 것이 사라졌는데 편집 상태로 남으면 무엇을 더 하라는
+     * 것인지 알 수 없다.
      */
     fun onDeleteConfirm() {
-        updateContent { content ->
-            val ids = content.selectedIds.orEmpty()
-            val groups =
-                content.groups
-                    .map { group -> group.copy(items = group.items.filterNot { it.id in ids }) }
-                    .filter { it.items.isNotEmpty() }
-            content.copy(groups = groups, selectedIds = null, deleteRequested = false)
+        val content = mutableUiState.value as? RecordUiState.Content ?: return
+        val picked = content.groups.flatMap { it.items }.filter { it.id in content.selectedIds.orEmpty() }
+        if (picked.isEmpty()) return
+        updateContent { it.copy(deleteRequested = false) }
+        viewModelScope.launch {
+            val goneCards = cardRepository.deleteAll(picked.mapNotNull { it.cardId }.toSet())
+            val gone = picked.filter { it.cardId in goneCards }.map { it.id }.toSet()
+            updateContent { state -> state.without(gone).copy(selectedIds = null) }
         }
     }
 
@@ -98,6 +107,19 @@ internal constructor(private val repository: VisitRepository) : ViewModel() {
 }
 
 /** 응답을 월별 묶음으로. 서버가 최근 순으로 주므로 순서를 다시 세우지 않는다. */
+/**
+ * 지워진 것만 목록에서 뺀다.
+ *
+ * 여러 건을 한 번에 지울 때 일부만 실패할 수 있다. 실패한 것을 함께 빼면 지워지지 않은
+ * 기록이 지워진 것처럼 보이고, 다시 열었을 때 되살아난 것으로 읽힌다.
+ */
+private fun RecordUiState.Content.without(ids: Set<String>): RecordUiState.Content = copy(
+    groups =
+    groups
+        .map { group -> group.copy(items = group.items.filterNot { it.id in ids }) }
+        .filter { it.items.isNotEmpty() },
+)
+
 private fun List<VisitListItem>.toGroups(): List<RecordGroup> = groupBy { it.visitedOn.format(MONTH_LABEL) }
     .map { (label, items) -> RecordGroup(monthLabel = label, items = items.map { it.toRow() }) }
 
@@ -109,6 +131,7 @@ private fun List<VisitListItem>.toGroups(): List<RecordGroup> = groupBy { it.vis
  */
 private fun VisitListItem.toRow() = RecordItem(
     id = id,
+    cardId = cardId?.toString(),
     title = cardTitle,
     status = RecordItem.Status.CONFIRMED,
     meta = listOfNotNull(visitedOn.format(VISITED_ON) + " 진료", clinic).joinToString(" · "),
