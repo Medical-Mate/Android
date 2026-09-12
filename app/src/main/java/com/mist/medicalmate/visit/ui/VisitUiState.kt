@@ -1,6 +1,7 @@
 package com.mist.medicalmate.visit.ui
 
 import androidx.annotation.Keep
+import java.time.LocalDate
 
 /**
  * 진료 후 기록 플로우의 상태. Figma 1m·1p·1q-1·1k.
@@ -113,8 +114,16 @@ data class VisitNoteUiState(val visit: VisitHeadline, val note: String = "", val
     val canSave: Boolean = note.isNotBlank() && !organizing
 }
 
-/** "오늘 진료 / 서울OO병원 내과 · 9월 12일 / 복부 통증 · 3주 브리핑 카드로 진료받았어요" */
-data class VisitHeadline(val label: String, val title: String, val detail: String)
+/**
+ * 어떤 진료를 적는 것인지. "오늘 진료 / 서울OO병원 내과 · 9월 12일 / 복부 통증 · 3주 브리핑
+ * 카드로 진료받았어요"의 재료다.
+ *
+ * 완성된 문장을 담지 않는다. 앞말과 뒷말은 문자열 리소스에 있고 조립은 화면이 한다.
+ *
+ * [clinic]은 1m에서 고른 병원, [cardTitle]은 이 기록이 붙을 카드의 제목이다. 둘 다 캘린더
+ * 일자에서 라우트를 타고 따라온다. 없으면 그 줄을 그리지 않는다.
+ */
+data class VisitHeadline(val visitedOn: LocalDate, val clinic: String? = null, val cardTitle: String? = null)
 
 /**
  * 1q-1 자동 분류 결과와 1q-1-E 전체 수정. Figma `405:2193`, `636:3675`.
@@ -195,27 +204,49 @@ data class VisitRecordItem(val key: String, val value: String, val tone: Tone = 
 /**
  * 1k 이번 진료 정리. Figma `405:2322`.
  *
- * [previous]가 없으면 비교 영역을 그리지 않는다. 첫 진료에는 견줄 것이 없다.
+ * **저장됐다는 안내는 세 상태에서 모두 남는다.** 여기까지 온 것 자체가 저장이 끝났다는
+ * 뜻이라, 읽기가 실패했다고 해서 그 사실까지 감추면 방금 남긴 기록이 날아간 것으로 읽힌다.
+ * 화면이 안내를 먼저 그리고 그 아래만 이 상태로 갈린다.
  */
-data class VisitSummaryUiState(
-    val current: VisitCompareCard,
-    val hospital: HospitalSummary,
-    val previous: VisitCompareCard? = null,
-)
+sealed interface VisitSummaryUiState {
+    data object Loading : VisitSummaryUiState
 
-/** 비교 카드 한 장. "지난 진료 · 8.21 / 두통 · 어지러움 / 진통제 처방 · 경과 관찰" */
-data class VisitCompareCard(val label: String, val title: String, val detail: String)
+    /**
+     * @param compare 지난 진료가 없으면 null이다. 첫 진료에는 견줄 것이 없다.
+     * @param hospital 병원 이름이 없으면 null이다. 이름 없이 카드만 그릴 수 없다.
+     */
+    data class Content(val compare: VisitComparison? = null, val hospital: HospitalSummary? = null) :
+        VisitSummaryUiState
+
+    data object Failed : VisitSummaryUiState
+}
+
+/** 나란히 놓는 두 장. 둘이 다 있어야 비교가 성립해서 한 덩이로 든다. */
+data class VisitComparison(val previous: VisitCompareCard, val current: VisitCompareCard)
+
+/**
+ * 비교 카드 한 장.
+ *
+ * "지난 진료 · 8.21"처럼 완성된 문장을 담지 않는다. 앞말은 어느 자리에 놓이느냐로 정해지고
+ * 문자열 리소스에 있다. 날짜를 글자로 만들어 두면 형식을 바꿀 때 여기까지 고쳐야 한다.
+ *
+ * [detail]은 처방·결과·한 것 중 적힌 것을 잇는다. 셋 다 비어 있으면 null이고 그 줄은
+ * 그리지 않는다.
+ */
+data class VisitCompareCard(val visitedOn: LocalDate, val title: String, val detail: String? = null)
 
 /**
  * 진료받은 병원.
  *
- * [visitDate]와 [revisitDate]는 "09.12"처럼 월·일만 담는다. 카드가 두 날짜를 칩 두 개로
- * 나눠 보여주고 "진료"·"재방문"은 문자열 리소스에서 붙인다. 다시 갈 날을 정하지 않았으면
- * [revisitDate]가 null이고 칩도 하나만 나온다.
+ * [address]는 늘 null이다. 서버가 병원 이름만 준다(#155). 자리를 남겨 두는 이유는 주소가
+ * 오기 시작하면 채우는 곳이 여기 하나이기 때문이다.
+ *
+ * [revisitOn]도 지금은 늘 null이다. 1q-1에서 적은 재방문 날짜가 서버로 가지 않는다. 다시
+ * 갈 날이 없으면 칩이 하나만 나온다.
  */
 data class HospitalSummary(
     val name: String,
-    val address: String,
-    val visitDate: String,
-    val revisitDate: String? = null,
+    val address: String? = null,
+    val visitedOn: LocalDate? = null,
+    val revisitOn: LocalDate? = null,
 )

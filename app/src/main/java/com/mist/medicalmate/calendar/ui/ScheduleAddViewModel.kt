@@ -38,11 +38,21 @@ internal constructor(
     private val mutableUiState = MutableStateFlow(ScheduleAddUiState())
     val uiState: StateFlow<ScheduleAddUiState> = mutableUiState.asStateFlow()
 
-    /** 가져갈 카드로 고를 수 있는 것들. 저장된 카드 전부다. */
+    /**
+     * 가져갈 카드로 고를 수 있는 것들. 저장된 카드 전부다.
+     *
+     * **고른 것을 지우지 않는다.** 이 호출은 화면이 조합될 때마다 온다. 병원을 고르러
+     * 나갔다 돌아오면 이 화면이 컴포지션에 다시 들어오면서 한 번 더 오는데, 그때 목록을
+     * 통째로 갈아끼우면 골라 둔 카드가 조용히 풀린다. 그대로 저장하면 카드가 안 걸린 일정이
+     * 되고, 나중에 그 일정으로는 진료 후 기록을 남길 수 없다.
+     */
     fun load() {
         viewModelScope.launch {
             val cards = (cardRepository.cards() as? ApiResult.Success)?.value.orEmpty()
-            mutableUiState.update { state -> state.copy(cards = cards.map { it.toPick() }) }
+            mutableUiState.update { state ->
+                val picked = state.cards.filter { it.picked }.map { it.id }.toSet()
+                state.copy(cards = cards.map { card -> card.toPick().copy(picked = card.id in picked) })
+            }
         }
     }
 
