@@ -11,24 +11,57 @@ import com.mist.medicalmate.profile.data.HealthField
  * `GET /api/me/health-profile` 한 번으로 앞의 둘이 채워진다.
  */
 data class MyProfileUiState(
-    val profile: MyProfile,
-    val health: HealthSummary,
-    val settings: Map<AppSetting, Boolean> = emptyMap(),
+    val profile: MyProfile = MyProfile(),
+    val health: HealthSummary = HealthSummary(),
+    val settings: Map<AppSetting, Boolean> = DefaultSettings,
 ) {
     fun isOn(setting: AppSetting): Boolean = settings[setting] == true
 }
 
 /**
+ * 설정 세 개의 초기값. 시안 1s-1이 그린 대로다.
+ *
+ * 저장되지 않아 화면을 다시 열면 이 값으로 돌아온다. 기기에 남기려면 `DataStore`가, 계정에
+ * 남기려면 API가 필요하다(#85).
+ */
+private val DefaultSettings =
+    mapOf(
+        AppSetting.VISIT_REMINDER to true,
+        AppSetting.CARD_AUTO_SAVE to true,
+        AppSetting.HANDOFF_BRIGHTNESS to false,
+    )
+
+/**
  * 프로필.
  *
- * [initial]은 아바타에 들어가는 한 글자다. 이름에서 잘라내지 않고 따로 받는다. 서버가
- * 이름을 마스킹해서 줄 수 있고("김OO"), 그때 첫 글자를 자르는 규칙이 화면에 있으면
- * 마스킹 형식이 바뀔 때 화면이 깨진다.
+ * "1994년생 · 여" 같은 완성된 문장을 담지 않는다. 앞말과 뒷말은 문자열 리소스에 있고 조립은
+ * 화면이 한다. 시안이 이름 · 생년월일 · 로그인 수단을 세 줄로 그려서 줄을 나누는 것도
+ * 화면의 일이다.
  *
- * [meta]와 [login]을 나눠 둔 이유는 시안이 두 줄로 그렸기 때문이다. 한 문장으로 합치면
- * 좁은 화면에서 줄바꿈 위치를 고를 수 없다.
+ * [initial]은 아바타에 들어가는 한 글자다. 이름에서 잘라내는 규칙을 화면에 두지 않는다.
+ * 서버가 이름을 마스킹해서 줄 수 있고("김OO"), 마스킹 형식이 바뀌면 고칠 곳이 여럿이 된다.
+ * 자르는 자리는 [MyProfileViewModel]이고 홈 헤더의 아바타도 같은 규칙이다.
+ *
+ * 값이 없으면 그 줄을 그리지 않는다. 온보딩을 마치면 셋 다 차 있지만, 카카오 동의를 거부한
+ * 계정은 이름이나 성별이 빈 채로 온다.
  */
-data class MyProfile(val initial: String, val name: String, val meta: String, val login: String)
+data class MyProfile(
+    val initial: String = "",
+    val name: String? = null,
+    val birthYear: Int? = null,
+    val sex: ProfileSex? = null,
+)
+
+/**
+ * 화면에 적을 성별.
+ *
+ * 서버의 `UNSPECIFIED`는 여기서 null이다. "밝히지 않음"을 적을 자리가 시안에 없고, 적어도
+ * 환자에게 쓸모가 없다.
+ */
+enum class ProfileSex(@StringRes val labelRes: Int) {
+    FEMALE(R.string.my_profile_sex_female),
+    MALE(R.string.my_profile_sex_male),
+}
 
 /**
  * 건강 정보 요약 3줄.

@@ -134,18 +134,22 @@ private fun ProfileCard(profile: MyProfile) {
                 contentDescription = null,
             )
             Column(verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s2)) {
+                profile.name?.let { name ->
+                    Text(
+                        text = name,
+                        style = MedicalMateTheme.typography.headingM,
+                        color = MedicalMateTheme.colors.fgDefault,
+                    )
+                }
+                metaLine(profile)?.let { meta ->
+                    Text(
+                        text = meta,
+                        style = MedicalMateTheme.typography.bodyS,
+                        color = MedicalMateTheme.colors.fgSubtle,
+                    )
+                }
                 Text(
-                    text = profile.name,
-                    style = MedicalMateTheme.typography.headingM,
-                    color = MedicalMateTheme.colors.fgDefault,
-                )
-                Text(
-                    text = profile.meta,
-                    style = MedicalMateTheme.typography.bodyS,
-                    color = MedicalMateTheme.colors.fgSubtle,
-                )
-                Text(
-                    text = profile.login,
+                    text = stringResource(R.string.my_profile_login_kakao),
                     style = MedicalMateTheme.typography.bodyS,
                     color = MedicalMateTheme.colors.fgSubtle,
                 )
@@ -153,6 +157,17 @@ private fun ProfileCard(profile: MyProfile) {
         }
     }
 }
+
+/**
+ * 생년과 성별을 한 줄로. "1994년생 · 여".
+ *
+ * 둘 다 없으면 null이고 그 줄을 그리지 않는다. 카카오 동의를 거부한 계정이 그렇다.
+ */
+@Composable
+private fun metaLine(profile: MyProfile): String? = listOfNotNull(
+    profile.birthYear?.let { stringResource(R.string.my_profile_birth_year, it) },
+    profile.sex?.let { stringResource(it.labelRes) },
+).joinToString(" · ").takeIf { it.isNotBlank() }
 
 /** 알러지만 브랜드색으로 세운다. 진료 때 먼저 전해야 하는 값이다. */
 @Composable

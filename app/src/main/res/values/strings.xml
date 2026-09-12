@@ -335,6 +335,12 @@
     <string name="profile_setup_conditions_label">기저질환</string>
     <string name="profile_setup_allergies_label">알러지</string>
     <string name="my_profile_title">내 정보</string>
+    <string name="my_profile_birth_year">%1$d년생</string>
+    <string name="my_profile_sex_female">여</string>
+    <string name="my_profile_sex_male">남</string>
+    <!-- 로그인 수단이 카카오 하나다. 서버의 사용자 식별자가 kakaoId 단독이라 다른 수단이
+         생기기 전까지 이 줄은 고정이다. -->
+    <string name="my_profile_login_kakao">카카오로 로그인</string>
     <string name="my_profile_health">건강 정보</string>
     <string name="my_profile_health_edit">수정</string>
     <string name="my_profile_health_medications">복용약</string>
