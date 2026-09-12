@@ -136,7 +136,7 @@ MedicalMate/
 │       │   ├── intake/  ui/               1l 인체도, 1c·1d·1i 증상 정리
 │       │   ├── card/  ui/                 1e 브리핑 카드, 1f 진료실 화면, 1j 기록
 │       │   ├── calendar/  ui/             1r 캘린더
-│       │   ├── visit/  ui/                1m 병원 찾기, 1p 메모, 1q 진료 후 기록, 1k 정리
+│       │   ├── visit/  ui/                1m 병원 찾기, 1p 메모, 1q 진료 후 기록
 │       │   └── home/  ui/                 1n 홈
 │       ├── test/                          JVM 유닛 테스트
 │       └── androidTest/                   계측 테스트 (CI에서 실행하지 않음)
@@ -308,7 +308,7 @@ com.mist.medicalmate/
 ├── card/      ui/ data/    1e 브리핑 카드, 1j 기록
 ├── calendar/  ui/           1r 캘린더
 ├── handoff/   ui/           1f 진료실 전달
-└── visit/     ui/ data/    1m 1p 1q 1k 사후 기록
+└── visit/     ui/ data/    1m 1p 1q 사후 기록
 ```
 
 도메인 이름은 `Medical-Mate/Backend`의 패키지(`auth`, `profile`, `intake`, `card`,
@@ -450,7 +450,7 @@ com.mist.medicalmate/
 
 | 항목 | 상태 |
 | -- | -- |
-| 유닛 테스트 | `IntakeViewModel` 33건, `VisitRecordViewModel` 25건, `SessionViewModel` 23건, `BriefCardViewModel` 19건, `ScheduleAddViewModel` 20건, `BodyMapGeometry` 17건, `HealthEditViewModel` 17건, `RecordViewModel` 17건, `CalendarDayViewModel` 20건, `CalendarViewModel` 15건, `BriefCardListViewModel` 14건, `HomeRepository` 14건, `HospitalPickViewModel` 14건, `ProfileSetupViewModel` 14건, `LoginViewModel` 13건, `DesignToken` 12건, `RecordDetailFixtures` 12건, `MyProfileViewModel` 12건, `RecordDetailViewModel` 12건, `VisitSummaryViewModel` 12건, `BodyMapSearchState` 11건, `CardMapping` 11건, `VectorParity` 11건, `BodyMapLayout` 10건, `IntakeSessionActions` 10건, `AppointmentRepository` 8건, `BodyPartSearch` 8건, `HomeViewModel` 7건, `MedicalMateSeverity` 7건, `TokenAuthenticator` 7건, `VisitNoteViewModel` 8건, `HomeSchedule` 4건, `PretendardFont` 4건, `ProgressIndicator` 4건, `SegmentedControl` 3건, 템플릿 1개 |
+| 유닛 테스트 | `IntakeViewModel` 33건, `VisitRecordViewModel` 25건, `SessionViewModel` 23건, `BriefCardViewModel` 23건, `ScheduleAddViewModel` 20건, `BodyMapGeometry` 17건, `HealthEditViewModel` 17건, `RecordViewModel` 17건, `CalendarDayViewModel` 20건, `CalendarViewModel` 15건, `BriefCardListViewModel` 14건, `HomeRepository` 14건, `HospitalPickViewModel` 14건, `ProfileSetupViewModel` 14건, `LoginViewModel` 13건, `DesignToken` 12건, `RecordDetailFixtures` 12건, `MyProfileViewModel` 12건, `RecordDetailViewModel` 12건, `BodyMapSearchState` 11건, `CardMapping` 11건, `VectorParity` 11건, `BodyMapLayout` 10건, `IntakeSessionActions` 10건, `AppointmentRepository` 8건, `BodyPartSearch` 8건, `HomeViewModel` 7건, `MedicalMateSeverity` 7건, `TokenAuthenticator` 7건, `VisitNoteViewModel` 8건, `HomeSchedule` 4건, `PretendardFont` 4건, `ProgressIndicator` 4건, `SegmentedControl` 3건, 템플릿 1개 |
 | 네비게이션 테스트 | 없음. `NavHost`는 계측 테스트가 필요하고 CI가 androidTest를 실행하지 않음 |
 | 아키텍처 패턴 | MVVM 확정. UseCase는 필요할 때만 |
 | DI | Hilt 확정 |
@@ -461,7 +461,7 @@ com.mist.medicalmate/
 | 디자인 시스템 | DESIGN.md 3.0의 토큰·타이포·아이콘 반영 완료. 시맨틱 41개, 타이포 15종, 아이콘 46개(arrow-up 추가), 로고 4개, Pretendard 4무게. 3.0이 확정한 `layout/tabbar-h` 79와 Date Cell 42는 코드와 같다. Badge를 `Label/M`으로 적었던 2.0의 오기는 3.0에서 사라졌다 |
 | 컴포넌트 | 51종 구현. Figma 마스터 대응은 `COMPONENT_MAP.md`. `Severity Scale`은 Figma에서 마스터가 삭제돼 함께 지웠는데 3.0 문서에는 아직 남아 있다. 디자인 트랙 확인 필요 |
 | 컴포넌트 v2 | Figma `06 · 추가`가 9종을 v2로 재등록. KV Row·Tab Bar·Nav Bar·Date Cell·Text Field·Segmented Control 반영 완료. Text Area의 Footer Row(카운터·마이크)와 Toast의 Timer는 기본 false라 미구현. List Row의 Summary도 미구현인데 시안 `1j-1`의 줄이 104(Summary 있는 높이)라 이 자리가 그 변이일 수 있다. 지금 그 줄은 `Card`로 짜여 있고 어느 쪽이 맞는지가 확인 대기 항목이다. Ghost→Outline은 F·H 플로우를 대조한 결과 해당 지점이 여전히 텍스트형이라 적용 대상이 없다 |
-| 컴포넌트 3.0 신규 | 7종 모두 화면에 붙었다. `Hospital Card`는 1e-1·1k, `Picker Field`·`Card Pick`은 1r-4, `Add Row`는 1r-4, `Todo Row`는 1r-2·1r-4, `Select Bar`는 1j-4, `Onboarding Progress`는 ONB다. `Select Bar`의 면색은 마스터에 채움이 없었는데 `1j-4-D2` 인스턴스가 `#F2F4FE`로 칠해져 있어 `bg/primary-faint`로 넣었다. `Hospital Card`·`Card Pick` 마스터도 채움이 묶여 있지 않아 `bg/surface`를 넣었다. 디자인 트랙 확인 필요 |
+| 컴포넌트 3.0 신규 | 7종 모두 화면에 붙었다. `Hospital Card`는 1e-1(1k는 시안에서 사라졌다), `Picker Field`·`Card Pick`은 1r-4, `Add Row`는 1r-4, `Todo Row`는 1r-2·1r-4, `Select Bar`는 1j-4, `Onboarding Progress`는 ONB다. `Select Bar`의 면색은 마스터에 채움이 없었는데 `1j-4-D2` 인스턴스가 `#F2F4FE`로 칠해져 있어 `bg/primary-faint`로 넣었다. `Hospital Card`·`Card Pick` 마스터도 채움이 묶여 있지 않아 `bg/surface`를 넣었다. 디자인 트랙 확인 필요 |
 | CRUD 규칙 | 3.0이 장으로 확정. 편집 상태는 `편집 → 취소 → 확인` 한 자리에서 이름만 바뀌고, 삭제는 세 갈래(개체=하단 Danger CTA+Dialog / 항목=행 × 확인 없음 / 목록=체크 다중선택+Dialog)다. 토스트와 스와이프는 쓰지 않는다. 여섯 화면에 들어갔다. 1e-1·1q-1·1r-2가 편집 상태와 개체 삭제를, 1j-1·1j-4가 목록 삭제를, 1r-4가 항목 삭제를 쓴다 |
 | 반경 13 · 14 | 3.0이 둘 다 스케일 밖 값으로 잡고 `radius/sm` 12 · `radius/md` 16 통일안을 적었다. 코드의 `MedicalMateRadius.dateCell`(13)과 `buttonM`(14)이 그 값이다. Figma가 바뀌면 함께 바꾼다 |
 | Elevation/Card | Figma가 2겹(y3 r10 8% + y1 r2 5%)으로 바뀜. 코드는 `Modifier.shadow` 한 겹 근사 |
@@ -485,7 +485,7 @@ com.mist.medicalmate/
 | 진료과 안내 | 없다. 응답(`docs/examples/body-map.json`)이 부위별 진료과를 함께 주지만 화면에 넣지 않았고, 픽스처에도 담지 않았다. 넣게 되면 응답에서 다시 가져온다 |
 | 부위 이름 조사 | 물음의 주격 조사를 문자열 리소스에 박지 않는다. 부위가 25가지라 `%1$s가`로 고정하면 "무릎가"가 된다. 문구는 리소스에, 조사는 `withSubjectParticle`이 계산해 `IntakeUiState.bodyPartSubject`로 넘긴다 |
 | 브리핑 카드(1e·1f·1j-4) | 카드 읽기·전체 수정·진료실 화면과 카드 전체 목록(1j-4) 구현. 목록은 홈의 "전체 보기"에서 들어가고 편집으로 여러 장을 골라 지운다. 읽기·수정·확정이 `GET`·`PATCH`·`POST /api/cards/{id}`에 붙어 있고(#139) 삭제는 #157이다. 카드를 만드는 것은 문답 쪽(`POST /api/sessions/{id}/card`)이다 |
-| 진료 후 기록(1m·1p·1q·1k) | 네 화면 구현. 캘린더 일자의 "진료 후 기록하기"에서 들어간다. 1q-1의 저장이 `POST /api/cards/{cardId}/visit`이고, 그 요청에 들어갈 값(병원 이름·붙일 카드·원문 메모)이 라우트를 타고 1m → 1p → 1q-1로 따라간다. 1p의 머리말(병원·날짜·카드 제목)은 픽스처가 아니라 앞 화면에서 고른 값이다 — 카드 제목은 캘린더 일자에서 라우트를 타고 따라온다. **일정에 카드가 걸려 있지 않으면 일자 화면에 "진료 후 기록하기"를 두지 않는다.** 서버가 카드에 매달린 기록만 받아서, 카드 없이 들어가면 끝에서 저장이 아무 일도 하지 않았다. **AI 분류는 미연동이라 1q-1의 네 줄이 빈 채로 열린다.** 픽스처 문장을 넣어 두면 손대지 않고 저장했을 때 듣지 않은 소견이 서버에 남는다. 병원 검색은 `GET /api/hospitals`다(#155). 원천이 심평원이고 서버가 목록을 들고 있지 않아 앱도 캐시하지 않는다. **이름만 온다** — 주소·전화·좌표를 서버가 내려보내지 않기로 해서 결과 줄과 카드의 병원 블록에서 주소가 빠졌다. 검색어가 멎은 뒤(300ms) 한 번 부르고 앞선 요청은 취소한다. 부분 일치라 받은 것보다 많으면 그 사실을 줄에 적는다. 1k 정리 화면은 저장이 끝난 뒤 `GET /api/visits/{id}`로 그 기록을 다시 읽는다(#159). 견주는 대상은 직전 진료 전체다 — 카드 하나에 기록 하나라 같은 카드의 이전 기록이 있을 수 없다. 목록이 최근 진료일 순이라 이번 것 바로 다음 줄이 그것이다. 주소와 재방문 날짜는 서버에 자리가 없어 비어 있다 |
+| 진료 후 기록(1m·1p·1q) | 세 화면 구현(1m·1p·1q-1). 캘린더 일자의 "진료 후 기록하기"에서 들어간다. 1q-1의 저장이 `POST /api/cards/{cardId}/visit`이고, 그 요청에 들어갈 값(병원 이름·붙일 카드·원문 메모)이 라우트를 타고 1m → 1p → 1q-1로 따라간다. 1p의 머리말(병원·날짜·카드 제목)은 픽스처가 아니라 앞 화면에서 고른 값이다 — 카드 제목은 캘린더 일자에서 라우트를 타고 따라온다. **일정에 카드가 걸려 있지 않으면 일자 화면에 "진료 후 기록하기"를 두지 않는다.** 서버가 카드에 매달린 기록만 받아서, 카드 없이 들어가면 끝에서 저장이 아무 일도 하지 않았다. **AI 분류는 미연동이라 1q-1의 네 줄이 빈 채로 열린다.** 픽스처 문장을 넣어 두면 손대지 않고 저장했을 때 듣지 않은 소견이 서버에 남는다. 병원 검색은 `GET /api/hospitals`다(#155). 원천이 심평원이고 서버가 목록을 들고 있지 않아 앱도 캐시하지 않는다. **이름만 온다** — 주소·전화·좌표를 서버가 내려보내지 않기로 해서 결과 줄과 카드의 병원 블록에서 주소가 빠졌다. 검색어가 멎은 뒤(300ms) 한 번 부르고 앞선 요청은 취소한다. 부분 일치라 받은 것보다 많으면 그 사실을 줄에 적는다. **1k 이번 진료 정리는 시안에서 사라졌다.** 유저플로우가 1q-1 저장에서 캘린더 일자로 바로 잇는다. #159에서 붙였다가 #165에서 화면·상태·문자열을 함께 걷어냈다. 저장하면 흐름이 시작된 일자로 돌아가고 그 화면이 다시 읽으면서 방금 남긴 기록이 "이 날 기록"으로 선다 |
 | 기록·캘린더(1j·1r) | G·H 섹션 대조 완료(#121). 기록 목록·비어 있음·상세와 상세의 두 상태(카드 펼침 1j-3-X · 재방문 누적 1j-3-R), 목록 편집과 여러 건 삭제(1j-1-D·D2·DC), 캘린더 월·일자와 카드만 있는 날 시트(1r-1-S), 일정 추가 여덟 장(1r-4 계열), 일자 편집과 일정 삭제(1r-2-E·E2·DC), 다녀온 날과 다음 일정(1r-2-A·A2)까지 구현. 기록 목록은 `GET /api/me/visits`를 달로 묶고, 상세는 `GET /api/visits/{id}`다. **상세 타임라인이 한 단계다.** 응답이 진료에서 들은 것만 주고 카드 단계를 채우려면 그 카드를 따로 읽어야 한다. 여러 단계 타임라인은 Preview 픽스처에 남아 있고 `RecordDetailFixturesTest`가 그 모양을 지킨다. 일자 화면의 기록은 `GET /api/me/visits`를 그 날짜로 거른 것이고, 다음 일정은 `GET /api/me/appointments/upcoming`의 첫 줄이다(#163). 기록이 있는 날에만 다음 일정을 붙이고 그 날 자신의 일정은 뺀다. 진료가 끝난 날에는 진료 전 할 일을 두지 않는다. **할 일은 여전히 픽스처다** — 서버에 자리가 없다. 목록 삭제는 카드 삭제로 대신한다(#157). `1r-2-C`는 `1r-1-S`와 같은 상황을 다르게 그려서 어느 쪽을 쓸지 확인 대기다 |
 | 하단 탭 | 기록·홈·캘린더 세 탭 연결 완료. 내 정보는 탭이 아니라 홈 헤더 아바타로 진입 |
 | 내 정보(1s) | 두 화면 구현. 1s-1의 건강 요약과 1s-2가 `GET`·`PUT /api/me/health-profile`이다. 1s-2에서 고치고 돌아오면 1s-1이 다시 읽는다(`ON_RESUME`). 한 번만 읽으면 방금 고친 값 대신 들어올 때 읽은 값이 남는다. 프로필 줄(이름·생년·성별)도 같은 응답에서 온다. 이름은 서버가 마스킹해 줄 수 있어("김OO") 아바타 글자를 자르는 자리를 ViewModel에 뒀다. 로그인 수단은 읽지 않는다 — 서버의 식별자가 `kakaoId` 단독이라 카카오 하나뿐이고 그 줄은 고정이다. 값이 없으면 그 줄을 그리지 않는다. 설정 토글만 아직 저장되지 않는다. 서버에 자리가 없다 |

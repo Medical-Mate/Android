@@ -4,9 +4,9 @@ import androidx.annotation.Keep
 import java.time.LocalDate
 
 /**
- * 진료 후 기록 플로우의 상태. Figma 1m·1p·1q-1·1k.
+ * 진료 후 기록 플로우의 상태. Figma 1m·1p·1q-1.
  *
- * 네 화면이 한 흐름이지만 목적지가 각각이라 상태도 화면 단위로 둔다. 서버 연동에서는
+ * 세 화면이 한 흐름이지만 목적지가 각각이라 상태도 화면 단위로 둔다. 서버 연동에서는
  * 병원 id와 방문 id가 화면 사이를 라우트로 건너간다.
  */
 
@@ -200,53 +200,3 @@ data class VisitRecord(
 data class VisitRecordItem(val key: String, val value: String, val tone: Tone = Tone.DEFAULT) {
     enum class Tone { DEFAULT, LINK }
 }
-
-/**
- * 1k 이번 진료 정리. Figma `405:2322`.
- *
- * **저장됐다는 안내는 세 상태에서 모두 남는다.** 여기까지 온 것 자체가 저장이 끝났다는
- * 뜻이라, 읽기가 실패했다고 해서 그 사실까지 감추면 방금 남긴 기록이 날아간 것으로 읽힌다.
- * 화면이 안내를 먼저 그리고 그 아래만 이 상태로 갈린다.
- */
-sealed interface VisitSummaryUiState {
-    data object Loading : VisitSummaryUiState
-
-    /**
-     * @param compare 지난 진료가 없으면 null이다. 첫 진료에는 견줄 것이 없다.
-     * @param hospital 병원 이름이 없으면 null이다. 이름 없이 카드만 그릴 수 없다.
-     */
-    data class Content(val compare: VisitComparison? = null, val hospital: HospitalSummary? = null) :
-        VisitSummaryUiState
-
-    data object Failed : VisitSummaryUiState
-}
-
-/** 나란히 놓는 두 장. 둘이 다 있어야 비교가 성립해서 한 덩이로 든다. */
-data class VisitComparison(val previous: VisitCompareCard, val current: VisitCompareCard)
-
-/**
- * 비교 카드 한 장.
- *
- * "지난 진료 · 8.21"처럼 완성된 문장을 담지 않는다. 앞말은 어느 자리에 놓이느냐로 정해지고
- * 문자열 리소스에 있다. 날짜를 글자로 만들어 두면 형식을 바꿀 때 여기까지 고쳐야 한다.
- *
- * [detail]은 처방·결과·한 것 중 적힌 것을 잇는다. 셋 다 비어 있으면 null이고 그 줄은
- * 그리지 않는다.
- */
-data class VisitCompareCard(val visitedOn: LocalDate, val title: String, val detail: String? = null)
-
-/**
- * 진료받은 병원.
- *
- * [address]는 늘 null이다. 서버가 병원 이름만 준다(#155). 자리를 남겨 두는 이유는 주소가
- * 오기 시작하면 채우는 곳이 여기 하나이기 때문이다.
- *
- * [revisitOn]도 지금은 늘 null이다. 1q-1에서 적은 재방문 날짜가 서버로 가지 않는다. 다시
- * 갈 날이 없으면 칩이 하나만 나온다.
- */
-data class HospitalSummary(
-    val name: String,
-    val address: String? = null,
-    val visitedOn: LocalDate? = null,
-    val revisitOn: LocalDate? = null,
-)

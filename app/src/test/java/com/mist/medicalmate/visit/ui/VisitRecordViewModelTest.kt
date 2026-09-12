@@ -216,9 +216,9 @@ class VisitRecordViewModelTest {
     fun `저장하면 채운 값이 서버의 세 필드로 간다`() {
         val repository = FakeVisitRepository()
         val viewModel = filled(repository)
-        var saved: String? = null
+        var left = false
 
-        viewModel.onSaveClick(cardId = "3", onSaved = { saved = it })
+        viewModel.onSaveClick(cardId = "3", onSaved = { left = true })
 
         val request = repository.request
         assertEquals(3L, repository.cardId)
@@ -228,7 +228,8 @@ class VisitRecordViewModelTest {
         assertEquals("위염 초기 소견", request?.result)
         assertEquals("2주분 처방", request?.prescription)
         assertEquals(NOTE, request?.rawNote)
-        assertEquals(FakeVisitRepository.SAVED_ID, saved)
+        // 저장이 끝나면 흐름이 시작된 캘린더 일자로 돌아간다. 기록 id는 더 쓰지 않는다.
+        assertTrue(left)
     }
 
     @Test
@@ -264,12 +265,12 @@ class VisitRecordViewModelTest {
     fun `카드가 없으면 저장하지 않는다`() {
         val repository = FakeVisitRepository()
         val viewModel = filled(repository)
-        var saved: String? = null
+        var left = false
 
-        viewModel.onSaveClick(cardId = null, onSaved = { saved = it })
+        viewModel.onSaveClick(cardId = null, onSaved = { left = true })
 
         assertEquals(0, repository.createCount)
-        assertNull(saved)
+        assertFalse(left)
     }
 
     @Test
@@ -286,11 +287,11 @@ class VisitRecordViewModelTest {
         // 나가 버리면 적은 것이 사라지고 다시 누를 수도 없다.
         val repository = FakeVisitRepository(saved = FakeVisitRepository.OFFLINE)
         val viewModel = filled(repository)
-        var saved: String? = null
+        var left = false
 
-        viewModel.onSaveClick(cardId = "3", onSaved = { saved = it })
+        viewModel.onSaveClick(cardId = "3", onSaved = { left = true })
 
-        assertNull(saved)
+        assertFalse(left)
         assertTrue(viewModel.uiState.value is VisitRecordUiState.Content)
     }
 

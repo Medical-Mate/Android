@@ -12,6 +12,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -34,7 +35,7 @@ class BriefCardViewModelTest {
 
         assertEquals(BriefCardUiState.Loading, viewModel.uiState.value)
 
-        viewModel.load(1)
+        viewModel.open(1)
 
         assertTrue(viewModel.uiState.value is BriefCardUiState.Content)
     }
@@ -147,7 +148,7 @@ class BriefCardViewModelTest {
     @Test
     fun `편집 모드가 아니면 사본 조작이 아무것도 바꾸지 않는다`() {
         val viewModel = BriefCardViewModel(FakeCardRepository())
-        viewModel.load(1)
+        viewModel.open(1)
         val before = viewModel.uiState.value
 
         viewModel.editActions.onItemValueChange(0, "값")
@@ -195,7 +196,7 @@ class BriefCardViewModelTest {
         // 서버 카드 응답에 병원이 없다. 1m-B에서 방금 고른 것만 실린다(#139).
         val viewModel = BriefCardViewModel(FakeCardRepository())
 
-        viewModel.load(1, BriefCardHospital(name = "서울OO병원 내과", address = "서울 관악구"))
+        viewModel.open(1, hospital = BriefCardHospital(name = "서울OO병원 내과", address = "서울 관악구"))
 
         val content = viewModel.uiState.value as BriefCardUiState.Content
         assertEquals("서울OO병원 내과", content.card.hospital?.name)
@@ -203,7 +204,7 @@ class BriefCardViewModelTest {
 
     private fun editing(): BriefCardViewModel {
         val viewModel = BriefCardViewModel(FakeCardRepository())
-        viewModel.load(1)
+        viewModel.open(1)
         viewModel.onEditClick()
         return viewModel
     }
@@ -212,7 +213,7 @@ class BriefCardViewModelTest {
 
     private fun loadedContent(): BriefCardUiState.Content {
         val viewModel = BriefCardViewModel(FakeCardRepository())
-        viewModel.load(1)
+        viewModel.open(1)
         return viewModel.uiState.value as BriefCardUiState.Content
     }
 
@@ -222,7 +223,7 @@ class BriefCardViewModelTest {
         // 값으로 남긴다.
         val repository = FakeCardRepository()
         val viewModel = BriefCardViewModel(repository)
-        viewModel.load(1)
+        viewModel.open(1)
         viewModel.onEditClick()
 
         viewModel.editActions.onItemValueChange(1, "2주 전 시작")
@@ -235,7 +236,7 @@ class BriefCardViewModelTest {
     fun `아무것도 안 고치면 축을 보내지 않는다`() {
         val repository = FakeCardRepository()
         val viewModel = BriefCardViewModel(repository)
-        viewModel.load(1)
+        viewModel.open(1)
         viewModel.onEditClick()
 
         viewModel.onEditDoneClick()
@@ -248,7 +249,7 @@ class BriefCardViewModelTest {
         // 원본과 사본을 자리로 맞추면 첫 줄을 지웠을 때 나머지가 한 칸씩 밀려 전부 바뀐 것이 된다.
         val repository = FakeCardRepository()
         val viewModel = BriefCardViewModel(repository)
-        viewModel.load(1)
+        viewModel.open(1)
         viewModel.onEditClick()
 
         viewModel.editActions.onItemDeleteClick(0)
@@ -272,9 +273,53 @@ class BriefCardDeleteTest {
     }
 
     @Test
+    fun `카드가 없으면 문답으로 만든다`() {
+        // 1c-5에서 곧장 오든 병원을 먼저 찾고 오든 카드가 아직 없다. 만드는 자리는 여기
+        // 하나다. 예전에는 "new"라는 가짜 id가 넘어와 화면이 빈 채로 열렸다.
+        val cards = FakeCardRepository()
+        val viewModel = BriefCardViewModel(cards)
+
+        viewModel.open(cardId = null, sessionId = 7)
+
+        assertEquals(7L, cards.createdFrom)
+        assertEquals(testCard.id, (viewModel.uiState.value as BriefCardUiState.Content).card.id)
+    }
+
+    @Test
+    fun `만든 카드에 방금 고른 병원이 얹힌다`() {
+        val viewModel = BriefCardViewModel(FakeCardRepository())
+
+        viewModel.open(cardId = null, sessionId = 7, hospital = BriefCardHospital(name = "서울OO병원 내과"))
+
+        val content = viewModel.uiState.value as BriefCardUiState.Content
+        assertEquals("서울OO병원 내과", content.card.hospital?.name)
+    }
+
+    @Test
+    fun `화면이 다시 조합돼도 카드를 두 번 만들지 않는다`() {
+        val cards = FakeCardRepository()
+        val viewModel = BriefCardViewModel(cards)
+
+        viewModel.open(cardId = null, sessionId = 7)
+        cards.createdFrom = null
+        viewModel.open(cardId = null, sessionId = 7)
+
+        assertNull(cards.createdFrom)
+    }
+
+    @Test
+    fun `카드도 문답도 없으면 실패다`() {
+        val viewModel = BriefCardViewModel(FakeCardRepository())
+
+        viewModel.open(cardId = null, sessionId = null)
+
+        assertEquals(BriefCardUiState.Failed, viewModel.uiState.value)
+    }
+
+    @Test
     fun `지우면 서버에 나가고 화면을 나간다`() {
         val cards = FakeCardRepository()
-        val viewModel = BriefCardViewModel(cards).apply { load(testCard.id.toLong()) }
+        val viewModel = BriefCardViewModel(cards).apply { open(testCard.id.toLong()) }
         var left = false
 
         viewModel.onDeleteConfirm { left = true }
@@ -287,7 +332,7 @@ class BriefCardDeleteTest {
     fun `못 지우면 화면에 남는다`() {
         // 나가 버리면 안 지워진 카드를 지운 것으로 알게 된다.
         val cards = FakeCardRepository(deleteFails = setOf(testCard.id))
-        val viewModel = BriefCardViewModel(cards).apply { load(testCard.id.toLong()) }
+        val viewModel = BriefCardViewModel(cards).apply { open(testCard.id.toLong()) }
         var left = false
 
         viewModel.onDeleteConfirm { left = true }
@@ -316,7 +361,13 @@ internal class FakeCardRepository(
     var confirmedId: Long? = null
     var deleted = mutableListOf<Long>()
 
-    override suspend fun createFromSession(sessionId: Long) = result ?: ApiResult.Success(card)
+    /** 어느 문답으로 만들었는지. 카드 없이 들어온 경로가 이 값을 채운다. */
+    var createdFrom: Long? = null
+
+    override suspend fun createFromSession(sessionId: Long): ApiResult<BriefCard> {
+        createdFrom = sessionId
+        return result ?: ApiResult.Success(card)
+    }
 
     override suspend fun cards() = list
 

@@ -12,9 +12,10 @@ import androidx.navigation.toRoute
 import kotlinx.serialization.Serializable
 
 /**
- * 진료 후 기록 플로우의 목적지들. Figma 흐름은 `1m → 1p → 1q-1 → 1k`다.
+ * 진료 후 기록 플로우의 목적지들. Figma 흐름은 `1m → 1p → 1q-1`이고, 저장하면 흐름이
+ * 시작된 캘린더 일자로 돌아간다.
  *
- * 네 화면이 한 흐름이지만 목적지가 각각이라 ViewModel을 공유하지 않는다. 그래서 앞 화면에서
+ * 세 화면이 한 흐름이지만 목적지가 각각이라 ViewModel을 공유하지 않는다. 그래서 앞 화면에서
  * 정한 것이 라우트를 타고 따라간다. 마지막 화면(1q-1)의 저장 한 번이
  * `POST /api/cards/{cardId}/visit`이고, 그 요청에 들어갈 값이 세 화면에 흩어져 있다.
  */
@@ -27,6 +28,9 @@ import kotlinx.serialization.Serializable
  * [cardId]는 브리핑 카드의 `변경`에서 들어온 경우에만 있다. 고른 뒤 그 카드로 돌아가야 해서
  * 어느 카드였는지를 들고 간다.
  *
+ * [sessionId]는 진료 전(1m-B)에서만 채워진다. 고른 병원을 들고 카드 화면으로 갈 때 그
+ * 문답으로 카드를 만들어야 해서 함께 나른다.
+ *
  * [cardTitle]은 진료 후(1m)에서만 채워진다. 1p가 "무엇으로 진료받았는지"를 적는 데 쓰는
  * 값이고, 이 화면은 나르기만 한다. 카드를 다시 읽지 않는 이유는 그 제목이 이미 캘린더 일자에
  * 있기 때문이다. 병원 이름을 나르는 것과 같은 방식이다.
@@ -36,6 +40,7 @@ internal data class HospitalPickDestination(
     val purpose: HospitalPickPurpose = HospitalPickPurpose.AFTER_VISIT,
     val cardId: String? = null,
     val cardTitle: String? = null,
+    val sessionId: Long? = null,
 )
 
 /**
@@ -71,10 +76,6 @@ internal data class VisitRecordDestination(
     val note: String = "",
 )
 
-/** 와이어프레임 1k. */
-@Serializable
-internal data class VisitSummaryDestination(val visitId: String)
-
 /**
  * @param onPicked 진료 후(1m)에서 병원을 고르고 완료했을 때. 고른 병원과, 이 흐름이 어느
  *   카드에 붙는지가(id와 제목) 함께 넘어간다.
@@ -83,7 +84,7 @@ internal data class VisitSummaryDestination(val visitId: String)
  */
 internal fun NavGraphBuilder.hospitalPickDestination(
     onPicked: (cardId: String?, cardTitle: String?, hospital: Hospital) -> Unit,
-    onCardRequested: (cardId: String?, hospital: Hospital?) -> Unit,
+    onCardRequested: (cardId: String?, sessionId: Long?, hospital: Hospital?) -> Unit,
     onScheduleRequested: (Hospital?) -> Unit,
     onExit: () -> Unit,
 ) {
@@ -93,6 +94,7 @@ internal fun NavGraphBuilder.hospitalPickDestination(
             purpose = route.purpose,
             cardId = route.cardId,
             cardTitle = route.cardTitle,
+            sessionId = route.sessionId,
             onPicked = onPicked,
             onCardRequested = onCardRequested,
             onScheduleRequested = onScheduleRequested,
@@ -116,11 +118,7 @@ internal fun NavGraphBuilder.visitNoteDestination(
     }
 }
 
-internal fun NavGraphBuilder.visitRecordDestination(
-    onSaved: (visitId: String) -> Unit,
-    onDeleted: () -> Unit,
-    onExit: () -> Unit,
-) {
+internal fun NavGraphBuilder.visitRecordDestination(onSaved: () -> Unit, onDeleted: () -> Unit, onExit: () -> Unit) {
     composable<VisitRecordDestination> { entry ->
         VisitRecordRoute(
             route = entry.toRoute<VisitRecordDestination>(),
@@ -131,23 +129,14 @@ internal fun NavGraphBuilder.visitRecordDestination(
     }
 }
 
-internal fun NavGraphBuilder.visitSummaryDestination(onHome: () -> Unit, onExit: () -> Unit) {
-    composable<VisitSummaryDestination> { entry ->
-        VisitSummaryRoute(
-            visitId = entry.toRoute<VisitSummaryDestination>().visitId,
-            onHome = onHome,
-            onExit = onExit,
-        )
-    }
-}
-
 @Composable
 private fun HospitalPickRoute(
     purpose: HospitalPickPurpose,
     cardId: String?,
     cardTitle: String?,
+    sessionId: Long?,
     onPicked: (cardId: String?, cardTitle: String?, hospital: Hospital) -> Unit,
-    onCardRequested: (cardId: String?, hospital: Hospital?) -> Unit,
+    onCardRequested: (cardId: String?, sessionId: Long?, hospital: Hospital?) -> Unit,
     onScheduleRequested: (Hospital?) -> Unit,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
@@ -170,7 +159,7 @@ private fun HospitalPickRoute(
         onSubmitClick = {
             when (purpose) {
                 HospitalPickPurpose.AFTER_VISIT -> selected?.let { onPicked(cardId, cardTitle, it) }
-                HospitalPickPurpose.BEFORE_VISIT -> onCardRequested(cardId, selected)
+                HospitalPickPurpose.BEFORE_VISIT -> onCardRequested(cardId, sessionId, selected)
                 HospitalPickPurpose.SCHEDULE -> onScheduleRequested(selected)
             }
         },
@@ -179,7 +168,7 @@ private fun HospitalPickRoute(
         // 건너뛰기는 병원 없이 카드로 간다. 1m-B에만 있다. 일정 추가에서는 뒤로 가는 것이
         // 그대로 "정하지 않음"이라 따로 두지 않는다.
         onSkipClick = if (beforeCard) {
-            { onCardRequested(cardId, null) }
+            { onCardRequested(cardId, sessionId, null) }
         } else {
             null
         },
@@ -216,41 +205,13 @@ private fun VisitNoteRoute(
 /**
  * 상태 있는 진입점.
  *
- * 저장이 끝나고 서버가 매긴 기록 id를 들고 들어오는 자리다. 그 id로 방금 저장된 것을 다시
- * 읽는다. [LaunchedEffect]가 id를 열쇠로 잡아서, 같은 화면이 다시 조합돼도 다시 부르지
- * 않는다.
- */
-@Composable
-private fun VisitSummaryRoute(
-    visitId: String,
-    onHome: () -> Unit,
-    onExit: () -> Unit,
-    modifier: Modifier = Modifier,
-    viewModel: VisitSummaryViewModel = hiltViewModel(),
-) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
-
-    LaunchedEffect(visitId) { viewModel.load(visitId) }
-
-    VisitSummaryScreen(
-        state = state,
-        onHomeClick = onHome,
-        onBackClick = onExit,
-        onRetryClick = { viewModel.load(visitId) },
-        modifier = modifier,
-    )
-}
-
-/**
- * 상태 있는 진입점.
- *
  * 저장은 두 가지 일을 한다. 수정 중이면 초안을 옮기고 화면에 남고, 읽는 중이면 서버에
- * 보낸 뒤 이번 진료 정리(1k)로 넘어간다. 브리핑 카드 화면과 같은 구조다.
+ * 보낸 뒤 흐름이 시작된 캘린더 일자로 돌아간다. 브리핑 카드 화면과 같은 구조다.
  */
 @Composable
 private fun VisitRecordRoute(
     route: VisitRecordDestination,
-    onSaved: (visitId: String) -> Unit,
+    onSaved: () -> Unit,
     onDeleted: () -> Unit,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,

@@ -33,11 +33,9 @@ import com.mist.medicalmate.visit.ui.HospitalPickDestination
 import com.mist.medicalmate.visit.ui.HospitalPickPurpose
 import com.mist.medicalmate.visit.ui.VisitNoteDestination
 import com.mist.medicalmate.visit.ui.VisitRecordDestination
-import com.mist.medicalmate.visit.ui.VisitSummaryDestination
 import com.mist.medicalmate.visit.ui.hospitalPickDestination
 import com.mist.medicalmate.visit.ui.visitNoteDestination
 import com.mist.medicalmate.visit.ui.visitRecordDestination
-import com.mist.medicalmate.visit.ui.visitSummaryDestination
 
 /**
  * 그래프 등록을 도메인별로 나눈 확장 함수들.
@@ -93,9 +91,13 @@ internal fun NavGraphBuilder.intakeDestinations(navController: NavHostController
         onExit = { navController.popBackStack() },
     )
     intakeDoneDestination(
-        onCardCreated = { cardId -> navController.navigate(BriefCardDestination(cardId = cardId)) },
-        onHospitalClick = {
-            navController.navigate(HospitalPickDestination(purpose = HospitalPickPurpose.BEFORE_VISIT))
+        // 카드를 여기서 만들지 않는다. 만들 문답만 넘기고 카드 화면이 만든다. 병원을 먼저
+        // 찾고 오는 길과 한 자리에서 만나게 하려는 것이다.
+        onCardRequested = { sessionId -> navController.navigate(BriefCardDestination(sessionId = sessionId)) },
+        onHospitalClick = { sessionId ->
+            navController.navigate(
+                HospitalPickDestination(purpose = HospitalPickPurpose.BEFORE_VISIT, sessionId = sessionId),
+            )
         },
         onExit = { navController.popBackStack() },
     )
@@ -175,11 +177,11 @@ internal fun NavGraphBuilder.visitDestinations(navController: NavHostController)
         },
         // 진료 전(1m-B)에서 카드로. cardId가 있으면 카드의 `변경`에서 온 것이라 고른
         // 병원만 남기고 그 카드로 돌아간다. 엔트리를 갈아치우면 그 화면이 편집 중이던 값을
-        // 잃는다. cardId가 없으면 문답을 마치고 온 것이라 새 카드를 연다.
-        onCardRequested = { cardId, hospital ->
+        // 잃는다. cardId가 없으면 문답을 마치고 온 것이라 그 문답으로 카드를 만든다.
+        onCardRequested = { cardId, sessionId, hospital ->
             if (cardId == null) {
                 navController.navigate(
-                    BriefCardDestination(cardId = NEW_CARD_ID, hospitalName = hospital?.name),
+                    BriefCardDestination(sessionId = sessionId, hospitalName = hospital?.name),
                 )
             } else {
                 navController.popWithResult(NavResult.HOSPITAL_NAME to hospital?.name)
@@ -199,16 +201,13 @@ internal fun NavGraphBuilder.visitDestinations(navController: NavHostController)
         onExit = { navController.popBackStack() },
     )
     visitRecordDestination(
-        // 저장이 끝난 뒤라 서버가 매긴 기록 id가 있다.
-        onSaved = { visitId -> navController.navigate(VisitSummaryDestination(visitId = visitId)) },
+        // 저장하면 흐름이 시작된 캘린더 일자로 돌아간다. 그 화면이 다시 읽으면서 방금 남긴
+        // 기록이 "이 날 기록"으로 선다(1r-2-A). 시안에 있던 이번 진료 정리(1k)는 사라졌다.
+        onSaved = { navController.popBackStack<CalendarDayDestination>(inclusive = false) },
         // 지운 기록의 화면에 남을 수 없다. 한 단계만 pop하면 방금 적은 메모 화면(1p)으로
         // 돌아가는데, 거기서 저장하면 지운 것을 다시 만든다. 그래서 흐름이 시작된 캘린더
         // 일자까지 되돌린다.
         onDeleted = { navController.popBackStack<CalendarDayDestination>(inclusive = false) },
-        onExit = { navController.popBackStack() },
-    )
-    visitSummaryDestination(
-        onHome = { navController.resetTo(HomeDestination()) },
         onExit = { navController.popBackStack() },
     )
 }
@@ -241,7 +240,6 @@ internal fun NavGraphBuilder.recordDestinations(navController: NavHostController
  * 문답을 마치면 서버가 카드를 만들고 그 id를 준다. 그 호출이 아직 없어서 자리만 채운다.
  * 카드 화면은 지금 id를 보지 않고 픽스처를 그린다.
  */
-private const val NEW_CARD_ID = "new"
 
 /**
  * 방금 만든 방문의 임시 id.

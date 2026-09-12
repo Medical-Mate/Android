@@ -92,7 +92,7 @@ internal constructor(
      * 실패하면 화면에 남는다. 일정 추가(1r-4)와 같다. 나가 버리면 적은 것이 사라지고 다시
      * 누를 수도 없다.
      */
-    fun onSaveClick(cardId: String?, onSaved: (visitId: String) -> Unit) {
+    fun onSaveClick(cardId: String?, onSaved: () -> Unit) {
         val content = mutableUiState.value as? VisitRecordUiState.Content
         val card = cardId?.toLongOrNull()
         if (content == null || card == null || saving) return
@@ -101,7 +101,7 @@ internal constructor(
         viewModelScope.launch {
             val result = repository.create(card, content.record.toNewVisit(LocalDate.now(clock)))
             saving = false
-            if (result is ApiResult.Success) onSaved(result.value.id)
+            if (result is ApiResult.Success) onSaved()
         }
     }
 
