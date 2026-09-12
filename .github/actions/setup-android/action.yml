@@ -3,6 +3,15 @@ description: >
   Installs JDK 21 (required by gradle/gradle-daemon-jvm.properties), the Android SDK
   packages this project builds against, and Gradle with dependency/wrapper caching.
 
+inputs:
+  native:
+    description: >
+      Install the NDK and CMake as well. Only the jobs that actually compile the JNI
+      wrapper need them (assembleDebug, bundleRelease) — ktlint, detekt, lint and unit
+      tests do not reach externalNativeBuild, and the NDK is a ~1GB download.
+    required: false
+    default: 'false'
+
 runs:
   using: composite
   steps:
@@ -16,7 +25,10 @@ runs:
       uses: android-actions/setup-android@v4
       with:
         # compileSdk = 37 (app/build.gradle.kts); build-tools 36.0.0 is AGP 9.3.2's default.
-        packages: 'platform-tools platforms;android-37.0 build-tools;36.0.0'
+        # The NDK/CMake versions must match app/build.gradle.kts and CMakeLists.txt.
+        packages: >-
+          platform-tools platforms;android-37.0 build-tools;36.0.0
+          ${{ inputs.native == 'true' && 'ndk;28.2.13676358 cmake;3.22.1' || '' }}
 
     - name: Set up Gradle
       uses: gradle/actions/setup-gradle@v6

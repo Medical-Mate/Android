@@ -28,6 +28,11 @@ kotlinxCoroutines = "1.9.0"
 navigation = "2.10.0"
 datastore = "1.2.1"
 hilt = "2.60.1"
+# 온디바이스 엔진. AI 트랙이 llama.cpp 업스트림을 Snapdragon 툴체인으로 빌드해 릴리즈로 넘긴
+# 산출물이다(`Medical-Mate/AI`의 릴리즈 태그). 앱이 직접 빌드하지 않는다. 도커 툴체인이 필요한데
+# 이 개발 환경에 없다. 바뀌면 AI 쪽이 태그를 올려 다시 전달한다.
+onDeviceEngine = "pkg-android-2092353"
+onDeviceEngineSha256 = "0611e4eca75f0bfde900d7cd937ecf8e80edd0820a5fe2a068cd5b568d334545"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
