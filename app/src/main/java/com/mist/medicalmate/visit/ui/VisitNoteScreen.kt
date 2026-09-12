@@ -32,8 +32,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateCard
 import com.mist.medicalmate.core.designsystem.component.MedicalMateCardEmphasis
 import com.mist.medicalmate.core.designsystem.component.MedicalMateChip
 import com.mist.medicalmate.core.designsystem.component.MedicalMateDivider
-import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButton
-import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButtonStyle
+import com.mist.medicalmate.core.designsystem.component.MedicalMateFab
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTextArea
@@ -73,11 +72,10 @@ fun VisitNoteScreen(state: VisitNoteUiState, callbacks: VisitNoteCallbacks, modi
             // 듣는 중에는 마이크를 패널이 들고 있다. 같은 조작이 화면에 둘 있으면 어느 것을
             // 눌러야 멈추는지 알 수 없다.
             if (state.voice == null) {
-                MedicalMateIconButton(
+                MedicalMateFab(
                     onClick = callbacks.onVoiceClick,
                     icon = MedicalMateIcons.Mic,
                     contentDescription = stringResource(R.string.visit_note_voice),
-                    style = MedicalMateIconButtonStyle.SOLID,
                     modifier =
                     Modifier
                         .align(Alignment.BottomEnd)

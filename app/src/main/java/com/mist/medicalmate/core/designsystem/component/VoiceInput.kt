@@ -5,9 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.CircularProgressIndicator
@@ -71,9 +69,6 @@ fun MedicalMateVoiceInput(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12),
     ) {
-        if (state == MedicalMateVoiceState.LISTENING) {
-            Waveform()
-        }
         MicButton(state = state, onClick = onMicClick)
         Text(
             text = stringResource(state.titleRes),
@@ -160,8 +155,14 @@ private fun MicContent(state: MedicalMateVoiceState, tint: Color) {
         )
         return
     }
+    // 듣는 중에는 마이크 대신 파형이 원 안에 들어간다. 마스터가 그렇게 그린다. 원 위에 따로
+    // 띄우면 무엇을 누르면 멈추는지가 흐려지고, 듣는 중이라는 신호가 두 군데로 갈린다.
     val icon =
-        if (state == MedicalMateVoiceState.DENIED) MedicalMateIcons.MicOff else MedicalMateIcons.Mic
+        when (state) {
+            MedicalMateVoiceState.DENIED -> MedicalMateIcons.MicOff
+            MedicalMateVoiceState.LISTENING -> MedicalMateIcons.Waveform
+            else -> MedicalMateIcons.Mic
+        }
     val descriptionRes =
         if (state == MedicalMateVoiceState.LISTENING) R.string.voice_mic_stop else R.string.voice_mic_start
     Icon(
@@ -171,44 +172,5 @@ private fun MicContent(state: MedicalMateVoiceState, tint: Color) {
     )
 }
 
-/**
- * 듣는 중 파형.
- *
- * 정지 막대다. 문서의 접근성 기준이 움직임 축소 설정에서 파형의 움직임을 줄이라고 하는데,
- * 애니메이션을 넣으면 그 설정을 읽어 끄는 처리가 함께 필요하다. 상태는 문구가 알리므로
- * 파형이 움직이지 않아도 정보가 빠지지 않는다.
- *
- * 접근성 트리에는 넣지 않는다. 장식이고 상태는 아래 문구가 읽힌다.
- */
-@Composable
-private fun Waveform() {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        WaveformHeights.forEach { height ->
-            Box(
-                modifier =
-                Modifier
-                    .width(WaveformBarWidth)
-                    .height(height),
-            ) {
-                Surface(
-                    shape = MedicalMateRadius.full,
-                    color = MedicalMateTheme.colors.bgPrimary,
-                    modifier = Modifier.fillMaxWidth().height(height),
-                    content = {},
-                )
-            }
-        }
-    }
-}
-
 /** 문서의 "6px brand ring". */
 private val ListeningRingWidth = 6.dp
-
-private val WaveformBarWidth = 4.dp
-
-/** 가운데가 높은 좌우 대칭. 소리 크기를 흉내내려는 것이 아니라 듣는 중임을 보이는 장식이다. */
-private val WaveformHeights =
-    listOf(12.dp, 20.dp, 28.dp, 16.dp, 32.dp, 20.dp, 28.dp, 12.dp, 20.dp)
