@@ -40,6 +40,14 @@ constructor(@ApplicationContext private val context: Context) {
     }
 
     private suspend fun open(): OnDeviceEngineState = withContext(Dispatchers.IO) {
+        // `libggml.so`와 `libllama.so`가 OpenCL 백엔드를 DT_NEEDED로 걸고 있고, 그것이 다시
+        // 벤더 라이브러리 `libOpenCL.so`를 건다. 앱 네임스페이스가 그 이름을 자동으로 찾지
+        // 못해 먼저 열어 둔다. 실패해도 넘어간다. 그러면 아래에서 엔진이 안 열릴 뿐이다.
+        VENDOR_LIBRARIES.forEach { name ->
+            val result = runCatching { System.loadLibrary(name) }
+            Log.i(TAG, "벤더 $name ${if (result.isSuccess) "열림" else "막힘"}")
+        }
+
         val loaded = runCatching { System.loadLibrary(LIBRARY) }
         loaded.exceptionOrNull()?.let { cause ->
             // 라이브러리가 없는 것은 고장이 아니다. 엔진 없이 빌드했거나 arm64가 아닌 기기다.
@@ -82,6 +90,17 @@ constructor(@ApplicationContext private val context: Context) {
     private companion object {
         const val TAG = "OnDeviceEngine"
         const val LIBRARY = "medicalmate_ondevice"
+
+        /**
+         * 엔진이 기대는 벤더 라이브러리.
+         *
+         * 앱이 직접 쓰지 않지만 열리는지 먼저 본다. `OpenCL`은 `libggml.so`가 DT_NEEDED로
+         * 걸고 있어 못 열면 엔진 자체가 안 열리고, `cdsprpc`는 Hexagon 백엔드가 DSP와
+         * 말하는 통로다. 둘 다 `/vendor/etc/public.libraries.txt`에 있는데 그 목록이 앱
+         * 네임스페이스에 열려 있는지는 기기마다 다르다. 막힌 것을 로그에 남겨야 "왜 CPU로
+         * 떨어졌는지"를 나중에 찾을 수 있다.
+         */
+        val VENDOR_LIBRARIES = listOf("OpenCL", "cdsprpc")
 
         /** 엔진 묶음의 HTP 이미지가 실리는 자산 폴더. `fetchOnDeviceEngine`이 채운다. */
         const val HTP_ASSET_DIR = "ondevice/htp"

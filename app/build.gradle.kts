@@ -149,8 +149,13 @@ val onDeviceEngineDir: Provider<Directory> = layout.buildDirectory.dir("ondevice
 /**
  * 엔진에서 앱으로 가져오는 것.
  *
- * `libllama-common`·`libggml-opencl`·`libmtmd`와 `*-impl`은 뺀다. 묶음의 CLI 도구가 쓰는
- * 것이고 앱은 추론만 한다. 다 넣으면 네이티브만 170MB다.
+ * `libllama-common`·`libmtmd`와 `*-impl`은 뺀다. 묶음의 CLI 도구가 쓰는 것이고 앱은 추론만
+ * 한다. 다 넣으면 네이티브만 170MB다.
+ *
+ * **`libggml-opencl`은 뺄 수 없다.** 쓰지 않는 백엔드인데도 `libggml.so`와 `libllama.so`가
+ * `DT_NEEDED`로 직접 걸고 있다. 빼고 넣었더니 기기에서 `dlopen failed: library
+ * "libggml-opencl.so" not found`로 엔진이 아예 열리지 않았다. 백엔드 등록은 런타임이지만
+ * 링크는 빌드 때 박힌 것이라 고를 수 있는 것이 아니다.
  */
 val engineNativeLibraries =
     listOf(
@@ -159,6 +164,7 @@ val engineNativeLibraries =
         "libggml-base.so",
         "libggml-cpu.so",
         "libggml-hexagon.so",
+        "libggml-opencl.so",
     )
 
 /**
