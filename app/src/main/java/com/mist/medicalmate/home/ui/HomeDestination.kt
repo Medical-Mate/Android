@@ -25,7 +25,7 @@ internal data class HomeDestination(val justRegistered: Boolean = false)
  */
 internal fun NavGraphBuilder.homeDestination(
     onIntakeClick: (String?) -> Unit,
-    onCardClick: (String) -> Unit,
+    onCardClick: (cardId: String, clinic: String?) -> Unit,
     onAllCardsClick: () -> Unit,
     onProfileClick: () -> Unit,
     onTabSelect: (MedicalMateTab) -> Unit,

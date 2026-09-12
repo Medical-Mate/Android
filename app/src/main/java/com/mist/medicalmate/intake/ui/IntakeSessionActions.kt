@@ -51,10 +51,22 @@ internal class IntakeSessionActions(
      * 그것은 디자인 것이지 서버 것이 아니다.
      *
      * 실패해도 흐름을 막지 않는다. 다음 단계로 못 가게 하는 것이 더 나쁘다.
+     *
+     * **응답에서 질문 후보를 받아 온다.** 서버가 문답이 끝나면 AI가 고른 질문 셋을 세션에
+     * 얹어 두고 모든 세션 응답에 함께 싣는다. 3단계를 지나는 이 호출이 4단계(1i) 직전의
+     * 마지막 왕복이라, 여기서 받으면 그 화면이 열릴 때 목록이 차 있다.
+     *
+     * 환자가 이미 적은 것이 있으면 덮지 않는다. 덮으면 지운 질문이 되살아난다.
      */
     fun saveSeverity(state: IntakeUiState, label: String) {
         val sessionId = state.sessionId ?: return
-        scope.launch { repository.setSeverity(sessionId, state.severity.level, label) }
+        scope.launch {
+            val result = repository.setSeverity(sessionId, state.severity.level, label)
+            if (result !is ApiResult.Success) return@launch
+            update { current ->
+                if (current.questions.isNotEmpty()) current else current.copy(questions = result.value.questions)
+            }
+        }
     }
 
     /** 적어 둔 질문을 통째로 보낸다. 추가·삭제·순서가 한 번에 처리된다. */
@@ -98,6 +110,8 @@ private fun IntakeUiState.restoredWith(session: IntakeSession): IntakeUiState {
         sessionId = session.id,
         bodyPart = session.siteText,
         messages = restored.ifEmpty { openingFor(session.siteText) },
+        // 적어 둔 질문이 있으면 그것이, 없으면 AI 후보가 들어 있다. 저장소가 그 규칙을 든다.
+        questions = session.questions.ifEmpty { questions },
         restoring = false,
         restoreFailed = false,
     )

@@ -95,7 +95,7 @@ fun RecordScreen(state: RecordUiState, callbacks: RecordCallbacks, modifier: Mod
 
 /** 기록 탭에서 나가는 길과 화면 안의 조작. */
 data class RecordCallbacks(
-    val onItemClick: (String) -> Unit = {},
+    val onItemClick: (RecordItem) -> Unit = {},
     val onStartIntakeClick: () -> Unit = {},
     val onRetryClick: () -> Unit = {},
     val onTabSelect: (MedicalMateTab) -> Unit = {},

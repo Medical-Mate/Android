@@ -22,7 +22,6 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateEmptyState
 import com.mist.medicalmate.core.designsystem.component.MedicalMateEmptyStateType
 import com.mist.medicalmate.core.designsystem.component.MedicalMateLoadingSpinner
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
-import com.mist.medicalmate.core.designsystem.component.MedicalMateSelectBar
 
 /**
  * 와이어프레임 1j-4. Figma `1122:4830`.
@@ -31,7 +30,8 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateSelectBar
  * 상단 왼쪽에 뒤로가기가 있고 하단 탭바를 두지 않는다. 시안도 그 상태의 탭바를 감췄다.
  *
  * 편집은 기록 목록(1j-1)과 같은 CRUD 규칙이다. 다른 점이 둘 있다. 세는 단위가 "장"이고,
- * 고른 수를 목록 위 `Select Bar`가 한 번 더 알린다. 시안 `1j-4-D2`가 그렇게 그렸다.
+ * 고른 수는 묶음 머리와 하단 버튼이 알린다. 목록 위에 `Select Bar`를 두지 않는다 — 시안
+ * `1j-4-D2`에 그 줄이 없고, 같은 수를 세 곳에서 말하게 된다.
  * 기록 쪽은 하단 버튼 글자에만 적는다. 두 화면이 같은 조작을 다르게 알리는 셈이라 디자인
  * 트랙에 확인을 넘겼고, 여기서는 각자의 프레임을 따랐다.
  */
@@ -86,7 +86,7 @@ fun BriefCardListScreen(
 /** 브리핑 카드 전체에서 나가는 길과 화면 안의 조작. */
 data class BriefCardListCallbacks(
     val onBackClick: () -> Unit = {},
-    val onCardClick: (String) -> Unit = {},
+    val onCardClick: (RecordItem) -> Unit = {},
     val onStartIntakeClick: () -> Unit = {},
     val onEditStart: () -> Unit = {},
     val onEditCancel: () -> Unit = {},
@@ -105,7 +105,7 @@ private fun navActionLabel(content: BriefCardListUiState.Content?): String? = wh
     else -> stringResource(R.string.brief_card_list_edit)
 }
 
-/** 목록. 편집 중에는 고른 수를 알리는 줄이 맨 위에 붙는다. */
+/** 목록. 편집 중에는 줄마다 체크가 붙는다. */
 @Composable
 private fun ColumnScope.CardGroups(state: BriefCardListUiState.Content, callbacks: BriefCardListCallbacks) {
     GroupList(
@@ -114,12 +114,6 @@ private fun ColumnScope.CardGroups(state: BriefCardListUiState.Content, callback
         onItemClick = callbacks.onCardClick,
         selectedIds = state.selectedIds,
         onSelectChange = callbacks.onSelectChange,
-        header =
-        if (state.editing) {
-            { MedicalMateSelectBar(text = stringResource(R.string.brief_card_list_selected, state.selectedCount)) }
-        } else {
-            null
-        },
     )
 }
 

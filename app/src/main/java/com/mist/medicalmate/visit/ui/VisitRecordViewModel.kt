@@ -76,10 +76,6 @@ internal constructor(
         update { it.copy(draft = null) }
     }
 
-    fun onScheduleChange(checked: Boolean) {
-        update { it.copy(scheduleRevisit = checked) }
-    }
-
     /**
      * 읽는 중의 저장하기. `POST /api/cards/{cardId}/visit`.
      *

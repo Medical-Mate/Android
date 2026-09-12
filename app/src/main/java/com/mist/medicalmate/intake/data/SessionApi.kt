@@ -68,6 +68,10 @@ internal data class SeverityRequest(val level: Int, val label: String)
 @Serializable
 internal data class QuestionsRequest(val questions: List<String>)
 
+/** @param rank 낮을수록 먼저 보여줄 것. 서버가 정렬해 주지만 순서를 믿지 않는다. */
+@Serializable
+internal data class QuestionCandidateResponse(val text: String, val source: String? = null, val rank: Int = 0)
+
 /**
  * 한 턴의 결과.
  *
@@ -102,6 +106,13 @@ internal data class SessionResponse(
     val messages: List<MessageResponse> = emptyList(),
     val severity: SeverityResponse? = null,
     val questions: List<String> = emptyList(),
+    /**
+     * AI가 고른 질문 후보.
+     *
+     * 환자가 적어 둔 [questions]와 다르다. 이쪽은 제안이고 저쪽은 확정이다. 4단계(1i)가
+     * 후보를 목록에 채워 두고 환자가 지우거나 더한다.
+     */
+    val questionCandidates: List<QuestionCandidateResponse> = emptyList(),
 )
 
 @Serializable

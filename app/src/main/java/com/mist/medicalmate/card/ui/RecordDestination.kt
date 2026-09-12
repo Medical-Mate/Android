@@ -45,7 +45,7 @@ private fun RecordRoute(
         state = state,
         callbacks =
         RecordCallbacks(
-            onItemClick = onItemClick,
+            onItemClick = { item -> onItemClick(item.id) },
             onStartIntakeClick = onStartIntakeClick,
             onRetryClick = viewModel::load,
             onTabSelect = onTabSelect,

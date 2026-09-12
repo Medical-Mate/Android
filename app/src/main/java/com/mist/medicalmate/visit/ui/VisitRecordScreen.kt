@@ -21,7 +21,6 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateBottomCtaBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonType
-import com.mist.medicalmate.core.designsystem.component.MedicalMateCheckbox
 import com.mist.medicalmate.core.designsystem.component.MedicalMateDialog
 import com.mist.medicalmate.core.designsystem.component.MedicalMateEmptyState
 import com.mist.medicalmate.core.designsystem.component.MedicalMateEmptyStateType
@@ -87,7 +86,6 @@ data class VisitRecordCallbacks(
     val onEditDoneClick: () -> Unit = {},
     val onCancelClick: () -> Unit = {},
     val edit: VisitRecordEditActions = VisitRecordEditActions {},
-    val onScheduleChange: (Boolean) -> Unit = {},
     val onSaveClick: () -> Unit = {},
     val onDeleteClick: () -> Unit = {},
     val onDeleteDismiss: () -> Unit = {},
@@ -146,11 +144,9 @@ private fun Footer(state: VisitRecordUiState.Content, callbacks: VisitRecordCall
                 modifier = Modifier.fillMaxWidth(),
             )
         } else {
-            MedicalMateCheckbox(
-                checked = state.scheduleRevisit,
-                onCheckedChange = callbacks.onScheduleChange,
-                label = stringResource(R.string.visit_record_schedule),
-            )
+            // **재방문 일정 등록 체크가 없다.** 시안에서 빠졌다(#170). 저장 요청에 재방문
+            // 날짜를 실을 자리가 없어서 눌러도 아무 일이 없던 자리이기도 하다. 재방문이
+            // 캘린더로 이어지는 길은 일자 화면의 "다음 일정"(1r-2-A)이 맡는다.
             MedicalMateButton(
                 label = stringResource(R.string.visit_record_save),
                 onClick = callbacks.onSaveClick,

@@ -114,7 +114,8 @@ internal constructor(
      *
      * 고른 카드가 있으면 첫 장만 싣는다. 서버의 `cardId`가 단수이고 시안도 한 장이다.
      *
-     * 병원·날짜·시간이 필수다. 하나라도 비면 보내지 않고 그 칸에 안내를 띄운다.
+     * 병원과 날짜가 필수다. 비면 보내지 않고 그 칸에 안내를 띄운다. 시간은 안 골라도 되고 그때는
+     * 기본 시각으로 저장한다.
      *
      * **할 일은 보내지 않는다.** `AppointmentResponse`에 자리가 없다. 여러 줄에 줄마다 체크
      * 상태까지 있어서 `purpose` 하나로 담을 수 없다. 화면에만 남는다(#141).
@@ -130,8 +131,9 @@ internal constructor(
             return
         }
         val date = state.date
-        val time = state.time
-        if (date == null || time == null || saving) return
+        // 시간을 안 골랐으면 기본 시각이다. 서버가 시각 없는 일정을 받지 못한다.
+        val time = state.time ?: DEFAULT_TIME
+        if (date == null || saving) return
 
         saving = true
         viewModelScope.launch {

@@ -91,7 +91,10 @@ internal fun MedicalMateNavHost(
             onIntakeClick = { sessionId ->
                 navController.navigate(IntakeDestination(sessionId?.toLongOrNull()))
             },
-            onCardClick = { cardId -> navController.navigate(BriefCardDestination(cardId)) },
+            // 카드 응답에 병원이 없다. 목록이 들고 있는 값을 라우트로 함께 넘긴다.
+            onCardClick = { cardId, clinic ->
+                navController.navigate(BriefCardDestination(cardId = cardId, hospitalName = clinic))
+            },
             onAllCardsClick = { navController.navigate(BriefCardListDestination) },
             onProfileClick = { navController.navigate(MyProfileDestination) },
             onTabSelect = navController::selectTab,

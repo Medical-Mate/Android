@@ -141,6 +141,29 @@ class IntakeSessionActionsTest {
         assertFalse(state.restoring)
     }
 
+    @Test
+    fun `강도를 보내면 응답의 질문 후보가 화면에 온다`() = runTest {
+        // 문답이 끝나면 서버가 AI 후보를 세션에 얹고 모든 응답에 함께 싣는다. 3단계를 지나는
+        // 이 호출이 4단계 직전의 마지막 왕복이다.
+        var state = IntakeUiState()
+
+        actions(FixedRepository(ApiResult.Success(withCandidates)), update = { state = it(state) })
+            .saveSeverity(IntakeUiState(sessionId = 7), label = "꽤 아파요")
+
+        assertEquals(listOf("검사를 받아야 하나요?"), state.questions)
+    }
+
+    @Test
+    fun `이미 적은 질문은 후보로 덮지 않는다`() = runTest {
+        // 덮으면 환자가 지운 질문이 되살아난다.
+        var state = IntakeUiState(questions = listOf("내가 적은 것"))
+
+        actions(FixedRepository(ApiResult.Success(withCandidates)), update = { state = it(state) })
+            .saveSeverity(IntakeUiState(sessionId = 7), label = "꽤 아파요")
+
+        assertEquals(listOf("내가 적은 것"), state.questions)
+    }
+
     private fun TestScope.actions(
         repository: SessionRepository,
         update: (((IntakeUiState) -> IntakeUiState)) -> Unit = {},
@@ -194,5 +217,8 @@ class IntakeSessionActionsTest {
                     IntakeSessionMessage(seq = 2, fromPatient = true, text = "3주쯤 됐어요"),
                 ),
             )
+
+        /** 문답이 끝나 후보가 실린 세션. 저장소가 후보를 questions 자리에 넣어 준다. */
+        val withCandidates = savedSession.copy(questions = listOf("검사를 받아야 하나요?"))
     }
 }

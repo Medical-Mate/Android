@@ -114,7 +114,10 @@ private fun SessionResponse.toSession() = IntakeSession(
     total = progress?.total ?: 0,
     messages = messages.map { it.toMessage() },
     severityLevel = severity?.level,
-    questions = questions,
+    // 환자가 아직 아무것도 적지 않았으면 AI 후보를 채워 둔다. 시안 1i가 추천 질문 셋을
+    // 목록에 넣어 두고 ×로 지우게 한다. 한 번이라도 손댔으면 그 결과가 정본이다 — 후보로
+    // 덮으면 지운 질문이 되살아난다.
+    questions = questions.ifEmpty { questionCandidates.sortedBy { it.rank }.map { it.text } },
 )
 
 /**

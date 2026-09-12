@@ -195,6 +195,8 @@ private fun VisitNoteRoute(
             onBackClick = onExit,
             onNoteChange = viewModel::onNoteChange,
             onOrganizeClick = viewModel::onOrganizeClick,
+            onVoiceClick = viewModel::onVoiceClick,
+            onTypeInsteadClick = viewModel::onTypeInsteadClick,
             // 적은 원문이 그대로 다음 화면으로 간다. 1q-1이 그 글을 보여주고 저장한다.
             onSaveClick = { onSaved(state.note) },
         ),
@@ -230,7 +232,6 @@ private fun VisitRecordRoute(
             onEditDoneClick = viewModel::onEditDoneClick,
             onCancelClick = viewModel::onCancelClick,
             edit = viewModel.editActions,
-            onScheduleChange = viewModel::onScheduleChange,
             // 편집 중에는 하단에 저장하기가 없다. 그 자리가 삭제이고 사본을 옮기는 것은
             // Nav 우측 `확인`이 한다. 그래서 저장하기는 항상 화면을 나간다.
             onSaveClick = { viewModel.onSaveClick(cardId = route.cardId, onSaved = onSaved) },
