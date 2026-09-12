@@ -39,8 +39,18 @@ enum class HospitalPickPurpose {
 data class HospitalPickUiState(
     val query: String = "",
     val results: List<Hospital> = emptyList(),
-    val selectedId: String? = null,
+    val selected: Hospital? = null,
     val purpose: HospitalPickPurpose = HospitalPickPurpose.AFTER_VISIT,
+    val searching: Boolean = false,
+    /**
+     * 조건에 맞는 전체 건수. [results]보다 클 수 있다.
+     *
+     * 부분 일치라 "서울"이면 4천 건이 넘는다. 그때 필요한 것은 더 받는 것이 아니라 검색어를
+     * 좁히는 것이고, 그 사실을 알려야 목록 끝까지 훑다 포기하지 않는다.
+     */
+    val total: Int = 0,
+    /** 서버에 닿지 못했는지. 못 찾은 것과 다르다. */
+    val failed: Boolean = false,
 ) {
     /**
      * 하단 CTA를 누를 수 있는지.
@@ -51,7 +61,7 @@ data class HospitalPickUiState(
      * 진료 전(1m-B)에는 고르지 않아도 넘어간다. 시안이 아무것도 고르지 않은 상태에서도 CTA를
      * 살려 뒀고, 옆의 `건너뛰기`와 같은 곳으로 간다. 병원은 진료 후에도 등록할 수 있다.
      */
-    val canSubmit: Boolean = selectedId != null || purpose != HospitalPickPurpose.AFTER_VISIT
+    val canSubmit: Boolean = selected != null || purpose != HospitalPickPurpose.AFTER_VISIT
 
     /**
      * 하단 CTA 바를 그리는지.
@@ -60,13 +70,16 @@ data class HospitalPickUiState(
      * 프레임(`1092:3858`)에 `Footer`가 없고 그 자리를 `Empty State`가 496으로 늘어 채운다.
      * 결과가 있는 `1m-B`(`1041:3687`)와 `1m`(`489:5447`)에는 있다.
      *
-     * [results]가 비면 [selectedId]도 항상 비어 있다. 검색어가 바뀔 때 결과에서 빠진 선택을
+     * [results]가 비면 [selected]도 항상 비어 있다. 검색어가 바뀔 때 결과에서 빠진 선택을
      * 지우기 때문이다. 그래서 고른 것이 있는지 따로 보지 않는다.
      *
      * 진료 전에는 이 바가 사라지면 앞으로 갈 길이 상단의 `건너뛰기`뿐이다. 시안은 그
      * 문구까지 지웠는데 대신 갈 자리가 없어서 남겨 뒀다. #119에 올린 확인 대기 항목이다.
      */
     val showSubmit: Boolean = results.isNotEmpty()
+
+    /** 받은 것보다 더 있는지. */
+    val truncated: Boolean = total > results.size
 }
 
 /**
@@ -78,8 +91,16 @@ data class HospitalPickUiState(
 internal val HospitalPickPurpose.beforeVisit: Boolean
     get() = this != HospitalPickPurpose.AFTER_VISIT
 
-/** 검색 결과 한 곳. 이름으로 찾으면 주소가 함께 등록된다. */
-data class Hospital(val id: String, val name: String, val address: String)
+/**
+ * 검색 결과 한 곳.
+ *
+ * **이름뿐이다.** 서버가 심평원에서 이름과 홈페이지만 가져오고 id를 매기지 않는다. 이름이 곧
+ * 식별자이고, 일정 등록의 `clinicName`에 이 값을 그대로 넣는다.
+ *
+ * 홈페이지는 담지 않는다. 작은 의원은 대부분 비어 있고, 고르는 화면에 링크를 두면 줄 전체가
+ * 선택 영역인 것과 부딪친다. 쓸 자리가 생기면 응답에서 다시 가져온다.
+ */
+data class Hospital(val name: String)
 
 /**
  * 1p 진료 후 메모. Figma `405:1926`.

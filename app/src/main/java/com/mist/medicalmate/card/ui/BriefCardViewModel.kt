@@ -69,7 +69,7 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
             if (state !is BriefCardUiState.Content) {
                 state
             } else {
-                state.copy(card = state.card.copy(hospital = BriefCardHospital(name = name, address = "")))
+                state.copy(card = state.card.copy(hospital = BriefCardHospital(name = name)))
             }
         }
     }

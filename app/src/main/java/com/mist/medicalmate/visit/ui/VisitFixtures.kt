@@ -6,31 +6,6 @@ package com.mist.medicalmate.visit.ui
  * Figma 1m·1p·1q-1·1k의 내용을 그대로 옮겼다. Preview와 ViewModel이 함께 쓴다.
  */
 
-/** 1m의 검색 결과 4곳. 검색어 "서울OO병원"으로 좁힌 상태다. */
-internal val previewHospitals =
-    listOf(
-        Hospital(
-            id = "hospital-1",
-            name = "서울OO병원 내과",
-            address = "서울 관악구 남부순환로 1820, 3층",
-        ),
-        Hospital(
-            id = "hospital-2",
-            name = "서울OO병원 이비인후과",
-            address = "서울 관악구 남부순환로 1820, 4층",
-        ),
-        Hospital(
-            id = "hospital-3",
-            name = "OO이비인후과의원",
-            address = "서울 관악구 봉천로 412, 2층",
-        ),
-        Hospital(
-            id = "hospital-4",
-            name = "OO정형외과의원",
-            address = "서울 관악구 신림로 245, 5층",
-        ),
-    )
-
 internal val previewVisitHeadline =
     VisitHeadline(
         label = "오늘 진료",

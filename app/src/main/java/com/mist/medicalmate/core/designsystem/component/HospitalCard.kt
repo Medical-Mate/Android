@@ -60,7 +60,7 @@ data class MedicalMateHospitalChip(val label: String, val tone: MedicalMateHospi
 @Composable
 fun MedicalMateHospitalCard(
     name: String,
-    address: String,
+    address: String? = null,
     modifier: Modifier = Modifier,
     chips: List<MedicalMateHospitalChip> = emptyList(),
 ) {
@@ -86,9 +86,15 @@ fun MedicalMateHospitalCard(
     }
 }
 
-/** 아이콘 상자와 이름·주소. 마스터의 `Info` 묶음이다. */
+/**
+ * 아이콘 상자와 이름·주소. 마스터의 `Info` 묶음이다.
+ *
+ * **주소가 없으면 그 줄을 그리지 않는다.** 마스터에는 두 줄이 있는데 병원 검색이 서버로
+ * 옮겨지면서 주소를 받을 수 없게 됐다(#155). 빈 줄을 남기면 이름 아래가 비어 카드가 잘린
+ * 것처럼 보인다. 그 자리를 무엇으로 할지는 디자인 트랙 확인 대기다.
+ */
 @Composable
-private fun Info(name: String, address: String) {
+private fun Info(name: String, address: String?) {
     val colors = MedicalMateTheme.colors
     Row(
         modifier =
@@ -114,7 +120,9 @@ private fun Info(name: String, address: String) {
         }
         Column(verticalArrangement = Arrangement.spacedBy(TitleGap)) {
             Text(text = name, style = MedicalMateTheme.typography.headingS, color = colors.fgDefault)
-            Text(text = address, style = MedicalMateTheme.typography.bodyS, color = colors.fgSubtle)
+            if (!address.isNullOrBlank()) {
+                Text(text = address, style = MedicalMateTheme.typography.bodyS, color = colors.fgSubtle)
+            }
         }
     }
 }

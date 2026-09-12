@@ -316,7 +316,7 @@ internal val previewBriefCard =
             "어떤 증상이면 바로 다시 와야 하나요?",
         ),
         hospital =
-        BriefCardHospital(name = "서울OO병원 내과", address = "서울 관악구 남부순환로 1820, 3층"),
+        BriefCardHospital(name = "서울OO병원 내과"),
     )
 
 @MedicalMateScreenPreviews
