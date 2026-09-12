@@ -121,6 +121,20 @@ class ScheduleAddViewModelTest {
     }
 
     @Test
+    fun `카드 목록을 다시 읽어도 고른 것은 그대로다`() {
+        // 병원을 고르러 나갔다 돌아오면 화면이 다시 조합되면서 목록을 한 번 더 읽는다.
+        // 그때 고른 것이 풀리면 카드가 안 걸린 일정이 저장되고, 그 일정으로는 진료 후
+        // 기록을 남길 수 없다.
+        val viewModel = addViewModel()
+        viewModel.onCardPickChange("1", true)
+
+        viewModel.load()
+
+        assertEquals(1, viewModel.uiState.value.pickedCardCount)
+        assertTrue(viewModel.uiState.value.cards.first { it.id == "1" }.picked)
+    }
+
+    @Test
     fun `할 일을 추가하면 적는 중인 빈 줄이 생긴다`() {
         val viewModel = addViewModel()
 
