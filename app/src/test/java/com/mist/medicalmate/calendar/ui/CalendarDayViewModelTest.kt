@@ -3,6 +3,8 @@ import com.mist.medicalmate.calendar.data.Appointment
 import com.mist.medicalmate.calendar.data.AppointmentRepository
 import com.mist.medicalmate.calendar.data.AppointmentStatus
 import com.mist.medicalmate.core.network.ApiResult
+import com.mist.medicalmate.visit.data.FakeVisitRepository
+import com.mist.medicalmate.visit.data.VisitListItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -178,7 +180,7 @@ class CalendarDayViewModelTest {
     @Test
     fun `삭제를 확정하면 그 일정을 서버에서 지운다`() {
         val repository = FakeAppointmentRepository(listOf(testAppointment))
-        val viewModel = CalendarDayViewModel(repository, fixedClock)
+        val viewModel = CalendarDayViewModel(repository, FakeVisitRepository(), fixedClock)
         viewModel.load(LocalDate.of(2026, 9, 12))
         var left = false
 
@@ -189,30 +191,102 @@ class CalendarDayViewModelTest {
     }
 
     @Test
-    fun `다음 일정에 재방문할 병원이 함께 온다`() {
-        // 시간을 확정하러 갈 때 일정 추가의 병원 필드가 이 값으로 채워진다(1r-4-B).
-        // 제목에서 떼어내지 않는다. "서울OO병원 내과 재방문"처럼 말이 붙어 있다.
-        val viewModel = dayViewModel()
+    fun `그 날 기록이 있으면 줄로 선다`() {
+        val viewModel = dayViewModel(visits = listOf(testVisit))
 
-        viewModel.load(PastVisitDate)
+        viewModel.load(VisitDate)
 
-        assertEquals("서울OO병원 내과", viewModel.uiState.value?.nextEvent?.clinic)
+        val record = viewModel.state().record
+        assertEquals("2", record?.id)
+        assertEquals("갈비뼈 · 일주일", record?.title)
+        assertTrue(viewModel.state().visited)
     }
 
     @Test
-    fun `시간이 정해지면 확정 조작이 사라진다`() {
-        // 1r-2-A는 시간이 비어 조작이 붙고, A2는 확정된 상태다.
-        val viewModel = dayViewModel()
+    fun `다른 날 기록은 끌어오지 않는다`() {
+        val viewModel = dayViewModel(visits = listOf(testVisit.copy(visitedOn = PastVisitDate)))
 
-        viewModel.load(PastVisitDate)
+        viewModel.load(VisitDate)
 
-        assertNull(viewModel.uiState.value?.nextEvent?.at)
+        assertNull(viewModel.state().record)
+        assertFalse(viewModel.state().visited)
+    }
+
+    @Test
+    fun `진료가 끝난 날에는 진료 전 할 일을 두지 않는다`() {
+        // 시안 1r-2-A에도 없다. 다녀온 뒤에 챙길 것을 알릴 이유가 없다.
+        val viewModel = dayViewModel(visits = listOf(testVisit))
+
+        viewModel.load(VisitDate)
+
+        assertTrue(viewModel.state().todos.isEmpty())
+    }
+
+    @Test
+    fun `기록이 있으면 다음 일정이 붙는다`() {
+        val viewModel =
+            dayViewModel(appointments = listOf(testAppointment, nextAppointment), visits = listOf(testVisit))
+
+        viewModel.load(VisitDate)
+
+        val next = viewModel.state().nextEvent
+        assertEquals("서울OO병원 내과 재방문", next?.title)
+        assertEquals("D-15", next?.chip)
+        // 서버 일정에는 시각이 늘 있다. 시간을 정하는 조작이 붙는 1r-2-A는 Preview에만 남는다.
+        assertEquals("9월 26일 (토) 오전 10:30", next?.at)
+    }
+
+    @Test
+    fun `기록이 없으면 다음 일정을 붙이지 않는다`() {
+        // 아직 오지 않은 날에 붙이면 "이 날 일정"과 나란히 서서 어느 쪽이 오늘 갈 곳인지 흐려진다.
+        val viewModel = dayViewModel(appointments = listOf(testAppointment, nextAppointment))
+
+        viewModel.load(VisitDate)
+
+        assertNull(viewModel.state().nextEvent)
+    }
+
+    @Test
+    fun `그 날 일정은 다음 일정이 되지 않는다`() {
+        // 위에 이미 "이 날 일정"으로 서 있다.
+        val viewModel = dayViewModel(appointments = listOf(testAppointment), visits = listOf(testVisit))
+
+        viewModel.load(VisitDate)
+
+        assertNull(viewModel.state().nextEvent)
     }
 }
 
-/** 그 날 일정을 하나 돌려주는 저장소. */
-private fun dayViewModel(appointments: List<Appointment> = listOf(testAppointment)) =
-    CalendarDayViewModel(FakeAppointmentRepository(appointments), fixedClock)
+/** 그 날 일정과 기록을 돌려주는 저장소 둘. */
+private fun dayViewModel(
+    appointments: List<Appointment> = listOf(testAppointment),
+    visits: List<VisitListItem> = emptyList(),
+) = CalendarDayViewModel(
+    FakeAppointmentRepository(appointments),
+    FakeVisitRepository(list = ApiResult.Success(visits)),
+    fixedClock,
+)
+
+/** 그 날 남긴 기록. 목록 응답의 한 줄이다. */
+private val testVisit =
+    VisitListItem(
+        id = "2",
+        cardId = 1L,
+        cardTitle = "갈비뼈 · 일주일",
+        clinic = "서울OO병원 내과",
+        visitedOn = VisitDate,
+    )
+
+/** 진료 다음에 잡힌 일정. */
+private val nextAppointment =
+    Appointment(
+        id = 2,
+        title = "서울OO병원 내과 재방문",
+        at = LocalDateTime.of(2026, 9, 26, 10, 30),
+        status = AppointmentStatus.SCHEDULED,
+        cardId = null,
+        cardTitle = null,
+    )
 
 private val fixedClock: Clock = Clock.fixed(Instant.parse("2026-09-11T00:00:00Z"), ZoneId.of("Asia/Seoul"))
 
@@ -231,7 +305,8 @@ private class FakeAppointmentRepository(private val appointments: List<Appointme
 
     override suspend fun month(month: java.time.YearMonth) = ApiResult.Success(appointments)
 
-    override suspend fun day(date: java.time.LocalDate) = ApiResult.Success(appointments)
+    override suspend fun day(date: java.time.LocalDate) =
+        ApiResult.Success(appointments.filter { it.at.toLocalDate() == date })
 
     override suspend fun upcoming() = ApiResult.Success(appointments)
 
