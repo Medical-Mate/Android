@@ -32,6 +32,8 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTextArea
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTooltip
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /**
  * 와이어프레임 1p. Figma `1185:12667`.
@@ -131,27 +133,37 @@ private fun Heading() {
     }
 }
 
-/** 어떤 진료를 적는 것인지. 카드로 진료를 받았으면 그 카드의 제목이 아래 줄에 온다. */
+/**
+ * 어떤 진료를 적는 것인지. 카드로 진료를 받았으면 그 카드의 제목이 아래 줄에 온다.
+ *
+ * 병원을 고르지 않고 들어오면 날짜만 남고, 카드가 없으면 아래 줄을 그리지 않는다. 빈 줄을
+ * 남기면 무엇이 있어야 하는데 비었다는 뜻으로 읽힌다.
+ */
 @Composable
 private fun VisitCard(visit: VisitHeadline) {
     MedicalMateCard(emphasis = MedicalMateCardEmphasis.QUIET) {
         Text(
-            text = visit.label,
+            text = stringResource(R.string.visit_note_headline_label),
             style = MedicalMateTheme.typography.labelS,
             color = MedicalMateTheme.colors.fgSubtle,
         )
         Text(
-            text = visit.title,
+            text = listOfNotNull(visit.clinic, visit.visitedOn.format(HeadlineDate)).joinToString(" · "),
             style = MedicalMateTheme.typography.bodyLStrong,
             color = MedicalMateTheme.colors.fgDefault,
         )
-        Text(
-            text = visit.detail,
-            style = MedicalMateTheme.typography.bodyS,
-            color = MedicalMateTheme.colors.fgSubtle,
-        )
+        visit.cardTitle?.let { title ->
+            Text(
+                text = stringResource(R.string.visit_note_headline_card, title),
+                style = MedicalMateTheme.typography.bodyS,
+                color = MedicalMateTheme.colors.fgSubtle,
+            )
+        }
     }
 }
+
+/** 헤드라인의 날짜. 시안이 "9월 12일"로 적는다. */
+private val HeadlineDate: DateTimeFormatter = DateTimeFormatter.ofPattern("M월 d일", Locale.KOREAN)
 
 /**
  * AI로 정리하기.

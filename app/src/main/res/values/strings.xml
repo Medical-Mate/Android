@@ -85,6 +85,8 @@
     <string name="hospital_pick_empty_title">아직 검색 기록이 없어요</string>
     <string name="hospital_pick_empty_description">병원 명을 입력하면 진료받을 병원을 찾을 수 있어요</string>
     <string name="visit_note_title">진료 후 기록</string>
+    <string name="visit_note_headline_label">오늘 진료</string>
+    <string name="visit_note_headline_card">%1$s 브리핑 카드로 진료받았어요</string>
     <string name="visit_note_heading">진료실에서 들은 말을\n그대로 남겨두세요</string>
     <string name="visit_note_description">기억나는 대로 편하게 적어주세요.</string>
     <string name="visit_note_placeholder">들은 내용을 그대로 적어주세요</string>

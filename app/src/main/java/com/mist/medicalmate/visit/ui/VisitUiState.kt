@@ -114,8 +114,16 @@ data class VisitNoteUiState(val visit: VisitHeadline, val note: String = "", val
     val canSave: Boolean = note.isNotBlank() && !organizing
 }
 
-/** "오늘 진료 / 서울OO병원 내과 · 9월 12일 / 복부 통증 · 3주 브리핑 카드로 진료받았어요" */
-data class VisitHeadline(val label: String, val title: String, val detail: String)
+/**
+ * 어떤 진료를 적는 것인지. "오늘 진료 / 서울OO병원 내과 · 9월 12일 / 복부 통증 · 3주 브리핑
+ * 카드로 진료받았어요"의 재료다.
+ *
+ * 완성된 문장을 담지 않는다. 앞말과 뒷말은 문자열 리소스에 있고 조립은 화면이 한다.
+ *
+ * [clinic]은 1m에서 고른 병원, [cardTitle]은 이 기록이 붙을 카드의 제목이다. 둘 다 캘린더
+ * 일자에서 라우트를 타고 따라온다. 없으면 그 줄을 그리지 않는다.
+ */
+data class VisitHeadline(val visitedOn: LocalDate, val clinic: String? = null, val cardTitle: String? = null)
 
 /**
  * 1q-1 자동 분류 결과와 1q-1-E 전체 수정. Figma `405:2193`, `636:3675`.

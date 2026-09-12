@@ -144,7 +144,10 @@ internal fun NavGraphBuilder.calendarDestinations(navController: NavHostControll
     calendarDayDestination(
         onCardOpen = { cardId -> navController.navigate(BriefCardDestination(cardId)) },
         // 이 날 일정에 걸린 카드에 기록이 붙는다. 서버가 카드 하나에 기록 하나를 받는다.
-        onRecordAdd = { cardId -> navController.navigate(HospitalPickDestination(cardId = cardId)) },
+        // 카드 제목도 함께 간다. 1p가 무엇으로 진료받았는지를 그 값으로 적는다.
+        onRecordAdd = { cardId, cardTitle ->
+            navController.navigate(HospitalPickDestination(cardId = cardId, cardTitle = cardTitle))
+        },
         onRecordOpen = { recordId -> navController.navigate(RecordDetailDestination(recordId)) },
         // 1r-2-A의 다음 일정이 시간만 비어 있는 상태다. 확정하러 가면 병원이 이미 채워진
         // 일정 추가(1r-4-B)가 열린다.
@@ -165,8 +168,10 @@ internal fun NavGraphBuilder.calendarDestinations(navController: NavHostControll
 internal fun NavGraphBuilder.visitDestinations(navController: NavHostController) {
     hospitalPickDestination(
         // 진료 후(1m). 고른 병원 이름과 붙일 카드를 메모 화면으로 넘긴다.
-        onPicked = { cardId, hospital ->
-            navController.navigate(VisitNoteDestination(clinic = hospital.name, cardId = cardId))
+        onPicked = { cardId, cardTitle, hospital ->
+            navController.navigate(
+                VisitNoteDestination(clinic = hospital.name, cardId = cardId, cardTitle = cardTitle),
+            )
         },
         // 진료 전(1m-B)에서 카드로. cardId가 있으면 카드의 `변경`에서 온 것이라 고른
         // 병원만 남기고 그 카드로 돌아간다. 엔트리를 갈아치우면 그 화면이 편집 중이던 값을

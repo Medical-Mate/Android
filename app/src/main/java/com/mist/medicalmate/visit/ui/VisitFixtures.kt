@@ -10,9 +10,9 @@ import java.time.LocalDate
 
 internal val previewVisitHeadline =
     VisitHeadline(
-        label = "오늘 진료",
-        title = "서울OO병원 내과 · 9월 12일",
-        detail = "복부 통증 · 3주 브리핑 카드로 진료받았어요",
+        visitedOn = LocalDate.of(2026, 9, 12),
+        clinic = "서울OO병원 내과",
+        cardTitle = "복부 통증 · 3주",
     )
 
 /** 1p에 적힌 메모. 1q-1의 원문 인용과 같은 문장이어야 흐름이 이어진다. */

@@ -129,7 +129,8 @@ data class CalendarDayCallbacks(
     val onBackClick: () -> Unit = {},
     val onCardOpenClick: (String) -> Unit = {},
     val onTodoToggle: (String, Boolean) -> Unit = { _, _ -> },
-    val onRecordAddClick: () -> Unit = {},
+    /** 기록을 붙일 카드의 id와 제목. 제목은 1p가 "무엇으로 진료받았는지"를 적는 데 쓴다. */
+    val onRecordAddClick: (cardId: String, cardTitle: String) -> Unit = { _, _ -> },
     val onRecordOpenClick: (String) -> Unit = {},
     val onNextEventConfirmClick: () -> Unit = {},
     val onEditClick: () -> Unit = {},
@@ -253,12 +254,17 @@ private fun ColumnScope.TodoSection(state: CalendarDayUiState, callbacks: Calend
  * 이 날 기록.
  *
  * 진료가 끝나기 전에는 빈 상태다. 무엇을 적을 자리인지 알려주고 진료 후 기록으로 보낸다.
+ *
+ * **카드가 걸린 일정에서만 기록으로 보낸다.** 서버가 확정한 카드에 매달린 기록만 받아서,
+ * 카드 없이 그 흐름에 들어가면 끝에서 저장이 아무 일도 하지 않는다. 눌러도 되지 않는 버튼을
+ * 두는 대신 빈 상태의 안내만 남긴다.
  */
 @Composable
 private fun ColumnScope.RecordSection(state: CalendarDayUiState, callbacks: CalendarDayCallbacks) {
     MedicalMateSectionHeader(title = stringResource(R.string.calendar_day_record))
     val record = state.record
     if (record == null) {
+        val card = state.card
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -267,8 +273,8 @@ private fun ColumnScope.RecordSection(state: CalendarDayUiState, callbacks: Cale
                 type = MedicalMateEmptyStateType.NO_RECORD,
                 title = stringResource(R.string.calendar_day_record_empty_title),
                 description = stringResource(R.string.calendar_day_record_empty_description),
-                actionLabel = stringResource(R.string.calendar_day_record_empty_action),
-                onActionClick = callbacks.onRecordAddClick,
+                actionLabel = card?.let { stringResource(R.string.calendar_day_record_empty_action) },
+                onActionClick = card?.let { { callbacks.onRecordAddClick(it.id, it.title) } },
             )
         }
         return

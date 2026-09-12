@@ -26,11 +26,16 @@ import kotlinx.serialization.Serializable
  *
  * [cardId]는 브리핑 카드의 `변경`에서 들어온 경우에만 있다. 고른 뒤 그 카드로 돌아가야 해서
  * 어느 카드였는지를 들고 간다.
+ *
+ * [cardTitle]은 진료 후(1m)에서만 채워진다. 1p가 "무엇으로 진료받았는지"를 적는 데 쓰는
+ * 값이고, 이 화면은 나르기만 한다. 카드를 다시 읽지 않는 이유는 그 제목이 이미 캘린더 일자에
+ * 있기 때문이다. 병원 이름을 나르는 것과 같은 방식이다.
  */
 @Serializable
 internal data class HospitalPickDestination(
     val purpose: HospitalPickPurpose = HospitalPickPurpose.AFTER_VISIT,
     val cardId: String? = null,
+    val cardTitle: String? = null,
 )
 
 /**
@@ -41,9 +46,16 @@ internal data class HospitalPickDestination(
  *
  * [cardId]는 기록을 붙일 카드다. 서버가 확정한 카드 하나에 기록 하나를 받는다. 캘린더 일자의
  * 일정에 걸린 카드에서 온다.
+ *
+ * [cardTitle]은 그 카드의 제목이다. 화면 맨 위에 "무엇으로 진료받았는지"를 적는 자리가 있고
+ * 그 값이다. 카드를 다시 읽는 대신 캘린더에서부터 라우트로 따라온다.
  */
 @Serializable
-internal data class VisitNoteDestination(val clinic: String? = null, val cardId: String? = null)
+internal data class VisitNoteDestination(
+    val clinic: String? = null,
+    val cardId: String? = null,
+    val cardTitle: String? = null,
+)
 
 /**
  * 와이어프레임 1q-1과 1q-1-E.
@@ -65,12 +77,12 @@ internal data class VisitSummaryDestination(val visitId: String)
 
 /**
  * @param onPicked 진료 후(1m)에서 병원을 고르고 완료했을 때. 고른 병원과, 이 흐름이 어느
- *   카드에 붙는지가 함께 넘어간다.
+ *   카드에 붙는지가(id와 제목) 함께 넘어간다.
  * @param onCardRequested 진료 전(1m-B)에서 카드로 넘어갈 때. 고른 병원이 없으면 null이
  *   넘어간다. 건너뛰기와 CTA가 같은 곳으로 가고, 다른 것은 병원을 들고 가는지뿐이다.
  */
 internal fun NavGraphBuilder.hospitalPickDestination(
-    onPicked: (cardId: String?, hospital: Hospital) -> Unit,
+    onPicked: (cardId: String?, cardTitle: String?, hospital: Hospital) -> Unit,
     onCardRequested: (cardId: String?, hospital: Hospital?) -> Unit,
     onScheduleRequested: (Hospital?) -> Unit,
     onExit: () -> Unit,
@@ -80,6 +92,7 @@ internal fun NavGraphBuilder.hospitalPickDestination(
         HospitalPickRoute(
             purpose = route.purpose,
             cardId = route.cardId,
+            cardTitle = route.cardTitle,
             onPicked = onPicked,
             onCardRequested = onCardRequested,
             onScheduleRequested = onScheduleRequested,
@@ -95,6 +108,8 @@ internal fun NavGraphBuilder.visitNoteDestination(
     composable<VisitNoteDestination> { entry ->
         val route = entry.toRoute<VisitNoteDestination>()
         VisitNoteRoute(
+            clinic = route.clinic,
+            cardTitle = route.cardTitle,
             onSaved = { note -> onSaved(route.clinic, route.cardId, note) },
             onExit = onExit,
         )
@@ -130,7 +145,8 @@ internal fun NavGraphBuilder.visitSummaryDestination(onHome: () -> Unit, onExit:
 private fun HospitalPickRoute(
     purpose: HospitalPickPurpose,
     cardId: String?,
-    onPicked: (cardId: String?, hospital: Hospital) -> Unit,
+    cardTitle: String?,
+    onPicked: (cardId: String?, cardTitle: String?, hospital: Hospital) -> Unit,
     onCardRequested: (cardId: String?, hospital: Hospital?) -> Unit,
     onScheduleRequested: (Hospital?) -> Unit,
     onExit: () -> Unit,
@@ -153,7 +169,7 @@ private fun HospitalPickRoute(
         // 추가는 필드에 이름만 채우고 돌아간다.
         onSubmitClick = {
             when (purpose) {
-                HospitalPickPurpose.AFTER_VISIT -> selected?.let { onPicked(cardId, it) }
+                HospitalPickPurpose.AFTER_VISIT -> selected?.let { onPicked(cardId, cardTitle, it) }
                 HospitalPickPurpose.BEFORE_VISIT -> onCardRequested(cardId, selected)
                 HospitalPickPurpose.SCHEDULE -> onScheduleRequested(selected)
             }
@@ -172,12 +188,16 @@ private fun HospitalPickRoute(
 
 @Composable
 private fun VisitNoteRoute(
+    clinic: String?,
+    cardTitle: String?,
     onSaved: (note: String) -> Unit,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: VisitNoteViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(clinic, cardTitle) { viewModel.load(clinic, cardTitle) }
 
     VisitNoteScreen(
         state = state,
