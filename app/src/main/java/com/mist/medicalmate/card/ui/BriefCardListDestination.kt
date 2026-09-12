@@ -15,13 +15,13 @@ import kotlinx.serialization.Serializable
 internal data object BriefCardListDestination
 
 internal fun NavGraphBuilder.briefCardListDestination(
-    onCardClick: (String) -> Unit,
+    onCardClick: (cardId: String, clinic: String?) -> Unit,
     onStartIntakeClick: () -> Unit,
     onExit: () -> Unit,
 ) {
     composable<BriefCardListDestination> {
         BriefCardListRoute(
-            onCardClick = onCardClick,
+            onCardClick = { item -> onCardClick(item.id, item.clinic) },
             onStartIntakeClick = onStartIntakeClick,
             onExit = onExit,
         )
@@ -30,7 +30,7 @@ internal fun NavGraphBuilder.briefCardListDestination(
 
 @Composable
 private fun BriefCardListRoute(
-    onCardClick: (String) -> Unit,
+    onCardClick: (RecordItem) -> Unit,
     onStartIntakeClick: () -> Unit,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,

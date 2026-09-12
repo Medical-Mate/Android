@@ -113,6 +113,7 @@ private fun CardListItem.toRow() = RecordItem(
         confirmed -> RecordItem.Status.BEFORE_VISIT
         else -> RecordItem.Status.DRAFT
     },
+    clinic = clinic,
     meta = listOfNotNull(writtenOn.format(WRITTEN_ON) + " 작성", clinic).joinToString(" · "),
 )
 

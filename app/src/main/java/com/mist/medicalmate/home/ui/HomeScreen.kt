@@ -126,7 +126,7 @@ private val ToastTop = 68.dp
 data class HomeCallbacks(
     val onStartIntakeClick: () -> Unit = {},
     val onResumeClick: (String?) -> Unit = {},
-    val onSavedCardClick: (String) -> Unit = {},
+    val onSavedCardClick: (cardId: String, clinic: String?) -> Unit = { _, _ -> },
     val onAllCardsClick: () -> Unit = {},
     val onScheduleClick: (String) -> Unit = {},
     val onCalendarClick: () -> Unit = {},
@@ -231,7 +231,7 @@ private fun LazyListScope.savedCardsSection(content: HomeUiState.Content, callba
         )
     }
     items(items = content.savedCards, key = { it.id }) { card ->
-        SavedCardRow(card = card, onClick = { callbacks.onSavedCardClick(card.id) })
+        SavedCardRow(card = card, onClick = { callbacks.onSavedCardClick(card.id, card.clinic) })
     }
 }
 

@@ -55,6 +55,13 @@ data class RecordItem(
     val cardId: String? = null,
     val title: String,
     val status: Status,
+    /**
+     * 진료받을(받은) 병원.
+     *
+     * [meta]에도 들어 있지만 거기는 날짜와 합친 표시용 문자열이다. 카드를 열 때 그 이름을
+     * 함께 넘겨야 해서 값으로도 든다 — 카드 상세 응답에 병원이 없고 목록 응답에만 있다.
+     */
+    val clinic: String? = null,
     val meta: String,
     val detail: String? = null,
     val resumeLabel: String? = null,

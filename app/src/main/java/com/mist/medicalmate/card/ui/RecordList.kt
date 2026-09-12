@@ -59,7 +59,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 internal fun ColumnScope.GroupList(
     groups: List<RecordGroup>,
     @StringRes countRes: Int,
-    onItemClick: (String) -> Unit,
+    onItemClick: (RecordItem) -> Unit,
     selectedIds: Set<String>? = null,
     onSelectChange: (String, Boolean) -> Unit = { _, _ -> },
 ) {
@@ -90,7 +90,7 @@ internal fun ColumnScope.GroupList(
                     item = item,
                     selected = selected,
                     onClick = {
-                        if (selected == null) onItemClick(item.id) else onSelectChange(item.id, !selected)
+                        if (selected == null) onItemClick(item) else onSelectChange(item.id, !selected)
                     },
                 )
             }

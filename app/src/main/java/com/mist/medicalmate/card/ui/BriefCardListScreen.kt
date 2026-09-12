@@ -86,7 +86,7 @@ fun BriefCardListScreen(
 /** 브리핑 카드 전체에서 나가는 길과 화면 안의 조작. */
 data class BriefCardListCallbacks(
     val onBackClick: () -> Unit = {},
-    val onCardClick: (String) -> Unit = {},
+    val onCardClick: (RecordItem) -> Unit = {},
     val onStartIntakeClick: () -> Unit = {},
     val onEditStart: () -> Unit = {},
     val onEditCancel: () -> Unit = {},
