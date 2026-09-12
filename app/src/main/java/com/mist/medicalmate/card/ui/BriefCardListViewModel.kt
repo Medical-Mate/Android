@@ -67,8 +67,8 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
     /**
      * 고른 카드를 지운다.
      *
-     * 서버에 나가지 않는다. `DELETE /api/cards`가 붙으면 여기서 부른다. 빈 묶음은 함께
-     * 사라지고 편집에서 빠져나온다.
+     * 한 장씩 `DELETE /api/cards/{id}`로 나간다(#157). 안 지워진 것은 목록에 남긴다. 빈
+     * 묶음은 함께 사라지고 편집에서 빠져나온다.
      */
     fun onDeleteConfirm() {
         val ids = (mutableUiState.value as? BriefCardListUiState.Content)?.selectedIds.orEmpty()

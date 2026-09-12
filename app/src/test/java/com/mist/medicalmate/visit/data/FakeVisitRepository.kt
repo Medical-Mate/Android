@@ -15,17 +15,28 @@ internal class FakeVisitRepository(
     private val list: ApiResult<List<VisitListItem>> = ApiResult.Success(emptyList()),
     private val detail: ApiResult<Visit> = ApiResult.Success(EMPTY_VISIT),
     private val saved: ApiResult<Visit> = ApiResult.Success(EMPTY_VISIT.copy(id = SAVED_ID)),
+    /**
+     * id마다 다른 상세.
+     *
+     * 1k가 이번 기록과 직전 기록을 함께 읽어서 둘이 달라야 한다. 여기 없는 id는 [detail]로
+     * 떨어진다.
+     */
+    private val details: Map<Long, ApiResult<Visit>> = emptyMap(),
 ) : VisitRepository {
     var requestedId: Long? = null
     var createCount = 0
     var cardId: Long? = null
     var request: NewVisit? = null
 
+    /** 물어본 차례대로. 몇 번 불렀는지가 관심사인 시험이 있다. */
+    val requestedIds = mutableListOf<Long>()
+
     override suspend fun visits(): ApiResult<List<VisitListItem>> = list
 
     override suspend fun visit(visitId: Long): ApiResult<Visit> {
         requestedId = visitId
-        return detail
+        requestedIds += visitId
+        return details[visitId] ?: detail
     }
 
     override suspend fun create(cardId: Long, visit: NewVisit): ApiResult<Visit> {

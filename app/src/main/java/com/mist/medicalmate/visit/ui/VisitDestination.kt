@@ -117,8 +117,12 @@ internal fun NavGraphBuilder.visitRecordDestination(
 }
 
 internal fun NavGraphBuilder.visitSummaryDestination(onHome: () -> Unit, onExit: () -> Unit) {
-    composable<VisitSummaryDestination> {
-        VisitSummaryScreen(state = previewVisitSummary, onHomeClick = onHome, onBackClick = onExit)
+    composable<VisitSummaryDestination> { entry ->
+        VisitSummaryRoute(
+            visitId = entry.toRoute<VisitSummaryDestination>().visitId,
+            onHome = onHome,
+            onExit = onExit,
+        )
     }
 }
 
@@ -185,6 +189,34 @@ private fun VisitNoteRoute(
             // 적은 원문이 그대로 다음 화면으로 간다. 1q-1이 그 글을 보여주고 저장한다.
             onSaveClick = { onSaved(state.note) },
         ),
+        modifier = modifier,
+    )
+}
+
+/**
+ * 상태 있는 진입점.
+ *
+ * 저장이 끝나고 서버가 매긴 기록 id를 들고 들어오는 자리다. 그 id로 방금 저장된 것을 다시
+ * 읽는다. [LaunchedEffect]가 id를 열쇠로 잡아서, 같은 화면이 다시 조합돼도 다시 부르지
+ * 않는다.
+ */
+@Composable
+private fun VisitSummaryRoute(
+    visitId: String,
+    onHome: () -> Unit,
+    onExit: () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: VisitSummaryViewModel = hiltViewModel(),
+) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(visitId) { viewModel.load(visitId) }
+
+    VisitSummaryScreen(
+        state = state,
+        onHomeClick = onHome,
+        onBackClick = onExit,
+        onRetryClick = { viewModel.load(visitId) },
         modifier = modifier,
     )
 }
