@@ -6,6 +6,8 @@ import com.mist.medicalmate.calendar.data.Appointment
 import com.mist.medicalmate.calendar.data.AppointmentRepository
 import com.mist.medicalmate.calendar.data.AppointmentStatus
 import com.mist.medicalmate.core.network.ApiResult
+import com.mist.medicalmate.visit.data.VisitListItem
+import com.mist.medicalmate.visit.data.VisitRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,6 +34,7 @@ class CalendarDayViewModel
 @Inject
 internal constructor(
     private val repository: AppointmentRepository,
+    private val visitRepository: VisitRepository,
     private val clock: Clock,
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow<CalendarDayUiState?>(null)
@@ -40,12 +43,14 @@ internal constructor(
     /**
      * 그 날을 읽는다.
      *
-     * **일정과 그 일정에 걸린 카드가 서버 값이다.** 진료 후 기록·다음 일정·진료 전 할 일은
-     * 아직 픽스처다. 기록과 다음 일정은 기록 상세를 함께 읽어야 나오고, 할 일은 서버에
-     * 자리가 없다(#141). 그것들까지 지우면 화면이 일정 한 줄만 남는다.
+     * 일정·카드·기록·다음 일정이 서버 값이다. **진료 전 할 일만 아직 픽스처다.** 서버에
+     * 자리가 없다(#141).
      *
-     * 서버에 그 날 일정이 없으면 픽스처의 일정도 지운다. 없는 일정을 남겨 두면 삭제를
-     * 눌렀을 때 지울 것이 없다.
+     * 서버에 없는 것은 픽스처의 것도 지운다. 없는 일정을 남겨 두면 삭제를 눌렀을 때 지울
+     * 것이 없고, 없는 기록을 남겨 두면 눌렀을 때 빈 화면이 나온다.
+     *
+     * 세 호출을 하나씩 기다린다. 화면 하나를 그리는 데 셋이 다 있어야 하고, 일자 화면은
+     * 캘린더에서 한 번 들어올 때만 읽는다.
      */
     fun load(date: LocalDate) {
         viewModelScope.launch {
@@ -53,13 +58,32 @@ internal constructor(
                 (repository.day(date) as? ApiResult.Success)
                     ?.value
                     ?.firstOrNull { it.status != AppointmentStatus.CANCELED }
+            val record = (visitRepository.visits() as? ApiResult.Success)?.value?.firstOrNull { it.visitedOn == date }
             mutableUiState.value =
                 dayState(date).copy(
                     schedule = appointment?.toDaySchedule(LocalDate.now(clock)),
                     card = appointment?.toDayCard(),
+                    record = record?.toDayRecord(),
+                    // 진료가 끝난 날에는 진료 전 할 일을 두지 않는다. 시안 1r-2-A도 그렇다.
+                    todos = if (record == null) dayState(date).todos else emptyList(),
+                    nextEvent = record?.let { nextEvent(date) },
                 )
         }
     }
+
+    /**
+     * 이 진료 다음에 올 일정.
+     *
+     * **기록이 있는 날에만 붙인다.** 진료를 다녀온 뒤 다음이 언제인지를 알리는 자리다(1r-2-A).
+     * 아직 오지 않은 날에 붙이면 같은 화면에 "이 날 일정"과 "다음 일정"이 나란히 서서 어느
+     * 쪽이 오늘 갈 곳인지 흐려진다.
+     *
+     * 그 날 자신의 일정은 뺀다. 위에 이미 "이 날 일정"으로 서 있다.
+     */
+    private suspend fun nextEvent(date: LocalDate): DayNextEvent? = (repository.upcoming() as? ApiResult.Success)
+        ?.value
+        ?.firstOrNull { it.status != AppointmentStatus.CANCELED && it.at.toLocalDate() > date }
+        ?.toNextEvent(LocalDate.now(clock))
 
     /** 할 일 체크. 편집 중이면 사본을 고친다. */
     fun onTodoToggle(id: String, done: Boolean) {
@@ -135,6 +159,31 @@ private fun Appointment.toDayCard(): DayCard? {
     return DayCard(id = id.toString(), title = cardTitle.orEmpty())
 }
 
+/**
+ * 그 날 남긴 진료 후 기록.
+ *
+ * 무엇을 들었는지는 목록 응답에 없다. 상세를 따로 읽어야 나오는데, 이 줄은 기록 상세로
+ * 들어가는 길이라 그 값이 없어도 제 일을 한다. 기록 목록(1j-1)의 줄과 같은 모양이다.
+ */
+private fun VisitListItem.toDayRecord() = DayRecord(
+    id = id,
+    title = cardTitle.ifBlank { clinic.orEmpty() },
+    meta = clinic.orEmpty(),
+)
+
+/**
+ * 다음 일정 카드.
+ *
+ * 시간이 없는 상태(1r-2-A)는 서버에서 오지 않는다. 일정에 시각이 필수라 늘 정해진 쪽(1r-2-A2)
+ * 이다. 그 상태는 Preview에만 남아 있다.
+ */
+private fun Appointment.toNextEvent(today: LocalDate) = DayNextEvent(
+    chip = "D-${at.toLocalDate().toEpochDay() - today.toEpochDay()}",
+    title = title,
+    at = at.format(NEXT_EVENT_FORMAT),
+    clinic = title,
+)
+
 private fun Appointment.toDaySchedule(today: LocalDate) = CalendarSchedule(
     id = id.toString(),
     title = title,
@@ -144,3 +193,7 @@ private fun Appointment.toDaySchedule(today: LocalDate) = CalendarSchedule(
 )
 
 private val DAY_TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)
+
+/** 다음 일정의 "9월 26일 (토) 오전 10:30". */
+private val NEXT_EVENT_FORMAT: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("M월 d일 (E) a h:mm", Locale.KOREAN)
