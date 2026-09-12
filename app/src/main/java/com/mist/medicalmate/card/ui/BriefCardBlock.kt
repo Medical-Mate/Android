@@ -66,6 +66,9 @@ internal fun BriefCardBlock(
                 onDeleteClick = onItemDeleteClick?.let { delete -> { delete(index) } },
             )
         }
+        // 복용약과 기저질환은 프로필에서 온 사실이라 편집에서 열리지 않는다. 문답에서 말한
+        // 것이 아니라 환자가 신상정보에 적어 둔 값이고, 고칠 자리는 1s-2다.
+        card.health.forEach { item -> KvLine(item = item, editing = false, onValueChange = {}) }
         card.severity?.let { MedicalMateSeverityReadout(severity = it) }
         if (showAiCaption && !editing) {
             AiCaption()
@@ -79,7 +82,7 @@ private fun KvLine(
     item: BriefCardItem,
     editing: Boolean,
     onValueChange: (String) -> Unit,
-    onDeleteClick: (() -> Unit)?,
+    onDeleteClick: (() -> Unit)? = null,
 ) {
     if (onDeleteClick == null) {
         MedicalMateKvRow(

@@ -14,9 +14,15 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
  * 강도는 색과 NRS 등가가 붙고, 질문은 번호 pill이 붙고, 알러지는 경고 면에 얹힌다.
  * 이것들을 [items]에 섞으면 그 모양을 잃는다.
  *
- * **[allergies]는 AI가 만든 것이 아니다.** 신상정보 등록(1b-3)에서 환자가 고른 값이
- * 그대로 올라온다. 문답에서 말한 것이 아니라 프로필에 있는 사실이라 AI가 다시 정리할
- * 대상이 아니고, 카드 맨 위에 항상 표시된다.
+ * **[health]와 [allergies]는 AI가 만든 것이 아니다.** 신상정보 등록(1b-3)에서 환자가 고른
+ * 값이고 화면이 `GET /api/me/health-profile`에서 읽어 얹는다. 문답에서 말한 것이 아니라
+ * 프로필에 있는 사실이라 AI가 다시 정리할 대상이 아니고 편집에서도 열리지 않는다.
+ *
+ * 복용약과 기저질환은 카드 안에 줄로 들어가고 알러지만 카드 밖 경고로 나온다. 처방을 바꾸는
+ * 값이라 다른 정보와 같은 무게로 두지 않는다.
+ *
+ * **카드를 만든 시점이 아니라 보는 시점의 프로필이다.** 서버 카드 응답에 건강 정보가 없어서
+ * 생기는 한계다. 카드에 실어 달라고 백엔드에 올려 뒀다.
  *
  * [hospital]은 진료받을 병원이다. 증상 정리를 마치고 병원을 먼저 찾은 경우에만 있다.
  * 그래서 null이 될 수 있다.
@@ -28,6 +34,7 @@ data class BriefCard(
     val patientLine: String,
     val items: List<BriefCardItem>,
     val severity: MedicalMateSeverity?,
+    val health: List<BriefCardItem> = emptyList(),
     val allergies: List<String>,
     val questions: List<String>,
     val hospital: BriefCardHospital? = null,

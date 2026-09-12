@@ -4,6 +4,10 @@ import com.mist.medicalmate.card.data.AxisEdit
 import com.mist.medicalmate.card.data.CardListItem
 import com.mist.medicalmate.card.data.CardRepository
 import com.mist.medicalmate.core.network.ApiResult
+import com.mist.medicalmate.profile.data.FakeHealthProfileRepository
+import com.mist.medicalmate.profile.data.HealthEdit
+import com.mist.medicalmate.profile.data.HealthField
+import com.mist.medicalmate.profile.data.HealthStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -31,7 +35,7 @@ class BriefCardViewModelTest {
 
     @Test
     fun `처음은 Loading이고 불러오면 카드가 나온다`() {
-        val viewModel = BriefCardViewModel(FakeCardRepository())
+        val viewModel = BriefCardViewModel(FakeCardRepository(), FakeHealthProfileRepository())
 
         assertEquals(BriefCardUiState.Loading, viewModel.uiState.value)
 
@@ -147,7 +151,7 @@ class BriefCardViewModelTest {
 
     @Test
     fun `편집 모드가 아니면 사본 조작이 아무것도 바꾸지 않는다`() {
-        val viewModel = BriefCardViewModel(FakeCardRepository())
+        val viewModel = BriefCardViewModel(FakeCardRepository(), FakeHealthProfileRepository())
         viewModel.open(1)
         val before = viewModel.uiState.value
 
@@ -194,7 +198,7 @@ class BriefCardViewModelTest {
     @Test
     fun `병원은 라우트가 넘긴 값이 카드에 얹힌다`() {
         // 서버 카드 응답에 병원이 없다. 1m-B에서 방금 고른 것만 실린다(#139).
-        val viewModel = BriefCardViewModel(FakeCardRepository())
+        val viewModel = BriefCardViewModel(FakeCardRepository(), FakeHealthProfileRepository())
 
         viewModel.open(1, hospital = BriefCardHospital(name = "서울OO병원 내과", address = "서울 관악구"))
 
@@ -203,7 +207,7 @@ class BriefCardViewModelTest {
     }
 
     private fun editing(): BriefCardViewModel {
-        val viewModel = BriefCardViewModel(FakeCardRepository())
+        val viewModel = BriefCardViewModel(FakeCardRepository(), FakeHealthProfileRepository())
         viewModel.open(1)
         viewModel.onEditClick()
         return viewModel
@@ -212,7 +216,7 @@ class BriefCardViewModelTest {
     private fun BriefCardViewModel.content(): BriefCardUiState.Content = uiState.value as BriefCardUiState.Content
 
     private fun loadedContent(): BriefCardUiState.Content {
-        val viewModel = BriefCardViewModel(FakeCardRepository())
+        val viewModel = BriefCardViewModel(FakeCardRepository(), FakeHealthProfileRepository())
         viewModel.open(1)
         return viewModel.uiState.value as BriefCardUiState.Content
     }
@@ -222,7 +226,7 @@ class BriefCardViewModelTest {
         // PATCH라 보낸 것만 바뀐다. 안 건드린 축까지 실어 보내면 서버가 그것도 환자가 고친
         // 값으로 남긴다.
         val repository = FakeCardRepository()
-        val viewModel = BriefCardViewModel(repository)
+        val viewModel = BriefCardViewModel(repository, FakeHealthProfileRepository())
         viewModel.open(1)
         viewModel.onEditClick()
 
@@ -235,7 +239,7 @@ class BriefCardViewModelTest {
     @Test
     fun `아무것도 안 고치면 축을 보내지 않는다`() {
         val repository = FakeCardRepository()
-        val viewModel = BriefCardViewModel(repository)
+        val viewModel = BriefCardViewModel(repository, FakeHealthProfileRepository())
         viewModel.open(1)
         viewModel.onEditClick()
 
@@ -248,7 +252,7 @@ class BriefCardViewModelTest {
     fun `줄을 지워도 남은 축의 자리가 밀리지 않는다`() {
         // 원본과 사본을 자리로 맞추면 첫 줄을 지웠을 때 나머지가 한 칸씩 밀려 전부 바뀐 것이 된다.
         val repository = FakeCardRepository()
-        val viewModel = BriefCardViewModel(repository)
+        val viewModel = BriefCardViewModel(repository, FakeHealthProfileRepository())
         viewModel.open(1)
         viewModel.onEditClick()
 
@@ -273,11 +277,61 @@ class BriefCardDeleteTest {
     }
 
     @Test
+    fun `프로필의 복용약과 기저질환이 카드 줄로 온다`() {
+        // 카드 응답에 없는 값이다. 화면이 프로필에서 읽어 얹는다.
+        val viewModel = BriefCardViewModel(FakeCardRepository(), filledProfile())
+
+        viewModel.open(1)
+
+        val card = (viewModel.uiState.value as BriefCardUiState.Content).card
+        assertEquals(listOf("복용약", "기저질환"), card.health.map { it.key })
+        assertEquals(listOf("혈압약 · 진통제", "고혈압"), card.health.map { it.value })
+    }
+
+    @Test
+    fun `알러지는 줄이 아니라 경고로 간다`() {
+        // 처방을 바꾸는 값이라 카드 밖 경고 면에 얹힌다.
+        val viewModel = BriefCardViewModel(FakeCardRepository(), filledProfile())
+
+        viewModel.open(1)
+
+        val card = (viewModel.uiState.value as BriefCardUiState.Content).card
+        assertEquals(listOf("페니실린"), card.allergies)
+        assertFalse(card.health.any { it.key == "알러지" })
+    }
+
+    @Test
+    fun `적은 것이 없는 갈래는 줄을 만들지 않는다`() {
+        // "없어요"와 "잘 모르겠어요"를 카드에 적지 않는다. 비어 있다는 것은 빈 자리로 전해진다.
+        val profile = FakeHealthProfileRepository(read = ApiResult.Success(EMPTY_HEALTH))
+        val viewModel = BriefCardViewModel(FakeCardRepository(), profile)
+
+        viewModel.open(1)
+
+        val card = (viewModel.uiState.value as BriefCardUiState.Content).card
+        assertTrue(card.health.isEmpty())
+        assertTrue(card.allergies.isEmpty())
+    }
+
+    @Test
+    fun `프로필을 못 읽어도 카드는 그린다`() {
+        // 카드 본문은 이미 서버에서 왔다. 건강 정보가 없다고 화면 전체를 실패로 둘 수 없다.
+        val profile = FakeHealthProfileRepository(read = FakeHealthProfileRepository.OFFLINE)
+        val viewModel = BriefCardViewModel(FakeCardRepository(), profile)
+
+        viewModel.open(1)
+
+        val state = viewModel.uiState.value as BriefCardUiState.Content
+        assertEquals(testCard.id, state.card.id)
+        assertTrue(state.card.health.isEmpty())
+    }
+
+    @Test
     fun `카드가 없으면 문답으로 만든다`() {
         // 1c-5에서 곧장 오든 병원을 먼저 찾고 오든 카드가 아직 없다. 만드는 자리는 여기
         // 하나다. 예전에는 "new"라는 가짜 id가 넘어와 화면이 빈 채로 열렸다.
         val cards = FakeCardRepository()
-        val viewModel = BriefCardViewModel(cards)
+        val viewModel = BriefCardViewModel(cards, FakeHealthProfileRepository())
 
         viewModel.open(cardId = null, sessionId = 7)
 
@@ -287,7 +341,7 @@ class BriefCardDeleteTest {
 
     @Test
     fun `만든 카드에 방금 고른 병원이 얹힌다`() {
-        val viewModel = BriefCardViewModel(FakeCardRepository())
+        val viewModel = BriefCardViewModel(FakeCardRepository(), FakeHealthProfileRepository())
 
         viewModel.open(cardId = null, sessionId = 7, hospital = BriefCardHospital(name = "서울OO병원 내과"))
 
@@ -298,7 +352,7 @@ class BriefCardDeleteTest {
     @Test
     fun `화면이 다시 조합돼도 카드를 두 번 만들지 않는다`() {
         val cards = FakeCardRepository()
-        val viewModel = BriefCardViewModel(cards)
+        val viewModel = BriefCardViewModel(cards, FakeHealthProfileRepository())
 
         viewModel.open(cardId = null, sessionId = 7)
         cards.createdFrom = null
@@ -309,7 +363,7 @@ class BriefCardDeleteTest {
 
     @Test
     fun `카드도 문답도 없으면 실패다`() {
-        val viewModel = BriefCardViewModel(FakeCardRepository())
+        val viewModel = BriefCardViewModel(FakeCardRepository(), FakeHealthProfileRepository())
 
         viewModel.open(cardId = null, sessionId = null)
 
@@ -319,7 +373,7 @@ class BriefCardDeleteTest {
     @Test
     fun `지우면 서버에 나가고 화면을 나간다`() {
         val cards = FakeCardRepository()
-        val viewModel = BriefCardViewModel(cards).apply { open(testCard.id.toLong()) }
+        val viewModel = BriefCardViewModel(cards, FakeHealthProfileRepository()).apply { open(testCard.id.toLong()) }
         var left = false
 
         viewModel.onDeleteConfirm { left = true }
@@ -332,7 +386,7 @@ class BriefCardDeleteTest {
     fun `못 지우면 화면에 남는다`() {
         // 나가 버리면 안 지워진 카드를 지운 것으로 알게 된다.
         val cards = FakeCardRepository(deleteFails = setOf(testCard.id))
-        val viewModel = BriefCardViewModel(cards).apply { open(testCard.id.toLong()) }
+        val viewModel = BriefCardViewModel(cards, FakeHealthProfileRepository()).apply { open(testCard.id.toLong()) }
         var left = false
 
         viewModel.onDeleteConfirm { left = true }
@@ -344,7 +398,7 @@ class BriefCardDeleteTest {
     fun `불러오기 전에는 지우지 않는다`() {
         val cards = FakeCardRepository()
 
-        BriefCardViewModel(cards).onDeleteConfirm {}
+        BriefCardViewModel(cards, FakeHealthProfileRepository()).onDeleteConfirm {}
 
         assertEquals(emptyList<Long>(), cards.deleted)
     }
@@ -420,5 +474,31 @@ internal val testCard =
             "검사를 받아야 하나요?",
             "지금 진통제 계속 먹어도 되나요?",
             "어떤 증상이면 바로 다시 와야 하나요?",
+        ),
+    )
+
+/** 신상정보에 세 갈래를 다 적어 둔 프로필. */
+private fun filledProfile() = FakeHealthProfileRepository(
+    read =
+    ApiResult.Success(
+        FakeHealthProfileRepository.PROFILE.copy(
+            health =
+            HealthEdit(
+                medications = HealthField(listOf("혈압약", "진통제")),
+                conditions = HealthField(listOf("고혈압")),
+                allergies = HealthField(listOf("페니실린")),
+            ),
+        ),
+    ),
+)
+
+/** 세 갈래가 모두 비어 있는 프로필. */
+private val EMPTY_HEALTH =
+    FakeHealthProfileRepository.PROFILE.copy(
+        health =
+        HealthEdit(
+            medications = HealthField(emptyList(), HealthStatus.NONE),
+            conditions = HealthField(emptyList(), HealthStatus.UNKNOWN),
+            allergies = HealthField(emptyList(), HealthStatus.NONE),
         ),
     )

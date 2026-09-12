@@ -247,15 +247,12 @@ private fun Footer(editing: Boolean, callbacks: BriefCardCallbacks) {
                 modifier = Modifier.fillMaxWidth(),
             )
         } else {
+            // **진료실에서 보여주기가 없다.** 시안 와이어프레임에서 진료실 화면(1f) 프레임이
+            // 사라지면서 이 버튼도 함께 빠졌다(#167). 화면과 전달 호출은 그대로 두었고 들어갈
+            // 길만 없다. 진입점이 정해지면 다시 붙인다.
             MedicalMateButton(
                 onClick = callbacks.onSaveClick,
                 label = stringResource(R.string.brief_card_save),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            MedicalMateButton(
-                onClick = callbacks.onHandoffClick,
-                label = stringResource(R.string.brief_card_handoff),
-                type = MedicalMateButtonType.OUTLINE,
                 modifier = Modifier.fillMaxWidth(),
             )
         }
