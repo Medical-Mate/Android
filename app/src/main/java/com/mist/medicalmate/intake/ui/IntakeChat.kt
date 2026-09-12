@@ -3,18 +3,23 @@ package com.mist.medicalmate.intake.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -40,30 +45,38 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceInput
  *
  * 맨 위에 짚은 부위를 칩으로 남긴다. 대화가 길어져도 무엇에 대한 문답인지 남아 있어야 한다.
  *
- * **자동 스크롤을 넣지 않았다.** 마디가 늘면 아래가 잘린다. 목록을 `LazyColumn`으로 바꾸고
- * 새 마디에서 끝으로 보내는 것이 맞는데, 그 동작을 지금 정하면 실제 응답 길이를 모른 채
- * 정하는 것이 된다. LLM을 붙일 때 함께 잡는다(#69).
+ * **마디가 붙으면 끝으로 보낸다**(#176). 그러지 않으면 방금 보낸 말과 AI의 답이 입력창 뒤에
+ * 남는다. 키보드 높이를 함께 보는 이유는, 마디가 늘지 않아도 키보드가 올라오면 보이는 높이가
+ * 줄어 마지막 마디가 가리기 때문이다. 인셋 자체는 `MainActivity`가 `safeDrawing`으로 합쳐
+ * 두어 입력창은 제 자리에 서 있고, 가리는 것은 본문이다.
  */
 @Composable
 internal fun ChatStep(state: IntakeUiState, modifier: Modifier = Modifier) {
-    Column(
-        modifier =
-        modifier
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
-            .padding(
-                start = MedicalMateSize.gutter,
-                end = MedicalMateSize.gutter,
-                top = MedicalMateSpace.s12,
-                bottom = MedicalMateSpace.s16,
-            ),
+    val listState = rememberLazyListState()
+    val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
+
+    LaunchedEffect(state.messages.size, state.awaitingReply, imeBottom) {
+        val last = listState.layoutInfo.totalItemsCount - 1
+        if (last >= 0) listState.animateScrollToItem(last)
+    }
+
+    LazyColumn(
+        state = listState,
+        modifier = modifier.fillMaxWidth(),
+        contentPadding =
+        PaddingValues(
+            start = MedicalMateSize.gutter,
+            end = MedicalMateSize.gutter,
+            top = MedicalMateSpace.s12,
+            bottom = MedicalMateSpace.s16,
+        ),
         verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s14),
     ) {
-        IntakeProgress(state.step)
-        state.bodyPart?.let { BodyPartContext(it) }
-        state.messages.forEach { message -> MessageRow(message) }
+        item(key = PROGRESS_KEY) { IntakeProgress(state.step) }
+        state.bodyPart?.let { part -> item(key = CONTEXT_KEY) { BodyPartContext(part) } }
+        items(state.messages, key = { it.id }) { message -> MessageRow(message) }
         if (state.awaitingReply) {
-            TypingRow()
+            item(key = TYPING_KEY) { TypingRow() }
         }
     }
 }
@@ -183,6 +196,17 @@ internal fun ChatInput(state: IntakeUiState, callbacks: IntakeCallbacks) {
             )
     }
 }
+
+/**
+ * 고정 항목의 key.
+ *
+ * 마디 key는 서버의 `seq`라 숫자다. 고정 항목을 숫자로 두면 겹칠 수 있어 문자열로 둔다.
+ */
+private const val PROGRESS_KEY = "progress"
+
+private const val CONTEXT_KEY = "context"
+
+private const val TYPING_KEY = "typing"
 
 private const val TYPING_DOTS = 3
 
