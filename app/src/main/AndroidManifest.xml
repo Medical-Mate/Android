@@ -27,6 +27,26 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MedicalMate">
+
+        <!--
+            온디바이스 엔진이 기대는 벤더 라이브러리.
+
+            둘 다 /vendor/etc/public.libraries.txt에만 있고 /system/etc 쪽에는 없다. 그 목록은
+            선언한 앱에만 열리고, 선언이 없으면 이름으로도 찾지 못한다(#142).
+
+            libOpenCL은 llama.cpp의 OpenCL 백엔드가 DT_NEEDED로 걸고 있어 없으면 엔진이 아예
+            열리지 않는다. libcdsprpc는 Hexagon 백엔드가 DSP와 말하는 통로다.
+
+            required=false다. 없는 기기에서도 설치돼야 한다. 그때는 엔진이 열리지 않고 서버
+            추출로 넘어간다.
+        -->
+        <uses-native-library
+            android:name="libOpenCL.so"
+            android:required="false" />
+        <uses-native-library
+            android:name="libcdsprpc.so"
+            android:required="false" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

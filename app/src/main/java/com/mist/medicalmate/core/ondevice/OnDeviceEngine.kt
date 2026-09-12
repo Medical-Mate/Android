@@ -204,10 +204,14 @@ data class OnDeviceDevice(val name: String, val type: String, val description: S
     /**
      * NPU인지.
      *
-     * ggml이 HTP를 가속기(`ACCEL`)로 등록한다. 이름으로 보지 않는 이유는 그 문자열이 엔진
-     * 버전에 묶여 있어서다.
+     * **이름으로 본다.** 종류로 가르려 했는데 ggml이 Hexagon을 `ACCEL`이 아니라 `GPU`로
+     * 등록한다. 기기에서 확인한 값이 `HTP0 · GPU · Hexagon`이고, 같은 `GPU`에 Adreno도 있어서
+     * 종류만으로는 갈리지 않는다.
+     *
+     * `HTP` 접두사는 llama.cpp Hexagon 백엔드가 장치를 세는 이름이다(`HTP0`·`HTP1`…). 엔진이
+     * 이름을 바꾸면 여기도 바뀌어야 하고, 그 사실이 로그의 장치 목록에 드러난다.
      */
-    val isNpu: Boolean get() = type == "ACCEL"
+    val isNpu: Boolean get() = name.startsWith("HTP")
 }
 
 private fun parseDevice(line: String): OnDeviceDevice {
