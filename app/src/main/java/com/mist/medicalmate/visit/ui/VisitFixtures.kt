@@ -5,7 +5,7 @@ import java.time.LocalDate
 /**
  * 진료 후 기록 플로우의 픽스처. 서버·AI 연동 시 이 파일을 삭제한다.
  *
- * Figma 1m·1p·1q-1·1k의 내용을 그대로 옮겼다. Preview와 ViewModel이 함께 쓴다.
+ * Figma 1m·1p·1q-1의 내용을 그대로 옮겼다. Preview와 ViewModel이 함께 쓴다.
  */
 
 internal val previewVisitHeadline =
@@ -38,36 +38,4 @@ internal val previewVisitRecord =
         ),
         memo = PREVIEW_VISIT_NOTE,
         caption = "AI가 메모를 4가지로 나눴어요",
-    )
-
-/**
- * 1k는 서버에서 읽는다(#159). 이 값은 Preview에만 남는다.
- *
- * 주소와 재방문 날짜를 넣어 둔 것은 시안의 모양을 그대로 보기 위해서다. 서버는 둘 다 주지
- * 않아서 실제 화면에는 주소 줄이 없고 칩도 하나다.
- */
-internal val previewVisitSummary =
-    VisitSummaryUiState.Content(
-        compare =
-        VisitComparison(
-            previous =
-            VisitCompareCard(
-                visitedOn = LocalDate.of(2026, 8, 21),
-                title = "두통 · 어지러움",
-                detail = "진통제 처방 · 경과 관찰",
-            ),
-            current =
-            VisitCompareCard(
-                visitedOn = LocalDate.of(2026, 9, 12),
-                title = "복부통 · 위염 초기",
-                detail = "2주 약 · 경과 관찰",
-            ),
-        ),
-        hospital =
-        HospitalSummary(
-            name = "서울OO병원 내과",
-            address = "서울 관악구 남부순환로 1820, 3층",
-            visitedOn = LocalDate.of(2026, 9, 12),
-            revisitOn = LocalDate.of(2026, 9, 26),
-        ),
     )

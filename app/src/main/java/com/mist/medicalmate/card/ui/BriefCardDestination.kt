@@ -29,7 +29,17 @@ import kotlinx.serialization.Serializable
  * id를 받고 여기서 조회한다.
  */
 @Serializable
-internal data class BriefCardDestination(val cardId: String, val hospitalName: String? = null)
+internal data class BriefCardDestination(
+    val cardId: String? = null,
+    /**
+     * 아직 카드가 없을 때 그 카드를 만들 문답.
+     *
+     * 문답을 마치면(1c-5) 카드가 없다. 병원을 먼저 찾고 오든 바로 오든 이 화면에서 만든다.
+     * 두 길이 여기서 만나고, 만드는 자리가 하나라 어느 쪽으로 와도 같은 카드가 나온다.
+     */
+    val sessionId: Long? = null,
+    val hospitalName: String? = null,
+)
 
 /** 와이어프레임 1f-1. 폰을 의사에게 건네는 화면. */
 @Serializable
@@ -47,7 +57,8 @@ internal fun NavGraphBuilder.briefCardDestination(
         BriefCardRoute(
             entry = entry,
             // 라우트는 문자열로 들고 다닌다. 서버 id는 숫자라 여기서 바꾼다.
-            cardId = route.cardId.toLongOrNull() ?: return@composable,
+            cardId = route.cardId?.toLongOrNull(),
+            sessionId = route.sessionId,
             hospital = briefCardHospital(route),
             onSaved = onSaved,
             onDeleted = onDeleted,
@@ -77,7 +88,8 @@ internal fun NavGraphBuilder.handoffDestination(onDone: () -> Unit) {
 @Composable
 private fun BriefCardRoute(
     entry: NavBackStackEntry,
-    cardId: Long,
+    cardId: Long?,
+    sessionId: Long?,
     hospital: BriefCardHospital?,
     onSaved: () -> Unit,
     onDeleted: () -> Unit,
@@ -89,7 +101,7 @@ private fun BriefCardRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(cardId, hospital) { viewModel.load(cardId, hospital) }
+    LaunchedEffect(cardId, sessionId, hospital) { viewModel.open(cardId, sessionId, hospital) }
 
     // 병원 `변경`에서 골라 돌아온 값. 엔트리가 살아 있어서 편집 중이던 값이 남는다.
     entry.ConsumeResult(NavResult.HOSPITAL_NAME, viewModel::onHospitalPicked)
@@ -111,7 +123,7 @@ private fun BriefCardRoute(
             onDeleteConfirm = { viewModel.onDeleteConfirm(onDeleted) },
             onHospitalChangeClick = { content?.card?.id?.let(onHospitalChange) },
             onHandoffClick = { viewModel.onHandoffClick(onHandoff) },
-            onRetryClick = { viewModel.load(cardId, hospital) },
+            onRetryClick = { viewModel.open(cardId, sessionId, hospital) },
         ),
         modifier = modifier,
     )

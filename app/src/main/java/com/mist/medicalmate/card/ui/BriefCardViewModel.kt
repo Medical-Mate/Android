@@ -41,18 +41,33 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
         }
 
     /**
-     * [hospital]은 라우트가 들고 온 값이다. 진료 전 병원 찾기(1m-B)에서 고른 것이다.
+     * 카드를 연다. 없으면 문답으로 만든다.
      *
+     * 문답을 마치면(1c-5) 아직 카드가 없다. 병원을 먼저 찾고 오는 길과 바로 오는 길이 여기서
+     * 만나고, 만드는 자리가 하나라 어느 쪽으로 와도 같은 카드가 나온다.
+     *
+     * 카드는 `DRAFT`로 만들어진다. 확정은 진료실에서 보여줄 때 한다. 검증에 걸린 필드가
+     * 있어도 만들기 자체는 성공한다. 통째로 실패시키면 환자가 답한 문답이 날아간다.
+     *
+     * [hospital]은 라우트가 들고 온 값이다. 진료 전 병원 찾기(1m-B)에서 고른 것이다.
      * 서버 카드 응답에는 병원이 없다. 목록 응답에만 `clinicName`이 있어서 상세를 열면 그
      * 값을 채울 곳이 없다(#139). 그래서 지금은 방금 고른 것만 얹는다.
      */
-    fun load(cardId: Long, hospital: BriefCardHospital? = null) {
+    fun open(cardId: Long?, sessionId: Long? = null, hospital: BriefCardHospital? = null) {
+        // 이미 만든 카드를 다시 만들지 않는다. 화면이 다시 조합되면 이 호출이 한 번 더 온다.
+        if (cardId == null && mutableUiState.value is BriefCardUiState.Content) return
         mutableUiState.value = BriefCardUiState.Loading
         viewModelScope.launch {
+            val result =
+                when {
+                    cardId != null -> repository.card(cardId)
+                    sessionId != null -> repository.createFromSession(sessionId)
+                    else -> null
+                }
             mutableUiState.value =
-                when (val result = repository.card(cardId)) {
+                when (result) {
                     is ApiResult.Success -> BriefCardUiState.Content(card = result.value.copy(hospital = hospital))
-                    is ApiResult.Rejected, is ApiResult.NetworkUnavailable -> BriefCardUiState.Failed
+                    else -> BriefCardUiState.Failed
                 }
         }
     }

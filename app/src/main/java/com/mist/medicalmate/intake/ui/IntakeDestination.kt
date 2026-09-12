@@ -55,45 +55,20 @@ internal fun NavGraphBuilder.intakeDestination(onCompleted: (Long?) -> Unit, onE
  * 상태가 없어서 Route를 두지 않는다. 두 버튼과 뒤로가 전부다.
  */
 internal fun NavGraphBuilder.intakeDoneDestination(
-    onCardCreated: (String) -> Unit,
-    onHospitalClick: () -> Unit,
+    onCardRequested: (sessionId: Long) -> Unit,
+    onHospitalClick: (sessionId: Long) -> Unit,
     onExit: () -> Unit,
 ) {
     composable<IntakeDoneDestination> { entry ->
-        IntakeDoneRoute(
-            sessionId = entry.toRoute<IntakeDoneDestination>().sessionId,
-            onCardCreated = onCardCreated,
-            onHospitalClick = onHospitalClick,
-            onExit = onExit,
+        // 문답 없이 이 화면에 올 길이 없다. 세션이 없으면 만들 카드도 고를 병원도 없어서
+        // 두 버튼이 아무 일도 하지 않는다.
+        val sessionId = entry.toRoute<IntakeDoneDestination>().sessionId ?: return@composable
+        IntakeDoneScreen(
+            onCardClick = { onCardRequested(sessionId) },
+            onHospitalClick = { onHospitalClick(sessionId) },
+            onBackClick = onExit,
         )
     }
-}
-
-/**
- * 1c-5의 진입점.
- *
- * "브리핑 카드 만들기"를 누르면 문답을 카드로 만든다. 만들어진 카드 id로 카드 화면을 연다.
- * 카드는 `DRAFT`로 만들어지고 확정은 진료실에서 보여줄 때 한다.
- */
-@Composable
-private fun IntakeDoneRoute(
-    sessionId: Long?,
-    onCardCreated: (String) -> Unit,
-    onHospitalClick: () -> Unit,
-    onExit: () -> Unit,
-    viewModel: IntakeCardViewModel = hiltViewModel(),
-) {
-    val createdId by viewModel.createdCardId.collectAsStateWithLifecycle()
-
-    LaunchedEffect(createdId) {
-        createdId?.let(onCardCreated)
-    }
-
-    IntakeDoneScreen(
-        onCardClick = { sessionId?.let(viewModel::create) },
-        onHospitalClick = onHospitalClick,
-        onBackClick = onExit,
-    )
 }
 
 /**
