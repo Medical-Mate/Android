@@ -175,6 +175,68 @@ class HospitalPickViewModelTest {
     }
 
     @Test
+    fun `기다리는 동안 화면에서 먼저 좁힌다`() = runTest(dispatcher) {
+        // 왕복이 1.6초다. 그동안 목록이 그대로면 친 글자가 아무 일도 안 하는 것처럼 보인다.
+        val viewModel = searched(FakeHospitalRepository(hospitals = SEOUL + Hospital("OO정형외과의원"), total = 3))
+
+        viewModel.onQueryChange("이비인후")
+
+        // 아직 서버를 부르기 전인데 목록이 줄어 있다.
+        assertEquals(listOf("서울OO병원 이비인후과"), viewModel.uiState.value.results.map { it.name })
+    }
+
+    @Test
+    fun `좁혀서 비면 목록을 그대로 둔다`() = runTest(dispatcher) {
+        // 보이는 20곳에 없다고 전국에 없는 것이 아니다. 한글 조합 중간 상태도 여기서 빈다.
+        val viewModel = searched()
+
+        viewModel.onQueryChange("서울ㅂ")
+
+        assertEquals(SEOUL, viewModel.uiState.value.results)
+    }
+
+    @Test
+    fun `좁힌 결과는 서버 답으로 바뀐다`() = runTest(dispatcher) {
+        val repository = FakeHospitalRepository(hospitals = SEOUL, total = 2)
+        val viewModel = searched(repository)
+        val fromServer = listOf(Hospital("서울OO병원 이비인후과"), Hospital("OO이비인후과의원"))
+
+        viewModel.onQueryChange("이비인후")
+        repository.hospitals = fromServer
+        advanceUntilIdle()
+
+        // 화면에서 좁힐 때는 보이던 것 중에서만 걸렀는데, 서버가 못 보던 것을 더 준다.
+        assertEquals(fromServer, viewModel.uiState.value.results)
+    }
+
+    @Test
+    fun `한 번 받은 검색어는 다시 부르지 않는다`() = runTest(dispatcher) {
+        // 지우고 다시 치는 일이 잦은데 그때마다 1.6초를 기다릴 이유가 없다.
+        val repository = FakeHospitalRepository(hospitals = SEOUL, total = 2)
+        val viewModel = searched(repository)
+
+        viewModel.onQueryChange("")
+        viewModel.onQueryChange("서울")
+        advanceUntilIdle()
+
+        assertEquals(1, repository.calls)
+        assertEquals(SEOUL, viewModel.uiState.value.results)
+    }
+
+    @Test
+    fun `다시 열면 받아 둔 것도 버린다`() = runTest(dispatcher) {
+        // 개원·폐원이 계속 생기는 데이터라 오래 들고 있을 값이 아니다.
+        val repository = FakeHospitalRepository(hospitals = SEOUL, total = 2)
+        val viewModel = searched(repository)
+
+        viewModel.load()
+        viewModel.onQueryChange("서울")
+        advanceUntilIdle()
+
+        assertEquals(2, repository.calls)
+    }
+
+    @Test
     fun `진료 전에는 고르지 않아도 넘어간다`() {
         val viewModel = viewModel()
 
