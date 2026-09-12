@@ -137,6 +137,7 @@ private fun IntakeRoute(
             onBodyAnchorFocus = viewModel.bodyMap::onAnchorFocus,
             onBodyFocusClear = viewModel.bodyMap::onFocusClear,
             onBodyListModeToggle = viewModel.bodyMap::onListModeToggle,
+            onBodySearchChange = viewModel.bodyMap::onSearchChange,
             onDraftChange = viewModel::onDraftChange,
             onSendClick = viewModel::onSend,
             onVoiceClick = { viewModel.onInputModeChange(IntakeInputMode.VOICE) },

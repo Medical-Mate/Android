@@ -23,7 +23,21 @@ data class BodyMapUiState(
     val focus: BodyMapSelection? = null,
     val selection: BodyMapSelection? = null,
     val byList: Boolean = false,
+    val search: String = "",
+    /**
+     * 마지막으로 결과가 있었던 검색.
+     *
+     * 0건을 그대로 그리지 않고 직전 결과를 남긴다. 한글은 마지막 글자가 조합되는 동안
+     * 중간 상태가 되어("옆 → 옆ㄱ → 옆구") 한 글자마다 찾으면 목록이 깜빡인다. 서버도 같은
+     * 이유로 같은 동작을 권했다.
+     *
+     * 검색어를 비우면 함께 비운다. 그때는 지운 것이지 못 찾은 것이 아니다.
+     */
+    val searchResults: List<BodyPartMatch> = emptyList(),
 ) {
+    /** 검색 중인지. 목록에서 검색어를 넣으면 두 단계 목록 대신 결과가 나온다. */
+    val searching: Boolean get() = byList && search.isNotBlank()
+
     /** 구역을 고르는 중인지. 구역이 있는 앵커를 확대한 상태면 그렇다. */
     val pickingZone: Boolean get() = focus != null && zones.isNotEmpty()
 
@@ -166,3 +180,28 @@ internal fun parseDotId(dotId: String): Pair<String, BodyMapSide> {
     val (id, side) = dotId.split('@', limit = 2)
     return id to BodyMapSide.valueOf(side)
 }
+
+/**
+ * 검색에서 구역 하나를 고를 수 있는 갈래.
+ *
+ * 좌우가 갈리는 구역은 두 줄이 된다. 팔·다리는 좌우가 앵커에서 갈려서 구역 점이 기준점
+ * 하나뿐이라 양쪽을 다 만들어 준다. 목록에서는 어느 쪽 팔을 눌러 들어왔는지로 정해지지만
+ * 검색은 그 단계를 건너뛰기 때문이다.
+ */
+internal fun bodyMapChoicesForZone(anchorId: String, zoneId: String): List<BodyMapSelection> {
+    val anchor = bodyMapAnchorOf(anchorId)
+    val sides =
+        if (anchor.detail?.mirrored == true) {
+            listOf(BodyMapSide.LEFT, BodyMapSide.RIGHT)
+        } else {
+            listOf(BodyMapSide.CENTER)
+        }
+    return sides
+        .flatMap { side -> bodyMapZoneChoices(anchor, side) }
+        .filter { it.zoneId == zoneId }
+        .distinct()
+}
+
+/** 구역이 속한 앵커. 검색 결과는 id만 주는데 선택에는 앵커가 필요하다. */
+internal fun bodyMapAnchorIdOfZone(zoneId: String): String? =
+    bodyMapGroups.firstOrNull { group -> group.zones.any { it.id == zoneId } }?.anchor?.id

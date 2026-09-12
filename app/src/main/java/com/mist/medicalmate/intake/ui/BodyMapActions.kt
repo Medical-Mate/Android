@@ -52,9 +52,15 @@ class BodyMapActions(private val update: ((BodyMapUiState) -> BodyMapUiState) ->
         update { it.copy(focus = null, selection = BodyMapSelection(anchorId)) }
     }
 
-    /** 확대할 앵커를 짚었다. 목록에서 앵커 줄을 누르는 길이 쓴다. */
+    /**
+     * 확대할 앵커를 짚었다. 목록에서 앵커 줄을 누르는 길이 쓴다.
+     *
+     * 검색을 함께 닫는다. 검색 결과에서 앵커를 누르면 그 앵커의 구역 목록으로 가야 하는데,
+     * 검색어가 남아 있으면 화면이 계속 결과를 그려서 누른 것이 아무 일도 안 한 것처럼 보인다.
+     * 목록에서 누른 경우에는 검색어가 이미 비어 있어 달라지는 것이 없다.
+     */
     fun onAnchorFocus(selection: BodyMapSelection) {
-        update { it.copy(focus = selection) }
+        update { it.copy(focus = selection, search = "", searchResults = emptyList()) }
     }
 
     /**
@@ -69,7 +75,28 @@ class BodyMapActions(private val update: ((BodyMapUiState) -> BodyMapUiState) ->
 
     /** 인체도와 목록을 오간다. 고른 부위는 양쪽이 같은 값이라 그대로 둔다. */
     fun onListModeToggle() {
-        update { it.copy(byList = !it.byList) }
+        update { it.copy(byList = !it.byList, search = "", searchResults = emptyList()) }
+    }
+
+    /**
+     * 목록에서 부위를 찾는다.
+     *
+     * **0건이면 직전 결과를 남긴다.** 한글은 마지막 글자가 조합되는 동안 중간 상태가 되고
+     * ("옆 → 옆ㄱ → 옆구") 그대로 그리면 한 글자마다 목록이 깜빡인다. 검색어를 비웠을 때만
+     * 결과도 비운다. 그때는 못 찾은 것이 아니라 지운 것이다.
+     */
+    fun onSearchChange(query: String) {
+        val found = searchBodyParts(query)
+        update { state ->
+            state.copy(
+                search = query,
+                searchResults = when {
+                    query.isBlank() -> emptyList()
+                    found.isEmpty() -> state.searchResults
+                    else -> found
+                },
+            )
+        }
     }
 
     private companion object {

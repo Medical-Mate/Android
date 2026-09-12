@@ -12,6 +12,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonSize
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonType
 import com.mist.medicalmate.core.designsystem.component.MedicalMateListRow
 import com.mist.medicalmate.core.designsystem.component.MedicalMateRadio
+import com.mist.medicalmate.core.designsystem.component.MedicalMateSearchField
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 
 /**
@@ -46,10 +47,77 @@ internal fun BodyMapPartList(state: BodyMapUiState, callbacks: IntakeCallbacks, 
         size = MedicalMateButtonSize.M,
         modifier = Modifier.fillMaxWidth(),
     )
-    if (state.pickingZone && anchor != null && focus != null) {
-        ZoneRows(anchor = anchor, focus = focus, selection = state.selection, callbacks = callbacks)
+    MedicalMateSearchField(
+        value = state.search,
+        onValueChange = callbacks.onBodySearchChange,
+        placeholder = stringResource(R.string.body_map_search_placeholder),
+        clearContentDescription = stringResource(R.string.body_map_search_clear),
+    )
+    when {
+        state.searching -> SearchRows(state = state, callbacks = callbacks)
+        state.pickingZone && anchor != null && focus != null ->
+            ZoneRows(anchor = anchor, focus = focus, selection = state.selection, callbacks = callbacks)
+
+        else -> AnchorRows(selection = state.selection, callbacks = callbacks)
+    }
+}
+
+/**
+ * 검색 결과.
+ *
+ * 줄의 모양은 목록과 같다. 구역은 고르는 줄(라디오)이고 앵커는 들어가는 줄이다. 검색이
+ * 하는 일은 찾는 것까지이고 고르는 방식까지 바꾸면 두 길이 다르게 동작한다.
+ *
+ * 점수 0으로 딸려 온 구역도 그냥 이어 붙인다. 명세가 앱 판단으로 뒀는데, 사용자가 보기에
+ * "다리"를 쳤을 때 나오는 무릎과 "무릎"을 쳐서 나오는 무릎이 다른 줄일 이유가 없다.
+ *
+ * 결과가 비어 있을 수 있다. 검색어가 부위 이름이 아닐 때다("감기"). 그때만 안내를 둔다.
+ */
+@Composable
+private fun SearchRows(state: BodyMapUiState, callbacks: IntakeCallbacks) {
+    if (state.searchResults.isEmpty()) {
+        Text(
+            text = stringResource(R.string.body_map_search_empty),
+            style = MedicalMateTheme.typography.bodyM,
+            color = MedicalMateTheme.colors.fgSubtle,
+        )
+        return
+    }
+    state.searchResults.forEach { match ->
+        val anchorId = bodyMapAnchorIdOfZone(match.id)
+        if (anchorId == null) {
+            AnchorResultRows(anchorId = match.id, selection = state.selection, callbacks = callbacks)
+        } else {
+            bodyMapChoicesForZone(anchorId, match.id).forEach { choice ->
+                MedicalMateRadio(
+                    selected = state.selection == choice,
+                    onSelect = { callbacks.onBodyPartSelect(choice) },
+                    label = choice.title(),
+                )
+            }
+        }
+    }
+}
+
+/** 검색에 걸린 앵커. 목록의 앵커 줄과 같게 그린다. */
+@Composable
+private fun AnchorResultRows(anchorId: String, selection: BodyMapSelection?, callbacks: IntakeCallbacks) {
+    val anchor = bodyMapAnchorOf(anchorId)
+    if (anchor.zones.isEmpty()) {
+        val choice = BodyMapSelection(anchorId)
+        MedicalMateRadio(
+            selected = selection == choice,
+            onSelect = { callbacks.onBodySideAnchorClick(anchorId) },
+            label = choice.title(),
+        )
     } else {
-        AnchorRows(selection = state.selection, callbacks = callbacks)
+        anchor.points.forEach { point ->
+            AnchorRow(
+                entry = BodyMapSelection(anchorId, side = point.side),
+                selection = selection,
+                onClick = callbacks.onBodyAnchorFocus,
+            )
+        }
     }
 }
 
