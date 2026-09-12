@@ -2,6 +2,7 @@ package com.mist.medicalmate.card.data
 
 import com.mist.medicalmate.card.ui.BriefCard
 import com.mist.medicalmate.card.ui.BriefCardItem
+import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -20,9 +21,10 @@ internal fun CardResponse.toBriefCard(): BriefCard = BriefCard(
     status = if (status == STATUS_CONFIRMED) BriefCard.Status.CONFIRMED else BriefCard.Status.BEFORE_VISIT,
     patientLine = patientLine(),
     items = axes.toItems(),
-    // 강도가 축 하나가 됐다. 따로 받지 않고 [items]에 줄로 들어간다.
-    severity = null,
-    // 새 스키마에 알러지가 없다. 신상정보에서 오던 값인데 카드가 더 이상 싣지 않는다.
+    // 강도는 KV 줄이 아니라 눈금이다. 시안이 칩·낱말·NRS 등가를 한 줄로 그리고, 그 모양은
+    // 줄 하나로 낼 수 없다. 그래서 축에서 빼 따로 든다.
+    severity = axes[AXIS_SEVERITY]?.toSeverity(),
+    // 카드 응답에 건강 정보가 없다. 화면이 프로필에서 읽어 얹는다(#167).
     allergies = emptyList(),
     questions = questions,
     // `CardResponse`에 병원이 없다. 목록 응답에만 `clinicName`이 있다.
@@ -114,8 +116,27 @@ private val AXIS_ORDER =
         "associated",
         "time_course",
         "exacerbating_relieving",
-        "severity",
     )
+
+/** 강도 축. KV 줄이 아니라 눈금으로 그려서 [AXIS_ORDER]에 없다. */
+private const val AXIS_SEVERITY = "severity"
+
+/**
+ * 강도 축을 눈금으로.
+ *
+ * 값이 "3 (꽤 아파요)"처럼 숫자와 낱말이 함께 온다. 앞의 숫자만 읽는다. 낱말은 화면이
+ * 단계에서 가져오고, 문자열을 맞춰 보면 서버가 표현을 바꿀 때마다 갈린다.
+ *
+ * 1~5 밖이거나 숫자가 없으면 그리지 않는다. 눈금은 다섯 단계뿐이고, 모르는 값을 억지로
+ * 한 단계에 끼우면 환자가 고른 것과 다른 색이 나온다.
+ */
+private fun AxisResponse.toSeverity(): MedicalMateSeverity? {
+    if (status != STATUS_FILLED) return null
+    val level = SEVERITY_LEVEL.find(value.orEmpty())?.value?.toIntOrNull()
+    return MedicalMateSeverity.entries.firstOrNull { it.level == level }
+}
+
+private val SEVERITY_LEVEL = Regex("\\d+")
 
 private const val STATUS_FILLED = "FILLED"
 

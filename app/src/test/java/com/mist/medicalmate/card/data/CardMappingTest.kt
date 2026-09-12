@@ -1,6 +1,7 @@
 package com.mist.medicalmate.card.data
 
 import com.mist.medicalmate.card.ui.BriefCard
+import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -56,12 +57,42 @@ class CardMappingTest {
         val card =
             response(
                 axes = mapOf(
-                    "severity" to axis("FILLED", "9점"),
+                    "onset" to axis("FILLED", "3주 전"),
                     "site" to axis("FILLED", "왼쪽 무릎"),
                 ),
             ).toBriefCard()
 
-        assertEquals(listOf("부위", "강도"), card.items.map { it.key })
+        assertEquals(listOf("부위", "시작"), card.items.map { it.key })
+    }
+
+    @Test
+    fun `강도는 줄이 아니라 눈금으로 간다`() {
+        // 시안이 칩·낱말·NRS 등가를 한 줄로 그린다. KV 줄 하나로는 그 모양이 안 나온다.
+        val card =
+            response(
+                axes = mapOf(
+                    "site" to axis("FILLED", "왼쪽 무릎"),
+                    "severity" to axis("FILLED", "3 (꽤 아파요)"),
+                ),
+            ).toBriefCard()
+
+        assertEquals(MedicalMateSeverity.LEVEL_3, card.severity)
+        assertEquals(listOf("부위"), card.items.map { it.key })
+    }
+
+    @Test
+    fun `눈금 밖의 값은 그리지 않는다`() {
+        // 눈금이 다섯 단계다. 모르는 값을 억지로 끼우면 환자가 고른 것과 다른 색이 나온다.
+        val card = response(axes = mapOf("severity" to axis("FILLED", "9점"))).toBriefCard()
+
+        assertNull(card.severity)
+    }
+
+    @Test
+    fun `답하지 않은 강도는 눈금이 없다`() {
+        val card = response(axes = mapOf("severity" to axis("NOT_ASKED"))).toBriefCard()
+
+        assertNull(card.severity)
     }
 
     @Test
@@ -82,12 +113,13 @@ class CardMappingTest {
     }
 
     @Test
-    fun `알러지와 병원은 새 스키마에 없어 비운다`() {
+    fun `건강 정보와 병원은 카드 응답에 없어 비운다`() {
+        // 알러지·복용약·기저질환은 화면이 프로필에서 읽어 얹는다(#167).
         val card = response().toBriefCard()
 
         assertTrue(card.allergies.isEmpty())
+        assertTrue(card.health.isEmpty())
         assertNull(card.hospital)
-        assertNull(card.severity)
     }
 
     @Test
