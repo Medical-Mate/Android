@@ -2,6 +2,7 @@ package com.mist.medicalmate.visit.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.delay
@@ -48,6 +49,28 @@ constructor(private val clock: Clock) : ViewModel() {
 
     fun onNoteChange(note: String) {
         mutableUiState.update { it.copy(note = note) }
+    }
+
+    /**
+     * 우하단 마이크. 음성 패널을 열고 닫는다.
+     *
+     * **받아쓰기는 아직 없다.** 패널과 상태까지가 지금 범위이고, 실제 인식은 증상 문답과 함께
+     * 붙인다. 그래서 듣는 중에서 글이 들어오지 않는다.
+     */
+    fun onVoiceClick() {
+        mutableUiState.update { state ->
+            val next =
+                when (state.voice) {
+                    null, MedicalMateVoiceState.IDLE -> MedicalMateVoiceState.LISTENING
+                    else -> MedicalMateVoiceState.IDLE
+                }
+            state.copy(voice = next)
+        }
+    }
+
+    /** 음성 패널의 "직접 입력할게요". 패널을 닫고 적던 글로 돌아간다. */
+    fun onTypeInsteadClick() {
+        mutableUiState.update { it.copy(voice = null) }
     }
 
     fun onOrganizeClick() {

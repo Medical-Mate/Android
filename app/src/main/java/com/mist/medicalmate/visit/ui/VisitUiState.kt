@@ -1,6 +1,7 @@
 package com.mist.medicalmate.visit.ui
 
 import androidx.annotation.Keep
+import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
 import java.time.LocalDate
 
 /**
@@ -110,7 +111,18 @@ data class Hospital(val name: String)
  * [note]는 환자가 적은 원문이고 뒤 화면까지 그대로 따라간다. AI가 나눈 결과가 틀렸을 때
  * 대조할 것이 원문뿐이다.
  */
-data class VisitNoteUiState(val visit: VisitHeadline, val note: String = "", val organizing: Boolean = false) {
+data class VisitNoteUiState(
+    val visit: VisitHeadline,
+    val note: String = "",
+    val organizing: Boolean = false,
+    /**
+     * 음성으로 적는 중인지. 꺼져 있으면 [MedicalMateVoiceState.IDLE]이 아니라 null이다.
+     *
+     * 증상 문답은 글과 음성이 입력 자리를 번갈아 차지하지만(1c-2 대 1c-3) 여기는 적던 글이
+     * 그대로 남아 있고 음성 패널이 그 아래 선다. 그래서 "지금 음성인가"를 따로 든다.
+     */
+    val voice: MedicalMateVoiceState? = null,
+) {
     val canSave: Boolean = note.isNotBlank() && !organizing
 }
 
@@ -128,8 +140,7 @@ data class VisitHeadline(val visitedOn: LocalDate, val clinic: String? = null, v
 /**
  * 1q-1 자동 분류 결과와 1q-1-E 전체 수정. Figma `405:2193`, `636:3675`.
  *
- * 한 화면의 두 모드다. 편집이 켜지면 값이 그 자리에서 입력으로 바뀌고, 일정 등록
- * 체크박스가 숨는다(시안이 `hidden`으로 표시해 둔 부분이다).
+ * 한 화면의 두 모드다. 편집이 켜지면 값이 그 자리에서 입력으로 바뀌고 하단이 삭제로 바뀐다.
  *
  * [VisitRecordDraft]를 따로 두는 이유는 취소가 있기 때문이다. 원본을 바로 고치면 되돌릴
  * 것이 없다.
@@ -149,7 +160,6 @@ sealed interface VisitRecordUiState {
     data class Content(
         val record: VisitRecord,
         val draft: VisitRecordDraft? = null,
-        val scheduleRevisit: Boolean = false,
         val deleteRequested: Boolean = false,
     ) : VisitRecordUiState {
         val editing: Boolean get() = draft != null

@@ -1,5 +1,6 @@
 package com.mist.medicalmate.visit.ui
 
+import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -10,6 +11,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -83,6 +85,53 @@ class VisitNoteViewModelTest {
         viewModel.onNoteChange("   ")
 
         assertFalse(viewModel.uiState.value.canSave)
+    }
+
+    @Test
+    fun `처음에는 음성 패널이 없다`() {
+        // 적는 화면이다. 마이크는 우하단에 떠 있고 패널은 누를 때 선다.
+        assertNull(viewModel().uiState.value.voice)
+    }
+
+    @Test
+    fun `마이크를 누르면 듣는 중이 된다`() {
+        val viewModel = viewModel()
+
+        viewModel.onVoiceClick()
+
+        assertEquals(MedicalMateVoiceState.LISTENING, viewModel.uiState.value.voice)
+    }
+
+    @Test
+    fun `듣는 중에 다시 누르면 멈춘다`() {
+        // 다 말했을 때 누르는 자리다. 패널은 남고 상태만 돌아온다.
+        val viewModel = viewModel()
+
+        viewModel.onVoiceClick()
+        viewModel.onVoiceClick()
+
+        assertEquals(MedicalMateVoiceState.IDLE, viewModel.uiState.value.voice)
+    }
+
+    @Test
+    fun `직접 입력할게요를 누르면 패널이 닫힌다`() {
+        val viewModel = viewModel()
+        viewModel.onVoiceClick()
+
+        viewModel.onTypeInsteadClick()
+
+        assertNull(viewModel.uiState.value.voice)
+    }
+
+    @Test
+    fun `음성을 켜도 적던 글은 남는다`() {
+        // 증상 문답은 입력 자리를 통째로 갈아끼우지만 여기는 적어 둔 글 아래에 패널이 선다.
+        val viewModel = viewModel()
+        viewModel.onNoteChange("위염이라고 하셨어요")
+
+        viewModel.onVoiceClick()
+
+        assertEquals("위염이라고 하셨어요", viewModel.uiState.value.note)
     }
 
     @Test

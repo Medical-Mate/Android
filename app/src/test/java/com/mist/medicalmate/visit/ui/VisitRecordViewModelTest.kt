@@ -191,22 +191,10 @@ class VisitRecordViewModelTest {
     }
 
     @Test
-    fun `일정 등록을 켜고 끈다`() {
-        val viewModel = viewModel().apply { load(CLINIC, NOTE) }
-
-        viewModel.onScheduleChange(true)
-        assertTrue(content(viewModel).scheduleRevisit)
-
-        viewModel.onScheduleChange(false)
-        assertFalse(content(viewModel).scheduleRevisit)
-    }
-
-    @Test
     fun `불러오기 전에는 조작이 아무 일도 하지 않는다`() {
         val viewModel = viewModel()
 
         viewModel.onEditClick()
-        viewModel.onScheduleChange(true)
         viewModel.onDeleteClick()
 
         assertEquals(VisitRecordUiState.Loading, viewModel.uiState.value)
