@@ -84,6 +84,14 @@ data class BodyMapAnchorGeometry(
 internal data class BodyMapDot(val id: String, val label: String, val x: Float, val y: Float, val selected: Boolean)
 
 /**
+ * 검색 결과 한 줄.
+ *
+ * [matched]는 어느 후보 문자열에 걸렸는지다. [score]가 0이면 직접 걸린 것이 아니라 걸린
+ * 앵커에 딸려 온 구역이고, 그때 [matched]는 그 앵커가 걸린 문자열이다.
+ */
+data class BodyPartMatch(val id: String, val matched: String, val score: Int)
+
+/**
  * 부위 하나를 가리키는 값.
  *
  * 고른 부위와 확대해서 보고 있는 앵커가 같은 타입이다. [zoneId]가 null이면 앵커까지만
