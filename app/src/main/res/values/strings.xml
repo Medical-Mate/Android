@@ -242,8 +242,10 @@
     <string name="handoff_done">완료</string>
 
     <!-- Figma 1l·1c·1d·1i 증상 정리. -->
-    <string name="intake_title">증상 정리</string>
-    <string name="intake_progress_label">증상 문답</string>
+    <!-- 상단 바 제목. 시안 1c-2·1c-4·1c-5·1i가 모두 "기록"이다. 하단 탭의 기록과 같은
+         말이지만 이 흐름이 기록을 만드는 과정이라 시안이 그렇게 묶었다. -->
+    <string name="intake_title">기록</string>
+    <string name="intake_progress_label">증상 정리</string>
     <string name="intake_next">다음</string>
 
     <string name="intake_body_part_question">어디가 아프세요?</string>
