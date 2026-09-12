@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
 import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
@@ -52,8 +53,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
  * [selectedIds]가 null이면 편집이 아니다. 그때 줄을 누르면 [onItemClick]이 이동을 맡고,
  * 편집 중이면 [onSelectChange]가 고르고 푼다.
  *
- * [header]로 목록 위에 한 덩어리를 끼울 수 있다. 1j-4의 `Select Bar`가 그 자리다. 목록과
- * 함께 스크롤돼야 해서 화면이 위에 따로 두지 않고 `LazyColumn` 안에 넣는다.
+ * 편집 중에는 묶음 머리의 개수가 그 달에서 고른 수로 바뀐다. 시안 1j-4-D2가 그렇게 그린다.
  */
 @Composable
 internal fun ColumnScope.GroupList(
@@ -62,7 +62,6 @@ internal fun ColumnScope.GroupList(
     onItemClick: (String) -> Unit,
     selectedIds: Set<String>? = null,
     onSelectChange: (String, Boolean) -> Unit = { _, _ -> },
-    header: (@Composable () -> Unit)? = null,
 ) {
     LazyColumn(
         modifier = Modifier.weight(1f),
@@ -75,11 +74,16 @@ internal fun ColumnScope.GroupList(
         ),
         verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s10),
     ) {
-        if (header != null) {
-            item(key = "header") { header() }
-        }
         groups.forEach { group ->
-            item(key = group.monthLabel) { GroupHeader(group = group, countRes = countRes) }
+            item(key = group.monthLabel) {
+                GroupHeader(
+                    group = group,
+                    countRes = countRes,
+                    // 편집 중에는 그 달에서 고른 수를 적는다. 시안 1j-4-D2가 묶음 머리에
+                    // "1장 선택됨"을 두고 하단 버튼이 전체 수("2장 삭제")를 든다.
+                    selectedCount = selectedIds?.let { ids -> group.items.count { it.id in ids } },
+                )
+            }
             items(items = group.items, key = { it.id }) { item ->
                 val selected = selectedIds?.contains(item.id)
                 RecordRow(
@@ -96,10 +100,15 @@ internal fun ColumnScope.GroupList(
 
 /** 묶음 머리. 개수는 누를 수 없는 표시라 `Section Header`의 캡션 자리에 둔다. */
 @Composable
-private fun GroupHeader(group: RecordGroup, @StringRes countRes: Int) {
+private fun GroupHeader(group: RecordGroup, @StringRes countRes: Int, selectedCount: Int? = null) {
     MedicalMateSectionHeader(
         title = group.monthLabel,
-        caption = stringResource(countRes, group.items.size),
+        caption =
+        if (selectedCount == null) {
+            stringResource(countRes, group.items.size)
+        } else {
+            stringResource(R.string.record_group_selected, selectedCount)
+        },
     )
 }
 

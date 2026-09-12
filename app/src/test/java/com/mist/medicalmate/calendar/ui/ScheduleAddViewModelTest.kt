@@ -46,7 +46,8 @@ class ScheduleAddViewModelTest {
     }
 
     @Test
-    fun `병원 날짜 시간이 다 있어야 저장할 수 있다`() {
+    fun `병원과 날짜가 있어야 저장할 수 있다`() {
+        // 시간은 필수가 아니다. 진료 시각을 아직 모르고 날짜만 잡아 두는 일이 흔하다.
         val viewModel = addViewModel()
 
         assertFalse(viewModel.uiState.value.canSave)
@@ -55,15 +56,12 @@ class ScheduleAddViewModelTest {
         assertFalse(viewModel.uiState.value.canSave)
 
         viewModel.onDateConfirm(LocalDate.of(2026, 9, 26))
-        assertFalse(viewModel.uiState.value.canSave)
-
-        viewModel.onTimeConfirm(LocalTime.of(10, 30))
         assertTrue(viewModel.uiState.value.canSave)
     }
 
     @Test
     fun `카드와 할 일은 없어도 저장할 수 있다`() {
-        // 필수는 셋뿐이다. 나머지는 선택이다.
+        // 필수는 병원과 날짜뿐이다. 나머지는 선택이다.
         val viewModel = filled()
 
         assertTrue(viewModel.uiState.value.cards.none { it.picked })
@@ -239,7 +237,6 @@ class ScheduleAddViewModelTest {
         val state = viewModel.uiState.value
         assertTrue(state.hospitalMissing)
         assertTrue(state.dateMissing)
-        assertTrue(state.timeMissing)
     }
 
     @Test
@@ -253,7 +250,6 @@ class ScheduleAddViewModelTest {
         val state = viewModel.uiState.value
         assertTrue(state.hospitalMissing)
         assertFalse(state.dateMissing)
-        assertFalse(state.timeMissing)
     }
 
     @Test
@@ -263,7 +259,20 @@ class ScheduleAddViewModelTest {
 
         assertFalse(state.hospitalMissing)
         assertFalse(state.dateMissing)
-        assertFalse(state.timeMissing)
+    }
+
+    @Test
+    fun `시간을 안 골라도 저장한다`() {
+        // 진료 시각을 아직 모르고 날짜만 잡아 두는 일이 흔하다. 시안도 필수 표시를 두지 않는다.
+        val repository = RecordingAppointmentRepository()
+        val viewModel = addViewModel(repository)
+        viewModel.onHospitalPicked("서울OO병원 내과")
+        viewModel.onDateConfirm(LocalDate.of(2026, 9, 26))
+
+        viewModel.onSaveClick {}
+
+        // 서버가 시각 없는 일정을 받지 못해 기본 시각으로 나간다.
+        assertEquals(LocalDateTime.of(2026, 9, 26, 9, 0), repository.createdAt)
     }
 
     @Test

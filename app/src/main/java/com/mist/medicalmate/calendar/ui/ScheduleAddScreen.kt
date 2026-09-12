@@ -148,7 +148,6 @@ private fun DateTimeFields(state: ScheduleAddUiState, onSheetOpen: (ScheduleAddS
             onClick = { onSheetOpen(ScheduleAddSheet.TIME) },
             trailingIcon = MedicalMateIcons.Clock,
             modifier = Modifier.weight(1f),
-            errorText = stringResource(R.string.schedule_add_time_required).takeIf { state.timeMissing },
         )
     }
 }

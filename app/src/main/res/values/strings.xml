@@ -53,7 +53,8 @@
     <string name="brief_card_list_edit">편집</string>
     <string name="brief_card_list_edit_cancel">취소</string>
     <!-- 기록은 "건", 카드는 "장"으로 센다. -->
-    <string name="brief_card_list_selected">%1$d장 선택됨</string>
+    <!-- 묶음 머리의 오른쪽. 편집 중에는 총 개수 대신 그 달에서 고른 수를 적는다. -->
+    <string name="record_group_selected">%1$d장 선택됨</string>
     <string name="brief_card_list_delete">삭제</string>
     <string name="brief_card_list_delete_count">%1$d장 삭제</string>
     <string name="brief_card_list_delete_title">브리핑 카드 %1$d장을 삭제할까요?</string>
@@ -178,7 +179,6 @@
     <!-- 필수 칸을 비우고 저장을 눌렀을 때. 문서가 오류를 색만으로 알리지 말라고 한다. -->
     <string name="schedule_add_hospital_required">병원을 골라주세요</string>
     <string name="schedule_add_date_required">날짜를 골라주세요</string>
-    <string name="schedule_add_time_required">시간을 골라주세요</string>
     <string name="schedule_add_hospital_placeholder">진료받을 병원을 찾아주세요</string>
     <string name="schedule_add_datetime">날짜 · 시간</string>
     <string name="schedule_add_date_placeholder">날짜</string>
