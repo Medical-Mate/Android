@@ -20,6 +20,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateProgressIndicator
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
+import com.mist.medicalmate.core.model.IntakeStep
 
 /**
  * 와이어프레임 1l·1c·1d·1i. 증상 정리 네 단계를 한 화면이 그린다.
