@@ -174,17 +174,10 @@ internal fun NavGraphBuilder.visitDestinations(navController: NavHostController)
         onCardRequested = { cardId, hospital ->
             if (cardId == null) {
                 navController.navigate(
-                    BriefCardDestination(
-                        cardId = NEW_CARD_ID,
-                        hospitalName = hospital?.name,
-                        hospitalAddress = hospital?.address,
-                    ),
+                    BriefCardDestination(cardId = NEW_CARD_ID, hospitalName = hospital?.name),
                 )
             } else {
-                navController.popWithResult(
-                    NavResult.HOSPITAL_NAME to hospital?.name,
-                    NavResult.HOSPITAL_ADDRESS to hospital?.address,
-                )
+                navController.popWithResult(NavResult.HOSPITAL_NAME to hospital?.name)
             }
         },
         // 일정 추가(1r-4)의 병원 필드에서 온 것. 고른 이름만 남기고 뒤로 간다. 엔트리를

@@ -42,7 +42,14 @@ data class BriefCard(
  * 날짜는 들고 있지 않다. 시안의 이 섹션은 `Hospital Card`에서 날짜 칩을 끄고 이름과 주소만
  * 보여준다. 진료 날짜는 캘린더 일정이 들고 있고 카드가 정하는 값이 아니다.
  */
-data class BriefCardHospital(val name: String, val address: String)
+/**
+ * 진료받을 병원.
+ *
+ * **주소가 없다.** 병원 검색이 서버로 옮겨지면서 이름만 오게 됐다(#155). 서버가 심평원에서
+ * 쓰지 않을 값을 내려보내지 않기로 했다. 시안의 `Hospital Card`에는 주소 줄이 있어서 그
+ * 자리를 어떻게 할지 디자인 트랙에 넘겼고, 그때까지 값이 없으면 줄을 그리지 않는다.
+ */
+data class BriefCardHospital(val name: String, val address: String? = null)
 
 /**
  * 카드의 항목 한 줄. Figma `KV Row`.

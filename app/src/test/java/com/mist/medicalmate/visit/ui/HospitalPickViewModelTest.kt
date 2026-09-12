@@ -1,180 +1,292 @@
 package com.mist.medicalmate.visit.ui
 
+import com.mist.medicalmate.core.network.ApiResult
+import com.mist.medicalmate.visit.data.HospitalRepository
+import com.mist.medicalmate.visit.data.HospitalSearchResult
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
+import java.io.IOException
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class HospitalPickViewModelTest {
+    private val dispatcher = StandardTestDispatcher()
+
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(dispatcher)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
     @Test
     fun `처음에는 결과가 비어 있고 완료를 누를 수 없다`() {
-        val state = HospitalPickViewModel().uiState.value
+        val state = viewModel().uiState.value
 
         assertEquals(emptyList<Hospital>(), state.results)
         assertFalse(state.canSubmit)
+        assertFalse(state.showSubmit)
     }
 
     @Test
-    fun `불러오면 전체 목록이 나온다`() {
-        val viewModel = HospitalPickViewModel()
+    fun `검색 전에는 보여줄 것이 없다`() = runTest(dispatcher) {
+        // 전에는 진료 후(1m)에 후보 네 곳을 먼저 보여줬는데 그것이 픽스처였다.
+        val repository = FakeHospitalRepository()
+        val viewModel = viewModel(repository)
 
-        viewModel.load()
+        viewModel.load(HospitalPickPurpose.AFTER_VISIT)
+        advanceUntilIdle()
 
-        assertEquals(previewHospitals, viewModel.uiState.value.results)
+        assertEquals(emptyList<Hospital>(), viewModel.uiState.value.results)
+        assertEquals(0, repository.calls)
     }
 
     @Test
-    fun `이름으로 좁힌다`() {
-        val viewModel = loaded()
+    fun `검색어가 멎은 뒤에 한 번만 부른다`() = runTest(dispatcher) {
+        // 한 글자마다 부르면 심평원까지 왕복이 그만큼 간다.
+        val repository = FakeHospitalRepository()
+        val viewModel = viewModel(repository)
 
-        viewModel.onQueryChange("서울OO병원")
+        viewModel.onQueryChange("서")
+        viewModel.onQueryChange("서울")
+        viewModel.onQueryChange("서울병")
+        advanceUntilIdle()
 
-        val results = viewModel.uiState.value.results
-        assertEquals(2, results.size)
-        assertTrue(results.all { it.name.contains("서울OO병원") })
+        assertEquals(1, repository.calls)
+        assertEquals("서울병", repository.lastQuery)
     }
 
     @Test
-    fun `주소로도 좁힌다`() {
-        val viewModel = loaded()
+    fun `찾으면 결과와 건수가 들어온다`() = runTest(dispatcher) {
+        val viewModel = searched(FakeHospitalRepository(hospitals = SEOUL, total = 2))
 
-        viewModel.onQueryChange("봉천로")
-
-        assertEquals(listOf("OO이비인후과의원"), viewModel.uiState.value.results.map { it.name })
+        val state = viewModel.uiState.value
+        assertEquals(listOf("서울OO병원 내과", "서울OO병원 이비인후과"), state.results.map { it.name })
+        assertFalse(state.searching)
+        assertFalse(state.truncated)
+        assertTrue(state.showSubmit)
     }
 
     @Test
-    fun `검색어를 지우면 전체가 돌아온다`() {
-        val viewModel = loaded()
+    fun `받은 것보다 많으면 알린다`() = runTest(dispatcher) {
+        // 부분 일치라 "서울"이면 4천 건이 넘는다. 더 받는 것이 아니라 좁혀야 한다.
+        val viewModel = searched(FakeHospitalRepository(hospitals = SEOUL, total = 4231))
 
-        viewModel.onQueryChange("봉천로")
+        assertTrue(viewModel.uiState.value.truncated)
+        assertEquals(4231, viewModel.uiState.value.total)
+    }
+
+    @Test
+    fun `0건이면 직전 결과를 남긴다`() = runTest(dispatcher) {
+        // 한글 조합 중간 상태가 0건으로 지나간다. 그대로 그리면 목록이 깜빡인다.
+        val repository = FakeHospitalRepository(hospitals = SEOUL, total = 2)
+        val viewModel = searched(repository)
+
+        repository.hospitals = emptyList()
+        viewModel.onQueryChange("서울ㅇ")
+        advanceUntilIdle()
+
+        assertEquals(SEOUL, viewModel.uiState.value.results)
+    }
+
+    @Test
+    fun `검색어를 비우면 결과도 비운다`() = runTest(dispatcher) {
+        val viewModel = searched()
+
         viewModel.onQueryChange("")
+        advanceUntilIdle()
 
-        assertEquals(previewHospitals, viewModel.uiState.value.results)
+        assertEquals(emptyList<Hospital>(), viewModel.uiState.value.results)
+        assertNull(viewModel.uiState.value.selected)
     }
 
     @Test
-    fun `앞뒤 공백은 무시한다`() {
-        val viewModel = loaded()
+    fun `빈 검색어로는 부르지 않는다`() = runTest(dispatcher) {
+        // 서버가 q를 필수로 두고, 부분 일치라 무엇이든 받으면 수천 건이 온다.
+        val repository = FakeHospitalRepository()
+        val viewModel = viewModel(repository)
 
-        viewModel.onQueryChange("  봉천로  ")
+        viewModel.onQueryChange("   ")
+        advanceUntilIdle()
 
-        assertEquals(1, viewModel.uiState.value.results.size)
+        assertEquals(0, repository.calls)
     }
 
     @Test
-    fun `하나를 고르면 완료를 누를 수 있다`() {
-        val viewModel = loaded()
+    fun `고르면 완료를 누를 수 있다`() = runTest(dispatcher) {
+        val viewModel = searched()
 
-        viewModel.onHospitalClick("hospital-2")
+        viewModel.onHospitalClick("서울OO병원 내과")
 
-        assertEquals("hospital-2", viewModel.uiState.value.selectedId)
+        assertEquals(Hospital("서울OO병원 내과"), viewModel.uiState.value.selected)
         assertTrue(viewModel.uiState.value.canSubmit)
     }
 
     @Test
-    fun `다시 고르면 하나만 남는다`() {
-        val viewModel = loaded()
+    fun `고른 병원이 결과에서 빠지면 선택을 지운다`() = runTest(dispatcher) {
+        // 보이지 않는 것이 골라져 있으면 완료를 눌렀을 때 무엇이 저장되는지 알 수 없다.
+        val repository = FakeHospitalRepository(hospitals = SEOUL, total = 2)
+        val viewModel = searched(repository)
+        viewModel.onHospitalClick("서울OO병원 내과")
 
-        viewModel.onHospitalClick("hospital-2")
-        viewModel.onHospitalClick("hospital-3")
+        repository.hospitals = listOf(Hospital("OO정형외과의원"))
+        viewModel.onQueryChange("정형")
+        advanceUntilIdle()
 
-        assertEquals("hospital-3", viewModel.uiState.value.selectedId)
+        assertNull(viewModel.uiState.value.selected)
     }
 
     @Test
-    fun `고른 병원이 결과에서 빠지면 선택이 풀린다`() {
-        val viewModel = loaded()
+    fun `못 닿으면 못 찾은 것과 다르게 알린다`() = runTest(dispatcher) {
+        // 앞은 잠시 뒤 다시 할 일이고 뒤는 검색어를 바꿀 일이다.
+        val viewModel = searched(FakeHospitalRepository(result = OFFLINE))
 
-        viewModel.onHospitalClick("hospital-4")
-        viewModel.onQueryChange("서울OO병원")
-
-        assertNull(viewModel.uiState.value.selectedId)
-        assertFalse(viewModel.uiState.value.canSubmit)
+        assertTrue(viewModel.uiState.value.failed)
+        assertFalse(viewModel.uiState.value.searching)
     }
 
     @Test
-    fun `고른 병원이 결과에 남으면 선택이 유지된다`() {
-        val viewModel = loaded()
+    fun `다시 찾으면 실패 표시가 걷힌다`() = runTest(dispatcher) {
+        val repository = FakeHospitalRepository(result = OFFLINE)
+        val viewModel = searched(repository)
 
-        viewModel.onHospitalClick("hospital-1")
-        viewModel.onQueryChange("서울OO병원")
+        repository.result = null
+        repository.hospitals = SEOUL
+        viewModel.onQueryChange("서울OO")
+        advanceUntilIdle()
 
-        assertEquals("hospital-1", viewModel.uiState.value.selectedId)
+        assertFalse(viewModel.uiState.value.failed)
+        assertEquals(SEOUL, viewModel.uiState.value.results)
     }
 
     @Test
-    fun `진료 전에는 검색어가 없으면 결과를 비운다`() {
-        // 1m-B는 입력 전 상태를 빈 화면으로 그린다. 아직 아무것도 찾지 않은 사람에게 후보
-        // 네 곳을 보여주면 그중 하나를 골라야 하는 것으로 읽힌다.
-        val viewModel = loadedBefore()
+    fun `기다리는 동안 화면에서 먼저 좁힌다`() = runTest(dispatcher) {
+        // 왕복이 1.6초다. 그동안 목록이 그대로면 친 글자가 아무 일도 안 하는 것처럼 보인다.
+        val viewModel = searched(FakeHospitalRepository(hospitals = SEOUL + Hospital("OO정형외과의원"), total = 3))
 
-        assertTrue(viewModel.uiState.value.results.isEmpty())
+        viewModel.onQueryChange("이비인후")
+
+        // 아직 서버를 부르기 전인데 목록이 줄어 있다.
+        assertEquals(listOf("서울OO병원 이비인후과"), viewModel.uiState.value.results.map { it.name })
     }
 
     @Test
-    fun `진료 전에도 검색하면 결과가 나온다`() {
-        val viewModel = loadedBefore()
+    fun `좁혀서 비면 목록을 그대로 둔다`() = runTest(dispatcher) {
+        // 보이는 20곳에 없다고 전국에 없는 것이 아니다. 한글 조합 중간 상태도 여기서 빈다.
+        val viewModel = searched()
 
-        viewModel.onQueryChange("이비인후과")
+        viewModel.onQueryChange("서울ㅂ")
 
-        assertEquals(listOf("서울OO병원 이비인후과", "OO이비인후과의원"), viewModel.uiState.value.results.map { it.name })
+        assertEquals(SEOUL, viewModel.uiState.value.results)
     }
 
     @Test
-    fun `진료 전에 검색어를 지우면 다시 빈다`() {
-        val viewModel = loadedBefore()
-        viewModel.onQueryChange("이비인후과")
+    fun `좁힌 결과는 서버 답으로 바뀐다`() = runTest(dispatcher) {
+        val repository = FakeHospitalRepository(hospitals = SEOUL, total = 2)
+        val viewModel = searched(repository)
+        val fromServer = listOf(Hospital("서울OO병원 이비인후과"), Hospital("OO이비인후과의원"))
+
+        viewModel.onQueryChange("이비인후")
+        repository.hospitals = fromServer
+        advanceUntilIdle()
+
+        // 화면에서 좁힐 때는 보이던 것 중에서만 걸렀는데, 서버가 못 보던 것을 더 준다.
+        assertEquals(fromServer, viewModel.uiState.value.results)
+    }
+
+    @Test
+    fun `한 번 받은 검색어는 다시 부르지 않는다`() = runTest(dispatcher) {
+        // 지우고 다시 치는 일이 잦은데 그때마다 1.6초를 기다릴 이유가 없다.
+        val repository = FakeHospitalRepository(hospitals = SEOUL, total = 2)
+        val viewModel = searched(repository)
 
         viewModel.onQueryChange("")
-
-        assertTrue(viewModel.uiState.value.results.isEmpty())
-    }
-
-    @Test
-    fun `진료 전에는 고르지 않아도 넘어갈 수 있다`() {
-        // 건너뛰기와 같은 곳으로 간다. 병원은 진료 후에도 등록할 수 있다.
-        assertTrue(loadedBefore().uiState.value.canSubmit)
-    }
-
-    @Test
-    fun `진료 후에는 골라야 넘어갈 수 있다`() {
-        assertFalse(loaded().uiState.value.canSubmit)
-    }
-
-    @Test
-    fun `진료 전 입력 전에는 하단 바를 두지 않는다`() {
-        // 시안의 1m-B 입력 전 프레임(1092:3858)에 Footer가 없다.
-        assertFalse(loadedBefore().uiState.value.showSubmit)
-    }
-
-    @Test
-    fun `진료 전에 검색해서 결과가 나오면 하단 바가 생긴다`() {
-        val viewModel = loadedBefore()
-
         viewModel.onQueryChange("서울")
+        advanceUntilIdle()
 
-        assertTrue(viewModel.uiState.value.showSubmit)
+        assertEquals(1, repository.calls)
+        assertEquals(SEOUL, viewModel.uiState.value.results)
     }
 
     @Test
-    fun `진료 후에는 처음부터 하단 바가 있다`() {
-        assertTrue(loaded().uiState.value.showSubmit)
+    fun `다시 열면 받아 둔 것도 버린다`() = runTest(dispatcher) {
+        // 개원·폐원이 계속 생기는 데이터라 오래 들고 있을 값이 아니다.
+        val repository = FakeHospitalRepository(hospitals = SEOUL, total = 2)
+        val viewModel = searched(repository)
+
+        viewModel.load()
+        viewModel.onQueryChange("서울")
+        advanceUntilIdle()
+
+        assertEquals(2, repository.calls)
     }
 
     @Test
-    fun `찾은 것이 없으면 하단 바가 사라진다`() {
-        // 비활성 버튼을 남기지 않는다. 결과가 비면 고른 것도 함께 풀린다.
-        val viewModel = loaded()
+    fun `진료 전에는 고르지 않아도 넘어간다`() {
+        val viewModel = viewModel()
 
-        viewModel.onQueryChange("없는병원이름")
+        viewModel.load(HospitalPickPurpose.BEFORE_VISIT)
 
-        assertFalse(viewModel.uiState.value.showSubmit)
-        assertFalse(viewModel.uiState.value.canSubmit)
+        assertTrue(viewModel.uiState.value.canSubmit)
     }
 
-    private fun loaded() = HospitalPickViewModel().apply { load() }
+    @Test
+    fun `다시 열면 앞선 검색이 남지 않는다`() = runTest(dispatcher) {
+        val viewModel = searched()
 
-    private fun loadedBefore() = HospitalPickViewModel().apply { load(HospitalPickPurpose.BEFORE_VISIT) }
+        viewModel.load(HospitalPickPurpose.SCHEDULE)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("", state.query)
+        assertEquals(emptyList<Hospital>(), state.results)
+        assertEquals(HospitalPickPurpose.SCHEDULE, state.purpose)
+    }
+
+    private fun viewModel(repository: FakeHospitalRepository = FakeHospitalRepository()) =
+        HospitalPickViewModel(repository)
+
+    private fun TestScope.searched(
+        repository: FakeHospitalRepository = FakeHospitalRepository(hospitals = SEOUL, total = 2),
+    ): HospitalPickViewModel = viewModel(repository).apply {
+        onQueryChange("서울")
+        advanceUntilIdle()
+    }
+
+    /** 병원 검색 저장소 대역. 응답을 시험 도중에 바꿀 수 있어야 한다. */
+    private class FakeHospitalRepository(
+        var hospitals: List<Hospital> = emptyList(),
+        var total: Int = 0,
+        var result: ApiResult<HospitalSearchResult>? = null,
+    ) : HospitalRepository {
+        var calls = 0
+        var lastQuery: String? = null
+
+        override suspend fun search(query: String): ApiResult<HospitalSearchResult> {
+            calls += 1
+            lastQuery = query
+            return result ?: ApiResult.Success(HospitalSearchResult(hospitals, total.coerceAtLeast(hospitals.size)))
+        }
+    }
+
+    private companion object {
+        val SEOUL = listOf(Hospital("서울OO병원 내과"), Hospital("서울OO병원 이비인후과"))
+
+        val OFFLINE = ApiResult.NetworkUnavailable(IOException("offline"))
+    }
 }

@@ -141,12 +141,7 @@ private fun ColumnScope.PickContent(
         )
         Column(verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12)) {
             Text(
-                text =
-                if (state.results.isEmpty()) {
-                    stringResource(R.string.hospital_pick_result_none)
-                } else {
-                    stringResource(R.string.hospital_pick_result_count, state.results.size)
-                },
+                text = resultLabel(state),
                 style = MedicalMateTheme.typography.labelM,
                 color = MedicalMateTheme.colors.fgSubtle,
             )
@@ -157,6 +152,24 @@ private fun ColumnScope.PickContent(
             }
         }
     }
+}
+
+/**
+ * 결과 줄의 문구.
+ *
+ * 못 닿은 것과 못 찾은 것을 가른다. 앞은 잠시 뒤 다시 할 일이고 뒤는 검색어를 바꿀 일이다.
+ * 한 문구로 뭉개면 사용자가 병원 이름을 계속 고쳐 친다.
+ *
+ * 받은 것보다 많으면 그 사실을 적는다. 부분 일치라 "서울"이면 4천 건이 넘는데, 그때 필요한
+ * 것은 목록을 더 보는 것이 아니라 검색어를 좁히는 것이다.
+ */
+@Composable
+private fun resultLabel(state: HospitalPickUiState): String = when {
+    state.searching -> stringResource(R.string.hospital_pick_result_searching)
+    state.failed -> stringResource(R.string.hospital_pick_result_failed)
+    state.results.isEmpty() -> stringResource(R.string.hospital_pick_result_none)
+    state.truncated -> stringResource(R.string.hospital_pick_result_truncated, state.total, state.results.size)
+    else -> stringResource(R.string.hospital_pick_result_count, state.results.size)
 }
 
 /**
@@ -183,8 +196,8 @@ private fun Results(state: HospitalPickUiState, onHospitalClick: (String) -> Uni
             if (index > 0) MedicalMateDivider()
             ResultRow(
                 hospital = hospital,
-                selected = hospital.id == state.selectedId,
-                onClick = { onHospitalClick(hospital.id) },
+                selected = hospital == state.selected,
+                onClick = { onHospitalClick(hospital.name) },
             )
         }
     }
@@ -210,21 +223,14 @@ private fun ResultRow(hospital: Hospital, selected: Boolean, onClick: () -> Unit
         horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(
+        // 이름 한 줄이다. 서버가 심평원에서 이름과 홈페이지만 가져오고 주소를 내려보내지
+        // 않는다. 쓰지 않을 값을 내리면 앱이 무엇을 믿어야 할지 흐려진다는 것이 그쪽 판단이다.
+        Text(
+            text = hospital.name,
+            style = MedicalMateTheme.typography.bodyLStrong,
+            color = if (selected) colors.fgPrimary else colors.fgDefault,
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4),
-        ) {
-            Text(
-                text = hospital.name,
-                style = MedicalMateTheme.typography.bodyLStrong,
-                color = if (selected) colors.fgPrimary else colors.fgDefault,
-            )
-            Text(
-                text = hospital.address,
-                style = MedicalMateTheme.typography.bodyS,
-                color = colors.fgSubtle,
-            )
-        }
+        )
         if (selected) {
             Icon(
                 painter = painterResource(MedicalMateIcons.Check),
@@ -236,6 +242,15 @@ private fun ResultRow(hospital: Hospital, selected: Boolean, onClick: () -> Unit
     }
 }
 
+/** Preview에서만 쓰는 결과. 서버가 이름만 주므로 이름뿐이다. */
+private val previewHospitals =
+    listOf(
+        Hospital("서울OO병원 내과"),
+        Hospital("서울OO병원 이비인후과"),
+        Hospital("OO이비인후과의원"),
+        Hospital("OO정형외과의원"),
+    )
+
 @MedicalMateScreenPreviews
 @Composable
 private fun HospitalPickScreenPreview() {
@@ -245,7 +260,7 @@ private fun HospitalPickScreenPreview() {
             HospitalPickUiState(
                 query = "서울OO병원",
                 results = previewHospitals,
-                selectedId = previewHospitals.first().id,
+                selected = previewHospitals.first(),
             ),
             onQueryChange = {},
             onHospitalClick = {},

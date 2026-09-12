@@ -68,7 +68,7 @@
     <string name="text_area_counter">%1$d / %2$d</string>
     <string name="hospital_pick_title">병원 찾기</string>
     <string name="hospital_pick_question">진료받은 병원을 찾아주세요</string>
-    <string name="hospital_pick_description">병원 이름으로 검색하면 주소가 함께 등록돼요.</string>
+    <string name="hospital_pick_description">병원 이름으로 검색해 주세요.</string>
     <string name="hospital_pick_search_placeholder">병원 이름 검색</string>
     <string name="hospital_pick_search_clear">검색어 지우기</string>
     <string name="hospital_pick_result_count">검색 결과 %1$d곳</string>
@@ -79,6 +79,9 @@
     <string name="hospital_pick_skip">건너뛰기</string>
     <string name="hospital_pick_submit_before">브리핑 카드 만들기</string>
     <string name="hospital_pick_result_none">검색 결과 없음</string>
+    <string name="hospital_pick_result_searching">찾는 중이에요</string>
+    <string name="hospital_pick_result_failed">지금은 찾지 못했어요. 잠시 뒤 다시 해주세요.</string>
+    <string name="hospital_pick_result_truncated">%1$d곳 중 %2$d곳이에요. 이름을 더 적으면 좁혀져요.</string>
     <string name="hospital_pick_empty_title">아직 검색 기록이 없어요</string>
     <string name="hospital_pick_empty_description">병원 명을 입력하면 진료받을 병원을 찾을 수 있어요</string>
     <string name="visit_note_title">진료 후 기록</string>

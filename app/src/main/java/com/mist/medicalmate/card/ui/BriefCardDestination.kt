@@ -22,7 +22,6 @@ import kotlinx.serialization.Serializable
  */
 /**
  * @param hospitalName 진료 전 병원 찾기(1m-B)에서 고른 병원. 고르지 않았으면 null이다.
- * @param hospitalAddress 같은 병원의 주소.
  *
  * **id가 아니라 이름과 주소를 받는다.** id로 받으면 카드가 병원 목록을 찾아봐야 하는데 그
  * 목록은 `visit` 도메인에 있다. 한 도메인이 다른 도메인을 직접 참조하지 않는다는 규칙이
@@ -30,11 +29,7 @@ import kotlinx.serialization.Serializable
  * id를 받고 여기서 조회한다.
  */
 @Serializable
-internal data class BriefCardDestination(
-    val cardId: String,
-    val hospitalName: String? = null,
-    val hospitalAddress: String? = null,
-)
+internal data class BriefCardDestination(val cardId: String, val hospitalName: String? = null)
 
 /** 와이어프레임 1f-1. 폰을 의사에게 건네는 화면. */
 @Serializable
@@ -133,7 +128,7 @@ private fun BriefCardRoute(
  */
 private fun briefCardHospital(route: BriefCardDestination): BriefCardHospital? {
     val name = route.hospitalName ?: return null
-    return BriefCardHospital(name = name, address = route.hospitalAddress.orEmpty())
+    return BriefCardHospital(name = name)
 }
 
 /**

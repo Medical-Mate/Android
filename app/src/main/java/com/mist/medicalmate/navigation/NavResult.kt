@@ -24,11 +24,12 @@ import androidx.navigation.NavController
  * 경우다.
  */
 internal object NavResult {
-    /** 병원 찾기(1m-B)가 돌려주는 병원 이름. */
+    /**
+     * 병원 찾기(1m-B)가 돌려주는 병원 이름.
+     *
+     * 이름뿐이다. 주소도 함께 돌려주던 자리가 있었는데 서버가 이름만 준다(#155).
+     */
     const val HOSPITAL_NAME = "result.hospitalName"
-
-    /** 같은 자리에서 함께 오는 주소. 카드의 "진료받을 병원"이 둘을 같이 쓴다. */
-    const val HOSPITAL_ADDRESS = "result.hospitalAddress"
 }
 
 /**

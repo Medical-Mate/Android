@@ -138,7 +138,7 @@ private fun HospitalPickRoute(
     LaunchedEffect(purpose) { viewModel.load(purpose) }
 
     val beforeCard = purpose == HospitalPickPurpose.BEFORE_VISIT
-    val selected = state.results.firstOrNull { it.id == state.selectedId }
+    val selected = state.selected
 
     HospitalPickScreen(
         state = state,
