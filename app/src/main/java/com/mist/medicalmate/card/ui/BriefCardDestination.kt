@@ -39,6 +39,7 @@ internal data class BriefCardDestination(
      */
     val sessionId: Long? = null,
     val hospitalName: String? = null,
+    val hospitalAddress: String? = null,
 )
 
 /** 와이어프레임 1f-1. 폰을 의사에게 건네는 화면. */
@@ -104,7 +105,7 @@ private fun BriefCardRoute(
     LaunchedEffect(cardId, sessionId, hospital) { viewModel.open(cardId, sessionId, hospital) }
 
     // 병원 `변경`에서 골라 돌아온 값. 엔트리가 살아 있어서 편집 중이던 값이 남는다.
-    entry.ConsumeResult(NavResult.HOSPITAL_NAME, viewModel::onHospitalPicked)
+    entry.ConsumeResult(NavResult.HOSPITAL_NAME, NavResult.HOSPITAL_ADDRESS, viewModel::onHospitalPicked)
 
     val content = state as? BriefCardUiState.Content
 
@@ -137,7 +138,7 @@ private fun BriefCardRoute(
  */
 private fun briefCardHospital(route: BriefCardDestination): BriefCardHospital? {
     val name = route.hospitalName ?: return null
-    return BriefCardHospital(name = name)
+    return BriefCardHospital(name = name, address = route.hospitalAddress)
 }
 
 /**

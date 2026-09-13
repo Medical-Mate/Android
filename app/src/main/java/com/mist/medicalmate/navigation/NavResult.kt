@@ -24,12 +24,17 @@ import androidx.navigation.NavController
  * 경우다.
  */
 internal object NavResult {
-    /**
-     * 병원 찾기(1m-B)가 돌려주는 병원 이름.
-     *
-     * 이름뿐이다. 주소도 함께 돌려주던 자리가 있었는데 서버가 이름만 준다(#155).
-     */
+    /** 병원 찾기(1m-B)가 돌려주는 병원 이름. */
     const val HOSPITAL_NAME = "result.hospitalName"
+
+    /**
+     * 그 병원의 주소.
+     *
+     * 한동안 이름만 돌려줬다. 서버가 심평원 주소를 내려보내지 않기로 해서 채울 값이
+     * 없었는데(#155) 우리가 요청해 자리가 생겼다(#187). 시안 1e-1의 병원 블록이 이름
+     * 아래에 주소를 그린다.
+     */
+    const val HOSPITAL_ADDRESS = "result.hospitalAddress"
 }
 
 /**
@@ -42,6 +47,31 @@ internal fun NavController.popWithResult(vararg results: Pair<String, String?>) 
         results.forEach { (key, value) -> handle[key] = value }
     }
     popBackStack()
+}
+
+/**
+ * 한 번의 선택에서 나온 두 값을 함께 읽는다.
+ *
+ * 병원이 그렇다. 따로 읽으면 이름이 들어온 순간 주소 없이 한 번, 주소가 들어온 뒤 또 한 번
+ * 흘러서 화면이 주소 없는 병원을 먼저 그린다. [popWithResult]가 둘을 함께 넣으므로 앞엣것이
+ * 보이는 시점에 뒤엣것도 이미 있다.
+ */
+@Composable
+internal fun NavBackStackEntry.ConsumeResult(
+    key: String,
+    otherKey: String,
+    onResult: (String?, String?) -> Unit,
+) {
+    val handle = savedStateHandle
+    val value by handle.getStateFlow<String?>(key, null).collectAsStateWithLifecycle()
+
+    LaunchedEffect(value) {
+        if (handle.contains(key)) {
+            onResult(value, handle.get<String>(otherKey))
+            handle.remove<String>(key)
+            handle.remove<String>(otherKey)
+        }
+    }
 }
 
 /**

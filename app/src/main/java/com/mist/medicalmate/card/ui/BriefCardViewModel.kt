@@ -77,16 +77,21 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
     /**
      * 병원 `변경`에서 골라 돌아왔다.
      *
-     * 주소는 함께 오지 않는다. 이름만으로 그 자리를 채우고, 주소는 서버가 카드에 병원을
-     * 싣기 시작하면 응답에서 온다(#139).
+     * 주소가 함께 온다. 같은 이름의 다른 지점을 가르는 값이라 이름만 남기면 어느 곳을
+     * 골랐는지 알 수 없다. 심평원에 주소가 없는 곳은 비어 있고, 그때는 블록이 이름만
+     * 그린다.
      */
-    fun onHospitalPicked(name: String?) {
+    fun onHospitalPicked(name: String?, address: String?) {
         if (name.isNullOrBlank()) return
         mutableUiState.update { state ->
             if (state !is BriefCardUiState.Content) {
                 state
             } else {
-                state.copy(card = state.card.copy(hospital = BriefCardHospital(name = name)))
+                state.copy(
+                    card = state.card.copy(
+                        hospital = BriefCardHospital(name = name, address = address?.takeIf { it.isNotBlank() }),
+                    ),
+                )
             }
         }
     }
