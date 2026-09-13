@@ -2,7 +2,6 @@ package com.mist.medicalmate.card.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mist.medicalmate.card.data.CardRepository
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.visit.data.VisitListItem
 import com.mist.medicalmate.visit.data.VisitRepository
@@ -21,15 +20,12 @@ import java.util.Locale
  * `GET /api/me/visits`를 월별로 묶는다. 묶는 일이 화면이 아니라 여기 있어야 JVM에서 확인할
  * 수 있다.
  *
- * 삭제는 아직 화면 안에서만 일어난다. 기록을 지우는 API가 없다.
+ * 삭제는 `DELETE /api/visits/{id}`다(#178). 카드는 남는다.
  */
 @HiltViewModel
 class RecordViewModel
 @Inject
-internal constructor(
-    private val repository: VisitRepository,
-    private val cardRepository: CardRepository,
-) : ViewModel() {
+internal constructor(private val repository: VisitRepository) : ViewModel() {
     private val mutableUiState = MutableStateFlow<RecordUiState>(RecordUiState.Loading)
     val uiState: StateFlow<RecordUiState> = mutableUiState.asStateFlow()
 
@@ -81,21 +77,18 @@ internal constructor(
     /**
      * 고른 기록을 지운다.
      *
-     * **지우는 것은 카드다.** `DELETE /api/cards/{cardId}`이고 기록만 지우는 API가 없다.
-     * 그 카드의 문답도 함께 지워진다. 사용자에게는 "기록을 지웠다"인데 실제로 사라지는 것이
-     * 더 많아서 확인 문구가 그 사실을 적는다.
+     * **지우는 것은 기록이다.** `DELETE /api/visits/{visitId}`이고 카드는 남는다. 전에는 이
+     * 자리가 없어 카드 삭제로 나갔고, 기록 한 건을 지우려던 사람이 카드와 문답까지 잃었다.
      *
      * 지운 뒤에는 편집을 빠져나온다. 고른 것이 사라졌는데 편집 상태로 남으면 무엇을 더 하라는
      * 것인지 알 수 없다.
      */
     fun onDeleteConfirm() {
-        val content = mutableUiState.value as? RecordUiState.Content ?: return
-        val picked = content.groups.flatMap { it.items }.filter { it.id in content.selectedIds.orEmpty() }
-        if (picked.isEmpty()) return
+        val ids = (mutableUiState.value as? RecordUiState.Content)?.selectedIds.orEmpty()
+        if (ids.isEmpty()) return
         updateContent { it.copy(deleteRequested = false) }
         viewModelScope.launch {
-            val goneCards = cardRepository.deleteAll(picked.mapNotNull { it.cardId }.toSet())
-            val gone = picked.filter { it.cardId in goneCards }.map { it.id }.toSet()
+            val gone = repository.deleteAll(ids)
             updateContent { state -> state.without(gone).copy(selectedIds = null) }
         }
     }

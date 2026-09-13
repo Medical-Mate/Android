@@ -114,12 +114,8 @@ internal constructor(
  * 아니라 무엇이 비었는지로 읽힌다.
  */
 private fun Visit.toDetail(card: BriefCard?, next: Appointment?): RecordDetail {
-    val items =
-        listOfNotNull(
-            whatWasDone?.takeIf { it.isNotBlank() }?.let { RecordDetailItem(key = "한 것", value = it) },
-            result?.takeIf { it.isNotBlank() }?.let { RecordDetailItem(key = "결과", value = it) },
-            prescription?.takeIf { it.isNotBlank() }?.let { RecordDetailItem(key = "처방", value = it) },
-        )
+    // 항목이 가변이다(#178). 이름과 차례는 저장소가 정하고 여기는 그대로 편다.
+    val items = items.map { RecordDetailItem(key = it.label, value = it.value) }
     val day = visitedOn?.format(VISITED_ON).orEmpty()
     return RecordDetail(
         id = id,

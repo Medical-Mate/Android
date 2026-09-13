@@ -19,7 +19,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
 import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
@@ -47,7 +46,8 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
  * 월별 묶음 목록.
  *
  * 기록(1j-1)과 브리핑 카드 전체(1j-4)가 함께 쓴다. 두 화면의 줄이 제목·배지·메타·보조 한
- * 줄로 같고 편집 방식도 같다. 다른 것은 세는 단위뿐이라 [countRes]로 받는다. 기록은 "건",
+ * 줄로 같고 편집 방식도 같다. 다른 것은 세는 단위뿐이라 [countRes]·[selectedRes]로 받는다.
+ * 기록은 "건",
  * 카드는 "장"이다.
  *
  * [selectedIds]가 null이면 편집이 아니다. 그때 줄을 누르면 [onItemClick]이 이동을 맡고,
@@ -59,6 +59,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 internal fun ColumnScope.GroupList(
     groups: List<RecordGroup>,
     @StringRes countRes: Int,
+    @StringRes selectedRes: Int,
     onItemClick: (RecordItem) -> Unit,
     selectedIds: Set<String>? = null,
     onSelectChange: (String, Boolean) -> Unit = { _, _ -> },
@@ -79,6 +80,7 @@ internal fun ColumnScope.GroupList(
                 GroupHeader(
                     group = group,
                     countRes = countRes,
+                    selectedRes = selectedRes,
                     // 편집 중에는 그 달에서 고른 수를 적는다. 시안 1j-4-D2가 묶음 머리에
                     // "1장 선택됨"을 두고 하단 버튼이 전체 수("2장 삭제")를 든다.
                     selectedCount = selectedIds?.let { ids -> group.items.count { it.id in ids } },
@@ -100,14 +102,19 @@ internal fun ColumnScope.GroupList(
 
 /** 묶음 머리. 개수는 누를 수 없는 표시라 `Section Header`의 캡션 자리에 둔다. */
 @Composable
-private fun GroupHeader(group: RecordGroup, @StringRes countRes: Int, selectedCount: Int? = null) {
+private fun GroupHeader(
+    group: RecordGroup,
+    @StringRes countRes: Int,
+    @StringRes selectedRes: Int,
+    selectedCount: Int? = null,
+) {
     MedicalMateSectionHeader(
         title = group.monthLabel,
         caption =
         if (selectedCount == null) {
             stringResource(countRes, group.items.size)
         } else {
-            stringResource(R.string.record_group_selected, selectedCount)
+            stringResource(selectedRes, selectedCount)
         },
     )
 }

@@ -135,7 +135,18 @@ data class VisitNoteUiState(
  * [clinic]은 1m에서 고른 병원, [cardTitle]은 이 기록이 붙을 카드의 제목이다. 둘 다 캘린더
  * 일자에서 라우트를 타고 따라온다. 없으면 그 줄을 그리지 않는다.
  */
-data class VisitHeadline(val visitedOn: LocalDate, val clinic: String? = null, val cardTitle: String? = null)
+/**
+ * 1p 머리말.
+ *
+ * [today]는 진료가 오늘이었는지다. 시안의 "오늘 진료"는 그 날 바로 적는 경우를 그린 것이고,
+ * 어제 진료를 오늘 적으면 거짓이 된다. 화면이 그 낱말을 이 값으로 고른다.
+ */
+data class VisitHeadline(
+    val visitedOn: LocalDate,
+    val clinic: String? = null,
+    val cardTitle: String? = null,
+    val today: Boolean = true,
+)
 
 /**
  * 1q-1 자동 분류 결과와 1q-1-E 전체 수정. Figma `405:2193`, `636:3675`.
@@ -206,7 +217,15 @@ data class VisitRecord(
     val caption: String,
 )
 
-/** [tone]이 값의 색을 정한다. 재방문 날짜는 브랜드색으로 세운다. */
-data class VisitRecordItem(val key: String, val value: String, val tone: Tone = Tone.DEFAULT) {
+/**
+ * 분류 결과의 한 줄.
+ *
+ * [key]는 화면에 적는 이름이고 [axis]는 서버 축 id다. 둘을 나눠 두는 이유는 항목 이름이 닫힌
+ * 목록이 아니기 때문이다(#178) — AI가 축을 늘리면 이름을 모르는 줄이 생기고, 그때 표시는
+ * 축 id로 하더라도 저장은 그 축으로 나가야 한다.
+ *
+ * [tone]이 값의 색을 정한다. 재방문 날짜는 브랜드색으로 세운다.
+ */
+data class VisitRecordItem(val key: String, val value: String, val tone: Tone = Tone.DEFAULT, val axis: String = "") {
     enum class Tone { DEFAULT, LINK }
 }

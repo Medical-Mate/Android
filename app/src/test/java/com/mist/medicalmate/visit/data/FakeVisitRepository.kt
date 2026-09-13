@@ -28,6 +28,12 @@ internal class FakeVisitRepository(
     var cardId: Long? = null
     var request: NewVisit? = null
 
+    /** 지워 달라고 받은 id. 기록 삭제가 카드가 아니라 기록으로 나가는지 보는 데 쓴다. */
+    val deletedIds = mutableListOf<String>()
+
+    /** 지우지 못할 id. 일부만 실패하는 경우를 만든다. */
+    var deleteFails: Set<String> = emptySet()
+
     /** 물어본 차례대로. 몇 번 불렀는지가 관심사인 시험이 있다. */
     val requestedIds = mutableListOf<Long>()
 
@@ -46,6 +52,15 @@ internal class FakeVisitRepository(
         return saved
     }
 
+    override suspend fun delete(visitId: Long): ApiResult<Unit> {
+        deletedIds += visitId.toString()
+        return if (visitId.toString() in deleteFails) OFFLINE else ApiResult.Success(Unit)
+    }
+
+    override suspend fun deleteAll(visitIds: Set<String>): Set<String> = visitIds
+        .mapNotNull { id -> id.toLongOrNull()?.takeIf { delete(it) is ApiResult.Success }?.let { id } }
+        .toSet()
+
     companion object {
         const val SAVED_ID = "77"
 
@@ -55,9 +70,9 @@ internal class FakeVisitRepository(
                 cardId = null,
                 clinic = null,
                 visitedOn = null,
-                whatWasDone = null,
-                result = null,
-                prescription = null,
+                items = emptyList(),
+                followUp = null,
+                patientNotes = emptyList(),
                 rawNote = null,
             )
 

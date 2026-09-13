@@ -68,6 +68,7 @@ fun RecordScreen(state: RecordUiState, callbacks: RecordCallbacks, modifier: Mod
                     GroupList(
                         groups = state.groups,
                         countRes = R.string.record_count,
+                        selectedRes = R.string.record_selected,
                         onItemClick = callbacks.onItemClick,
                         selectedIds = state.selectedIds,
                         onSelectChange = callbacks.onSelectChange,

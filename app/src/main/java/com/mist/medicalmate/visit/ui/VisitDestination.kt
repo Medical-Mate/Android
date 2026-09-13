@@ -10,6 +10,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import kotlinx.serialization.Serializable
+import java.time.LocalDate
 
 /**
  * 진료 후 기록 플로우의 목적지들. Figma 흐름은 `1m → 1p → 1q-1`이고, 저장하면 흐름이
@@ -41,6 +42,13 @@ internal data class HospitalPickDestination(
     val cardId: String? = null,
     val cardTitle: String? = null,
     val sessionId: Long? = null,
+    /**
+     * 진료를 받은 날.
+     *
+     * 흐름이 시작된 캘린더 일자다. 오늘로 찍지 않는 이유는 어제 진료를 오늘 적을 수 있기
+     * 때문이다. 그때 기록이 오늘 날짜로 남으면 그 일자 화면에는 영영 나오지 않는다.
+     */
+    val visitedOn: String? = null,
 )
 
 /**
@@ -60,6 +68,7 @@ internal data class VisitNoteDestination(
     val clinic: String? = null,
     val cardId: String? = null,
     val cardTitle: String? = null,
+    val visitedOn: String? = null,
 )
 
 /**
@@ -74,6 +83,7 @@ internal data class VisitRecordDestination(
     val clinic: String? = null,
     val cardId: String? = null,
     val note: String = "",
+    val visitedOn: String? = null,
 )
 
 /**
@@ -83,7 +93,7 @@ internal data class VisitRecordDestination(
  *   넘어간다. 건너뛰기와 CTA가 같은 곳으로 가고, 다른 것은 병원을 들고 가는지뿐이다.
  */
 internal fun NavGraphBuilder.hospitalPickDestination(
-    onPicked: (cardId: String?, cardTitle: String?, hospital: Hospital) -> Unit,
+    onPicked: (cardId: String?, cardTitle: String?, visitedOn: String?, hospital: Hospital) -> Unit,
     onCardRequested: (cardId: String?, sessionId: Long?, hospital: Hospital?) -> Unit,
     onScheduleRequested: (Hospital?) -> Unit,
     onExit: () -> Unit,
@@ -95,6 +105,7 @@ internal fun NavGraphBuilder.hospitalPickDestination(
             cardId = route.cardId,
             cardTitle = route.cardTitle,
             sessionId = route.sessionId,
+            visitedOn = route.visitedOn,
             onPicked = onPicked,
             onCardRequested = onCardRequested,
             onScheduleRequested = onScheduleRequested,
@@ -104,7 +115,7 @@ internal fun NavGraphBuilder.hospitalPickDestination(
 }
 
 internal fun NavGraphBuilder.visitNoteDestination(
-    onSaved: (clinic: String?, cardId: String?, note: String) -> Unit,
+    onSaved: (clinic: String?, cardId: String?, note: String, visitedOn: String?) -> Unit,
     onExit: () -> Unit,
 ) {
     composable<VisitNoteDestination> { entry ->
@@ -112,7 +123,8 @@ internal fun NavGraphBuilder.visitNoteDestination(
         VisitNoteRoute(
             clinic = route.clinic,
             cardTitle = route.cardTitle,
-            onSaved = { note -> onSaved(route.clinic, route.cardId, note) },
+            visitedOn = route.visitedOn,
+            onSaved = { note -> onSaved(route.clinic, route.cardId, note, route.visitedOn) },
             onExit = onExit,
         )
     }
@@ -135,7 +147,8 @@ private fun HospitalPickRoute(
     cardId: String?,
     cardTitle: String?,
     sessionId: Long?,
-    onPicked: (cardId: String?, cardTitle: String?, hospital: Hospital) -> Unit,
+    visitedOn: String?,
+    onPicked: (cardId: String?, cardTitle: String?, visitedOn: String?, hospital: Hospital) -> Unit,
     onCardRequested: (cardId: String?, sessionId: Long?, hospital: Hospital?) -> Unit,
     onScheduleRequested: (Hospital?) -> Unit,
     onExit: () -> Unit,
@@ -158,7 +171,7 @@ private fun HospitalPickRoute(
         // 추가는 필드에 이름만 채우고 돌아간다.
         onSubmitClick = {
             when (purpose) {
-                HospitalPickPurpose.AFTER_VISIT -> selected?.let { onPicked(cardId, cardTitle, it) }
+                HospitalPickPurpose.AFTER_VISIT -> selected?.let { onPicked(cardId, cardTitle, visitedOn, it) }
                 HospitalPickPurpose.BEFORE_VISIT -> onCardRequested(cardId, sessionId, selected)
                 HospitalPickPurpose.SCHEDULE -> onScheduleRequested(selected)
             }
@@ -179,6 +192,7 @@ private fun HospitalPickRoute(
 private fun VisitNoteRoute(
     clinic: String?,
     cardTitle: String?,
+    visitedOn: String?,
     onSaved: (note: String) -> Unit,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
@@ -186,7 +200,9 @@ private fun VisitNoteRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(clinic, cardTitle) { viewModel.load(clinic, cardTitle) }
+    LaunchedEffect(clinic, cardTitle, visitedOn) {
+        viewModel.load(clinic, cardTitle, visitedOn?.let(LocalDate::parse))
+    }
 
     VisitNoteScreen(
         state = state,
@@ -221,7 +237,13 @@ private fun VisitRecordRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(route) { viewModel.load(clinic = route.clinic, note = route.note) }
+    LaunchedEffect(route) {
+        viewModel.load(
+            clinic = route.clinic,
+            note = route.note,
+            visitedOn = route.visitedOn?.let(LocalDate::parse),
+        )
+    }
 
     VisitRecordScreen(
         state = state,
@@ -241,7 +263,13 @@ private fun VisitRecordRoute(
                 viewModel.onDeleteConfirm()
                 onDeleted()
             },
-            onRetryClick = { viewModel.load(clinic = route.clinic, note = route.note) },
+            onRetryClick = {
+                viewModel.load(
+                    clinic = route.clinic,
+                    note = route.note,
+                    visitedOn = route.visitedOn?.let(LocalDate::parse),
+                )
+            },
         ),
         modifier = modifier,
     )

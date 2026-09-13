@@ -147,8 +147,15 @@ internal fun NavGraphBuilder.calendarDestinations(navController: NavHostControll
         onCardOpen = { cardId -> navController.navigate(BriefCardDestination(cardId)) },
         // 이 날 일정에 걸린 카드에 기록이 붙는다. 서버가 카드 하나에 기록 하나를 받는다.
         // 카드 제목도 함께 간다. 1p가 무엇으로 진료받았는지를 그 값으로 적는다.
-        onRecordAdd = { cardId, cardTitle ->
-            navController.navigate(HospitalPickDestination(cardId = cardId, cardTitle = cardTitle))
+        onRecordAdd = { cardId, cardTitle, visitedOn ->
+            navController.navigate(
+                HospitalPickDestination(
+                    cardId = cardId,
+                    cardTitle = cardTitle,
+                    // 오늘이 아니라 그 일자다. 어제 진료를 오늘 적어도 기록은 그 날에 남는다.
+                    visitedOn = visitedOn.toString(),
+                ),
+            )
         },
         onRecordOpen = { recordId -> navController.navigate(RecordDetailDestination(recordId)) },
         // 1r-2-A의 다음 일정이 시간만 비어 있는 상태다. 확정하러 가면 병원이 이미 채워진
@@ -170,9 +177,14 @@ internal fun NavGraphBuilder.calendarDestinations(navController: NavHostControll
 internal fun NavGraphBuilder.visitDestinations(navController: NavHostController) {
     hospitalPickDestination(
         // 진료 후(1m). 고른 병원 이름과 붙일 카드를 메모 화면으로 넘긴다.
-        onPicked = { cardId, cardTitle, hospital ->
+        onPicked = { cardId, cardTitle, visitedOn, hospital ->
             navController.navigate(
-                VisitNoteDestination(clinic = hospital.name, cardId = cardId, cardTitle = cardTitle),
+                VisitNoteDestination(
+                    clinic = hospital.name,
+                    cardId = cardId,
+                    cardTitle = cardTitle,
+                    visitedOn = visitedOn,
+                ),
             )
         },
         // 진료 전(1m-B)에서 카드로. cardId가 있으면 카드의 `변경`에서 온 것이라 고른
@@ -195,8 +207,10 @@ internal fun NavGraphBuilder.visitDestinations(navController: NavHostController)
         onExit = { navController.popBackStack() },
     )
     visitNoteDestination(
-        onSaved = { clinic, cardId, note ->
-            navController.navigate(VisitRecordDestination(clinic = clinic, cardId = cardId, note = note))
+        onSaved = { clinic, cardId, note, visitedOn ->
+            navController.navigate(
+                VisitRecordDestination(clinic = clinic, cardId = cardId, note = note, visitedOn = visitedOn),
+            )
         },
         onExit = { navController.popBackStack() },
     )

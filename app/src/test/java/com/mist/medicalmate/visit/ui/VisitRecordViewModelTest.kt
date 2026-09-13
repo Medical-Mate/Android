@@ -9,7 +9,6 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -53,7 +52,7 @@ class VisitRecordViewModelTest {
 
     @Test
     fun `병원을 고르지 않았으면 날짜만 적는다`() {
-        val viewModel = viewModel().apply { load(clinic = null, note = NOTE) }
+        val viewModel = viewModel().apply { load(clinic = null, note = NOTE, visitedOn = TODAY) }
 
         assertEquals("2026.09.12", content(viewModel).record.clinicLine)
     }
@@ -169,7 +168,7 @@ class VisitRecordViewModelTest {
 
     @Test
     fun `편집 모드가 아니면 사본 조작이 아무것도 바꾸지 않는다`() {
-        val viewModel = viewModel().apply { load(CLINIC, NOTE) }
+        val viewModel = viewModel().apply { load(CLINIC, NOTE, TODAY) }
         val before = viewModel.uiState.value
 
         viewModel.editActions.onItemValueChange(0, "위염 확진")
@@ -212,41 +211,61 @@ class VisitRecordViewModelTest {
         assertEquals(3L, repository.cardId)
         assertEquals(CLINIC, request?.clinicName)
         assertEquals(TODAY, request?.visitedOn)
-        assertEquals("혈액검사 시행", request?.whatWasDone)
-        assertEquals("위염 초기 소견", request?.result)
-        assertEquals("2주분 처방", request?.prescription)
+        assertEquals(
+            listOf("findings" to "위염 초기 소견", "tests" to "혈액검사 시행", "medication_instructions" to "2주분 처방"),
+            request?.items?.map { it.axis to it.value },
+        )
         assertEquals(NOTE, request?.rawNote)
         // 저장이 끝나면 흐름이 시작된 캘린더 일자로 돌아간다. 기록 id는 더 쓰지 않는다.
         assertTrue(left)
     }
 
     @Test
-    fun `비운 줄은 보내지 않는다`() {
+    fun `오늘이 아니라 흐름이 시작된 날로 저장한다`() {
+        // 어제 진료를 오늘 적을 수 있다. 오늘로 박으면 그 일자 화면에 영영 나오지 않는다.
+        val yesterday = TODAY.minusDays(1)
         val repository = FakeVisitRepository()
-        val viewModel = viewModel(repository).apply { load(CLINIC, NOTE) }
+        val viewModel = viewModel(repository).apply { load(CLINIC, NOTE, yesterday) }
 
         viewModel.onSaveClick(cardId = "3", onSaved = {})
 
-        val request = repository.request
-        assertNull(request?.whatWasDone)
-        assertNull(request?.result)
-        assertNull(request?.prescription)
-        assertEquals(NOTE, request?.rawNote)
+        assertEquals(yesterday, repository.request?.visitedOn)
     }
 
     @Test
-    fun `재방문 줄은 보낼 자리가 없다`() {
-        // POST /api/cards/{id}/visit에 재방문 날짜 필드가 없다. #148에 적어 뒀다.
+    fun `날짜가 없으면 오늘로 둔다`() {
         val repository = FakeVisitRepository()
-        val viewModel = viewModel(repository).apply { load(CLINIC, NOTE) }
+        val viewModel = viewModel(repository).apply { load(CLINIC, NOTE, null) }
+
+        viewModel.onSaveClick(cardId = "3", onSaved = {})
+
+        assertEquals(TODAY, repository.request?.visitedOn)
+    }
+
+    @Test
+    fun `비운 줄은 보내지 않는다`() {
+        // 안 적은 것과 빈 문자열은 다르다. 빈 줄을 보내면 서버가 UNKNOWN으로 박는다.
+        val repository = FakeVisitRepository()
+        val viewModel = viewModel(repository).apply { load(CLINIC, NOTE, TODAY) }
+
+        viewModel.onSaveClick(cardId = "3", onSaved = {})
+
+        assertEquals(emptyList<Pair<String, String>>(), repository.request?.items?.map { it.axis to it.value })
+        assertEquals(NOTE, repository.request?.rawNote)
+    }
+
+    @Test
+    fun `재방문 줄도 축으로 간다`() {
+        // follow_up 축이 생겼다(#178). 전에는 보낼 자리가 없어 버려졌다.
+        val repository = FakeVisitRepository()
+        val viewModel = viewModel(repository).apply { load(CLINIC, NOTE, TODAY) }
         viewModel.onEditClick()
         viewModel.editActions.onItemValueChange(3, "2주 뒤")
         viewModel.onEditDoneClick()
 
         viewModel.onSaveClick(cardId = "3", onSaved = {})
 
-        val request = repository.request
-        assertFalse(listOfNotNull(request?.whatWasDone, request?.result, request?.prescription).contains("2주 뒤"))
+        assertEquals("follow_up" to "2주 뒤", repository.request?.items?.single()?.let { it.axis to it.value })
     }
 
     @Test
@@ -287,7 +306,7 @@ class VisitRecordViewModelTest {
         VisitRecordViewModel(repository, Clock.fixed(Instant.parse("2026-09-12T01:00:00Z"), ZoneId.of("Asia/Seoul")))
 
     private fun filled(repository: FakeVisitRepository) = viewModel(repository).apply {
-        load(CLINIC, NOTE)
+        load(CLINIC, NOTE, TODAY)
         onEditClick()
         editActions.onItemValueChange(0, "위염 초기 소견")
         editActions.onItemValueChange(1, "혈액검사 시행")
@@ -295,9 +314,9 @@ class VisitRecordViewModelTest {
         onEditDoneClick()
     }
 
-    private fun editing() = viewModel().apply { load(CLINIC, NOTE) }.apply { onEditClick() }
+    private fun editing() = viewModel().apply { load(CLINIC, NOTE, TODAY) }.apply { onEditClick() }
 
-    private fun loaded() = content(viewModel().apply { load(CLINIC, NOTE) })
+    private fun loaded() = content(viewModel().apply { load(CLINIC, NOTE, TODAY) })
 
     private fun content(viewModel: VisitRecordViewModel) = viewModel.uiState.value as VisitRecordUiState.Content
 

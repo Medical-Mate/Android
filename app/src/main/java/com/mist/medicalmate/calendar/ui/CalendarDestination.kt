@@ -44,7 +44,7 @@ internal fun NavGraphBuilder.calendarDestination(
 
 internal fun NavGraphBuilder.calendarDayDestination(
     onCardOpen: (String) -> Unit,
-    onRecordAdd: (cardId: String, cardTitle: String) -> Unit,
+    onRecordAdd: (cardId: String, cardTitle: String, visitedOn: LocalDate) -> Unit,
     onRecordOpen: (String) -> Unit,
     onScheduleConfirm: (String?) -> Unit,
     onExit: () -> Unit,
@@ -55,7 +55,7 @@ internal fun NavGraphBuilder.calendarDayDestination(
             date = date,
             onCardOpen = onCardOpen,
             onScheduleConfirm = onScheduleConfirm,
-            onRecordAdd = onRecordAdd,
+            onRecordAdd = { cardId, cardTitle -> onRecordAdd(cardId, cardTitle, date) },
             onRecordOpen = onRecordOpen,
             onExit = onExit,
         )
