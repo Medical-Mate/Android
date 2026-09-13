@@ -104,7 +104,7 @@ private fun BriefCardRoute(
             onEditDoneClick = viewModel::onEditDoneClick,
             onCancelClick = viewModel::onCancelClick,
             edit = viewModel.editActions,
-            onSaveClick = onSaved,
+            onSaveClick = { viewModel.onSaveClick(onSaved) },
             onDeleteClick = viewModel::onDeleteClick,
             onDeleteDismiss = viewModel::onDeleteDismiss,
             onDeleteConfirm = { viewModel.onDeleteConfirm(onDeleted) },

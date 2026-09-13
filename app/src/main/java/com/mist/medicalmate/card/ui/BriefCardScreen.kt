@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -170,7 +171,7 @@ private fun ColumnScope.CardContent(state: BriefCardUiState.Content, callbacks: 
             onChangeClick = callbacks.onHospitalChangeClick,
         )
     }
-    Footer(editing = state.editing, callbacks = callbacks)
+    Footer(editing = state.editing, saveFailed = state.saveFailed, callbacks = callbacks)
 
     if (state.deleteRequested) {
         MedicalMateDialog(
@@ -221,8 +222,15 @@ private fun HospitalSection(hospital: BriefCardHospital?, onChangeClick: () -> U
     MedicalMateHospitalCard(name = hospital.name, address = hospital.address)
 }
 
+/**
+ * 하단.
+ *
+ * [saveFailed]면 버튼 위에 왜 안 됐는지를 적는다. 아무 말도 하지 않으면 버튼이 안 먹는
+ * 것으로 읽고 계속 누르게 된다 — 기기에서 실제로 그랬다(#196·#198). 버튼은 살려 둔다.
+ * 다시 눌러야 하는 자리다.
+ */
 @Composable
-private fun Footer(editing: Boolean, callbacks: BriefCardCallbacks) {
+private fun Footer(editing: Boolean, saveFailed: Boolean, callbacks: BriefCardCallbacks) {
     Column(
         modifier =
         Modifier
@@ -246,9 +254,15 @@ private fun Footer(editing: Boolean, callbacks: BriefCardCallbacks) {
                 modifier = Modifier.fillMaxWidth(),
             )
         } else {
-            // **진료실에서 보여주기가 없다.** 시안 와이어프레임에서 진료실 화면(1f) 프레임이
-            // 사라지면서 이 버튼도 함께 빠졌다(#167). 화면과 전달 호출은 그대로 두었고 들어갈
-            // 길만 없다. 진입점이 정해지면 다시 붙인다.
+            if (saveFailed) {
+                Text(
+                    text = stringResource(R.string.brief_card_save_failed),
+                    style = MedicalMateTheme.typography.bodyS,
+                    color = MedicalMateTheme.colors.fgDanger,
+                )
+            }
+            // **진료실에서 보여주기가 없다.** IA가 진료실 전달을 1e-1로 대체하면서 그 버튼도
+            // 사라졌다(#167 · #194). 저장하기가 카드를 확정하고 홈으로 나간다.
             MedicalMateButton(
                 onClick = callbacks.onSaveClick,
                 label = stringResource(R.string.brief_card_save),

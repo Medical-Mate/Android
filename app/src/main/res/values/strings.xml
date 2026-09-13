@@ -236,6 +236,8 @@
     <string name="brief_card_delete_title">이 브리핑 카드를 삭제할까요?</string>
     <string name="brief_card_delete_body">연결된 진료 기록은 남고 이 카드는 사라져요.</string>
     <string name="brief_card_delete_confirm">삭제</string>
+    <!-- 확정에 실패했을 때 저장하기 위에 붙는 줄. 다시 누를 수 있는 자리라 "다시 눌러주세요"다. -->
+    <string name="brief_card_save_failed">저장하지 못했어요. 다시 눌러주세요.</string>
 
     <!-- Figma 1l·1c·1d·1i 증상 정리. -->
     <!-- 상단 바 제목. 시안 1c-2·1c-4·1c-5·1i가 모두 "기록"이다. 하단 탭의 기록과 같은
