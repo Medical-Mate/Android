@@ -111,6 +111,7 @@ private fun ColumnScope.CardGroups(state: BriefCardListUiState.Content, callback
     GroupList(
         groups = state.groups,
         countRes = R.string.brief_card_list_count,
+        selectedRes = R.string.brief_card_list_selected,
         onItemClick = callbacks.onCardClick,
         selectedIds = state.selectedIds,
         onSelectChange = callbacks.onSelectChange,

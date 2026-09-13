@@ -50,11 +50,12 @@
     <!-- Figma 1j-4(1122:4830) 브리핑 카드 전체. 홈의 "전체 보기"에서 들어온다. -->
     <string name="brief_card_list_title">브리핑 카드</string>
     <string name="brief_card_list_count">%1$d장</string>
+    <string name="brief_card_list_selected">%1$d장 선택됨</string>
     <string name="brief_card_list_edit">편집</string>
     <string name="brief_card_list_edit_cancel">취소</string>
     <!-- 기록은 "건", 카드는 "장"으로 센다. -->
     <!-- 묶음 머리의 오른쪽. 편집 중에는 총 개수 대신 그 달에서 고른 수를 적는다. -->
-    <string name="record_group_selected">%1$d장 선택됨</string>
+    <string name="record_selected">%1$d건 선택됨</string>
     <string name="brief_card_list_delete">삭제</string>
     <string name="brief_card_list_delete_count">%1$d장 삭제</string>
     <string name="brief_card_list_delete_title">브리핑 카드 %1$d장을 삭제할까요?</string>
