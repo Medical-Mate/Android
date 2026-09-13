@@ -186,6 +186,23 @@ class CardMappingTest {
     }
 
     @Test
+    fun `상태가 없으면 값이 있는지로 가늠한다`() {
+        // 기기 로그에서 "medications":{"items":[]}처럼 status 없이 오는 것을 봤다. 상태만
+        // 보고 자르면 값이 있는데도 줄이 사라진다.
+        val card =
+            response(
+                patient =
+                PatientResponse(
+                    medications = CardListFieldResponse(items = listOf("이부프로펜")),
+                    allergies = CardTextFieldResponse(text = "페니실린"),
+                ),
+            ).toBriefCard()
+
+        assertEquals(listOf("이부프로펜"), card.health.map { it.value })
+        assertEquals(listOf("페니실린"), card.allergies)
+    }
+
+    @Test
     fun `건강 정보가 없는 응답도 카드가 된다`() {
         // 옛 카드에는 이 값이 없다. 그 줄만 빠지고 본문은 그대로 그린다.
         val card = response().toBriefCard()
