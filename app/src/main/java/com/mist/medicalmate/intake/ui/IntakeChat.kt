@@ -75,6 +75,9 @@ internal fun ChatStep(state: IntakeUiState, modifier: Modifier = Modifier) {
         item(key = PROGRESS_KEY) { IntakeProgress(state.step) }
         state.bodyPart?.let { part -> item(key = CONTEXT_KEY) { BodyPartContext(part) } }
         items(state.messages, key = { it.id }) { message -> MessageRow(message) }
+        // 말하는 중인 글은 대화에 미리 세운다. 음성일 때는 입력칸이 패널로 바뀌어 있어서
+        // 적힌 글을 볼 자리가 거기밖에 없다. 보내면 진짜 마디가 그 자리를 대신한다.
+        state.speaking?.let { text -> item(key = SPEAKING_KEY) { MessageRow(text) } }
         if (state.awaitingReply) {
             item(key = TYPING_KEY) { TypingRow() }
         }
@@ -94,6 +97,14 @@ private fun BodyPartContext(bodyPart: String) {
             color = MedicalMateTheme.colors.fgSubtle,
         )
         MedicalMateChip(label = bodyPart, selected = true, onClick = {})
+    }
+}
+
+/** 말하는 중인 글. 아직 보내지 않아 id가 없다. */
+@Composable
+private fun MessageRow(text: String) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        MedicalMateBubble(text = text, sender = MedicalMateBubbleSender.PATIENT)
     }
 }
 
@@ -212,6 +223,8 @@ private const val PROGRESS_KEY = "progress"
 private const val CONTEXT_KEY = "context"
 
 private const val TYPING_KEY = "typing"
+
+private const val SPEAKING_KEY = "speaking"
 
 private const val TYPING_DOTS = 3
 

@@ -87,6 +87,14 @@ data class IntakeUiState(
     /** 보낼 것이 있는지. 빈 글이나 공백만 보내면 문답이 헛돈다. */
     val canSend: Boolean get() = draft.isNotBlank() && !awaitingReply
 
+    /**
+     * 말하는 중인 글.
+     *
+     * 음성일 때만 있다. 그때는 입력칸이 패널로 바뀌어 있어서 받아쓴 글을 볼 자리가 대화밖에
+     * 없다. 보내면 진짜 마디가 되고 이 자리는 비워진다.
+     */
+    val speaking: String? get() = draft.takeIf { inputMode == IntakeInputMode.VOICE && it.isNotBlank() }
+
     val canAddQuestion: Boolean get() = questionDraft.isNotBlank()
 
     /**

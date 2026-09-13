@@ -101,11 +101,12 @@ private fun IntakeRoute(
     }
 
     // 이 기기에서 음성을 쓸 수 있는지. 쓸 수 없으면 마이크를 그리지 않는다.
-    LaunchedEffect(Unit) { viewModel.checkVoice() }
+    LaunchedEffect(Unit) { viewModel.voice.check() }
 
     // 권한은 마이크를 누를 때 묻는다. 화면을 열자마자 묻지 않는다.
-    val askMic = rememberMicPermission(onGranted = viewModel::onMicClick, onDenied = viewModel::onMicDenied)
-    val askVoiceMode = rememberMicPermission(onGranted = viewModel::onVoiceMode, onDenied = viewModel::onMicDenied)
+    val askMic = rememberMicPermission(onGranted = viewModel.voice::onMicClick, onDenied = viewModel.voice::onDenied)
+    val askVoiceMode =
+        rememberMicPermission(onGranted = viewModel.voice::onVoiceMode, onDenied = viewModel.voice::onDenied)
 
     IntakeScreen(
         state = state,

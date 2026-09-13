@@ -6,7 +6,6 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
 import com.mist.medicalmate.core.model.IntakeStep
 import com.mist.medicalmate.core.network.ApiResult
-import com.mist.medicalmate.core.speech.Dictation
 import com.mist.medicalmate.core.speech.SpeechToText
 import com.mist.medicalmate.intake.data.IntakeSessionMessage
 import com.mist.medicalmate.intake.data.SessionRepository
@@ -32,10 +31,8 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class IntakeViewModel
 @Inject
-internal constructor(
-    private val repository: SessionRepository,
-    private val speech: SpeechToText,
-) : ViewModel() {
+internal constructor(private val repository: SessionRepository, speech: SpeechToText) :
+    ViewModel() {
     private val mutableUiState = MutableStateFlow(IntakeUiState())
     val uiState: StateFlow<IntakeUiState> = mutableUiState.asStateFlow()
 
@@ -83,7 +80,7 @@ internal constructor(
         }
         viewModelScope.launch {
             when (val result = repository.send(sessionId, text, byVoice)) {
-                is ApiResult.Success ->
+                is ApiResult.Success -> {
                     mutableUiState.update { current ->
                         current.copy(
                             messages = result.value.messages.map { it.toMessage() },
@@ -91,6 +88,8 @@ internal constructor(
                             chatFinished = result.value.ended,
                         )
                     }
+                    voice.onReplied()
+                }
 
                 is ApiResult.Rejected, is ApiResult.NetworkUnavailable ->
                     // 보낸 말은 화면에 남긴다. 지우면 다시 적어야 한다.
@@ -101,52 +100,19 @@ internal constructor(
 
     /** 글과 음성을 바꾼다. 바꿀 때 음성 상태를 대기로 되돌린다. */
     fun onInputModeChange(mode: IntakeInputMode) {
-        if (mode == IntakeInputMode.TEXT) dictation.stop()
+        if (mode == IntakeInputMode.TEXT) voice.stop()
         mutableUiState.update { it.copy(inputMode = mode, voice = MedicalMateVoiceState.IDLE) }
     }
 
-    /**
-     * 받아쓰기.
-     *
-     * 받아쓴 글은 입력칸에 들어간다. 보내는 것은 환자가 한다 — 말이 끝나자마자 나가면 잘못
-     * 알아들은 것을 고칠 자리가 없다.
-     */
-    private val dictation =
-        Dictation(
+    /** 음성 조작. 왜 나눴는지는 [IntakeVoiceActions]에 있다. */
+    val voice =
+        IntakeVoiceActions(
             speech = speech,
             scope = viewModelScope,
-            onVoice = { voice -> mutableUiState.update { it.copy(voice = voice ?: MedicalMateVoiceState.IDLE) } },
-            onDictated = { draft -> mutableUiState.update { it.copy(draft = draft) } },
+            state = { mutableUiState.value },
+            update = { transform -> mutableUiState.update(transform) },
+            send = ::onSend,
         )
-
-    /**
-     * 입력칸의 마이크. 권한이 확인된 뒤에 불린다.
-     *
-     * 음성으로 바꾸면서 **바로 듣기 시작한다.** 누른 사람은 패널이 뜨자마자 말한다. 한 번 더
-     * 눌러야 듣기 시작하면 그 사이에 한 말이 사라진다.
-     */
-    fun onVoiceMode() {
-        mutableUiState.update { it.copy(inputMode = IntakeInputMode.VOICE, voice = MedicalMateVoiceState.IDLE) }
-        dictation.start(mutableUiState.value.draft)
-    }
-
-    /** 패널 안의 마이크. 듣는 중이면 멈추고 아니면 다시 듣는다. */
-    fun onMicClick() {
-        dictation.toggle(mutableUiState.value.draft)
-    }
-
-    /** 마이크 권한을 거부했다. */
-    fun onMicDenied() {
-        dictation.onDenied()
-    }
-
-    /** 이 기기에서 음성을 쓸 수 있는지. 쓸 수 없으면 마이크를 그리지 않는다. */
-    fun checkVoice() {
-        viewModelScope.launch {
-            val usable = speech.available()
-            mutableUiState.update { it.copy(voiceAvailable = usable) }
-        }
-    }
 
     fun onSeverityChange(severity: MedicalMateSeverity) {
         mutableUiState.update { it.copy(severity = severity) }
