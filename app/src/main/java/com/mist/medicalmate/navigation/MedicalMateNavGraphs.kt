@@ -74,7 +74,7 @@ internal fun NavGraphBuilder.entryDestinations(
     profileCompleteDestination(
         onFinished = {
             onOnboardingCompleted()
-            navController.resetTo(HomeDestination(justRegistered = true))
+            navController.resetTo(HomeDestination)
         },
     )
 }

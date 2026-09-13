@@ -384,8 +384,6 @@
         <item>먼지·진드기</item>
     </string-array>
 
-    <string name="home_registered_toast">내 정보가 등록되었어요</string>
-
     <!-- Figma 1b-4(676:2519) 신상정보 완료. -->
     <string name="profile_complete_title">내 정보가 등록되었어요</string>
     <string name="profile_complete_description">복용약 · 기저질환 · 알러지를 카드에 담았어요</string>

@@ -71,7 +71,7 @@ internal fun MedicalMateNavHost(
         )
         intakeDestinations(navController)
         briefCardDestination(
-            onSaved = { navController.resetTo(HomeDestination()) },
+            onSaved = { navController.resetTo(HomeDestination) },
             // 카드의 `변경`. 어느 카드로 돌아갈지 들고 간다.
             onHospitalChange = { cardId ->
                 navController.navigate(
@@ -130,7 +130,7 @@ private fun SessionUiState.destination(onboardingCompleted: Boolean): Any = when
         if (onboardingRequired && !onboardingCompleted) {
             OnboardingIntroDestination
         } else {
-            HomeDestination()
+            HomeDestination
         }
 }
 
@@ -179,7 +179,7 @@ internal fun NavHostController.selectTab(tab: MedicalMateTab) {
     val destination =
         when (tab) {
             MedicalMateTab.RECORD -> RecordDestination
-            MedicalMateTab.HOME -> HomeDestination()
+            MedicalMateTab.HOME -> HomeDestination
             MedicalMateTab.CALENDAR -> CalendarDestination
         }
     navigate(destination) {
