@@ -145,8 +145,31 @@ internal data class HandoffResponse(
     val confirmedAt: String? = null,
 )
 
+/**
+ * 카드 머리의 환자.
+ *
+ * 건강 정보가 여기 실린다. 전에는 없어서 화면이 `GET /api/me/health-profile`에서 읽어
+ * 얹었고, 카드를 만든 시점이 아니라 **보는 시점의 프로필**이 찍히는 것이 한계였다. 서버가
+ * 카드에 박아 주면서 그 우회를 걷어냈다(Backend#84).
+ *
+ * 알러지만 한 줄이고 나머지 둘은 목록이다. 프로필 응답과 같은 모양이라 나누는 규칙도 같다.
+ */
 @Serializable
-internal data class PatientResponse(val name: String? = null, val age: Int? = null, val sex: String? = null)
+internal data class PatientResponse(
+    val name: String? = null,
+    val age: Int? = null,
+    val sex: String? = null,
+    val allergies: CardTextFieldResponse? = null,
+    val medications: CardListFieldResponse? = null,
+    val conditions: CardListFieldResponse? = null,
+)
+
+/** @param status `KNOWN` 일 때만 값이 있다. `NONE`은 없다고 답한 것이고 `UNKNOWN`은 모른다는 것이다. */
+@Serializable
+internal data class CardTextFieldResponse(val status: String? = null, val text: String? = null)
+
+@Serializable
+internal data class CardListFieldResponse(val status: String? = null, val items: List<String> = emptyList())
 
 /**
  * 보낸 필드만 바뀐다. 건드리지 않은 것은 `null`로 두어 직렬화에서 빠지게 한다.

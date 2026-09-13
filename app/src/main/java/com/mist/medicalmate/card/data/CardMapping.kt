@@ -24,8 +24,9 @@ internal fun CardResponse.toBriefCard(): BriefCard = BriefCard(
     // 강도는 KV 줄이 아니라 눈금이다. 시안이 칩·낱말·NRS 등가를 한 줄로 그리고, 그 모양은
     // 줄 하나로 낼 수 없다. 그래서 축에서 빼 따로 든다.
     severity = axes[AXIS_SEVERITY]?.toSeverity(),
-    // 카드 응답에 건강 정보가 없다. 화면이 프로필에서 읽어 얹는다(#167).
-    allergies = emptyList(),
+    // 건강 정보는 `CardHealth.kt`가 옮긴다. 이 파일이 detekt의 함수 수 한도에 닿았다.
+    health = patient.toHealthRows(),
+    allergies = patient?.allergies.toAllergies(),
     questions = questions,
     // `CardResponse`에 병원이 없다. 목록 응답에만 `clinicName`이 있다.
     hospital = null,
