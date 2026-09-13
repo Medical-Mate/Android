@@ -49,13 +49,17 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceInput
  * 남는다. 키보드 높이를 함께 보는 이유는, 마디가 늘지 않아도 키보드가 올라오면 보이는 높이가
  * 줄어 마지막 마디가 가리기 때문이다. 인셋 자체는 `MainActivity`가 `safeDrawing`으로 합쳐
  * 두어 입력창은 제 자리에 서 있고, 가리는 것은 본문이다.
+ *
+ * **말로 할 때도 같다**(#190). 말하는 중인 글은 마디 수를 늘리지 않고 자라기만 하고, 음성
+ * 패널은 키보드보다 높아서 입력칸일 때보다 더 가린다. 그 둘을 함께 봐야 말하는 글이 패널 뒤로
+ * 들어가지 않는다.
  */
 @Composable
 internal fun ChatStep(state: IntakeUiState, modifier: Modifier = Modifier) {
     val listState = rememberLazyListState()
     val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
 
-    LaunchedEffect(state.messages.size, state.awaitingReply, imeBottom) {
+    LaunchedEffect(state.messages.size, state.awaitingReply, state.speaking, state.inputMode, imeBottom) {
         val last = listState.layoutInfo.totalItemsCount - 1
         if (last >= 0) listState.animateScrollToItem(last)
     }
