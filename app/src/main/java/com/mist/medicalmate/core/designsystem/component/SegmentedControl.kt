@@ -4,7 +4,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -49,10 +48,7 @@ fun MedicalMateSegmentedControl(
     Surface(
         shape = MedicalMateRadius.buttonM,
         color = MedicalMateTheme.colors.bgSubtle,
-        modifier =
-        modifier
-            .fillMaxWidth()
-            .heightIn(min = MedicalMateSize.controlMd),
+        modifier = modifier.fillMaxWidth(),
     ) {
         Row(
             modifier = Modifier.padding(InsetPadding),
@@ -83,7 +79,11 @@ private fun Segment(label: String, selected: Boolean, onClick: () -> Unit, modif
         border = if (selected) BorderStroke(SelectedBorderWidth, colors.borderStrong) else null,
         modifier =
         modifier
-            .fillMaxHeight()
+            // **높이를 칸이 든다.** 트랙에 최소 높이를 걸고 칸을 `fillMaxHeight()`로 두면
+            // `Surface`가 내용에 무한 높이를 넘겨서 그 수식어가 아무 일도 하지 않는다.
+            // 트랙만 커지고 칸은 글자 높이로 남아 위쪽에 붙는다. 칸이 높이를 들면 트랙은
+            // 칸 + 안쪽 여백으로 따라온다.
+            .heightIn(min = MedicalMateSize.controlSm)
             .selectable(selected = selected, onClick = onClick, role = Role.Tab),
     ) {
         Box(contentAlignment = Alignment.Center) {
