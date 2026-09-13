@@ -80,8 +80,14 @@ internal fun MedicalMateNavHost(
                     HospitalPickDestination(purpose = HospitalPickPurpose.BEFORE_VISIT, cardId = cardId),
                 )
             },
-            // 지운 카드의 화면에 남을 수 없다. 저장과 같은 자리로 나간다.
-            onDeleted = { navController.resetTo(HomeDestination()) },
+            // 지운 카드의 화면에 남을 수 없다. 시안이 카드 목록으로 보낸다(1e-1-DC). 홈까지만
+            // 걷어내고 목록을 얹어서, 뒤로 가면 홈이 나오고 목록이 두 장 쌓이지 않게 한다.
+            onDeleted = {
+                navController.navigate(BriefCardListDestination) {
+                    popUpTo<HomeDestination> { inclusive = false }
+                    launchSingleTop = true
+                }
+            },
             onHandoff = { cardId -> navController.navigate(HandoffDestination(cardId)) },
             onExit = { navController.popBackStack() },
         )
