@@ -2,10 +2,12 @@ package com.mist.medicalmate.core.designsystem.component
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
@@ -13,11 +15,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
 import com.mist.medicalmate.core.designsystem.MedicalMateRadius
+import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
@@ -39,8 +44,11 @@ enum class MedicalMateEmptyStateType {
  * 남아 있다는 사실을 가장 먼저 알려야 한다(문서의 컴포넌트 규격). 연결이 끊겼다는 말만 보이면
  * 환자는 방금 적은 증상이 날아갔다고 생각한다.
  *
- * 행동 버튼은 Tonal이다. 브랜드 채움은 실제 주 행동에만 쓴다(문서의 컴포넌트 규격).
- * **없을 수도 있다** — 화면에 이미 같은 행동을 부르는 버튼이 있으면 마스터가 그 자리를
+ * 행동은 채움 없는 글자다. 높이 48 · 반경 14 · `Label/L`에 `fg/link`다. **마스터는 Tonal
+ * 알약으로 그려져 있지만 시안의 인스턴스가 전부 채움을 지웠다**(`1j-2`·`1r-2` 등). 화면에
+ * 실제로 그려진 쪽을 따랐고, 어느 쪽이 정본인지는 디자인 트랙 확인 대기다.
+ *
+ * **없을 수도 있다** — 화면에 이미 같은 행동을 부르는 버튼이 있으면 시안이 그 자리를
  * 꺼 둔다(홈의 `1n-2`가 그렇다).
  *
  * 아이콘이 옅은 브랜드 원 안에 들어간다. 맨 아이콘만 두면 빈 화면 가운데에 획만 남아
@@ -107,13 +115,32 @@ fun MedicalMateEmptyState(
             )
         }
         if (actionLabel != null && onActionClick != null) {
-            MedicalMateButton(
-                onClick = onActionClick,
-                label = actionLabel,
-                type = MedicalMateButtonType.TONAL,
-                size = MedicalMateButtonSize.M,
-            )
+            EmptyStateAction(label = actionLabel, onClick = onActionClick)
         }
+    }
+}
+
+/**
+ * 다음 행동.
+ *
+ * 채움 없는 글자다. 마스터는 Tonal 알약이지만 시안의 인스턴스가 전부 채움을 지웠다.
+ * 크기와 반경은 마스터 그대로라 누를 수 있는 자리는 48로 남는다.
+ */
+@Composable
+private fun EmptyStateAction(label: String, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .height(MedicalMateSize.controlMd)
+            .clip(MedicalMateRadius.buttonM)
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = MedicalMateSpace.s20),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            style = MedicalMateTheme.typography.labelL,
+            color = MedicalMateTheme.colors.fgLink,
+        )
     }
 }
 
