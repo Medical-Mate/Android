@@ -3,6 +3,8 @@ package com.mist.medicalmate.calendar.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mist.medicalmate.calendar.data.AppointmentRepository
+import com.mist.medicalmate.calendar.data.AppointmentTodo
+import com.mist.medicalmate.calendar.data.NewAppointment
 import com.mist.medicalmate.card.data.CardListItem
 import com.mist.medicalmate.card.data.CardRepository
 import com.mist.medicalmate.core.network.ApiResult
@@ -139,11 +141,18 @@ internal constructor(
         viewModelScope.launch {
             val result =
                 repository.create(
-                    clinicName = state.hospital,
-                    department = null,
-                    purpose = null,
-                    at = date.atTime(time),
-                    cardId = state.cards.firstOrNull { it.picked }?.id?.toLongOrNull(),
+                    NewAppointment(
+                        clinicName = state.hospital,
+                        at = date.atTime(time),
+                        cardId = state.cards.firstOrNull { it.picked }?.id?.toLongOrNull(),
+                        // 적어 둔 할 일도 함께 보낸다. 비운 줄은 빼고 보낸다 — 적지 않은 것과
+                        // 빈 줄은 다르다.
+                        todos =
+                        state.todos.mapNotNull { todo ->
+                            todo.label.takeIf { it.isNotBlank() }
+                                ?.let { AppointmentTodo(text = it, done = todo.done) }
+                        },
+                    ),
                 )
             saving = false
             if (result is ApiResult.Success) onSaved()

@@ -1,5 +1,7 @@
 package com.mist.medicalmate.calendar.data
 
+import com.mist.medicalmate.calendar.data.AppointmentEdit
+import com.mist.medicalmate.calendar.data.NewAppointment
 import com.mist.medicalmate.core.network.ApiResult
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
@@ -26,7 +28,7 @@ class AppointmentRepositoryTest {
         // 나가지 않게 고정한다.
         val api = RecordingApi()
 
-        repository(api).create(null, null, null, LocalDateTime.of(2026, 9, 30, 10, 0), null)
+        repository(api).create(NewAppointment(clinicName = null, at = LocalDateTime.of(2026, 9, 30, 10, 0)))
 
         assertEquals("2026-09-30T10:00:00+09:00", api.created?.scheduledAt)
     }
@@ -36,7 +38,7 @@ class AppointmentRepositoryTest {
         // 서버가 날짜 경계를 KST로 자른다. 기기 시간대로 보내면 경계 근처 일정이 다른 날로 간다.
         val api = RecordingApi()
 
-        repository(api).create(null, null, null, LocalDateTime.of(2026, 9, 30, 0, 30), null)
+        repository(api).create(NewAppointment(clinicName = null, at = LocalDateTime.of(2026, 9, 30, 0, 30)))
 
         assertTrue(api.created!!.scheduledAt.endsWith("+09:00"))
     }
@@ -46,7 +48,7 @@ class AppointmentRepositoryTest {
         // 서버가 둘을 함께 받으면 어느 쪽인지 모른다.
         val api = RecordingApi()
 
-        repository(api).update(id = 1, cardId = 9, clearCard = true)
+        repository(api).update(id = 1, edit = AppointmentEdit(cardId = 9, clearCard = true))
 
         assertEquals(true, api.updated?.clearCard)
         assertNull(api.updated?.cardId)
@@ -56,7 +58,7 @@ class AppointmentRepositoryTest {
     fun `카드를 안 바꾸면 플래그도 안 보낸다`() = runTest {
         val api = RecordingApi()
 
-        repository(api).update(id = 1, cardId = 9)
+        repository(api).update(id = 1, edit = AppointmentEdit(cardId = 9))
 
         assertEquals(9L, api.updated?.cardId)
         assertNull(api.updated?.clearCard)

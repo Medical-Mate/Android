@@ -6,11 +6,14 @@ import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.profile.data.HealthField
 import com.mist.medicalmate.profile.data.HealthProfile
 import com.mist.medicalmate.profile.data.HealthProfileRepository
+import com.mist.medicalmate.profile.data.LocalSettingsStore
+import com.mist.medicalmate.profile.data.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -28,13 +31,24 @@ import kotlinx.coroutines.launch
  * 로그인 수단은 읽지 않는다. 서버의 사용자 식별자가 `kakaoId` 단독이라 카카오 하나뿐이고,
  * 그 줄은 문자열 리소스에 고정으로 있다.
  *
- * 설정 토글도 저장되지 않는다. 화면 안에서만 바뀌고, 기기에 남기려면 `DataStore`가
- * 계정에 남기려면 API가 필요하다.
+ * **설정 토글 셋 중 하나만 계정에 붙는다**(#187). 진료 하루 전 알림은 받을지 말지가 기기
+ * 취향이 아니라 그 사람의 선택이라 `GET`·`PATCH /api/me/settings`에 있다. 기기를 바꾸거나
+ * 앱을 다시 깔면 "안 받겠다"고 한 사람에게 알림이 다시 가기 때문이다. 나머지 둘은 이 기기에서
+ * 어떻게 보일지의 문제라 `DataStore`에 둔다.
+ *
+ * **알림을 예약하는 것은 여전히 앱이다.** 그 값은 예약할지 말지를 정한다.
+ *
+ * 토글을 누르면 화면을 먼저 바꾸고 저장을 보낸다. 왕복을 기다리면 누른 뒤에 잠깐 안 바뀐
+ * 것처럼 보인다. 실패하면 되돌린다.
  */
 @HiltViewModel
 class MyProfileViewModel
 @Inject
-internal constructor(private val repository: HealthProfileRepository) : ViewModel() {
+internal constructor(
+    private val repository: HealthProfileRepository,
+    private val settings: SettingsRepository,
+    private val localSettings: LocalSettingsStore,
+) : ViewModel() {
     private val mutableUiState = MutableStateFlow(MyProfileUiState())
     val uiState: StateFlow<MyProfileUiState> = mutableUiState.asStateFlow()
 
@@ -46,6 +60,7 @@ internal constructor(private val repository: HealthProfileRepository) : ViewMode
      */
     fun load() {
         viewModelScope.launch {
+            loadSettings()
             val profile = (repository.profile() as? ApiResult.Success)?.value ?: return@launch
             mutableUiState.update {
                 it.copy(
@@ -61,8 +76,50 @@ internal constructor(private val repository: HealthProfileRepository) : ViewMode
         }
     }
 
+    /**
+     * 토글 셋을 각자의 자리에서 읽는다.
+     *
+     * 알림은 계정, 나머지 둘은 이 기기다. 알림을 못 읽으면 그 토글만 지금 값으로 둔다 —
+     * 화면 전체를 막을 값이 아니다.
+     */
+    private suspend fun loadSettings() {
+        val reminder = (settings.visitReminder() as? ApiResult.Success)?.value
+        val cardAutoSave = localSettings.cardAutoSave.first()
+        val brightness = localSettings.handoffBrightness.first()
+        mutableUiState.update { state ->
+            state.copy(
+                settings =
+                state.settings +
+                    listOfNotNull(
+                        reminder?.let { AppSetting.VISIT_REMINDER to it },
+                        AppSetting.CARD_AUTO_SAVE to cardAutoSave,
+                        AppSetting.HANDOFF_BRIGHTNESS to brightness,
+                    ),
+            )
+        }
+    }
+
+    /**
+     * 토글을 눌렀다.
+     *
+     * 화면을 먼저 바꾸고 저장을 보낸다. 알림은 계정이라 실패하면 되돌린다 — 안 받겠다고 한
+     * 것이 서버에 안 남았는데 화면만 꺼져 있으면 알림이 계속 온다. 나머지 둘은 이 기기에만
+     * 쓰는 값이라 되돌릴 실패가 없다.
+     */
     fun onSettingChange(setting: AppSetting, enabled: Boolean) {
         mutableUiState.update { it.copy(settings = it.settings + (setting to enabled)) }
+        viewModelScope.launch {
+            when (setting) {
+                AppSetting.VISIT_REMINDER -> saveReminder(enabled)
+                AppSetting.CARD_AUTO_SAVE -> localSettings.setCardAutoSave(enabled)
+                AppSetting.HANDOFF_BRIGHTNESS -> localSettings.setHandoffBrightness(enabled)
+            }
+        }
+    }
+
+    private suspend fun saveReminder(enabled: Boolean) {
+        if (settings.setVisitReminder(enabled) is ApiResult.Success) return
+        mutableUiState.update { it.copy(settings = it.settings + (AppSetting.VISIT_REMINDER to !enabled)) }
     }
 }
 

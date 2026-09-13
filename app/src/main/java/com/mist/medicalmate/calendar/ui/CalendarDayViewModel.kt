@@ -3,8 +3,10 @@ package com.mist.medicalmate.calendar.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mist.medicalmate.calendar.data.Appointment
+import com.mist.medicalmate.calendar.data.AppointmentEdit
 import com.mist.medicalmate.calendar.data.AppointmentRepository
 import com.mist.medicalmate.calendar.data.AppointmentStatus
+import com.mist.medicalmate.calendar.data.AppointmentTodo
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.visit.data.VisitListItem
 import com.mist.medicalmate.visit.data.VisitRepository
@@ -65,8 +67,8 @@ internal constructor(
                     card = appointment?.toDayCard(),
                     record = record?.toDayRecord(),
                     // 진료가 끝난 날에는 진료 전 할 일을 두지 않는다. 시안 1r-2-A도 그렇다.
-                    todos = if (record == null) dayState(date).todos else emptyList(),
-                    nextEvent = record?.let { nextEvent(date) },
+                    todos = if (record == null) appointment?.todos.toDayTodos() else emptyList(),
+                    nextEvent = record?.let { nextEvent(date, it) },
                 )
         }
     }
@@ -79,45 +81,43 @@ internal constructor(
      * 쪽이 오늘 갈 곳인지 흐려진다.
      *
      * 그 날 자신의 일정은 뺀다. 위에 이미 "이 날 일정"으로 서 있다.
+     *
+     * **잡아 둔 일정이 없으면 뽑아 둔 재방문을 세운다**(#186). 진료 후 기록에서 AI가 꺼낸
+     * 날짜이고 아직 일정이 아니다. 시각이 없는 그 상태가 시안 1r-2-A이고, 거기서 확정하면
+     * 일정 추가(1r-4-B)가 열려 일정이 만들어진다.
+     *
+     * 잡아 둔 것이 있으면 그것이 이긴다. 확정한 것이 뽑아 둔 것보다 정확하다.
      */
-    private suspend fun nextEvent(date: LocalDate): DayNextEvent? = (repository.upcoming() as? ApiResult.Success)
-        ?.value
-        ?.firstOrNull { it.status != AppointmentStatus.CANCELED && it.at.toLocalDate() > date }
-        ?.toNextEvent(LocalDate.now(clock))
-
-    /** 할 일 체크. 편집 중이면 사본을 고친다. */
-    fun onTodoToggle(id: String, done: Boolean) {
-        mutableUiState.update { state ->
-            state?.copy(todos = state.todos.map { if (it.id == id) it.copy(done = done) else it })
-        }
+    private suspend fun nextEvent(date: LocalDate, record: VisitListItem): DayNextEvent? {
+        val today = LocalDate.now(clock)
+        val booked = (repository.upcoming() as? ApiResult.Success)
+            ?.value
+            ?.firstOrNull { it.status != AppointmentStatus.CANCELED && it.at.toLocalDate() > date }
+        if (booked != null) return booked.toNextEvent(today)
+        return record.followUpDate?.takeIf { it > date }?.toRevisit(record.clinic)
     }
 
-    fun onEditStart() {
-        mutableUiState.update { it?.copy(todoDraft = it.todos) }
-    }
-
-    /** 편집을 버린다. 사본을 지우면 본값이 그대로 남는다. */
-    fun onEditCancel() {
-        mutableUiState.update { it?.copy(todoDraft = null, deleteRequested = false) }
-    }
-
-    /** 편집을 마친다. 사본이 본값이 된다. */
-    fun onEditDone() {
-        mutableUiState.update { state ->
-            state?.copy(todos = state.todoDraft ?: state.todos, todoDraft = null)
-        }
-    }
+    /** 할 일 조작. 다섯 가지라 여기 얹으면 한 클래스가 너무 많은 일을 한다. */
+    val todo =
+        CalendarDayTodoActions(
+            editing = { mutableUiState.value?.todoDraft != null },
+            update = { change -> mutableUiState.update { it?.change() } },
+            save = ::saveTodos,
+        )
 
     /**
-     * 할 일 줄의 ×.
+     * 할 일을 일정에 남긴다.
      *
-     * 확인을 붙이지 않는다. 개체가 아니라 안의 항목이고, 편집을 벗어나기 전이면 취소가
-     * 실행 취소를 대신한다.
+     * **통째로 갈아끼운다.** 지운 줄이 남지 않으려면 화면에 있는 것을 전부 보내야 한다.
+     *
+     * 일정이 없으면 보낼 곳이 없다. 할 일은 일정에 매달린 값이라 그 날 일정이 없으면 화면에도
+     * 할 일이 없다.
      */
-    fun onTodoDelete(id: String) {
-        mutableUiState.update { state ->
-            state?.copy(todoDraft = state.todoDraft?.filterNot { it.id == id })
-        }
+    private fun saveTodos() {
+        val state = mutableUiState.value ?: return
+        val id = state.schedule?.id?.toLongOrNull() ?: return
+        val todos = state.todos.map { AppointmentTodo(text = it.label, done = it.done) }
+        viewModelScope.launch { repository.update(id = id, edit = AppointmentEdit(todos = todos)) }
     }
 
     fun onScheduleDeleteClick() {
@@ -184,6 +184,26 @@ private fun Appointment.toNextEvent(today: LocalDate) = DayNextEvent(
     clinic = title,
 )
 
+/**
+ * 서버의 할 일을 화면 줄로.
+ *
+ * 서버가 id를 매기지 않아 차례로 만든다. 같은 글이 두 줄 있을 수 있어 글을 key로 쓸 수 없다.
+ */
+private fun List<AppointmentTodo>?.toDayTodos(): List<DayTodo> =
+    orEmpty().mapIndexed { index, todo -> DayTodo(id = "todo-${index + 1}", label = todo.text, done = todo.done) }
+
+/**
+ * 확정 전 재방문.
+ *
+ * 시각이 없다. 칩에 D-day 대신 날짜를 적는다 — 아직 일정이 아니라서 "며칠 남았다"가 아니라
+ * "이 날쯤"이 맞는 말이다. 화면은 [DayNextEvent.at]이 없으면 "시간 정하고 확정하기"를 둔다.
+ */
+private fun LocalDate.toRevisit(clinic: String?) = DayNextEvent(
+    chip = format(REVISIT_CHIP),
+    title = clinic?.let { "$it 재방문" } ?: "재방문 예정",
+    clinic = clinic,
+)
+
 private fun Appointment.toDaySchedule(today: LocalDate) = CalendarSchedule(
     id = id.toString(),
     title = title,
@@ -191,6 +211,9 @@ private fun Appointment.toDaySchedule(today: LocalDate) = CalendarSchedule(
     detail = cardTitle.orEmpty(),
     dday = at.toLocalDate().toEpochDay() - today.toEpochDay(),
 )
+
+/** 시안 1r-2-A의 "9월 26일 (토)". */
+private val REVISIT_CHIP: DateTimeFormatter = DateTimeFormatter.ofPattern("M월 d일 (E)", Locale.KOREAN)
 
 private val DAY_TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)
 

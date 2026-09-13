@@ -15,6 +15,10 @@ internal object ProfileApiModule {
     @Provides
     @Singleton
     fun provideHealthProfileApi(retrofit: Retrofit): HealthProfileApi = retrofit.create(HealthProfileApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideSettingsApi(retrofit: Retrofit): SettingsApi = retrofit.create(SettingsApi::class.java)
 }
 
 @Module
@@ -26,4 +30,10 @@ internal abstract class ProfileRepositoryModule {
     /** 홈이 `profile`을 직접 참조하지 않도록 `core`의 인터페이스로 연결한다. */
     @Binds
     abstract fun bindCurrentUserProvider(impl: DefaultHealthProfileRepository): CurrentUserProvider
+
+    @Binds
+    abstract fun bindSettingsRepository(impl: DefaultSettingsRepository): SettingsRepository
+
+    @Binds
+    abstract fun bindLocalSettingsStore(impl: DefaultLocalSettingsStore): LocalSettingsStore
 }

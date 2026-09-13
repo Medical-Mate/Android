@@ -223,14 +223,26 @@ private fun ResultRow(hospital: Hospital, selected: Boolean, onClick: () -> Unit
         horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // 이름 한 줄이다. 서버가 심평원에서 이름과 홈페이지만 가져오고 주소를 내려보내지
-        // 않는다. 쓰지 않을 값을 내리면 앱이 무엇을 믿어야 할지 흐려진다는 것이 그쪽 판단이다.
-        Text(
-            text = hospital.name,
-            style = MedicalMateTheme.typography.bodyLStrong,
-            color = if (selected) colors.fgPrimary else colors.fgDefault,
+        // 주소는 같은 이름의 다른 지점을 구별하는 값이라 이름 아래에 붙인다. 심평원에 없는
+        // 곳은 비어 있고 그때는 줄을 그리지 않는다 — 빈 줄이 남으면 주소가 없는 병원이 아니라
+        // 주소가 빈 병원으로 읽힌다.
+        Column(
+            verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4),
             modifier = Modifier.weight(1f),
-        )
+        ) {
+            Text(
+                text = hospital.name,
+                style = MedicalMateTheme.typography.bodyLStrong,
+                color = if (selected) colors.fgPrimary else colors.fgDefault,
+            )
+            hospital.address?.takeIf { it.isNotBlank() }?.let { address ->
+                Text(
+                    text = address,
+                    style = MedicalMateTheme.typography.bodyS,
+                    color = colors.fgSubtle,
+                )
+            }
+        }
         if (selected) {
             Icon(
                 painter = painterResource(MedicalMateIcons.Check),
