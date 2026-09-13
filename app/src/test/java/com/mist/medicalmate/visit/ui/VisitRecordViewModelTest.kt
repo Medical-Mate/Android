@@ -40,12 +40,11 @@ class VisitRecordViewModelTest {
     }
 
     @Test
-    fun `불러오면 네 자리가 비어 있고 원문이 그대로 있다`() {
-        // 분류 엔진이 없다. 자리만 만들고 값은 환자가 채운다.
-        val content = loaded()
+    fun `불러오면 나눈 줄과 원문이 함께 있다`() {
+        val content = content(viewModel(sorted()).apply { load(CLINIC, NOTE, TODAY) })
 
         assertEquals(listOf("소견", "검사", "약", "재방문"), content.record.items.map { it.key })
-        assertEquals(listOf("", "", "", ""), content.record.items.map { it.value })
+        assertEquals(listOf("위염 초기", "혈액검사", "위장약", "2주 뒤"), content.record.items.map { it.value })
         assertEquals(NOTE, content.record.memo)
         assertFalse(content.editing)
     }
@@ -102,13 +101,24 @@ class VisitRecordViewModelTest {
     }
 
     @Test
-    fun `나누지 못하면 빈 네 자리를 연다`() {
-        // 환자는 방금 메모를 적었다. AI가 답하지 않았다고 손으로 적어 저장할 길까지 막을 수 없다.
-        // 편집에서 줄을 새로 만들 수 없어서 자리가 미리 있어야 한다.
-        val record = content(viewModel().apply { load(CLINIC, NOTE, TODAY) }).record
+    fun `나누지 못하면 줄이 없고 원문만 남는다`() {
+        // 전에는 빈 네 자리를 열었는데, 네 항목을 묻고는 아무 답도 못 내놓는 모양이었다.
+        // 적은 말은 사라지지 않는다 — 서버가 `patientNotes`로 돌려주고 원문은 `rawNote`로 간다.
+        val record = content(unsorted()).record
 
-        assertEquals(listOf("소견", "검사", "약", "재방문"), record.items.map { it.key })
-        assertTrue(record.items.all { it.value.isEmpty() })
+        assertTrue(record.items.isEmpty())
+        assertEquals(NOTE, record.memo)
+    }
+
+    @Test
+    fun `나누지 못해도 적은 말은 저장에 실린다`() {
+        val repository = FakeVisitRepository()
+        val viewModel = viewModel(repository).apply { load(CLINIC, NOTE, TODAY) }
+
+        viewModel.onSaveClick(cardId = "3", onSaved = {})
+
+        assertEquals(NOTE, repository.request?.rawNote)
+        assertTrue(repository.request?.items.orEmpty().isEmpty())
     }
 
     @Test
@@ -149,7 +159,8 @@ class VisitRecordViewModelTest {
 
     @Test
     fun `재방문만 브랜드색으로 세운다`() {
-        val links = loaded().record.items.filter { it.tone == VisitRecordItem.Tone.LINK }
+        val record = content(viewModel(sorted()).apply { load(CLINIC, NOTE, TODAY) }).record
+        val links = record.items.filter { it.tone == VisitRecordItem.Tone.LINK }
 
         assertEquals(listOf("재방문"), links.map { it.key })
     }
@@ -178,7 +189,7 @@ class VisitRecordViewModelTest {
         val content = content(viewModel)
         assertTrue(content.changed)
         assertEquals("위염 초기 소견", content.items[0].value)
-        assertEquals("", content.record.items[0].value)
+        assertEquals("위염 초기", content.record.items[0].value)
     }
 
     @Test
@@ -202,7 +213,7 @@ class VisitRecordViewModelTest {
 
         val content = content(viewModel)
         assertFalse(content.editing)
-        assertEquals("", content.record.items[1].value)
+        assertEquals("혈액검사", content.record.items[1].value)
     }
 
     @Test
@@ -297,7 +308,12 @@ class VisitRecordViewModelTest {
         assertEquals(CLINIC, request?.clinicName)
         assertEquals(TODAY, request?.visitedOn)
         assertEquals(
-            listOf("findings" to "위염 초기 소견", "tests" to "혈액검사 시행", "medication_instructions" to "2주분 처방"),
+            listOf(
+                "findings" to "위염 초기 소견",
+                "tests" to "혈액검사 시행",
+                "medication_instructions" to "2주분 처방",
+                "follow_up" to "2주 뒤",
+            ),
             request?.items?.map { it.axis to it.value },
         )
         assertEquals(NOTE, request?.rawNote)
@@ -373,9 +389,12 @@ class VisitRecordViewModelTest {
     @Test
     fun `재방문 줄도 축으로 간다`() {
         // follow_up 축이 생겼다(#178). 전에는 보낼 자리가 없어 버려졌다.
-        val repository = FakeVisitRepository()
+        val repository = sorted()
         val viewModel = viewModel(repository).apply { load(CLINIC, NOTE, TODAY) }
         viewModel.onEditClick()
+        viewModel.editActions.onItemValueChange(0, "")
+        viewModel.editActions.onItemValueChange(1, "")
+        viewModel.editActions.onItemValueChange(2, "")
         viewModel.editActions.onItemValueChange(3, "2주 뒤")
         viewModel.onEditDoneClick()
 
@@ -421,10 +440,15 @@ class VisitRecordViewModelTest {
     /** AI가 소견·검사·재방문 셋을 찾은 경우. 약은 못 찾았다. */
     private fun classifying() = FakeVisitRepository().apply { classification = ApiResult.Success(CLASSIFIED) }
 
+    /** 나눈 결과를 주는 저장소. 편집·저장 시험의 바탕이다. */
+    private fun sorted() = FakeVisitRepository().apply { classification = ApiResult.Success(ALL_FOUR) }
+
     private fun viewModel(repository: FakeVisitRepository = FakeVisitRepository()) =
         VisitRecordViewModel(repository, Clock.fixed(Instant.parse("2026-09-12T01:00:00Z"), ZoneId.of("Asia/Seoul")))
 
-    private fun filled(repository: FakeVisitRepository) = viewModel(repository).apply {
+    private fun filled(repository: FakeVisitRepository) = viewModel(
+        repository.apply { classification = ApiResult.Success(ALL_FOUR) },
+    ).apply {
         load(CLINIC, NOTE, TODAY)
         onEditClick()
         editActions.onItemValueChange(0, "위염 초기 소견")
@@ -433,7 +457,10 @@ class VisitRecordViewModelTest {
         onEditDoneClick()
     }
 
-    private fun editing() = viewModel().apply { load(CLINIC, NOTE, TODAY) }.apply { onEditClick() }
+    private fun editing() = viewModel(sorted()).apply { load(CLINIC, NOTE, TODAY) }.apply { onEditClick() }
+
+    /** 아무것도 못 나눈 경우. 줄이 서지 않는다. */
+    private fun unsorted() = viewModel(FakeVisitRepository()).apply { load(CLINIC, NOTE, TODAY) }
 
     private fun loaded() = content(viewModel().apply { load(CLINIC, NOTE, TODAY) })
 
@@ -443,6 +470,27 @@ class VisitRecordViewModelTest {
         const val CLINIC = "서울OO병원 내과"
         const val NOTE = "배가 아파서 갔더니 위염이래요"
         val TODAY: LocalDate = LocalDate.of(2026, 9, 12)
+
+        /**
+         * 네 축을 모두 나눈 결과.
+         *
+         * 편집·저장 시험이 줄 번호로 값을 넣는다. 전에는 나누지 못했을 때 열리던 빈 네 줄이
+         * 그 자리를 대신했는데, 그 줄이 사라지면서(#200) 나눈 결과를 주고 시작한다.
+         */
+        val ALL_FOUR =
+            VisitClassification(
+                items =
+                listOf(
+                    VisitItem("findings", "소견", "위염 초기"),
+                    VisitItem("tests", "검사", "혈액검사"),
+                    VisitItem("medication_instructions", "약", "위장약"),
+                    VisitItem("follow_up", "재방문", "2주 뒤"),
+                ),
+                followUp =
+                VisitFollowUp(date = LocalDate.of(2026, 9, 26), text = "2주 뒤", approximate = true),
+                patientNotes = listOf("접수 오래 걸렸어요"),
+                labels = mapOf("0" to "findings"),
+            )
 
         val CLASSIFIED =
             VisitClassification(
