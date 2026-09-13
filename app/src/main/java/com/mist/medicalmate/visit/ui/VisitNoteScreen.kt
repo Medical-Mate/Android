@@ -201,7 +201,14 @@ private fun VisitCard(visit: VisitHeadline) {
         MedicalMateDivider()
         Row(horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4)) {
             Text(
-                text = stringResource(R.string.visit_note_headline_label),
+                text =
+                stringResource(
+                    if (visit.today) {
+                        R.string.visit_note_headline_label
+                    } else {
+                        R.string.visit_note_headline_label_past
+                    },
+                ),
                 style = MedicalMateTheme.typography.labelM,
                 color = colors.fgPrimary,
             )

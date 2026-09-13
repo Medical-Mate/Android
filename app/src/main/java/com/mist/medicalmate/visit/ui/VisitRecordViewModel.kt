@@ -42,6 +42,14 @@ internal constructor(
     /** 저장 요청이 나가 있는 동안. 저장하기를 두 번 누르면 기록이 두 개 생긴다. */
     private var saving = false
 
+    /**
+     * 진료를 받은 날.
+     *
+     * 오늘이 아니다. 어제 진료를 오늘 적을 수 있고, 그때 기록이 오늘 날짜로 남으면 그 일자
+     * 화면에는 영영 나오지 않는다. 흐름이 시작된 캘린더 일자가 라우트를 타고 온다.
+     */
+    private var visitedOn: LocalDate = LocalDate.now(clock)
+
     private val mutableUiState = MutableStateFlow<VisitRecordUiState>(VisitRecordUiState.Loading)
     val uiState: StateFlow<VisitRecordUiState> = mutableUiState.asStateFlow()
 
@@ -54,9 +62,11 @@ internal constructor(
             }
         }
 
-    fun load(clinic: String?, note: String) {
+    fun load(clinic: String?, note: String, visitedOn: LocalDate?) {
+        // 흐름이 시작된 캘린더 일자다. 없으면 오늘로 둔다.
+        this.visitedOn = visitedOn ?: LocalDate.now(clock)
         mutableUiState.value =
-            VisitRecordUiState.Content(record = newRecord(clinic, note, LocalDate.now(clock)))
+            VisitRecordUiState.Content(record = newRecord(clinic, note, this.visitedOn))
     }
 
     /** Nav 우측 `편집`. 카드 안의 모든 값을 한 번에 연다. */
@@ -100,7 +110,7 @@ internal constructor(
 
         saving = true
         viewModelScope.launch {
-            val result = repository.create(card, content.record.toNewVisit(LocalDate.now(clock)))
+            val result = repository.create(card, content.record.toNewVisit(visitedOn))
             saving = false
             if (result is ApiResult.Success) onSaved()
         }

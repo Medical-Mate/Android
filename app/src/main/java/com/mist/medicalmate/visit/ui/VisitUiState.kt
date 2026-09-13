@@ -135,7 +135,18 @@ data class VisitNoteUiState(
  * [clinic]은 1m에서 고른 병원, [cardTitle]은 이 기록이 붙을 카드의 제목이다. 둘 다 캘린더
  * 일자에서 라우트를 타고 따라온다. 없으면 그 줄을 그리지 않는다.
  */
-data class VisitHeadline(val visitedOn: LocalDate, val clinic: String? = null, val cardTitle: String? = null)
+/**
+ * 1p 머리말.
+ *
+ * [today]는 진료가 오늘이었는지다. 시안의 "오늘 진료"는 그 날 바로 적는 경우를 그린 것이고,
+ * 어제 진료를 오늘 적으면 거짓이 된다. 화면이 그 낱말을 이 값으로 고른다.
+ */
+data class VisitHeadline(
+    val visitedOn: LocalDate,
+    val clinic: String? = null,
+    val cardTitle: String? = null,
+    val today: Boolean = true,
+)
 
 /**
  * 1q-1 자동 분류 결과와 1q-1-E 전체 수정. Figma `405:2193`, `636:3675`.

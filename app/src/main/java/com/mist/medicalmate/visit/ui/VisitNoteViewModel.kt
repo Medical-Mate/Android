@@ -41,9 +41,20 @@ constructor(private val clock: Clock) : ViewModel() {
      * 적던 글은 건드리지 않는다. 화면이 다시 조합돼 이 호출이 한 번 더 오더라도 그 글은
      * 남아야 한다.
      */
-    fun load(clinic: String?, cardTitle: String?) {
+    fun load(clinic: String?, cardTitle: String?, visitedOn: LocalDate?) {
+        val today = LocalDate.now(clock)
         mutableUiState.update {
-            it.copy(visit = VisitHeadline(visitedOn = LocalDate.now(clock), clinic = clinic, cardTitle = cardTitle))
+            it.copy(
+                // 흐름이 시작된 캘린더 일자다. 없으면 오늘로 둔다 — 그 경로가 지금은 없지만
+                // 라우트가 선택값이라 열려 있다.
+                visit =
+                VisitHeadline(
+                    visitedOn = visitedOn ?: today,
+                    clinic = clinic,
+                    cardTitle = cardTitle,
+                    today = (visitedOn ?: today) == today,
+                ),
+            )
         }
     }
 

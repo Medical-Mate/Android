@@ -46,7 +46,7 @@ class VisitNoteViewModelTest {
         // 앞 화면에서 고른 값이다. 픽스처를 보여주면 방금 고른 곳과 다른 병원이 적힌다.
         val viewModel = viewModel()
 
-        viewModel.load(clinic = "가톨릭대학교 성빈센트병원", cardTitle = "갈비뼈 · 일주일")
+        viewModel.load(clinic = "가톨릭대학교 성빈센트병원", cardTitle = "갈비뼈 · 일주일", visitedOn = LocalDate.of(2026, 9, 12))
 
         assertEquals(
             VisitHeadline(
@@ -64,7 +64,7 @@ class VisitNoteViewModelTest {
         val viewModel = viewModel()
         viewModel.onNoteChange("위염이라고 하셨어요")
 
-        viewModel.load(clinic = "가톨릭대학교 성빈센트병원", cardTitle = null)
+        viewModel.load(clinic = "가톨릭대학교 성빈센트병원", cardTitle = null, visitedOn = LocalDate.of(2026, 9, 12))
 
         assertEquals("위염이라고 하셨어요", viewModel.uiState.value.note)
     }
@@ -169,6 +169,26 @@ class VisitNoteViewModelTest {
         advanceUntilIdle()
 
         assertEquals(PREVIEW_VISIT_NOTE, viewModel.uiState.value.note)
+    }
+
+    @Test
+    fun `그 날 진료면 오늘이라고 하지 않는다`() {
+        // 시안의 "오늘 진료"는 그 날 바로 적는 경우다. 어제 진료를 오늘 적으면 거짓이 된다.
+        val viewModel = viewModel()
+
+        viewModel.load(clinic = null, cardTitle = null, visitedOn = LocalDate.of(2026, 9, 11))
+
+        assertEquals(LocalDate.of(2026, 9, 11), viewModel.uiState.value.visit.visitedOn)
+        assertFalse(viewModel.uiState.value.visit.today)
+    }
+
+    @Test
+    fun `오늘 진료면 오늘이라고 한다`() {
+        val viewModel = viewModel()
+
+        viewModel.load(clinic = null, cardTitle = null, visitedOn = LocalDate.of(2026, 9, 12))
+
+        assertTrue(viewModel.uiState.value.visit.today)
     }
 
     private fun viewModel() =
