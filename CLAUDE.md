@@ -459,7 +459,7 @@ com.mist.medicalmate/
 | DI | Hilt 확정 |
 | 패키지 구조 | 기능 우선 확정. 도메인명은 Backend와 일치 |
 | 네비게이션 | Navigation Compose 2.10.0 확정. 단일 `NavHost` + 타입 세이프 라우트. 목적지 21개. 그래프 등록은 도메인별 확장 함수로 나눠 `MedicalMateNavGraphs.kt`에 있고 `NavHost` 파일에는 그래프 본체와 세션 경계 처리만 남는다 |
-| 화면 전환 | `MedicalMateNavHost`. `MainActivity`는 세션 확인 중 로딩만 담당 |
+| 화면 전환 | `MedicalMateNavHost`. `MainActivity`는 세션 확인 중 로딩만 담당. **전환은 `MedicalMateNavTransitions`가 들고 있다**(#214) — 가로로 밀고, 물러나는 화면은 폭의 1/4만 움직인다. navigation-compose의 기본값(0.7초 크로스페이드)을 그대로 두면 화면이 어느 쪽으로 갔는지가 남지 않는다. 가장자리를 쓸어 돌아갈 때는 나가는 화면을 0.9까지만 줄이고 쓸어낸 쪽으로 민다 — 기본값 0.7은 작아져 사라지는 것으로 읽히고, 그 밑에 기본으로 걸린 `fadeIn`은 아래 화면이 뒤늦게 떠오르게 해서 걷어냈다. 디자인 문서에 화면 전환 규격이 없어 값은 Material 표준을 따랐다 |
 | ViewModel 스코프 | 화면 ViewModel은 목적지 스코프. `SessionViewModel`만 Activity 스코프 |
 | 디자인 시스템 | DESIGN.md 3.0의 토큰·타이포·아이콘 반영 완료. 시맨틱 41개, 타이포 15종, 아이콘 46개(arrow-up 추가), 로고 4개, Pretendard 4무게. 3.0이 확정한 `layout/tabbar-h` 79와 Date Cell 42는 코드와 같다. Badge를 `Label/M`으로 적었던 2.0의 오기는 3.0에서 사라졌다 |
 | 컴포넌트 | 52종 구현(`FAB` 추가). Figma 마스터 대응은 `COMPONENT_MAP.md`. `Severity Scale`은 Figma에서 마스터가 삭제돼 함께 지웠는데 3.0 문서에는 아직 남아 있다. 디자인 트랙 확인 필요. **`Voice Input`은 듣는 중에 파형이 원 안에 들어간다** — 원 위에 따로 띄우던 것을 마스터에 맞춰 고쳤다(#170) |

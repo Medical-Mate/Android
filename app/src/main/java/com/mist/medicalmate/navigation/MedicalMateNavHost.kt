@@ -62,6 +62,12 @@ internal fun MedicalMateNavHost(
         navController = navController,
         startDestination = session.destination(onboardingCompleted),
         modifier = modifier,
+        enterTransition = MedicalMateNavTransitions.enter,
+        exitTransition = MedicalMateNavTransitions.exit,
+        popEnterTransition = MedicalMateNavTransitions.popEnter,
+        popExitTransition = MedicalMateNavTransitions.popExit,
+        predictivePopEnterTransition = MedicalMateNavTransitions.predictivePopEnter,
+        predictivePopExitTransition = MedicalMateNavTransitions.predictivePopExit,
     ) {
         entryDestinations(
             navController = navController,
