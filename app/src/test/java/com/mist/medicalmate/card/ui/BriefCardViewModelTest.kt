@@ -192,11 +192,13 @@ class BriefCardViewModelTest {
     }
 
     @Test
-    fun `병원은 라우트가 넘긴 값이 카드에 얹힌다`() {
-        // 서버 카드 응답에 병원이 없다. 1m-B에서 방금 고른 것만 실린다(#139).
-        val viewModel = BriefCardViewModel(FakeCardRepository())
+    fun `이미 있는 카드는 응답의 병원을 쓴다`() {
+        // 카드가 병원을 들게 되면서(Backend#101) 라우트로 나르던 값을 얹지 않는다. 얹으면
+        // 캘린더에서 연 카드처럼 넘길 값이 없는 경로에서 병원이 지워진다.
+        val stored = testCard.copy(hospital = BriefCardHospital(name = "서울OO병원 내과", address = "서울 관악구"))
+        val viewModel = BriefCardViewModel(FakeCardRepository(card = stored))
 
-        viewModel.open(1, hospital = BriefCardHospital(name = "서울OO병원 내과", address = "서울 관악구"))
+        viewModel.open(1, hospital = BriefCardHospital(name = "엉뚱한병원"))
 
         val content = viewModel.uiState.value as BriefCardUiState.Content
         assertEquals("서울OO병원 내과", content.card.hospital?.name)
@@ -204,29 +206,61 @@ class BriefCardViewModelTest {
     }
 
     @Test
-    fun `변경에서 고른 병원은 주소까지 얹힌다`() {
-        // 같은 이름의 다른 지점을 가르는 값이라 이름만 남기면 어느 곳인지 알 수 없다.
-        val viewModel = BriefCardViewModel(FakeCardRepository())
+    fun `들고 있는 카드는 다시 읽지 않는다`() {
+        // 병원을 고르러 갔다 오면 조합이 다시 시작되며 이 호출이 한 번 더 온다. 그때 다시
+        // 읽으면 편집 중이던 사본이 날아가고, 돌아온 병원이 Loading에 도착해 버려진다.
+        val repository = FakeCardRepository()
+        val viewModel = BriefCardViewModel(repository)
+        viewModel.open(1)
+        viewModel.onEditClick()
+
+        viewModel.open(1)
+
+        val content = viewModel.uiState.value as BriefCardUiState.Content
+        assertTrue(content.editing)
+    }
+
+    @Test
+    fun `변경에서 고른 병원을 서버에 보낸다`() {
+        // 화면에만 얹으면 다시 열었을 때 되돌아가 있다. 카드가 병원을 들게 됐다(Backend#101).
+        val repository = FakeCardRepository()
+        val viewModel = BriefCardViewModel(repository)
         viewModel.open(1)
 
         viewModel.onHospitalPicked("서울OO병원 내과", "서울 관악구 남부순환로 1820, 3층")
 
+        assertEquals("서울OO병원 내과", repository.updatedClinic?.name)
+        assertEquals("서울 관악구 남부순환로 1820, 3층", repository.updatedClinic?.address)
         val content = viewModel.uiState.value as BriefCardUiState.Content
         assertEquals("서울OO병원 내과", content.card.hospital?.name)
-        assertEquals("서울 관악구 남부순환로 1820, 3층", content.card.hospital?.address)
     }
 
     @Test
-    fun `주소가 비어 있으면 병원 이름만 남는다`() {
+    fun `병원 변경이 거절되면 카드를 바꾸지 않는다`() {
+        // 화면에만 바꿔 두면 다시 열었을 때 되돌아가 있다.
+        val repository = FakeCardRepository()
+        repository.updateFails = true
+        val viewModel = BriefCardViewModel(repository)
+        viewModel.open(1)
+
+        viewModel.onHospitalPicked("서울OO병원 내과", null)
+
+        val content = viewModel.uiState.value as BriefCardUiState.Content
+        assertTrue(content.saveFailed)
+        assertNull(content.card.hospital)
+    }
+
+    @Test
+    fun `주소가 비어 있으면 병원 이름만 보낸다`() {
         // 심평원에 주소가 없는 곳이 있다. 빈 문자열을 그대로 두면 빈 줄이 그려진다.
-        val viewModel = BriefCardViewModel(FakeCardRepository())
+        val repository = FakeCardRepository()
+        val viewModel = BriefCardViewModel(repository)
         viewModel.open(1)
 
         viewModel.onHospitalPicked("서울OO병원 내과", "")
 
-        val content = viewModel.uiState.value as BriefCardUiState.Content
-        assertEquals("서울OO병원 내과", content.card.hospital?.name)
-        assertNull(content.card.hospital?.address)
+        assertEquals("서울OO병원 내과", repository.updatedClinic?.name)
+        assertNull(repository.updatedClinic?.address)
     }
 
     @Test
@@ -372,13 +406,25 @@ class BriefCardDeleteTest {
     }
 
     @Test
-    fun `만든 카드에 방금 고른 병원이 얹힌다`() {
-        val viewModel = BriefCardViewModel(FakeCardRepository())
+    fun `카드를 만들 때 고른 병원을 함께 보낸다`() {
+        // 서버가 그 값을 카드에 담는다(Backend#101). 화면에만 얹으면 다시 열 때 사라진다.
+        val repository = FakeCardRepository()
+        val viewModel = BriefCardViewModel(repository)
 
         viewModel.open(cardId = null, sessionId = 7, hospital = BriefCardHospital(name = "서울OO병원 내과"))
 
-        val content = viewModel.uiState.value as BriefCardUiState.Content
-        assertEquals("서울OO병원 내과", content.card.hospital?.name)
+        assertEquals("서울OO병원 내과", repository.createdClinic?.name)
+    }
+
+    @Test
+    fun `병원을 안 골랐으면 보내지 않는다`() {
+        // 1m-B에 건너뛰기가 있다. 안 보내면 병원 없이 만들어진다.
+        val repository = FakeCardRepository()
+        val viewModel = BriefCardViewModel(repository)
+
+        viewModel.open(cardId = null, sessionId = 7)
+
+        assertNull(repository.createdClinic)
     }
 
     @Test
@@ -450,8 +496,12 @@ internal class FakeCardRepository(
     /** 어느 문답으로 만들었는지. 카드 없이 들어온 경로가 이 값을 채운다. */
     var createdFrom: Long? = null
 
-    override suspend fun createFromSession(sessionId: Long): ApiResult<BriefCard> {
+    /** 카드를 만들 때 함께 보낸 병원. 고른 것이 서버로 가는지가 관심사다. */
+    var createdClinic: BriefCardHospital? = null
+
+    override suspend fun createFromSession(sessionId: Long, clinic: BriefCardHospital?): ApiResult<BriefCard> {
         createdFrom = sessionId
+        createdClinic = clinic
         return result ?: ApiResult.Success(card)
     }
 
@@ -461,11 +511,26 @@ internal class FakeCardRepository(
 
     var updatedAxes: List<AxisEdit>? = null
 
-    override suspend fun update(cardId: Long, axes: List<AxisEdit>, questions: List<String>): ApiResult<BriefCard> {
+    /** `변경`으로 보낸 병원. 화면에만 남지 않고 서버로 가는지가 관심사다. */
+    var updatedClinic: BriefCardHospital? = null
+
+    override suspend fun update(
+        cardId: Long,
+        axes: List<AxisEdit>,
+        questions: List<String>,
+        clinic: BriefCardHospital?,
+    ): ApiResult<BriefCard> {
         updatedAxes = axes
         updatedQuestions = questions
-        return result ?: ApiResult.Success(card)
+        updatedClinic = clinic
+        return when {
+            updateFails -> OFFLINE
+            else -> result ?: ApiResult.Success(card.copy(hospital = clinic ?: card.hospital))
+        }
     }
+
+    /** 수정만 실패해야 하는 시험이 있다. 카드 조회까지 실패하면 화면이 Content가 아니다. */
+    var updateFails: Boolean = false
 
     /** 확정만 실패해야 하는 시험이 있다. 카드 조회까지 실패하면 화면이 Content가 아니다. */
     var confirmFails: Boolean = false

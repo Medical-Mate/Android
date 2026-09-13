@@ -1,6 +1,7 @@
 package com.mist.medicalmate.card.data
 
 import com.mist.medicalmate.card.ui.BriefCard
+import com.mist.medicalmate.card.ui.BriefCardHospital
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.core.network.apiCall
 import com.mist.medicalmate.core.network.map
@@ -16,7 +17,12 @@ import java.time.OffsetDateTime
  */
 interface CardRepository {
     /** 문답을 카드로 만든다. 1c-5의 "브리핑 카드 만들기"가 여기로 온다. */
-    suspend fun createFromSession(sessionId: Long): ApiResult<BriefCard>
+    /**
+     * 문답으로 카드를 만든다.
+     *
+     * [clinic]은 1m-B에서 고른 진료받을 병원이다. 건너뛰었으면 null이고 병원 없이 만들어진다.
+     */
+    suspend fun createFromSession(sessionId: Long, clinic: BriefCardHospital? = null): ApiResult<BriefCard>
 
     suspend fun cards(): ApiResult<List<CardListItem>>
 
@@ -28,7 +34,13 @@ interface CardRepository {
      * **응답의 카드로 갈아타야 한다.** 확정된 카드를 고치면 서버가 새 버전을 만들고 id가
      * 달라진다. 옛 id를 들고 있으면 다음 수정이 엉뚱한 카드로 간다.
      */
-    suspend fun update(cardId: Long, axes: List<AxisEdit>, questions: List<String>): ApiResult<BriefCard>
+    /** [clinic]은 1e-1의 `변경`으로 고른 병원이다. 안 바꿨으면 null이라 보내지 않는다. */
+    suspend fun update(
+        cardId: Long,
+        axes: List<AxisEdit>,
+        questions: List<String>,
+        clinic: BriefCardHospital? = null,
+    ): ApiResult<BriefCard>
 
     /**
      * 카드를 지운다. 문답과 진료 기록이 함께 지워지고 일정은 연결만 끊긴다. 되돌릴 수 없다.
@@ -51,8 +63,9 @@ internal class DefaultCardRepository
 @Inject
 constructor(private val api: CardApi, private val json: Json) :
     CardRepository {
-    override suspend fun createFromSession(sessionId: Long): ApiResult<BriefCard> =
-        apiCall(json) { api.createFromSession(sessionId) }.map { it.toBriefCard() }
+    override suspend fun createFromSession(sessionId: Long, clinic: BriefCardHospital?): ApiResult<BriefCard> =
+        apiCall(json) { api.createFromSession(sessionId, GenerateCardRequest(clinic.toRequest())) }
+            .map { it.toBriefCard() }
 
     override suspend fun cards(): ApiResult<List<CardListItem>> =
         apiCall(json) { api.cards() }.map { list -> list.map { it.toListItem() } }
@@ -66,16 +79,21 @@ constructor(private val api: CardApi, private val json: Json) :
      * 제목과 진료과는 서버가 수정을 받지 않는다. 안 바뀐 축을 함께 보내지 않는 이유는 그것이
      * PATCH이기 때문이다. 보낸 것만 바뀐다.
      */
-    override suspend fun update(cardId: Long, axes: List<AxisEdit>, questions: List<String>): ApiResult<BriefCard> =
-        apiCall(json) {
-            api.update(
-                cardId,
-                UpdateCardRequest(
-                    axes = axes.map { AxisEditRequest(axis = it.axis, value = it.value) }.takeIf { it.isNotEmpty() },
-                    questions = questions,
-                ),
-            )
-        }.map { it.toBriefCard() }
+    override suspend fun update(
+        cardId: Long,
+        axes: List<AxisEdit>,
+        questions: List<String>,
+        clinic: BriefCardHospital?,
+    ): ApiResult<BriefCard> = apiCall(json) {
+        api.update(
+            cardId,
+            UpdateCardRequest(
+                axes = axes.map { AxisEditRequest(axis = it.axis, value = it.value) }.takeIf { it.isNotEmpty() },
+                questions = questions,
+                clinic = clinic.toRequest(),
+            ),
+        )
+    }.map { it.toBriefCard() }
 
     override suspend fun delete(cardId: Long): ApiResult<Unit> = apiCall(json) { api.delete(cardId) }
 
@@ -117,9 +135,15 @@ internal fun CardSummaryResponse.toListItem() = CardListItem(
     title = (title ?: chiefComplaint)?.shorten().orEmpty(),
     confirmed = status == "CONFIRMED",
     visited = visited,
-    clinic = clinicName,
+    // 목록 줄의 병원은 "진료받을 병원"이다(Backend#101). `clinicName`은 진료를 받은 병원이라
+    // 진료 전 카드는 비어 있다. 시안 1j-4의 `09.04 작성 · 서울OO병원 내과`가 이 값이다.
+    clinic = clinic?.name?.takeIf { it.isNotBlank() } ?: clinicName,
     writtenOn = OffsetDateTime.parse(createdAt).toLocalDate(),
 )
+
+/** 화면의 병원을 요청 모양으로. 없으면 보내지 않는다. */
+private fun BriefCardHospital?.toRequest(): ClinicRequest? =
+    this?.let { ClinicRequest(name = it.name, address = it.address) }
 
 /** 목록 제목의 길이 상한. 넘으면 말줄임을 붙인다. */
 private fun String.shorten(): String = if (length <= TITLE_MAX) this else take(TITLE_MAX).trimEnd() + "…"

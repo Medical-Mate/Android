@@ -231,6 +231,8 @@
     <string name="brief_card_retry">다시 시도</string>
     <string name="brief_card_hospital_section">진료받을 병원</string>
     <string name="brief_card_hospital_change">변경</string>
+    <!-- 진료받을 병원을 아직 안 정한 카드. 1m-B에 건너뛰기가 있어 정상 상태다. -->
+    <string name="brief_card_hospital_unset">병원 미정</string>
     <string name="brief_card_item_delete">%1$s 항목 삭제</string>
     <string name="brief_card_question_add">질문 추가</string>
     <string name="brief_card_question_delete">%1$d번 질문 삭제</string>

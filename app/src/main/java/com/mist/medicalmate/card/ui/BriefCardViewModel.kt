@@ -49,19 +49,24 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
      * 카드는 `DRAFT`로 만들어진다. 확정은 진료실에서 보여줄 때 한다. 검증에 걸린 필드가
      * 있어도 만들기 자체는 성공한다. 통째로 실패시키면 환자가 답한 문답이 날아간다.
      *
-     * [hospital]은 라우트가 들고 온 값이다. 진료 전 병원 찾기(1m-B)에서 고른 것이다.
-     * 서버 카드 응답에는 병원이 없다. 목록 응답에만 `clinicName`이 있어서 상세를 열면 그
-     * 값을 채울 곳이 없다(#139). 그래서 지금은 방금 고른 것만 얹는다.
+     * [hospital]은 진료 전 병원 찾기(1m-B)에서 고른 것이다. **만들 때만 쓴다** — 서버에
+     * 함께 보내면 카드가 그 값을 들고, 다음부터는 응답에서 온다(Backend#101). 전에는 카드
+     * 응답에 병원이 없어 라우트로 날라 화면에만 얹었고, 캘린더에서 연 카드는 비어 있었다.
      */
     fun open(cardId: Long?, sessionId: Long? = null, hospital: BriefCardHospital? = null) {
-        // 이미 만든 카드를 다시 만들지 않는다. 화면이 다시 조합되면 이 호출이 한 번 더 온다.
+        // **들고 있는 카드는 다시 읽지 않는다.** 병원을 고르러 갔다 오면 이 화면의 조합이 다시
+        // 시작되면서 이 호출이 한 번 더 온다. 그때 다시 읽으면 두 가지가 깨진다 — 편집 중이던
+        // 사본이 날아가고, 돌아온 병원이 `Loading` 상태에 도착해 조용히 버려진다.
+        val loaded = (mutableUiState.value as? BriefCardUiState.Content)?.card?.id?.toLongOrNull()
+        if (cardId != null && cardId == loaded) return
+        // 이미 만든 카드를 다시 만들지 않는다. 같은 이유로 한 번 더 오는 호출이다.
         if (cardId == null && mutableUiState.value is BriefCardUiState.Content) return
         mutableUiState.value = BriefCardUiState.Loading
         viewModelScope.launch {
             val result =
                 when {
                     cardId != null -> repository.card(cardId)
-                    sessionId != null -> repository.createFromSession(sessionId)
+                    sessionId != null -> repository.createFromSession(sessionId, hospital)
                     else -> null
                 }
             val card = (result as? ApiResult.Success)?.value
@@ -69,7 +74,7 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
                 if (card == null) {
                     BriefCardUiState.Failed
                 } else {
-                    BriefCardUiState.Content(card = card.copy(hospital = hospital))
+                    BriefCardUiState.Content(card = card)
                 }
         }
     }
@@ -77,21 +82,34 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
     /**
      * 병원 `변경`에서 골라 돌아왔다.
      *
+     * **서버에 보낸다**(Backend#101). 카드가 병원을 들게 되면서 `PATCH`로 남길 곳이 생겼다.
+     * 전에는 화면에만 얹어서 다시 열면 사라졌다.
+     *
      * 주소가 함께 온다. 같은 이름의 다른 지점을 가르는 값이라 이름만 남기면 어느 곳을
-     * 골랐는지 알 수 없다. 심평원에 주소가 없는 곳은 비어 있고, 그때는 블록이 이름만
-     * 그린다.
+     * 골랐는지 알 수 없다. 심평원에 주소가 없는 곳은 비어 있고, 그때는 블록이 이름만 그린다.
+     *
+     * 실패하면 카드는 그대로 둔다. 화면에만 바꿔 두면 다시 열었을 때 되돌아가 있다.
      */
     fun onHospitalPicked(name: String?, address: String?) {
-        if (name.isNullOrBlank()) return
-        mutableUiState.update { state ->
-            if (state !is BriefCardUiState.Content) {
-                state
-            } else {
-                state.copy(
-                    card = state.card.copy(
-                        hospital = BriefCardHospital(name = name, address = address?.takeIf { it.isNotBlank() }),
-                    ),
+        val state = mutableUiState.value as? BriefCardUiState.Content ?: return
+        // 고른 것이 없거나 부를 수 없는 id면 보낼 것이 없다. 화면은 그대로 둔다.
+        val cardId = state.card.id.toLongOrNull()?.takeIf { !name.isNullOrBlank() } ?: return
+        val picked = BriefCardHospital(name = name.orEmpty(), address = address?.takeIf { it.isNotBlank() })
+
+        viewModelScope.launch {
+            when (
+                val result = repository.update(
+                    cardId,
+                    axes = emptyList(),
+                    questions = state.card.questions,
+                    clinic = picked,
                 )
+            ) {
+                is ApiResult.Success ->
+                    mutableUiState.value = BriefCardUiState.Content(card = result.value)
+
+                is ApiResult.Rejected, is ApiResult.NetworkUnavailable ->
+                    mutableUiState.value = state.copy(saveFailed = true)
             }
         }
     }

@@ -18,7 +18,7 @@ internal data object HomeDestination
  */
 internal fun NavGraphBuilder.homeDestination(
     onIntakeClick: (String?) -> Unit,
-    onCardClick: (cardId: String, clinic: String?) -> Unit,
+    onCardClick: (cardId: String) -> Unit,
     onAllCardsClick: () -> Unit,
     onProfileClick: () -> Unit,
     onTabSelect: (MedicalMateTab) -> Unit,

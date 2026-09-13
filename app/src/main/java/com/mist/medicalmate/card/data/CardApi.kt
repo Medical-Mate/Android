@@ -15,8 +15,14 @@ import retrofit2.http.Path
  */
 internal interface CardApi {
     /** 문답을 카드로 만든다. 검증에 걸린 필드는 `UNKNOWN`으로 저장되고 이름이 온다. */
+    /**
+     * 문답으로 카드를 만든다.
+     *
+     * 본문 전체가 선택이다. 1m-B에서 병원을 골랐으면 함께 보내고, 건너뛰었으면 빈 본문을
+     * 보낸다. 안 보내면 병원 없이 만들어진다.
+     */
     @POST("api/sessions/{sessionId}/card")
-    suspend fun createFromSession(@Path("sessionId") sessionId: Long): CardResponse
+    suspend fun createFromSession(@Path("sessionId") sessionId: Long, @Body request: GenerateCardRequest): CardResponse
 
     /** 목록에는 본문이 없다. 상세는 [card]로 본다. */
     @GET("api/me/cards")
@@ -55,6 +61,13 @@ internal interface CardApi {
 @Serializable
 internal data class CardSummaryResponse(
     val cardId: Long,
+    /**
+     * 진료받을 병원. 카드가 드는 값이다.
+     *
+     * [clinicName]과 다른 축이다. 그쪽은 진료를 **받은** 병원이라 진료 기록에서 오고,
+     * 진료 전 카드는 비어 있다.
+     */
+    val clinic: ClinicResponse? = null,
     /** 아직 `null`이다. 목록 제목은 [chiefComplaint]를 쓴다. 환자가 말한 원문이라 길 수 있다. */
     val title: String? = null,
     val chiefComplaint: String? = null,
@@ -96,7 +109,19 @@ internal data class CardResponse(
     val rejectedFields: List<String> = emptyList(),
     val createdAt: String? = null,
     val confirmedAt: String? = null,
+    /**
+     * 진료받을 병원. 이 카드를 어디로 가져갈 것인가다.
+     *
+     * **응답에 병원이 셋이고 이것만 쓴다.** `appointment`는 연결된 일정의 병원이고 `visit`은
+     * 진료를 받은 병원이라 셋이 다 다를 수 있다. 시안 1e-1의 "진료받을 병원"은 이 값이다.
+     * 안 골랐으면 없다 — 1m-B에 건너뛰기가 있어서 정상 상태다.
+     */
+    val clinic: ClinicResponse? = null,
 )
+
+/** 병원 이름과 주소. */
+@Serializable
+internal data class ClinicResponse(val name: String? = null, val address: String? = null)
 
 /**
  * 축 하나.
@@ -155,12 +180,20 @@ internal data class CardListFieldResponse(val status: String? = null, val items:
  * 제목과 진료과는 고칠 수 없다. 서버가 받지 않는다.
  */
 @Serializable
+internal data class GenerateCardRequest(val clinic: ClinicRequest? = null)
+
+@Serializable
 internal data class UpdateCardRequest(
     val chiefComplaint: String? = null,
     val axes: List<AxisEditRequest>? = null,
     val questions: List<String>? = null,
     val patientNotes: List<String>? = null,
+    val clinic: ClinicRequest? = null,
 )
+
+/** 진료받을 병원. 병원 검색이 준 항목을 그대로 옮긴다. */
+@Serializable
+internal data class ClinicRequest(val name: String, val address: String? = null)
 
 @Serializable
 internal data class AxisEditRequest(val axis: String, val value: String)

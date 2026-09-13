@@ -1,6 +1,7 @@
 package com.mist.medicalmate.card.data
 
 import com.mist.medicalmate.card.ui.BriefCard
+import com.mist.medicalmate.card.ui.BriefCardHospital
 import com.mist.medicalmate.card.ui.BriefCardItem
 import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
 import java.time.OffsetDateTime
@@ -28,9 +29,21 @@ internal fun CardResponse.toBriefCard(): BriefCard = BriefCard(
     health = patient.toHealthRows(),
     allergies = patient?.allergies.toAllergies(),
     questions = questions,
-    // `CardResponse`에 병원이 없다. 목록 응답에만 `clinicName`이 있다.
-    hospital = null,
+    // 응답의 병원 셋 중 `clinic`이 "진료받을 병원"이다(Backend#101). `appointment`는 일정의
+    // 병원이고 `visit`은 진료를 받은 병원이라 셋이 다 다를 수 있다.
+    hospital = clinic?.toHospital(),
 )
+
+/**
+ * 진료받을 병원.
+ *
+ * 이름이 없으면 없는 것으로 본다. 안 골랐을 때 서버가 빈 객체를 줄 수 있고, 이름 없는
+ * 병원 블록은 그릴 것이 없다.
+ */
+private fun ClinicResponse.toHospital(): BriefCardHospital? {
+    val name = name?.takeIf { it.isNotBlank() } ?: return null
+    return BriefCardHospital(name = name, address = address?.takeIf { it.isNotBlank() })
+}
 
 /** 시안의 "김OO · 32세 여 · 2026.09.04 작성". */
 private fun CardResponse.patientLine(): String = listOfNotNull(
