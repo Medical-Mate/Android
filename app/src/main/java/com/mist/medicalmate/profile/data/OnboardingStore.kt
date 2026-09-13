@@ -12,7 +12,7 @@ import jakarta.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-private val Context.profileDataStore: DataStore<Preferences> by preferencesDataStore(name = "profile")
+internal val Context.profileDataStore: DataStore<Preferences> by preferencesDataStore(name = "profile")
 
 /**
  * 온보딩을 마쳤다는 기록.

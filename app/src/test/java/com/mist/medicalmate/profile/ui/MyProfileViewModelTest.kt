@@ -2,6 +2,8 @@ package com.mist.medicalmate.profile.ui
 
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.profile.data.FakeHealthProfileRepository
+import com.mist.medicalmate.profile.data.FakeLocalSettingsStore
+import com.mist.medicalmate.profile.data.FakeSettingsRepository
 import com.mist.medicalmate.profile.data.HealthEdit
 import com.mist.medicalmate.profile.data.HealthField
 import com.mist.medicalmate.profile.data.HealthStatus
@@ -161,8 +163,11 @@ class MyProfileViewModelTest {
         assertTrue(state.isOn(AppSetting.CARD_AUTO_SAVE))
     }
 
-    private fun viewModel(repository: FakeHealthProfileRepository = FakeHealthProfileRepository()) =
-        MyProfileViewModel(repository)
+    private fun viewModel(
+        repository: FakeHealthProfileRepository = FakeHealthProfileRepository(),
+        settings: FakeSettingsRepository = FakeSettingsRepository(),
+        local: FakeLocalSettingsStore = FakeLocalSettingsStore(),
+    ) = MyProfileViewModel(repository, settings, local)
 
     private fun profile(
         name: String? = FakeHealthProfileRepository.PROFILE.name,
@@ -170,6 +175,72 @@ class MyProfileViewModelTest {
     ) = FakeHealthProfileRepository(
         read = ApiResult.Success(FakeHealthProfileRepository.PROFILE.copy(name = name, sex = sex)),
     )
+
+    @Test
+    fun `알림은 계정에서 읽는다`() {
+        val viewModel = viewModel(settings = FakeSettingsRepository(read = ApiResult.Success(false)))
+
+        viewModel.load()
+
+        assertFalse(viewModel.uiState.value.isOn(AppSetting.VISIT_REMINDER))
+    }
+
+    @Test
+    fun `나머지 둘은 이 기기에서 읽는다`() {
+        // 이 기기에서 어떻게 보일지의 문제라 서버가 읽을 일이 없다.
+        val viewModel = viewModel(local = FakeLocalSettingsStore(cardAutoSave = false, handoffBrightness = true))
+
+        viewModel.load()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isOn(AppSetting.CARD_AUTO_SAVE))
+        assertTrue(state.isOn(AppSetting.HANDOFF_BRIGHTNESS))
+    }
+
+    @Test
+    fun `알림을 못 읽어도 나머지는 읽는다`() {
+        // 토글 하나 때문에 화면을 막지 않는다.
+        val viewModel =
+            viewModel(
+                settings = FakeSettingsRepository(read = FakeSettingsRepository.OFFLINE),
+                local = FakeLocalSettingsStore(cardAutoSave = false),
+            )
+
+        viewModel.load()
+
+        assertFalse(viewModel.uiState.value.isOn(AppSetting.CARD_AUTO_SAVE))
+    }
+
+    @Test
+    fun `알림을 끄면 서버로 나간다`() {
+        val settings = FakeSettingsRepository()
+        val viewModel = viewModel(settings = settings)
+
+        viewModel.onSettingChange(AppSetting.VISIT_REMINDER, false)
+
+        assertEquals(false, settings.saved)
+    }
+
+    @Test
+    fun `알림 저장이 실패하면 토글을 되돌린다`() {
+        // 안 받겠다고 한 것이 서버에 안 남았는데 화면만 꺼져 있으면 알림이 계속 온다.
+        val settings = FakeSettingsRepository(write = FakeSettingsRepository.OFFLINE)
+        val viewModel = viewModel(settings = settings)
+
+        viewModel.onSettingChange(AppSetting.VISIT_REMINDER, false)
+
+        assertTrue(viewModel.uiState.value.isOn(AppSetting.VISIT_REMINDER))
+    }
+
+    @Test
+    fun `이 기기 설정은 서버로 나가지 않는다`() {
+        val settings = FakeSettingsRepository()
+        val viewModel = viewModel(settings = settings)
+
+        viewModel.onSettingChange(AppSetting.CARD_AUTO_SAVE, false)
+
+        assertNull(settings.saved)
+    }
 
     @Test
     fun `설정 목록에 빠진 항목이 없다`() {
