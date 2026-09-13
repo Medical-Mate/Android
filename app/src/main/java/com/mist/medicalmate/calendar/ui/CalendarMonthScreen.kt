@@ -39,8 +39,8 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateCard
 import com.mist.medicalmate.core.designsystem.component.MedicalMateDateCell
 import com.mist.medicalmate.core.designsystem.component.MedicalMateDateCellSize
 import com.mist.medicalmate.core.designsystem.component.MedicalMateDateMarker
+import com.mist.medicalmate.core.designsystem.component.MedicalMateFab
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButton
-import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButtonStyle
 import com.mist.medicalmate.core.designsystem.component.MedicalMateListRow
 import com.mist.medicalmate.core.designsystem.component.MedicalMateListRowType
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
@@ -59,7 +59,10 @@ import java.time.format.DateTimeFormatter
  * 일자 화면(1r-2)으로 들어간다.
  *
  * 추가 버튼을 화면 우하단에 띄운다. Figma 수정사항이 상단 탭바의 일정 추가 버튼을 없애고
- * 캘린더·일자 페이지의 + 버튼으로 정리했다.
+ * 캘린더·일자 페이지의 + 버튼으로 정리했다. 마스터는 `FAB`이다 — 월 화면의 세 프레임이
+ * 모두 그 인스턴스를 둔다. 본문 위에 떠서 격자를 가리는 조작이라 그림자로 층을 알려야 하고,
+ * 그림자가 없는 `Icon Button`의 `SOLID`는 격자에 눌러붙어 보인다. 일자 화면(1r-2)에는
+ * 이 버튼이 없다.
  *
  * 1Depth 화면이라 하단 탭을 함께 그린다.
  */
@@ -94,11 +97,10 @@ fun CalendarMonthScreen(
                 onDayClick = onDayClick,
                 onScheduleClick = onScheduleClick,
             )
-            MedicalMateIconButton(
+            MedicalMateFab(
                 onClick = onAddClick,
                 icon = MedicalMateIcons.Plus,
                 contentDescription = stringResource(R.string.calendar_add_schedule),
-                style = MedicalMateIconButtonStyle.SOLID,
                 modifier =
                 Modifier
                     .align(Alignment.BottomEnd)

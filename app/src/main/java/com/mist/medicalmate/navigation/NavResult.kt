@@ -57,11 +57,7 @@ internal fun NavController.popWithResult(vararg results: Pair<String, String?>) 
  * 보이는 시점에 뒤엣것도 이미 있다.
  */
 @Composable
-internal fun NavBackStackEntry.ConsumeResult(
-    key: String,
-    otherKey: String,
-    onResult: (String?, String?) -> Unit,
-) {
+internal fun NavBackStackEntry.ConsumeResult(key: String, otherKey: String, onResult: (String?, String?) -> Unit) {
     val handle = savedStateHandle
     val value by handle.getStateFlow<String?>(key, null).collectAsStateWithLifecycle()
 
