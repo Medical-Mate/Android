@@ -138,7 +138,10 @@ internal fun NavGraphBuilder.profileDestinations(
 /** 캘린더 세 목적지. 월(1r-1) · 일자(1r-2) · 일정 추가(1r-4)다. */
 internal fun NavGraphBuilder.calendarDestinations(navController: NavHostController) {
     calendarDestination(
-        onDayOpen = { date -> navController.navigate(CalendarDayDestination(date.toString())) },
+        // 누른 일정을 들고 간다. 하루에 둘 이상일 수 있어 날짜만으로는 첫 건이 열린다(#179).
+        onDayOpen = { date, appointmentId ->
+            navController.navigate(CalendarDayDestination(date.toString(), appointmentId))
+        },
         onCardOpen = { cardId -> navController.navigate(BriefCardDestination(cardId)) },
         onAddClick = { navController.navigate(ScheduleAddDestination()) },
         onTabSelect = navController::selectTab,

@@ -41,6 +41,27 @@ class CalendarDayViewModelTest {
 
     private fun loaded(): CalendarDayViewModel = dayViewModel().apply { load(VisitDate) }
 
+    @Test
+    fun `누른 일정을 연다`() {
+        // 하루에 둘 이상일 수 있다. 날짜만으로 열면 첫 건이 나와서 누른 것과 달랐다(#179).
+        val second = testAppointment.copy(id = 7, title = "킴벨피부과병원")
+        val repository = FakeAppointmentRepository(listOf(testAppointment, second))
+
+        val viewModel = dayViewModel(repository = repository).apply { load(VisitDate, appointmentId = 7) }
+
+        assertEquals("킴벨피부과병원", viewModel.uiState.value?.schedule?.title)
+    }
+
+    @Test
+    fun `누른 일정이 그 날에 없으면 첫 일정을 연다`() {
+        // 지운 일정으로 돌아오는 경우다. 빈 화면보다 그 날 첫 일정이 낫다.
+        val repository = FakeAppointmentRepository(listOf(testAppointment))
+
+        val viewModel = dayViewModel(repository = repository).apply { load(VisitDate, appointmentId = 999) }
+
+        assertEquals(testAppointment.title, viewModel.uiState.value?.schedule?.title)
+    }
+
     private fun CalendarDayViewModel.state(): CalendarDayUiState = uiState.value!!
 
     @Test
