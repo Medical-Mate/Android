@@ -45,6 +45,8 @@ internal fun VisitRecordCard(state: VisitRecordUiState.Content, callbacks: Visit
     ) {
         Head(clinicLine = state.record.clinicLine)
         MedicalMateDivider()
+        // 하나도 못 나눴으면 줄이 없다. 그때는 머리 아래가 바로 원문이라 구분선이 겹치지
+        // 않게 줄과 함께 뒤쪽 구분선도 빠진다.
         state.items.forEachIndexed { index, item ->
             if (state.editing) {
                 MedicalMateEditingKvRow(
@@ -65,7 +67,7 @@ internal fun VisitRecordCard(state: VisitRecordUiState.Content, callbacks: Visit
                 )
             }
         }
-        MedicalMateDivider()
+        if (state.items.isNotEmpty()) MedicalMateDivider()
         Memo(memo = state.record.memo)
         state.record.classifiedCount?.takeIf { !state.editing }?.let { Caption(it) }
     }

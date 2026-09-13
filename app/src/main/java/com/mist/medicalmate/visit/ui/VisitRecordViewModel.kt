@@ -3,10 +3,7 @@ package com.mist.medicalmate.visit.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mist.medicalmate.core.network.ApiResult
-import com.mist.medicalmate.visit.data.AXIS_FINDINGS
 import com.mist.medicalmate.visit.data.AXIS_FOLLOW_UP
-import com.mist.medicalmate.visit.data.AXIS_MEDICATION
-import com.mist.medicalmate.visit.data.AXIS_TESTS
 import com.mist.medicalmate.visit.data.NewVisit
 import com.mist.medicalmate.visit.data.NewVisitItem
 import com.mist.medicalmate.visit.data.VisitClassification
@@ -213,13 +210,16 @@ private fun newRecord(clinic: String?, note: String, today: LocalDate, classifie
  * 없는 줄이다 — 서버도 키 자체를 보내지 않는다. 빈 자리를 네 개 깔아 두면 AI가 무엇을 찾았고
  * 무엇을 못 찾았는지가 화면에서 지워진다.
  *
- * 나눈 것이 하나도 없을 때만 네 자리를 연다. 분류가 실패했거나 AI가 아무것도 못 건졌을 때인데,
- * 그때도 손으로 적어 저장할 곳은 있어야 한다. 편집에서 줄을 새로 만들 수 없기 때문이다(×로
- * 지우기만 한다).
+ * **하나도 못 나눴으면 줄이 없다.** 전에는 네 자리를 빈 채로 열었는데, 화면이 네 항목을
+ * 묻고는 아무 답도 못 내놓는 모양이 됐다. 적은 말이 사라진 것도 아니다 — 서버가 분류되지 않은
+ * 문장을 `patientNotes`로 돌려주고 원문은 `rawNote`로 저장된다. 그때는 카드 아래의 원문만
+ * 남기는 편이 본 것을 그대로 말한다.
+ *
+ * 대신 그 기록은 손으로 채울 자리가 없다. 편집은 있는 줄을 고치고 ×로 지우기만 하고 줄을
+ * 새로 만들지 못한다. 그 자리는 #184다.
  */
 private fun classifiedItems(classified: VisitClassification?): List<VisitRecordItem> {
     val found = classified?.items.orEmpty()
-    if (found.isEmpty()) return EMPTY_ROWS
     return found.map { item ->
         VisitRecordItem(
             key = item.label,
@@ -229,15 +229,6 @@ private fun classifiedItems(classified: VisitClassification?): List<VisitRecordI
         )
     }
 }
-
-/** 나눈 것이 없을 때 여는 빈 자리. 시안 1q-1이 그리는 넷이다. */
-private val EMPTY_ROWS =
-    listOf(
-        VisitRecordItem(key = KEY_RESULT, value = "", axis = AXIS_FINDINGS),
-        VisitRecordItem(key = KEY_DONE, value = "", axis = AXIS_TESTS),
-        VisitRecordItem(key = KEY_PRESCRIPTION, value = "", axis = AXIS_MEDICATION),
-        VisitRecordItem(key = KEY_REVISIT, value = "", tone = VisitRecordItem.Tone.LINK, axis = AXIS_FOLLOW_UP),
-    )
 
 /**
  * 화면의 줄을 서버 축으로.
@@ -259,15 +250,5 @@ private fun VisitRecord.toNewVisit(today: LocalDate) = NewVisit(
     patientNotes = patientNotes,
     rawNote = memo,
 )
-
-/** 진료에서 들은 것. */
-private const val KEY_RESULT = "소견"
-
-/** 진료에서 한 것. */
-private const val KEY_DONE = "검사"
-
-private const val KEY_PRESCRIPTION = "약"
-
-private const val KEY_REVISIT = "재방문"
 
 private val VISITED_ON: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy.MM.dd", Locale.KOREAN)
