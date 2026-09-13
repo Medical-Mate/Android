@@ -9,6 +9,7 @@ import com.mist.medicalmate.visit.data.AXIS_MEDICATION
 import com.mist.medicalmate.visit.data.AXIS_TESTS
 import com.mist.medicalmate.visit.data.NewVisit
 import com.mist.medicalmate.visit.data.NewVisitItem
+import com.mist.medicalmate.visit.data.VisitClassification
 import com.mist.medicalmate.visit.data.VisitRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
@@ -50,6 +51,14 @@ internal constructor(
      */
     private var visitedOn: LocalDate = LocalDate.now(clock)
 
+    /**
+     * 직전에 받은 분류.
+     *
+     * 다시 나눌 때 그대로 돌려보낸다. **안 보내면 AI 모델 호출이 다시 나가고 그 비용이 서버
+     * 크레딧과 같은 주머니에서 빠진다**고 백엔드가 적었다.
+     */
+    private var labels: Map<String, String>? = null
+
     private val mutableUiState = MutableStateFlow<VisitRecordUiState>(VisitRecordUiState.Loading)
     val uiState: StateFlow<VisitRecordUiState> = mutableUiState.asStateFlow()
 
@@ -62,11 +71,40 @@ internal constructor(
             }
         }
 
+    /**
+     * 메모를 항목으로 나눠 화면을 채운다.
+     *
+     * **나누지 못해도 화면은 연다.** 환자는 방금 메모를 적었고 그것이 이 흐름에서 잃으면 안
+     * 되는 값이다. AI가 답하지 않았다고 화면 전체를 실패로 두면 손으로 적어 저장할 길까지
+     * 막힌다. 그때는 빈 네 줄이 열리고 캡션이 붙지 않는다.
+     *
+     * 직전 결과의 [labels]를 함께 보낸다. 다시 부를 때 AI 모델을 부르지 않고 재조립만 한다.
+     */
     fun load(clinic: String?, note: String, visitedOn: LocalDate?) {
         // 흐름이 시작된 캘린더 일자다. 없으면 오늘로 둔다.
         this.visitedOn = visitedOn ?: LocalDate.now(clock)
-        mutableUiState.value =
-            VisitRecordUiState.Content(record = newRecord(clinic, note, this.visitedOn))
+        mutableUiState.value = VisitRecordUiState.Loading
+        viewModelScope.launch {
+            val classified =
+                if (note.isBlank()) {
+                    null
+                } else {
+                    (
+                        repository.classify(
+                            note,
+                            this@VisitRecordViewModel.visitedOn,
+                            clinic,
+                            labels,
+                        ) as? ApiResult.Success
+                        )
+                        ?.value
+                }
+            labels = classified?.labels ?: labels
+            mutableUiState.value =
+                VisitRecordUiState.Content(
+                    record = newRecord(clinic, note, this@VisitRecordViewModel.visitedOn, classified),
+                )
+        }
     }
 
     /** Nav 우측 `편집`. 카드 안의 모든 값을 한 번에 연다. */
@@ -151,26 +189,43 @@ internal constructor(
  * 미리 있어야 한다. 그리고 [VisitRecordItem.key]가 저장할 때 어느 서버 필드인지를 가리키는
  * 이름이기도 하다. 위치로 찾으면 한 줄을 지운 뒤에 어긋난다.
  *
- * 재방문 줄도 서버로 간다. `follow_up` 축이 생겼다(#178). 다만 날짜로 뽑은 값(`followUp`)은
- * 아직 보내지 않는다 — 그 값을 만드는 것이 AI 분류이고 1p의 정리가 아직 안 붙었다.
+ * 재방문 줄도 서버로 간다. `follow_up` 축이 생겼다(#178).
  *
- * [VisitRecord.caption]은 비워 둔다. "AI가 메모를 4가지로 나눴어요"라고 적을 근거가 아직
- * 없다. 빈 값이면 화면이 그 줄을 그리지 않는다.
+ * **AI가 나눈 값이 있으면 그 자리에 채운다**(#183). AI가 찾지 못한 항목은 빈 채로 남고, AI가
+ * 늘린 축은 네 줄 뒤에 붙는다 — 항목 이름이 닫힌 목록이 아니다.
  */
-private fun newRecord(clinic: String?, note: String, today: LocalDate) = VisitRecord(
+private fun newRecord(clinic: String?, note: String, today: LocalDate, classified: VisitClassification?) = VisitRecord(
     id = "",
     clinic = clinic,
     clinicLine = listOfNotNull(clinic, today.format(VISITED_ON)).joinToString(" · "),
-    items =
-    listOf(
-        VisitRecordItem(key = KEY_RESULT, value = "", axis = AXIS_FINDINGS),
-        VisitRecordItem(key = KEY_DONE, value = "", axis = AXIS_TESTS),
-        VisitRecordItem(key = KEY_PRESCRIPTION, value = "", axis = AXIS_MEDICATION),
-        VisitRecordItem(key = KEY_REVISIT, value = "", tone = VisitRecordItem.Tone.LINK, axis = AXIS_FOLLOW_UP),
-    ),
+    items = classifiedItems(classified),
     memo = note,
-    caption = "",
+    classifiedCount = classified?.items?.size?.takeIf { it > 0 },
+    patientNotes = classified?.patientNotes.orEmpty(),
+    followUp = classified?.followUp,
 )
+
+/**
+ * 네 줄에 나눈 값을 얹는다.
+ *
+ * 네 자리는 AI가 못 채워도 남는다. 편집에서 줄을 새로 만들 수 없어서(×로 지우기만 한다) 자리가
+ * 미리 있어야 한다. 아는 축이 아닌 것은 뒤에 그 이름으로 붙인다.
+ */
+private fun classifiedItems(classified: VisitClassification?): List<VisitRecordItem> {
+    val found = classified?.items.orEmpty().associateBy { it.axis }
+    val fixed =
+        listOf(
+            VisitRecordItem(key = KEY_RESULT, value = "", axis = AXIS_FINDINGS),
+            VisitRecordItem(key = KEY_DONE, value = "", axis = AXIS_TESTS),
+            VisitRecordItem(key = KEY_PRESCRIPTION, value = "", axis = AXIS_MEDICATION),
+            VisitRecordItem(key = KEY_REVISIT, value = "", tone = VisitRecordItem.Tone.LINK, axis = AXIS_FOLLOW_UP),
+        ).map { item -> found[item.axis]?.let { item.copy(value = it.value) } ?: item }
+    val extra =
+        classified?.items.orEmpty()
+            .filterNot { item -> fixed.any { it.axis == item.axis } }
+            .map { VisitRecordItem(key = it.label, value = it.value, axis = it.axis) }
+    return fixed + extra
+}
 
 /**
  * 화면의 줄을 서버 축으로.
@@ -188,6 +243,8 @@ private fun VisitRecord.toNewVisit(today: LocalDate) = NewVisit(
         if (item.axis.isBlank() || item.value.isBlank()) return@mapNotNull null
         NewVisitItem(axis = item.axis, value = item.value)
     },
+    followUp = followUp,
+    patientNotes = patientNotes,
     rawNote = memo,
 )
 

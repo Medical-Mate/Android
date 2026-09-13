@@ -31,6 +31,18 @@ interface VisitRepository {
      * 부르게 된다.
      */
     suspend fun deleteAll(visitIds: Set<String>): Set<String>
+
+    /**
+     * 적어 둔 메모를 항목으로 나눈다. 저장하지 않는다.
+     *
+     * @param labels 직전 결과의 분류. 있으면 함께 보낸다. 안 보내면 AI 모델을 다시 부른다.
+     */
+    suspend fun classify(
+        memo: String,
+        visitedOn: LocalDate?,
+        clinic: String?,
+        labels: Map<String, String>?,
+    ): ApiResult<VisitClassification>
 }
 
 /**
@@ -88,7 +100,36 @@ constructor(private val api: VisitApi, private val json: Json) :
     override suspend fun deleteAll(visitIds: Set<String>): Set<String> = visitIds
         .mapNotNull { id -> id.toLongOrNull()?.takeIf { delete(it) is ApiResult.Success }?.let { id } }
         .toSet()
+
+    override suspend fun classify(
+        memo: String,
+        visitedOn: LocalDate?,
+        clinic: String?,
+        labels: Map<String, String>?,
+    ): ApiResult<VisitClassification> = apiCall(json) {
+        api.classify(
+            ClassifyMemoRequest(
+                memo = memo,
+                visitedOn = visitedOn?.toString(),
+                clinicName = clinic,
+                labels = labels?.takeIf { it.isNotEmpty() },
+            ),
+        )
+    }.map { it.toClassification() }
 }
+
+/**
+ * 메모를 나눈 결과.
+ *
+ * [labels]를 들고 있다가 다시 나눌 때 돌려준다. 그것이 AI 모델을 다시 부르지 않게 하는
+ * 유일한 방법이다.
+ */
+data class VisitClassification(
+    val items: List<VisitItem>,
+    val followUp: VisitFollowUp?,
+    val patientNotes: List<String>,
+    val labels: Map<String, String>,
+)
 
 /** 목록의 기록 한 줄. 원문은 담기지 않는다. */
 data class VisitListItem(

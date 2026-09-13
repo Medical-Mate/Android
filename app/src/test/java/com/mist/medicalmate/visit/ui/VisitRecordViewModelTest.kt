@@ -1,6 +1,10 @@
 package com.mist.medicalmate.visit.ui
 
+import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.visit.data.FakeVisitRepository
+import com.mist.medicalmate.visit.data.VisitClassification
+import com.mist.medicalmate.visit.data.VisitFollowUp
+import com.mist.medicalmate.visit.data.VisitItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -9,6 +13,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -58,8 +63,80 @@ class VisitRecordViewModelTest {
     }
 
     @Test
-    fun `나눈 가짓수를 알릴 것이 없으면 비어 있다`() {
-        assertEquals("", loaded().record.caption)
+    fun `AI가 나눈 값이 네 줄에 들어간다`() {
+        val repository = classifying()
+
+        val record = content(viewModel(repository).apply { load(CLINIC, NOTE, TODAY) }).record
+
+        assertEquals(
+            listOf("위염 초기", "혈액검사", "", "2주 뒤"),
+            record.items.take(4).map { it.value },
+        )
+        assertEquals(3, record.classifiedCount)
+    }
+
+    @Test
+    fun `AI가 늘린 축은 네 줄 뒤에 붙는다`() {
+        // 항목 이름이 닫힌 목록이 아니다. 아는 것만 그리면 환자가 들은 말이 사라진다.
+        val repository =
+            FakeVisitRepository().apply {
+                classification =
+                    ApiResult.Success(
+                        CLASSIFIED.copy(
+                            items = CLASSIFIED.items + VisitItem("referral", "referral", "큰 병원 가보래요"),
+                        ),
+                    )
+            }
+
+        val record = content(viewModel(repository).apply { load(CLINIC, NOTE, TODAY) }).record
+
+        assertEquals(5, record.items.size)
+        assertEquals("큰 병원 가보래요", record.items.last().value)
+    }
+
+    @Test
+    fun `나누지 못해도 화면은 연다`() {
+        // 환자는 방금 메모를 적었다. AI가 답하지 않았다고 손으로 적어 저장할 길까지 막을 수 없다.
+        val record = content(viewModel().apply { load(CLINIC, NOTE, TODAY) }).record
+
+        assertEquals(4, record.items.size)
+        assertTrue(record.items.all { it.value.isEmpty() })
+    }
+
+    @Test
+    fun `나눈 결과의 재방문 날짜와 남은 문장이 저장에 실린다`() {
+        val repository = classifying()
+        val viewModel = viewModel(repository).apply { load(CLINIC, NOTE, TODAY) }
+
+        viewModel.onSaveClick(cardId = "3", onSaved = {})
+
+        assertEquals(LocalDate.of(2026, 9, 26), repository.request?.followUp?.date)
+        assertEquals(listOf("접수 오래 걸렸어요"), repository.request?.patientNotes)
+    }
+
+    @Test
+    fun `직전 분류를 돌려보낸다`() {
+        // 안 보내면 AI 모델 호출이 다시 나가고 그 비용이 서버 크레딧에서 빠진다.
+        val repository = classifying()
+        val viewModel = viewModel(repository).apply { load(CLINIC, NOTE, TODAY) }
+
+        viewModel.load(CLINIC, NOTE, TODAY)
+
+        assertEquals(listOf(null, mapOf("0" to "findings")), repository.classifyRequests)
+    }
+
+    @Test
+    fun `메모가 비어 있으면 나눠 달라고 하지 않는다`() {
+        val repository = classifying()
+
+        viewModel(repository).apply { load(CLINIC, "", TODAY) }
+
+        assertTrue(repository.classifyRequests.isEmpty())
+    }
+
+    @Test
+    fun `나누지 못하면 가짓수를 알리지 않는다`() {
+        assertNull(loaded().record.classifiedCount)
     }
 
     @Test
@@ -302,6 +379,9 @@ class VisitRecordViewModelTest {
         assertTrue(viewModel.uiState.value is VisitRecordUiState.Content)
     }
 
+    /** AI가 소견·검사·재방문 셋을 찾은 경우. 약은 못 찾았다. */
+    private fun classifying() = FakeVisitRepository().apply { classification = ApiResult.Success(CLASSIFIED) }
+
     private fun viewModel(repository: FakeVisitRepository = FakeVisitRepository()) =
         VisitRecordViewModel(repository, Clock.fixed(Instant.parse("2026-09-12T01:00:00Z"), ZoneId.of("Asia/Seoul")))
 
@@ -324,5 +404,19 @@ class VisitRecordViewModelTest {
         const val CLINIC = "서울OO병원 내과"
         const val NOTE = "배가 아파서 갔더니 위염이래요"
         val TODAY: LocalDate = LocalDate.of(2026, 9, 12)
+
+        val CLASSIFIED =
+            VisitClassification(
+                items =
+                listOf(
+                    VisitItem("findings", "소견", "위염 초기"),
+                    VisitItem("tests", "검사", "혈액검사"),
+                    VisitItem("follow_up", "재방문", "2주 뒤"),
+                ),
+                followUp =
+                VisitFollowUp(date = LocalDate.of(2026, 9, 26), text = "2주 뒤", approximate = true),
+                patientNotes = listOf("접수 오래 걸렸어요"),
+                labels = mapOf("0" to "findings"),
+            )
     }
 }

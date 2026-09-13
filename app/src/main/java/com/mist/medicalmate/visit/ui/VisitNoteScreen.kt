@@ -98,7 +98,6 @@ fun VisitNoteScreen(state: VisitNoteUiState, callbacks: VisitNoteCallbacks, modi
 data class VisitNoteCallbacks(
     val onBackClick: () -> Unit = {},
     val onNoteChange: (String) -> Unit = {},
-    val onOrganizeClick: () -> Unit = {},
     val onVoiceClick: () -> Unit = {},
     val onTypeInsteadClick: () -> Unit = {},
     val onSaveClick: () -> Unit = {},
@@ -120,10 +119,9 @@ private fun NoteContent(state: VisitNoteUiState, callbacks: VisitNoteCallbacks) 
             value = state.note,
             onValueChange = callbacks.onNoteChange,
             placeholder = stringResource(R.string.visit_note_placeholder),
-            enabled = !state.organizing,
             maxLength = NOTE_MAX_LENGTH,
         )
-        OrganizeRow(state = state, onOrganizeClick = callbacks.onOrganizeClick)
+        OrganizeRow(state = state, onOrganizeClick = callbacks.onSaveClick)
         // 음성 패널은 적던 글 아래에 선다. 증상 문답(1c-3·1c-4)과 같은 컴포넌트다. 그쪽은
         // 입력 자리를 통째로 갈아끼우지만 여기는 적어 둔 글이 그대로 남아야 한다.
         state.voice?.let { voice ->
@@ -233,6 +231,13 @@ private val HeadlineDate: DateTimeFormatter = DateTimeFormatter.ofPattern("M월 
  * 칩으로 둔다. 화면의 주 행동은 저장하기이고, 이것은 적은 글을 다듬는 보조 조작이다.
  * 눌러도 화면이 바뀌지 않으므로 선택 상태가 아니라 누르는 조작으로 쓴다.
  */
+/**
+ * AI로 정리하기 칩.
+ *
+ * **하단 저장하기와 같은 자리로 간다**(#183). 둘 다 메모를 분류로 보내는 같은 동작이고,
+ * 나누는 것은 결과를 그리는 1q-1이 부른다. 칩이 따로 하는 일은 없고 시안이 그 자리에 둔
+ * 진입점이다.
+ */
 @Composable
 private fun OrganizeRow(state: VisitNoteUiState, onOrganizeClick: () -> Unit) {
     Row(
@@ -244,7 +249,7 @@ private fun OrganizeRow(state: VisitNoteUiState, onOrganizeClick: () -> Unit) {
             label = stringResource(R.string.visit_note_organize),
             selected = false,
             onClick = onOrganizeClick,
-            enabled = state.note.isNotBlank() && !state.organizing,
+            enabled = state.canSave,
         )
         // 툴팁 트리거는 블록 우측 끝에 둔다(Figma 툴팁 배치 규칙).
         MedicalMateTooltip(

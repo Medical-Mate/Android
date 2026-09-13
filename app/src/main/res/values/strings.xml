@@ -107,6 +107,7 @@
     <string name="visit_record_edit_done">확인</string>
     <string name="visit_record_memo">진료 메모</string>
     <string name="visit_record_memo_quote">내가 적은 그대로</string>
+    <string name="visit_record_caption">AI가 메모를 %1$d가지로 나눴어요</string>
     <string name="visit_record_caption_tooltip">소견·검사·약·재방문으로 나눴어요. 원문 메모도 함께 남아요</string>
     <string name="visit_record_caption_tooltip_label">분류 기준 설명</string>
     <string name="visit_record_save">저장하기</string>
