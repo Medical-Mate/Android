@@ -191,8 +191,8 @@ internal constructor(
  *
  * 재방문 줄도 서버로 간다. `follow_up` 축이 생겼다(#178).
  *
- * **AI가 나눈 값이 있으면 그 자리에 채운다**(#183). AI가 찾지 못한 항목은 빈 채로 남고, AI가
- * 늘린 축은 네 줄 뒤에 붙는다 — 항목 이름이 닫힌 목록이 아니다.
+ * **AI가 나눈 것만 줄이 된다**(#183). 항목이 고정이 아니다 — AI가 축을 늘릴 수도 있고 못 찾은
+ * 항목은 줄이 없다.
  */
 private fun newRecord(clinic: String?, note: String, today: LocalDate, classified: VisitClassification?) = VisitRecord(
     id = "",
@@ -206,26 +206,37 @@ private fun newRecord(clinic: String?, note: String, today: LocalDate, classifie
 )
 
 /**
- * 네 줄에 나눈 값을 얹는다.
+ * 그릴 줄.
  *
- * 네 자리는 AI가 못 채워도 남는다. 편집에서 줄을 새로 만들 수 없어서(×로 지우기만 한다) 자리가
- * 미리 있어야 한다. 아는 축이 아닌 것은 뒤에 그 이름으로 붙인다.
+ * **항목이 고정이 아니다.** AI가 찾은 축만 그 차례대로 선다. 못 찾은 항목은 빈 줄이 아니라
+ * 없는 줄이다 — 서버도 키 자체를 보내지 않는다. 빈 자리를 네 개 깔아 두면 AI가 무엇을 찾았고
+ * 무엇을 못 찾았는지가 화면에서 지워진다.
+ *
+ * 나눈 것이 하나도 없을 때만 네 자리를 연다. 분류가 실패했거나 AI가 아무것도 못 건졌을 때인데,
+ * 그때도 손으로 적어 저장할 곳은 있어야 한다. 편집에서 줄을 새로 만들 수 없기 때문이다(×로
+ * 지우기만 한다).
  */
 private fun classifiedItems(classified: VisitClassification?): List<VisitRecordItem> {
-    val found = classified?.items.orEmpty().associateBy { it.axis }
-    val fixed =
-        listOf(
-            VisitRecordItem(key = KEY_RESULT, value = "", axis = AXIS_FINDINGS),
-            VisitRecordItem(key = KEY_DONE, value = "", axis = AXIS_TESTS),
-            VisitRecordItem(key = KEY_PRESCRIPTION, value = "", axis = AXIS_MEDICATION),
-            VisitRecordItem(key = KEY_REVISIT, value = "", tone = VisitRecordItem.Tone.LINK, axis = AXIS_FOLLOW_UP),
-        ).map { item -> found[item.axis]?.let { item.copy(value = it.value) } ?: item }
-    val extra =
-        classified?.items.orEmpty()
-            .filterNot { item -> fixed.any { it.axis == item.axis } }
-            .map { VisitRecordItem(key = it.label, value = it.value, axis = it.axis) }
-    return fixed + extra
+    val found = classified?.items.orEmpty()
+    if (found.isEmpty()) return EMPTY_ROWS
+    return found.map { item ->
+        VisitRecordItem(
+            key = item.label,
+            value = item.value,
+            tone = if (item.axis == AXIS_FOLLOW_UP) VisitRecordItem.Tone.LINK else VisitRecordItem.Tone.DEFAULT,
+            axis = item.axis,
+        )
+    }
 }
+
+/** 나눈 것이 없을 때 여는 빈 자리. 시안 1q-1이 그리는 넷이다. */
+private val EMPTY_ROWS =
+    listOf(
+        VisitRecordItem(key = KEY_RESULT, value = "", axis = AXIS_FINDINGS),
+        VisitRecordItem(key = KEY_DONE, value = "", axis = AXIS_TESTS),
+        VisitRecordItem(key = KEY_PRESCRIPTION, value = "", axis = AXIS_MEDICATION),
+        VisitRecordItem(key = KEY_REVISIT, value = "", tone = VisitRecordItem.Tone.LINK, axis = AXIS_FOLLOW_UP),
+    )
 
 /**
  * 화면의 줄을 서버 축으로.

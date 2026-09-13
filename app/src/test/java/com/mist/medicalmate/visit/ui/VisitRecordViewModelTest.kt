@@ -63,20 +63,17 @@ class VisitRecordViewModelTest {
     }
 
     @Test
-    fun `AI가 나눈 값이 네 줄에 들어간다`() {
-        val repository = classifying()
+    fun `AI가 찾은 항목만 줄이 된다`() {
+        // 항목이 고정이 아니다. 못 찾은 것을 빈 줄로 깔면 AI가 무엇을 못 찾았는지가 지워진다.
+        val record = content(viewModel(classifying()).apply { load(CLINIC, NOTE, TODAY) }).record
 
-        val record = content(viewModel(repository).apply { load(CLINIC, NOTE, TODAY) }).record
-
-        assertEquals(
-            listOf("위염 초기", "혈액검사", "", "2주 뒤"),
-            record.items.take(4).map { it.value },
-        )
+        assertEquals(listOf("소견", "검사", "재방문"), record.items.map { it.key })
+        assertEquals(listOf("위염 초기", "혈액검사", "2주 뒤"), record.items.map { it.value })
         assertEquals(3, record.classifiedCount)
     }
 
     @Test
-    fun `AI가 늘린 축은 네 줄 뒤에 붙는다`() {
+    fun `AI가 늘린 축도 그대로 줄이 된다`() {
         // 항목 이름이 닫힌 목록이 아니다. 아는 것만 그리면 환자가 들은 말이 사라진다.
         val repository =
             FakeVisitRepository().apply {
@@ -90,16 +87,27 @@ class VisitRecordViewModelTest {
 
         val record = content(viewModel(repository).apply { load(CLINIC, NOTE, TODAY) }).record
 
-        assertEquals(5, record.items.size)
+        assertEquals(4, record.items.size)
         assertEquals("큰 병원 가보래요", record.items.last().value)
     }
 
     @Test
-    fun `나누지 못해도 화면은 연다`() {
+    fun `나눈 결과에서도 재방문만 브랜드색이다`() {
+        val record = content(viewModel(classifying()).apply { load(CLINIC, NOTE, TODAY) }).record
+
+        assertEquals(
+            listOf(VisitRecordItem.Tone.DEFAULT, VisitRecordItem.Tone.DEFAULT, VisitRecordItem.Tone.LINK),
+            record.items.map { it.tone },
+        )
+    }
+
+    @Test
+    fun `나누지 못하면 빈 네 자리를 연다`() {
         // 환자는 방금 메모를 적었다. AI가 답하지 않았다고 손으로 적어 저장할 길까지 막을 수 없다.
+        // 편집에서 줄을 새로 만들 수 없어서 자리가 미리 있어야 한다.
         val record = content(viewModel().apply { load(CLINIC, NOTE, TODAY) }).record
 
-        assertEquals(4, record.items.size)
+        assertEquals(listOf("소견", "검사", "약", "재방문"), record.items.map { it.key })
         assertTrue(record.items.all { it.value.isEmpty() })
     }
 
