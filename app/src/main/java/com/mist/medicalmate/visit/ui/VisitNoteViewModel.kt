@@ -79,7 +79,7 @@ constructor(private val clock: Clock, private val speech: SpeechToText) : ViewMo
             speech = speech,
             scope = viewModelScope,
             onVoice = { voice -> mutableUiState.update { it.copy(voice = voice) } },
-            onDictated = { note -> mutableUiState.update { it.copy(note = note) } },
+            onDictated = { note, _ -> mutableUiState.update { it.copy(note = note) } },
         )
 
     /**

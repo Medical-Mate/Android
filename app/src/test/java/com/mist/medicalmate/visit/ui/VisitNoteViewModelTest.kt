@@ -138,6 +138,53 @@ class VisitNoteViewModelTest {
     }
 
     @Test
+    fun `말이 끊겼다 이어져도 앞말이 남는다`() {
+        // 인식기는 잠깐 멈추면 그 발화를 확정하고 다음 발화를 처음부터 다시 센다. 누를 때의
+        // 글만 기준으로 삼으면 두 번째 말이 첫 번째 말을 지운다.
+        val speech =
+            FakeSpeechToText(
+                chunks =
+                listOf(
+                    SpeechChunk.Final("위염이래요"),
+                    SpeechChunk.Partial("약"),
+                    SpeechChunk.Final("약 일주일치 받았어요"),
+                ),
+                keepOpen = true,
+            )
+        val viewModel = viewModel(speech)
+
+        viewModel.onVoiceClick()
+
+        assertEquals("위염이래요 약 일주일치 받았어요", viewModel.uiState.value.note)
+    }
+
+    @Test
+    fun `이어 붙일 때 한 칸을 넣는다`() {
+        // 인식기가 앞뒤를 붙여 주지 않아 그대로 두면 "위염이래요약"이 된다.
+        val speech =
+            FakeSpeechToText(
+                chunks = listOf(SpeechChunk.Final("위염이래요"), SpeechChunk.Partial("약")),
+                keepOpen = true,
+            )
+        val viewModel = viewModel(speech)
+
+        viewModel.onVoiceClick()
+
+        assertEquals("위염이래요 약", viewModel.uiState.value.note)
+    }
+
+    @Test
+    fun `이미 띄어져 있으면 칸을 더 넣지 않는다`() {
+        val speech = FakeSpeechToText(chunks = listOf(SpeechChunk.Final("약 받았어요")), keepOpen = true)
+        val viewModel = viewModel(speech)
+        viewModel.onNoteChange("위염이래요. ")
+
+        viewModel.onVoiceClick()
+
+        assertEquals("위염이래요. 약 받았어요", viewModel.uiState.value.note)
+    }
+
+    @Test
     fun `모델을 받는 동안은 정리하는 중이다`() {
         // 처음 쓸 때 한 번이다. 시안의 PROCESSING 자리가 이 상태다.
         val speech = FakeSpeechToText(chunks = listOf(SpeechChunk.Preparing), keepOpen = true)

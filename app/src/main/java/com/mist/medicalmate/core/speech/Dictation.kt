@@ -19,16 +19,23 @@ import kotlinx.coroutines.launch
  * 눌러야 듣기 시작하면 그 사이에 한 말이 사라진다. 그래서 `말씀해 주세요`(IDLE)는 "아직
  * 아무것도 못 들었다"이고 `듣고 있어요`(LISTENING)는 "말소리가 들어오기 시작했다"다.
  *
+ * **말이 끊겼다 이어져도 앞말이 남는다.** 인식기는 잠깐 멈추면 그 발화를 확정하고 다음
+ * 발화를 처음부터 다시 센다. 누를 때의 글만 기준으로 삼으면 두 번째 말이 첫 번째 말을 지운다.
+ * 확정된 발화는 그때그때 이어 붙여 기준을 옮긴다.
+ *
  * @param onVoice 패널 상태.
- * @param onDictated 받아쓴 결과를 얹은 글 전체.
+ * @param onDictated 받아쓴 결과를 얹은 글 전체와, 방금 들어온 발화.
  */
 class Dictation(
     private val speech: SpeechToText,
     private val scope: CoroutineScope,
     private val onVoice: (MedicalMateVoiceState) -> Unit,
-    private val onDictated: (String) -> Unit,
+    private val onDictated: (text: String, latest: String) -> Unit,
 ) {
     private var job: Job? = null
+
+    /** 누를 때의 글에 확정된 발화를 이어 붙인 것. 다음 발화가 이 뒤에 붙는다. */
+    private var committed = ""
 
     /** 듣는 중인지. 패널 상태가 아니라 이것으로 판단한다 — IDLE이어도 듣고 있을 수 있다. */
     val listening: Boolean get() = job?.isActive == true
@@ -40,6 +47,7 @@ class Dictation(
      */
     fun start(base: String) {
         if (listening) return
+        committed = base
         onVoice(MedicalMateVoiceState.IDLE)
         job = scope.launch {
             speech.listen().collect { chunk ->
@@ -49,12 +57,14 @@ class Dictation(
 
                     is SpeechChunk.Partial -> {
                         onVoice(MedicalMateVoiceState.LISTENING)
-                        onDictated(base + chunk.text)
+                        onDictated(committed.join(chunk.text), chunk.text)
                     }
 
+                    // 확정된 발화는 기준에 얹는다. 다음 발화가 이것을 지우지 않게 한다.
                     is SpeechChunk.Final -> {
                         onVoice(MedicalMateVoiceState.LISTENING)
-                        onDictated(base + chunk.text)
+                        committed = committed.join(chunk.text)
+                        onDictated(committed, chunk.text)
                     }
 
                     // 적던 글은 그대로 두고 상태만 되돌린다. 못 알아들었다고 적은 것을 지우지 않는다.
@@ -82,4 +92,17 @@ class Dictation(
         scope.launch { speech.stop() }
         onVoice(MedicalMateVoiceState.IDLE)
     }
+}
+
+/**
+ * 앞말과 새 말을 잇는다.
+ *
+ * 발화가 끊기면 인식기가 앞뒤를 붙여 주지 않아 "위염이래요약을받았어요"가 된다. 한 칸을
+ * 넣되 이미 띄어져 있으면 그대로 둔다.
+ */
+private fun String.join(next: String): String = when {
+    isEmpty() -> next
+    next.isEmpty() -> this
+    last().isWhitespace() -> this + next
+    else -> "$this $next"
 }

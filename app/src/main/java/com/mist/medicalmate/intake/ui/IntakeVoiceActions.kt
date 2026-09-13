@@ -41,9 +41,12 @@ class IntakeVoiceActions(
      * **문답이 끝난 뒤에는 "다음"을 듣는다.** 더 할 말이 없는 자리라 남은 조작이 다음으로
      * 가는 것뿐이고, 말로 하던 사람에게 거기서만 손을 쓰게 할 이유가 없다. 그 밖의 말은
      * 적히기만 하고 아무 일도 하지 않는다.
+     *
+     * 방금 들어온 발화만 본다. 이어 붙인 글로 보면 앞에 다른 말을 한 뒤에는 "다음"이라고
+     * 해도 걸리지 않는다.
      */
-    private fun onDictated(text: String) {
-        if (state().chatFinished && text.isNextCommand()) {
+    private fun onDictated(text: String, latest: String) {
+        if (state().chatFinished && latest.isNextCommand()) {
             dictation.stop()
             onCommand(VoiceCommand.NEXT)
             return
