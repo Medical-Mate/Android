@@ -121,6 +121,8 @@ private fun IntakeRoute(
             onBodyAnchorFocus = viewModel.bodyMap::onAnchorFocus,
             onBodyFocusClear = viewModel.bodyMap::onFocusClear,
             onBodyListModeToggle = viewModel.bodyMap::onListModeToggle,
+            onBodyMap3dToggle = viewModel.bodyMap::onMap3dToggle,
+            onBodyReset = viewModel.bodyMap::onReset,
             onBodySearchChange = viewModel.bodyMap::onSearchChange,
             onDraftChange = viewModel::onDraftChange,
             onSendClick = viewModel::onSend,

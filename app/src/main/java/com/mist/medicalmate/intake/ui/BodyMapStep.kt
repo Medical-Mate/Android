@@ -3,6 +3,7 @@ package com.mist.medicalmate.intake.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -36,10 +37,10 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateSegmentedCont
 internal fun BodyPartStep(state: IntakeUiState, callbacks: IntakeCallbacks, modifier: Modifier = Modifier) {
     val bodyMap = state.bodyMap
     StepContent(step = state.step, scrollKey = bodyMap.screen, modifier = modifier) {
-        if (bodyMap.screen == BodyMapScreen.LIST) {
-            BodyMapPartList(state = bodyMap, callbacks = callbacks)
-        } else {
-            ImagePicker(state = bodyMap, callbacks = callbacks)
+        when (bodyMap.screen) {
+            BodyMapScreen.LIST -> BodyMapPartList(state = bodyMap, callbacks = callbacks)
+            BodyMapScreen.MAP_3D -> BodyMap3dStep(state = bodyMap, callbacks = callbacks)
+            else -> ImagePicker(state = bodyMap, callbacks = callbacks)
         }
     }
 }
@@ -83,7 +84,22 @@ private fun ImagePicker(state: BodyMapUiState, callbacks: IntakeCallbacks) {
             selectedIndex = state.view.ordinal,
             onSelect = { callbacks.onBodyViewChange(BodyMapView.entries[it]) },
         )
-        SideAnchorRow(state = state, callbacks = callbacks)
+        SideAnchorRow(state = state, callbacks = callbacks) {
+            // 3D 인체도로 가는 테스트 입구(#211). 쓸지 말지가 정해지면 지우거나 제 자리를
+            // 받는다. 라벨이 두 글자인 것은 이 줄에 버튼이 둘 들어가기 때문이다.
+            MedicalMateButton(
+                onClick = callbacks.onBodyMap3dToggle,
+                label = stringResource(R.string.body_map_use_3d),
+                type = MedicalMateButtonType.GHOST,
+                size = MedicalMateButtonSize.S,
+            )
+            MedicalMateButton(
+                onClick = callbacks.onBodyListModeToggle,
+                label = stringResource(R.string.body_map_use_list),
+                type = MedicalMateButtonType.GHOST,
+                size = MedicalMateButtonSize.S,
+            )
+        }
     }
     AnimatedCard(state = state, callbacks = callbacks)
 }
@@ -183,14 +199,19 @@ private fun ZoneCard(state: BodyMapUiState, callbacks: IntakeCallbacks) {
  * 칩 둘은 인체도에 점으로 찍을 수 없는 앵커다. 몸 전체에 걸리는 증상(열·피로)과 어디든
  * 생기는 증상(발진)이라 한 점으로 찍을 수 없다. 구역 단계가 없어서 누르면 바로 정해진다.
  *
- * 목록 전환을 같은 줄 오른쪽에 붙였다. 따로 줄을 두면 판이 그만큼 더 밀려 내려간다.
+ * 길을 바꾸는 버튼은 같은 줄 오른쪽에 붙인다([trailing]). 따로 줄을 두면 판이 그만큼 더
+ * 밀려 내려간다. 3D 화면도 같은 줄을 쓰는데 거기서는 버튼이 하나라 슬롯으로 받는다.
  *
  * **그 버튼에 `weight`를 주지 않는다.** 남은 폭을 전부 먹으면 라벨이 그 안에서 가운데
  * 정렬돼 칩과의 간격이 들쭉날쭉해 보인다. 빈 자리를 [Spacer]가 밀고 버튼은 제 폭으로
  * 오른쪽 끝에 선다.
  */
 @Composable
-private fun SideAnchorRow(state: BodyMapUiState, callbacks: IntakeCallbacks) {
+internal fun SideAnchorRow(
+    state: BodyMapUiState,
+    callbacks: IntakeCallbacks,
+    trailing: @Composable RowScope.() -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8),
@@ -204,17 +225,12 @@ private fun SideAnchorRow(state: BodyMapUiState, callbacks: IntakeCallbacks) {
             )
         }
         Spacer(modifier = Modifier.weight(1f))
-        MedicalMateButton(
-            onClick = callbacks.onBodyListModeToggle,
-            label = stringResource(R.string.body_map_use_list),
-            type = MedicalMateButtonType.GHOST,
-            size = MedicalMateButtonSize.S,
-        )
+        trailing()
     }
 }
 
 @Composable
-private fun bodyMapViewOptions(): List<String> = listOf(
+internal fun bodyMapViewOptions(): List<String> = listOf(
     stringResource(R.string.body_map_view_front),
     stringResource(R.string.body_map_view_back),
 )

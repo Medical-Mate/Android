@@ -23,6 +23,13 @@ data class BodyMapUiState(
     val focus: BodyMapSelection? = null,
     val selection: BodyMapSelection? = null,
     val byList: Boolean = false,
+    /**
+     * 3D 인체도로 짚는 중인지. 테스트용이다(#211).
+     *
+     * 2D와 같은 값을 고르고 같은 [selection]에 넣는다. 어느 쪽이 나은지 기기에서 견주려고
+     * 두 길을 함께 둔 것이라 저장되는 값이 갈리면 견줄 수가 없다.
+     */
+    val byMap3d: Boolean = false,
     val search: String = "",
     /**
      * 마지막으로 결과가 있었던 검색.
@@ -50,6 +57,7 @@ data class BodyMapUiState(
     val screen: BodyMapScreen
         get() = when {
             byList -> BodyMapScreen.LIST
+            byMap3d -> BodyMapScreen.MAP_3D
             pickingZone -> BodyMapScreen.ZONE
             else -> BodyMapScreen.ANCHOR
         }
@@ -77,9 +85,9 @@ data class BodyMapUiState(
  * 인체도 단계의 화면 셋.
  *
  * [ANCHOR]는 전신에서 앵커를 짚는 1l-1·1l-3, [ZONE]은 확대해 구역을 고르는 1l-2,
- * [LIST]는 인체도를 쓸 수 없을 때의 목록이다.
+ * [LIST]는 인체도를 쓸 수 없을 때의 목록이고, [MAP_3D]은 시안에 없는 테스트 화면이다(#211).
  */
-enum class BodyMapScreen { ANCHOR, ZONE, LIST }
+enum class BodyMapScreen { ANCHOR, ZONE, LIST, MAP_3D }
 
 /**
  * 인체도에 자리가 없는 앵커. 전신과 피부다.
