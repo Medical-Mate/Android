@@ -2,25 +2,33 @@ package com.mist.medicalmate.intake.ui
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.mist.medicalmate.R
+import com.mist.medicalmate.core.designsystem.MedicalMateIcons
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonSize
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonType
+import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButton
+import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButtonSize
+import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButtonStyle
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSegmentedControl
 import kotlinx.coroutines.launch
 
@@ -42,10 +50,13 @@ import kotlinx.coroutines.launch
 internal fun BodyMap3dStep(state: BodyMapUiState, callbacks: IntakeCallbacks) {
     val camera = rememberBodyMap3dCamera()
     var notice by remember { mutableStateOf<Int?>(null) }
+    var resets by remember { mutableIntStateOf(0) }
     val focus = state.focus
 
     // 부위가 바뀌면 카메라가 그 자리로 미끄러진다. 순간이동시키면 어디로 들어갔는지 알 수 없다.
-    LaunchedEffect(focus) {
+    // 초기화도 이 자리에서 함께 처리한다. 버튼에서 따로 카메라를 옮기면, 지운 것 때문에 다시
+    // 도는 이 효과와 겹쳐 둘이 서로를 끊는다.
+    LaunchedEffect(focus, resets) {
         notice = null
         val frame = focus?.let { bodyMap3dFrameOf(it.anchorId) }
         camera.glideTo(
@@ -63,28 +74,24 @@ internal fun BodyMap3dStep(state: BodyMapUiState, callbacks: IntakeCallbacks) {
     } else {
         AnchorActions(state = state, camera = camera, callbacks = callbacks)
     }
-    BodyMapCard(
-        height = bodyMapBodyHeight(),
-        orientationLabels = false,
-        caption = state.selection?.label(),
-    ) {
-        BodyMap3dBoard(
-            camera = camera,
-            focus = focus,
-            selection = state.selection,
-            onPick = { pick ->
-                notice = noticeOf(pick)
-                if (pick != null && pick.accepted) {
-                    if (focus == null) {
-                        callbacks.onBodyAnchorFocus(pick.point.toFocus())
-                    } else {
-                        callbacks.onBodyPartSelect(pick.point.toSelection())
-                    }
+    Board(
+        state = state,
+        camera = camera,
+        onPick = { pick ->
+            notice = noticeOf(pick)
+            if (pick != null && pick.accepted) {
+                if (focus == null) {
+                    callbacks.onBodyAnchorFocus(pick.point.toFocus())
+                } else {
+                    callbacks.onBodyPartSelect(pick.point.toSelection())
                 }
-            },
-            modifier = Modifier.fillMaxSize(),
-        )
-    }
+            }
+        },
+        onReset = {
+            callbacks.onBodyReset()
+            resets++
+        },
+    )
     val message = notice
     if (message != null) {
         Text(
@@ -92,6 +99,50 @@ internal fun BodyMap3dStep(state: BodyMapUiState, callbacks: IntakeCallbacks) {
             style = MedicalMateTheme.typography.bodyM,
             color = MedicalMateTheme.colors.fgSubtle,
         )
+    }
+}
+
+/**
+ * 인체도 판.
+ *
+ * 고른 것이 있으면 판 오른쪽 위에 지우는 버튼이 선다. 3D는 돌리고 확대하다 보면 처음
+ * 자리에서 멀어지는데, 고른 것을 물린 채로는 어디서부터 다시 짚어야 할지가 흐려진다.
+ * 고르기 전에는 지울 것이 없어서 두지 않는다.
+ *
+ * 판 안에 얹는 것은 좌우 안내와 고른 부위 알약이 그렇듯 판의 언어다. 판 밖에 두면 조작
+ * 줄이 한 줄 더 생겨 판이 그만큼 내려간다.
+ */
+@Composable
+private fun Board(
+    state: BodyMapUiState,
+    camera: BodyMap3dCameraState,
+    onPick: (BodyMap3dPick?) -> Unit,
+    onReset: () -> Unit,
+) {
+    BodyMapCard(
+        height = bodyMapBodyHeight(),
+        orientationLabels = false,
+        caption = state.selection?.label(),
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            BodyMap3dBoard(
+                camera = camera,
+                focus = state.focus,
+                selection = state.selection,
+                onPick = onPick,
+                modifier = Modifier.fillMaxSize(),
+            )
+            if (state.selection != null) {
+                MedicalMateIconButton(
+                    onClick = onReset,
+                    icon = MedicalMateIcons.Close,
+                    contentDescription = stringResource(R.string.body_map_3d_reset),
+                    style = MedicalMateIconButtonStyle.TONAL,
+                    size = MedicalMateIconButtonSize.M,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(ResetInset),
+                )
+            }
+        }
     }
 }
 
@@ -170,6 +221,14 @@ private fun ZoneActions(focus: BodyMapSelection, callbacks: IntakeCallbacks) {
         }
     }
 }
+
+/**
+ * 지우는 버튼을 판 모서리에서 띄우는 만큼.
+ *
+ * 버튼은 40으로 보이지만 48 터치 영역을 품고 있어서 그 4가 이미 안쪽에 있다. 판이 좌우
+ * 안내를 두는 12에 맞추려고 8만 더한다.
+ */
+private val ResetInset = MedicalMateSpace.s8
 
 /** 좌우를 뒤집는다. 좌우가 없는 자리에서 불릴 일은 없지만 왼쪽으로 둔다. */
 private fun BodyMapSide.opposite(): BodyMapSide = if (this == BodyMapSide.LEFT) BodyMapSide.RIGHT else BodyMapSide.LEFT

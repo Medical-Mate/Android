@@ -268,6 +268,7 @@
     <string name="body_map_use_3d">3D</string>
     <string name="body_map_3d_description">아픈 곳을 짚으면 그 부위로 들어가요. 끌면 돌고 오므리면 커져요.</string>
     <string name="body_map_3d_flip_side">반대쪽 보기</string>
+    <string name="body_map_3d_reset">고른 부위 지우기</string>
     <string name="body_map_3d_off_body">몸 바깥을 짚었어요. 몸 위를 짚어주세요.</string>
     <string name="body_map_3d_too_far">여기가 어디인지 알기 어려워요. 조금 더 가운데를 짚어주세요.</string>
     <string name="body_map_search_placeholder">부위 이름으로 찾기</string>

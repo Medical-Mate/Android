@@ -42,6 +42,16 @@ class BodyMapActions(private val update: ((BodyMapUiState) -> BodyMapUiState) ->
         }
     }
 
+    /**
+     * 고른 부위와 확대를 지우고 처음 상태로 되돌린다. 3D 테스트 화면의 초기화다(#211).
+     *
+     * 검색어는 건드리지 않는다. 이 동작이 있는 화면에는 검색이 없고, 목록으로 갔을 때
+     * 적어 둔 검색어가 사라지면 되돌린 것이 부위인지 검색인지 알 수 없다.
+     */
+    fun onReset() {
+        update { it.copy(focus = null, selection = null) }
+    }
+
     /** 확대한 앵커에서 부위를 골랐다. 목록에서 고르는 길이 쓴다. */
     fun onPartSelect(selection: BodyMapSelection) {
         update { it.copy(selection = selection) }

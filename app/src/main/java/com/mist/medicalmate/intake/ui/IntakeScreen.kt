@@ -73,6 +73,7 @@ data class IntakeCallbacks(
     val onBodyFocusClear: () -> Unit = {},
     val onBodyListModeToggle: () -> Unit = {},
     val onBodyMap3dToggle: () -> Unit = {},
+    val onBodyReset: () -> Unit = {},
     val onBodySearchChange: (String) -> Unit = {},
     val onDraftChange: (String) -> Unit = {},
     val onSendClick: () -> Unit = {},
