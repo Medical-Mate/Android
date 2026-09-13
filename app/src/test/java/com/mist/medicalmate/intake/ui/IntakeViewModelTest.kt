@@ -471,6 +471,56 @@ class IntakeViewModelTest {
     }
 
     @Test
+    fun `문답이 끝나면 다음이라고 말해 넘어간다`() {
+        // 더 할 말이 없는 자리라 남은 조작이 다음으로 가는 것뿐이다. 말로 하던 사람에게
+        // 거기서만 손을 쓰게 할 이유가 없다.
+        val speech = FakeSpeechToText(chunks = listOf(SpeechChunk.Final("다음")), keepOpen = true)
+        val viewModel = intakeViewModel(repository = FakeSessionRepository(ends = true), speech = speech)
+        viewModel.openChatStep()
+        viewModel.voice.onVoiceMode()
+        viewModel.voice.onMicClick()
+
+        assertEquals(IntakeStep.SEVERITY, viewModel.uiState.value.step)
+    }
+
+    @Test
+    fun `조사가 붙어도 다음으로 듣는다`() {
+        val speech = FakeSpeechToText(chunks = listOf(SpeechChunk.Final("다음이요")), keepOpen = true)
+        val viewModel = intakeViewModel(repository = FakeSessionRepository(ends = true), speech = speech)
+        viewModel.openChatStep()
+        viewModel.voice.onVoiceMode()
+        viewModel.voice.onMicClick()
+
+        assertEquals(IntakeStep.SEVERITY, viewModel.uiState.value.step)
+    }
+
+    @Test
+    fun `다음이 들어간 긴 말은 넘기지 않는다`() {
+        // 그냥 포함 여부로 보면 "다음 주에 다시 올게요" 같은 말에도 걸린다.
+        val speech =
+            FakeSpeechToText(chunks = listOf(SpeechChunk.Final("다음 주에 다시 올게요")), keepOpen = true)
+        val viewModel = intakeViewModel(repository = FakeSessionRepository(ends = true), speech = speech)
+        viewModel.openChatStep()
+        viewModel.voice.onVoiceMode()
+        viewModel.voice.onMicClick()
+
+        assertEquals(IntakeStep.SYMPTOM_CHAT, viewModel.uiState.value.step)
+    }
+
+    @Test
+    fun `문답 중에는 다음이라고 말해도 넘어가지 않는다`() {
+        // 아직 할 말이 남은 자리다. "다음에 또 아팠어요" 같은 말이 단계를 넘기면 안 된다.
+        val speech = FakeSpeechToText(chunks = listOf(SpeechChunk.Final("다음")), keepOpen = true)
+        val viewModel = intakeViewModel(speech = speech)
+        viewModel.openChatStep()
+
+        viewModel.voice.onVoiceMode()
+
+        assertEquals(IntakeStep.SYMPTOM_CHAT, viewModel.uiState.value.step)
+        assertEquals("다음", viewModel.uiState.value.draft)
+    }
+
+    @Test
     fun `마이크 권한을 거부하면 왜 안 되는지 적는다`() {
         val viewModel = intakeViewModel()
 

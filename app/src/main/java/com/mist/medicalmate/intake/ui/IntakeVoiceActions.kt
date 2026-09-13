@@ -15,25 +15,41 @@ import kotlinx.coroutines.launch
  *
  * **말로 하는 대화의 한 바퀴를 여기가 돈다.** 마이크를 누르면 듣고, 다 말하고 누르면 그
  * 자리에서 보내고, AI가 답하면 다시 듣는다. 매번 마이크를 누르게 하면 말로 하는 흐름이
- * 끊긴다.
+ * 끊긴다. 문답이 끝난 뒤에는 "다음"을 듣는다.
  *
- * @param send 적어 둔 글을 보낸다. 보내는 일 자체는 ViewModel이 한다 — 세션과 서버를 아는
- *   것이 그쪽이다.
+ * @param onCommand 말이 끝났을 때 할 일. 보내는 것도 다음으로 가는 것도 세션과 단계를 아는
+ *   ViewModel이 한다.
  */
 class IntakeVoiceActions(
     private val speech: SpeechToText,
     private val scope: CoroutineScope,
     private val state: () -> IntakeUiState,
     private val update: ((IntakeUiState) -> IntakeUiState) -> Unit,
-    private val send: () -> Unit,
+    private val onCommand: (VoiceCommand) -> Unit,
 ) {
     private val dictation =
         Dictation(
             speech = speech,
             scope = scope,
             onVoice = { voice -> update { it.copy(voice = voice) } },
-            onDictated = { draft -> update { it.copy(draft = draft) } },
+            onDictated = ::onDictated,
         )
+
+    /**
+     * 받아쓴 글이 왔다.
+     *
+     * **문답이 끝난 뒤에는 "다음"을 듣는다.** 더 할 말이 없는 자리라 남은 조작이 다음으로
+     * 가는 것뿐이고, 말로 하던 사람에게 거기서만 손을 쓰게 할 이유가 없다. 그 밖의 말은
+     * 적히기만 하고 아무 일도 하지 않는다.
+     */
+    private fun onDictated(text: String) {
+        if (state().chatFinished && text.isNextCommand()) {
+            dictation.stop()
+            onCommand(VoiceCommand.NEXT)
+            return
+        }
+        update { it.copy(draft = text) }
+    }
 
     /**
      * 입력칸의 마이크. 권한이 확인된 뒤에 불린다.
@@ -61,7 +77,7 @@ class IntakeVoiceActions(
             return
         }
         dictation.stop()
-        send()
+        onCommand(VoiceCommand.SEND)
     }
 
     /**
@@ -71,8 +87,7 @@ class IntakeVoiceActions(
      * 화면으로 가는 동안 녹음이 남는다.
      */
     fun onReplied() {
-        val current = state()
-        if (current.inputMode != IntakeInputMode.VOICE || current.chatFinished) return
+        if (state().inputMode != IntakeInputMode.VOICE) return
         dictation.start("")
     }
 
@@ -94,3 +109,30 @@ class IntakeVoiceActions(
         }
     }
 }
+
+/** 말이 끝났을 때 할 일. */
+enum class VoiceCommand {
+    /** 적힌 글을 보낸다. */
+    SEND,
+
+    /** 다음 단계로 간다. 문답이 끝난 뒤에만 나온다. */
+    NEXT,
+}
+
+/**
+ * "다음"으로 들리는 말인지.
+ *
+ * 앞이 "다음"이고 짧을 때만 본다. 그냥 포함 여부로 보면 "다음 주에 다시 올게요" 같은 말에도
+ * 걸린다. 조사나 어미가 붙는 것("다음이요"·"다음으로")은 받아들인다.
+ */
+private fun String.isNextCommand(): Boolean {
+    val word = filterNot { it.isWhitespace() || it in PUNCTUATION }
+    return word.startsWith(NEXT_WORD) && word.length <= NEXT_COMMAND_MAX
+}
+
+private const val NEXT_WORD = "다음"
+
+/** "다음" 두 자에 조사·어미가 붙는 만큼. */
+private const val NEXT_COMMAND_MAX = 6
+
+private const val PUNCTUATION = ".,!?"

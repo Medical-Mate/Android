@@ -111,8 +111,18 @@ internal constructor(private val repository: SessionRepository, speech: SpeechTo
             scope = viewModelScope,
             state = { mutableUiState.value },
             update = { transform -> mutableUiState.update(transform) },
-            send = ::onSend,
+            onCommand = ::onVoiceCommand,
         )
+
+    /** 말로 한 조작. 보내거나 다음으로 간다. */
+    private fun onVoiceCommand(command: VoiceCommand) {
+        when (command) {
+            VoiceCommand.SEND -> onSend()
+            // 강도 라벨은 이 단계에서 쓰지 않는다. 단계를 떠날 때 값을 남기는 것은 강도와
+            // 질문 단계뿐이다.
+            VoiceCommand.NEXT -> onNext("")
+        }
+    }
 
     fun onSeverityChange(severity: MedicalMateSeverity) {
         mutableUiState.update { it.copy(severity = severity) }

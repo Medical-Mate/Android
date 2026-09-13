@@ -181,6 +181,9 @@ internal fun ChatInput(state: IntakeUiState, callbacks: IntakeCallbacks) {
                 state = state.voice,
                 onMicClick = callbacks.onMicClick,
                 onTypeInsteadClick = callbacks.onTypeInsteadClick,
+                // 문답이 끝나면 더 할 말이 없고 남은 조작은 다음으로 가는 것뿐이다. 말로
+                // 하던 사람에게 거기서만 손을 쓰게 할 이유가 없어 그 말을 듣는다.
+                description = stringResource(R.string.voice_next_hint).takeIf { state.chatFinished },
             )
 
         IntakeInputMode.TEXT ->

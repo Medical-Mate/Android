@@ -51,6 +51,10 @@ enum class MedicalMateVoiceState(@StringRes val titleRes: Int, @StringRes val de
  * [MedicalMateVoiceState.PROCESSING]에서는 마이크를 누를 수 없다. 정리 중에 다시 눌러
  * 녹음이 겹치면 어느 말이 반영됐는지 알 수 없다.
  *
+ * [description]으로 둘째 줄을 갈아 끼울 수 있다. 상태가 말해 주지 못하는 것이 있을 때만
+ * 쓴다 — 문답이 끝난 뒤 "다음"이라고 말할 수 있다는 안내가 그 자리다(#190). **시안에 없는
+ * 문구라 디자인 트랙 확인이 필요하다.**
+ *
  * 파형은 [MedicalMateVoiceState.LISTENING]에서만 보인다. 움직임 축소 설정에서 흔들림을
  * 줄이더라도 "듣고 있어요" 문구는 남아야 하므로(문서의 접근성 기준), 상태를 파형으로만 알리지
  * 않는다. 지금 파형은 정지 막대이고 애니메이션은 넣지 않았다.
@@ -61,6 +65,7 @@ fun MedicalMateVoiceInput(
     onMicClick: () -> Unit,
     onTypeInsteadClick: () -> Unit,
     modifier: Modifier = Modifier,
+    description: String? = null,
 ) {
     val colors = MedicalMateTheme.colors
 
@@ -77,7 +82,7 @@ fun MedicalMateVoiceInput(
             textAlign = TextAlign.Center,
         )
         Text(
-            text = stringResource(state.descriptionRes),
+            text = description ?: stringResource(state.descriptionRes),
             style = MedicalMateTheme.typography.bodyS,
             color = if (state == MedicalMateVoiceState.DENIED) colors.fgDanger else colors.fgSubtle,
             textAlign = TextAlign.Center,
