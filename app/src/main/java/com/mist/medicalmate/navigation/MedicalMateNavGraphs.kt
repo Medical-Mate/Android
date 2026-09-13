@@ -252,11 +252,7 @@ internal fun NavGraphBuilder.recordDestinations(navController: NavHostController
     // 1j-4. 기록 탭이 아니라 홈의 "전체 보기"에서 들어오는데, 목록과 줄이 기록과 같은
     // 짜임이라 여기 함께 둔다.
     briefCardListDestination(
-        // 병원 이름을 함께 나른다. 카드 상세 응답에 병원이 없고 목록 응답에만 있다.
-        // 서버가 카드에 실어 주면 이 인자가 사라진다(Backend#84).
-        onCardClick = { cardId, clinic ->
-            navController.navigate(BriefCardDestination(cardId = cardId, hospitalName = clinic))
-        },
+        onCardClick = { cardId -> navController.navigate(BriefCardDestination(cardId = cardId)) },
         onStartIntakeClick = { navController.navigate(IntakeDestination()) },
         onExit = { navController.popBackStack() },
     )

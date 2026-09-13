@@ -86,7 +86,7 @@ private fun HomeBody(state: HomeUiState, today: LocalDate, callbacks: HomeCallba
 data class HomeCallbacks(
     val onStartIntakeClick: () -> Unit = {},
     val onResumeClick: (String?) -> Unit = {},
-    val onSavedCardClick: (cardId: String, clinic: String?) -> Unit = { _, _ -> },
+    val onSavedCardClick: (cardId: String) -> Unit = {},
     val onAllCardsClick: () -> Unit = {},
     val onScheduleClick: (String) -> Unit = {},
     val onCalendarClick: () -> Unit = {},
@@ -191,7 +191,7 @@ private fun LazyListScope.savedCardsSection(content: HomeUiState.Content, callba
         )
     }
     items(items = content.savedCards, key = { it.id }) { card ->
-        SavedCardRow(card = card, onClick = { callbacks.onSavedCardClick(card.id, card.clinic) })
+        SavedCardRow(card = card, onClick = { callbacks.onSavedCardClick(card.id) })
     }
 }
 

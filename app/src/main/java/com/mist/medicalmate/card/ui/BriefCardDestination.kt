@@ -20,14 +20,6 @@ import kotlinx.serialization.Serializable
  * [cardId]를 라우트에 담는다. 어느 카드를 여는지가 목적지의 일부이고, 화면이 다시
  * 만들어질 때 살아 있어야 한다. 서버 연동 전에는 쓰이지 않고 픽스처가 나온다.
  */
-/**
- * @param hospitalName 진료 전 병원 찾기(1m-B)에서 고른 병원. 고르지 않았으면 null이다.
- *
- * **id가 아니라 이름과 주소를 받는다.** id로 받으면 카드가 병원 목록을 찾아봐야 하는데 그
- * 목록은 `visit` 도메인에 있다. 한 도메인이 다른 도메인을 직접 참조하지 않는다는 규칙이
- * 있고, 서버가 붙기 전에는 고른 병원이 사실 이 두 문자열뿐이다. 병원 조회 API가 생기면
- * id를 받고 여기서 조회한다.
- */
 @Serializable
 internal data class BriefCardDestination(
     val cardId: String? = null,
@@ -38,6 +30,12 @@ internal data class BriefCardDestination(
      * 두 길이 여기서 만나고, 만드는 자리가 하나라 어느 쪽으로 와도 같은 카드가 나온다.
      */
     val sessionId: Long? = null,
+    /**
+     * 카드를 만들 때 함께 보낼 진료받을 병원. 1m-B에서 고른 것이다.
+     *
+     * **만들 때만 쓴다.** 만들고 나면 카드가 그 값을 들고 서버가 응답에 실어 준다
+     * (Backend#101). 이미 있는 카드를 열 때는 비어 있다.
+     */
     val hospitalName: String? = null,
     val hospitalAddress: String? = null,
 )

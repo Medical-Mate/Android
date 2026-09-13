@@ -131,7 +131,7 @@ private fun plannedDays(
     today: LocalDate,
 ): Set<Int> {
     val scheduled = appointments.map { it.on }
-    val revisits = visits.mapNotNull { it.followUpDate }
+    val revisits = visits.mapNotNull { it.followUp?.date }
     return (scheduled + revisits)
         .filter { it >= today && YearMonth.from(it) == month }
         .map { it.dayOfMonth }

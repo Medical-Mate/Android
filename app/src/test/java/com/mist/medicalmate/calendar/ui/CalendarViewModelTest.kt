@@ -8,6 +8,7 @@ import com.mist.medicalmate.card.data.CardListItem
 import com.mist.medicalmate.card.ui.FakeCardRepository
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.visit.data.FakeVisitRepository
+import com.mist.medicalmate.visit.data.VisitFollowUp
 import com.mist.medicalmate.visit.data.VisitListItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -68,7 +69,7 @@ class CalendarViewModelTest {
                 cardTitle = "갈비뼈",
                 clinic = null,
                 visitedOn = LocalDate.of(2026, 9, 5),
-                followUpDate = LocalDate.of(2026, 9, 26),
+                followUp = VisitFollowUp(date = LocalDate.of(2026, 9, 26)),
             )
 
         val state = monthViewModel(visits = listOf(revisit)).uiState.value
@@ -85,7 +86,7 @@ class CalendarViewModelTest {
                 cardTitle = "갈비뼈",
                 clinic = null,
                 visitedOn = LocalDate.of(2026, 9, 1),
-                followUpDate = LocalDate.of(2026, 9, 2),
+                followUp = VisitFollowUp(date = LocalDate.of(2026, 9, 2)),
             )
 
         assertEquals(setOf(12), monthViewModel(visits = listOf(past)).uiState.value.plannedDays)

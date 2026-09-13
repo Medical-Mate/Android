@@ -8,6 +8,7 @@ import com.mist.medicalmate.calendar.data.AppointmentRepository
 import com.mist.medicalmate.calendar.data.AppointmentStatus
 import com.mist.medicalmate.calendar.data.AppointmentTodo
 import com.mist.medicalmate.core.network.ApiResult
+import com.mist.medicalmate.visit.data.VisitFollowUp
 import com.mist.medicalmate.visit.data.VisitListItem
 import com.mist.medicalmate.visit.data.VisitRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -103,7 +104,7 @@ internal constructor(
             ?.value
             ?.firstOrNull { it.status != AppointmentStatus.CANCELED && it.on > date }
         if (booked != null) return booked.toNextEvent(today)
-        return record.followUpDate?.takeIf { it > date }?.toRevisit(record.clinic)
+        return record.followUp?.takeIf { it.date > date }?.toRevisit(record.clinic)
     }
 
     /** 할 일 조작. 다섯 가지라 여기 얹으면 한 클래스가 너무 많은 일을 한다. */
@@ -208,9 +209,12 @@ private fun List<AppointmentTodo>?.toDayTodos(): List<DayTodo> =
  *
  * 시각이 없다. 칩에 D-day 대신 날짜를 적는다 — 아직 일정이 아니라서 "며칠 남았다"가 아니라
  * "이 날쯤"이 맞는 말이다. 화면은 [DayNextEvent.at]이 없으면 "시간 정하고 확정하기"를 둔다.
+ *
+ * **대략이면 "전후"를 붙인다**(Backend#101). "2주 뒤"에서 나온 날짜를 정확한 날짜처럼 적으면
+ * 그날이 아니면 안 되는 것으로 읽힌다. 서버 문서도 달력에 그 말을 붙여 달라고 적었다.
  */
-private fun LocalDate.toRevisit(clinic: String?) = DayNextEvent(
-    chip = format(REVISIT_CHIP),
+private fun VisitFollowUp.toRevisit(clinic: String?) = DayNextEvent(
+    chip = date.format(REVISIT_CHIP) + if (approximate) " 전후" else "",
     title = clinic?.let { "$it 재방문" } ?: "재방문 예정",
     clinic = clinic,
 )

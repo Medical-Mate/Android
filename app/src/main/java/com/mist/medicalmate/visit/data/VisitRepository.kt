@@ -145,7 +145,8 @@ data class VisitListItem(
     val clinic: String?,
     val visitedOn: LocalDate,
     /** 다시 오라고 들은 날. 달력에 점을 찍는 데 쓴다. */
-    val followUpDate: LocalDate? = null,
+    /** 재방문. 대략이면 화면이 "전후"를 붙인다. */
+    val followUp: VisitFollowUp? = null,
 )
 
 /**
@@ -177,4 +178,4 @@ data class VisitItem(val axis: String, val label: String, val value: String)
  * **이 값으로 일정이 생기지 않는다.** 서버가 저장만 하고, 캘린더에 올리는 것은 환자가 보고
  * 정하는 흐름(1r-2-A)이다. AI가 날짜를 잘못 뽑을 수 있어서 조용히 일정이 생기면 안 된다.
  */
-data class VisitFollowUp(val date: LocalDate, val text: String?, val approximate: Boolean)
+data class VisitFollowUp(val date: LocalDate, val text: String? = null, val approximate: Boolean = false)

@@ -114,7 +114,8 @@ private fun CardListItem.toRow() = RecordItem(
         else -> RecordItem.Status.DRAFT
     },
     clinic = clinic,
-    meta = listOfNotNull(writtenOn.format(WRITTEN_ON) + " 작성", clinic).joinToString(" · "),
+    // 병원을 안 정한 카드는 "병원 미정"이다. 서버 문서가 그렇게 찍으라고 적었다(Backend#101).
+    meta = listOf(writtenOn.format(WRITTEN_ON) + " 작성", clinic ?: "병원 미정").joinToString(" · "),
 )
 
 private val MONTH_LABEL: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy년 M월", Locale.KOREAN)

@@ -35,7 +35,7 @@ internal fun VisitSummaryResponse.toListItem() = VisitListItem(
     cardTitle = cardTitle.orEmpty(),
     clinic = clinicName,
     visitedOn = LocalDate.parse(visitedOn),
-    followUpDate = followUpDate?.let(LocalDate::parse),
+    followUp = followUp?.toFollowUp(),
 )
 
 /**

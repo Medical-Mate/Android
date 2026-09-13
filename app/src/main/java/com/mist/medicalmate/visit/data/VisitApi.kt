@@ -61,7 +61,13 @@ internal data class VisitSummaryResponse(
     val cardTitle: String? = null,
     val clinicName: String? = null,
     val visitedOn: String,
-    val followUpDate: String? = null,
+    /**
+     * 재방문. 상세와 같은 모양이다(Backend#101).
+     *
+     * 전에는 `followUpDate` 한 칸이라 "2주 뒤"에서 나온 날짜인지 알 수 없었다. 이제
+     * [FollowUpResponse.approximate]가 함께 온다.
+     */
+    val followUp: FollowUpResponse? = null,
 )
 
 /**
