@@ -2,7 +2,7 @@ package com.mist.medicalmate.profile.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -12,15 +12,20 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.mist.medicalmate.R
+import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateScreenPreviews
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
@@ -33,28 +38,24 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateOnboardingPro
  * 와이어프레임 온보딩 v2. Figma `V2-00`~`V2-03`.
  *
  * 로그인 뒤 한 번 지나간다. 상단 바에 Nav Bar를 두지 않는다. 뒤로 갈 곳이 로그인이라
- * 돌아가면 로그아웃처럼 읽힌다. 진행 표시만 두고 앞으로만 간다. 시안도 그렇다.
+ * 돌아가면 로그아웃처럼 읽힌다. 앞으로 가는 길과 건너뛰는 길만 둔다. 시안도 그렇다.
  *
  * 글이 그림보다 위다. v1은 그림을 먼저 놓았는데 시안이 순서를 바꿨다.
  */
 @Composable
-fun OnboardingScreen(page: OnboardingPage, onNextClick: () -> Unit, modifier: Modifier = Modifier) {
+fun OnboardingScreen(
+    page: OnboardingPage,
+    onNextClick: () -> Unit,
+    onSkipClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Column(
         modifier =
         modifier
             .fillMaxSize()
             .background(MedicalMateTheme.colors.bgSurface),
     ) {
-        // 상단 바 56 안에서 진행 표시가 y=26에 놓인다. 위아래가 대칭이 아니라 값을 그대로 쓴다.
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(TopBarHeight)
-                .padding(top = ProgressTop),
-            horizontalArrangement = Arrangement.Center,
-        ) {
-            MedicalMateOnboardingProgress(current = page.step, total = OnboardingPage.total)
-        }
+        TopBar(page = page, onSkipClick = onSkipClick)
         PageContent(page = page)
         MedicalMateBottomCtaBar {
             MedicalMateButton(
@@ -62,6 +63,51 @@ fun OnboardingScreen(page: OnboardingPage, onNextClick: () -> Unit, modifier: Mo
                 onClick = onNextClick,
                 modifier = Modifier.fillMaxWidth(),
             )
+        }
+    }
+}
+
+/**
+ * 진행 표시와 건너뛰기.
+ *
+ * 시안이 건너뛰기 폭과 같은 빈 칸을 왼쪽에 둬서 진행 표시를 가운데에 세운다. 그 빈 칸을
+ * 59로 박지 않고 양쪽에 같은 가중치를 준다. 결과는 시안과 같고, 글꼴 배율이 커져 건너뛰기가
+ * 넓어져도 진행 표시가 한쪽으로 밀리지 않는다.
+ *
+ * 건너뛰기는 `Button`이 아니다. Ghost 버튼의 라벨이 15·13인데 시안은 `Body/L Strong` 17이다.
+ * 대신 48 터치 영역과 버튼 역할을 얹는다 — 글자 높이가 26뿐이라 그냥 두면 접근성 기준에
+ * 못 미친다.
+ *
+ * 마지막 장에도 둔다. 시안 네 장이 모두 그렇다.
+ */
+@Composable
+private fun TopBar(page: OnboardingPage, onSkipClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(TopBarHeight)
+            .padding(horizontal = MedicalMateSize.gutter),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Spacer(Modifier.weight(1f))
+        MedicalMateOnboardingProgress(current = page.step, total = OnboardingPage.total)
+        Box(
+            modifier = Modifier.weight(1f),
+            contentAlignment = Alignment.CenterEnd,
+        ) {
+            Box(
+                modifier = Modifier
+                    .heightIn(min = MedicalMateSize.touchMin)
+                    .clip(MedicalMateRadius.sm)
+                    .clickable(role = Role.Button, onClick = onSkipClick),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = stringResource(R.string.onboarding_skip),
+                    style = MedicalMateTheme.typography.bodyLStrong,
+                    color = MedicalMateTheme.colors.fgSubtle,
+                )
+            }
         }
     }
 }
@@ -136,10 +182,8 @@ private fun Illustration(page: OnboardingPage) {
     }
 }
 
-/** 시안의 Top Bar 56과 그 안의 진행 표시 y=26. */
+/** 시안의 Top Bar 56. 그 안에서 진행 표시와 건너뛰기가 세로 가운데에 선다. */
 private val TopBarHeight = 56.dp
-
-private val ProgressTop = 26.dp
 
 /** 그림 칸 304와 그 아래 여백 80. Content 664에서 글과 빈 칸이 나머지를 쓴다. */
 private val IllustrationHeight = 304.dp
@@ -157,7 +201,7 @@ private const val ART_ASPECT = 352f / 290.4f
 @Composable
 private fun OnboardingPreparePreview() {
     MedicalMateTheme {
-        OnboardingScreen(page = OnboardingPage.PREPARE, onNextClick = {})
+        OnboardingScreen(page = OnboardingPage.PREPARE, onNextClick = {}, onSkipClick = {})
     }
 }
 
@@ -165,7 +209,7 @@ private fun OnboardingPreparePreview() {
 @Composable
 private fun OnboardingPointPreview() {
     MedicalMateTheme {
-        OnboardingScreen(page = OnboardingPage.POINT, onNextClick = {})
+        OnboardingScreen(page = OnboardingPage.POINT, onNextClick = {}, onSkipClick = {})
     }
 }
 
@@ -173,7 +217,7 @@ private fun OnboardingPointPreview() {
 @Composable
 private fun OnboardingCardPreview() {
     MedicalMateTheme {
-        OnboardingScreen(page = OnboardingPage.CARD, onNextClick = {})
+        OnboardingScreen(page = OnboardingPage.CARD, onNextClick = {}, onSkipClick = {})
     }
 }
 
@@ -181,6 +225,6 @@ private fun OnboardingCardPreview() {
 @Composable
 private fun OnboardingFollowPreview() {
     MedicalMateTheme {
-        OnboardingScreen(page = OnboardingPage.FOLLOW, onNextClick = {})
+        OnboardingScreen(page = OnboardingPage.FOLLOW, onNextClick = {}, onSkipClick = {})
     }
 }
