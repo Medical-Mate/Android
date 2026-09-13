@@ -49,13 +49,17 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceInput
  * 남는다. 키보드 높이를 함께 보는 이유는, 마디가 늘지 않아도 키보드가 올라오면 보이는 높이가
  * 줄어 마지막 마디가 가리기 때문이다. 인셋 자체는 `MainActivity`가 `safeDrawing`으로 합쳐
  * 두어 입력창은 제 자리에 서 있고, 가리는 것은 본문이다.
+ *
+ * **말로 할 때도 같다**(#190). 말하는 중인 글은 마디 수를 늘리지 않고 자라기만 하고, 음성
+ * 패널은 키보드보다 높아서 입력칸일 때보다 더 가린다. 그 둘을 함께 봐야 말하는 글이 패널 뒤로
+ * 들어가지 않는다.
  */
 @Composable
 internal fun ChatStep(state: IntakeUiState, modifier: Modifier = Modifier) {
     val listState = rememberLazyListState()
     val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
 
-    LaunchedEffect(state.messages.size, state.awaitingReply, imeBottom) {
+    LaunchedEffect(state.messages.size, state.awaitingReply, state.speaking, state.inputMode, imeBottom) {
         val last = listState.layoutInfo.totalItemsCount - 1
         if (last >= 0) listState.animateScrollToItem(last)
     }
@@ -75,6 +79,9 @@ internal fun ChatStep(state: IntakeUiState, modifier: Modifier = Modifier) {
         item(key = PROGRESS_KEY) { IntakeProgress(state.step) }
         state.bodyPart?.let { part -> item(key = CONTEXT_KEY) { BodyPartContext(part) } }
         items(state.messages, key = { it.id }) { message -> MessageRow(message) }
+        // 말하는 중인 글은 대화에 미리 세운다. 음성일 때는 입력칸이 패널로 바뀌어 있어서
+        // 적힌 글을 볼 자리가 거기밖에 없다. 보내면 진짜 마디가 그 자리를 대신한다.
+        state.speaking?.let { text -> item(key = SPEAKING_KEY) { MessageRow(text) } }
         if (state.awaitingReply) {
             item(key = TYPING_KEY) { TypingRow() }
         }
@@ -94,6 +101,14 @@ private fun BodyPartContext(bodyPart: String) {
             color = MedicalMateTheme.colors.fgSubtle,
         )
         MedicalMateChip(label = bodyPart, selected = true, onClick = {})
+    }
+}
+
+/** 말하는 중인 글. 아직 보내지 않아 id가 없다. */
+@Composable
+private fun MessageRow(text: String) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        MedicalMateBubble(text = text, sender = MedicalMateBubbleSender.PATIENT)
     }
 }
 
@@ -166,6 +181,9 @@ internal fun ChatInput(state: IntakeUiState, callbacks: IntakeCallbacks) {
                 state = state.voice,
                 onMicClick = callbacks.onMicClick,
                 onTypeInsteadClick = callbacks.onTypeInsteadClick,
+                // 문답이 끝나면 더 할 말이 없고 남은 조작은 다음으로 가는 것뿐이다. 말로
+                // 하던 사람에게 거기서만 손을 쓰게 할 이유가 없어 그 말을 듣는다.
+                description = stringResource(R.string.voice_next_hint).takeIf { state.chatFinished },
             )
 
         IntakeInputMode.TEXT ->
@@ -180,11 +198,15 @@ internal fun ChatInput(state: IntakeUiState, callbacks: IntakeCallbacks) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4),
                     ) {
-                        MedicalMateIconButton(
-                            onClick = callbacks.onVoiceClick,
-                            icon = MedicalMateIcons.Mic,
-                            contentDescription = stringResource(R.string.intake_chat_voice),
-                        )
+                        // 음성을 쓸 수 없는 기기에서는 그리지 않는다. 직접 입력은 그대로라
+                        // 막히는 흐름이 없다.
+                        if (state.voiceAvailable) {
+                            MedicalMateIconButton(
+                                onClick = callbacks.onVoiceClick,
+                                icon = MedicalMateIcons.Mic,
+                                contentDescription = stringResource(R.string.intake_chat_voice),
+                            )
+                        }
                         MedicalMateIconButton(
                             onClick = callbacks.onSendClick,
                             icon = MedicalMateIcons.ArrowUp,
@@ -208,6 +230,8 @@ private const val PROGRESS_KEY = "progress"
 private const val CONTEXT_KEY = "context"
 
 private const val TYPING_KEY = "typing"
+
+private const val SPEAKING_KEY = "speaking"
 
 private const val TYPING_DOTS = 3
 

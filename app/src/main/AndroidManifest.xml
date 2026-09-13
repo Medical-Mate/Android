@@ -5,6 +5,12 @@
     <!-- 카카오 SDK 모듈 어디에도 uses-permission 선언이 없어 앱이 직접 넣어야 한다. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!--
+      음성 인식. 기기 안에서 돌고 오디오는 나가지 않는다. 마이크를 누를 때 묻는다 - 화면을
+      열자마자 물으면 글로 적고 나가는 사람에게 이유 없는 권한 창이 뜬다.
+    -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
     <application
         android:name=".MedicalMateApplication"
         android:allowBackup="false"

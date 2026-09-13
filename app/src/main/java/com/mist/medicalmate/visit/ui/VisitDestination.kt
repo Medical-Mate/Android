@@ -9,6 +9,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.mist.medicalmate.core.speech.rememberMicPermission
 import kotlinx.serialization.Serializable
 import java.time.LocalDate
 
@@ -204,13 +205,21 @@ private fun VisitNoteRoute(
         viewModel.load(clinic, cardTitle, visitedOn?.let(LocalDate::parse))
     }
 
+    // 이 기기에서 음성을 쓸 수 있는지. 쓸 수 없으면 마이크를 그리지 않는다.
+    LaunchedEffect(Unit) { viewModel.checkVoice() }
+
+    // 권한은 마이크를 누를 때 묻는다. 화면을 열자마자 묻지 않는다.
+    val askMic = rememberMicPermission(onGranted = viewModel::onMicClick, onDenied = viewModel::onMicDenied)
+    val askVoice = rememberMicPermission(onGranted = viewModel::onVoiceClick, onDenied = viewModel::onMicDenied)
+
     VisitNoteScreen(
         state = state,
         callbacks =
         VisitNoteCallbacks(
+            onMicClick = askMic,
+            onVoiceClick = askVoice,
             onBackClick = onExit,
             onNoteChange = viewModel::onNoteChange,
-            onVoiceClick = viewModel::onVoiceClick,
             onTypeInsteadClick = viewModel::onTypeInsteadClick,
             // 적은 원문이 그대로 다음 화면으로 간다. 1q-1이 그 글을 보여주고 저장한다.
             onSaveClick = { onSaved(state.note) },

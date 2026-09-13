@@ -6,6 +6,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
 import com.mist.medicalmate.core.model.IntakeStep
 import com.mist.medicalmate.core.network.ApiResult
+import com.mist.medicalmate.core.speech.SpeechToText
 import com.mist.medicalmate.intake.data.IntakeSessionMessage
 import com.mist.medicalmate.intake.data.SessionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,9 +31,13 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class IntakeViewModel
 @Inject
-internal constructor(private val repository: SessionRepository) : ViewModel() {
+internal constructor(private val repository: SessionRepository, speech: SpeechToText) :
+    ViewModel() {
     private val mutableUiState = MutableStateFlow(IntakeUiState())
     val uiState: StateFlow<IntakeUiState> = mutableUiState.asStateFlow()
+
+    /** 4단계 질문 목록 조작. 왜 나눴는지는 [IntakeQuestionActions]에 있다. */
+    val question = IntakeQuestionActions { transform -> mutableUiState.update(transform) }
 
     /** 인체도 단계의 조작. 왜 나눴는지는 [BodyMapActions]에 있다. */
     val bodyMap = BodyMapActions { transform ->
@@ -75,7 +80,7 @@ internal constructor(private val repository: SessionRepository) : ViewModel() {
         }
         viewModelScope.launch {
             when (val result = repository.send(sessionId, text, byVoice)) {
-                is ApiResult.Success ->
+                is ApiResult.Success -> {
                     mutableUiState.update { current ->
                         current.copy(
                             messages = result.value.messages.map { it.toMessage() },
@@ -83,6 +88,8 @@ internal constructor(private val repository: SessionRepository) : ViewModel() {
                             chatFinished = result.value.ended,
                         )
                     }
+                    voice.onReplied()
+                }
 
                 is ApiResult.Rejected, is ApiResult.NetworkUnavailable ->
                     // 보낸 말은 화면에 남긴다. 지우면 다시 적어야 한다.
@@ -93,57 +100,32 @@ internal constructor(private val repository: SessionRepository) : ViewModel() {
 
     /** 글과 음성을 바꾼다. 바꿀 때 음성 상태를 대기로 되돌린다. */
     fun onInputModeChange(mode: IntakeInputMode) {
+        if (mode == IntakeInputMode.TEXT) voice.stop()
         mutableUiState.update { it.copy(inputMode = mode, voice = MedicalMateVoiceState.IDLE) }
     }
 
-    /**
-     * 마이크를 눌렀다. 대기와 듣는 중을 오간다.
-     *
-     * 받아쓴 글은 아직 없다. 멈춰도 대화에 아무것도 붙지 않는다.
-     */
-    fun onMicClick() {
-        mutableUiState.update {
-            val next =
-                if (it.voice == MedicalMateVoiceState.LISTENING) {
-                    MedicalMateVoiceState.IDLE
-                } else {
-                    MedicalMateVoiceState.LISTENING
-                }
-            it.copy(voice = next)
+    /** 음성 조작. 왜 나눴는지는 [IntakeVoiceActions]에 있다. */
+    val voice =
+        IntakeVoiceActions(
+            speech = speech,
+            scope = viewModelScope,
+            state = { mutableUiState.value },
+            update = { transform -> mutableUiState.update(transform) },
+            onCommand = ::onVoiceCommand,
+        )
+
+    /** 말로 한 조작. 보내거나 다음으로 간다. */
+    private fun onVoiceCommand(command: VoiceCommand) {
+        when (command) {
+            VoiceCommand.SEND -> onSend()
+            // 강도 라벨은 이 단계에서 쓰지 않는다. 단계를 떠날 때 값을 남기는 것은 강도와
+            // 질문 단계뿐이다.
+            VoiceCommand.NEXT -> onNext("")
         }
     }
 
     fun onSeverityChange(severity: MedicalMateSeverity) {
         mutableUiState.update { it.copy(severity = severity) }
-    }
-
-    fun onQuestionDraftChange(draft: String) {
-        mutableUiState.update { it.copy(questionDraft = draft) }
-    }
-
-    fun onAddQuestion() {
-        mutableUiState.update {
-            if (!it.canAddQuestion) {
-                it
-            } else {
-                it.copy(
-                    questions = it.questions + it.questionDraft.trim(),
-                    questionDraft = "",
-                )
-            }
-        }
-    }
-
-    fun onRemoveQuestion(index: Int) {
-        mutableUiState.update {
-            if (index !in
-                it.questions.indices
-            ) {
-                it
-            } else {
-                it.copy(questions = it.questions.filterIndexed { i, _ -> i != index })
-            }
-        }
     }
 
     /**

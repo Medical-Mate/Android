@@ -41,6 +41,13 @@ data class IntakeUiState(
     val draft: String = "",
     val inputMode: IntakeInputMode = IntakeInputMode.TEXT,
     val voice: MedicalMateVoiceState = MedicalMateVoiceState.IDLE,
+    /**
+     * 이 기기에서 음성을 쓸 수 있는지.
+     *
+     * 쓸 수 없으면 입력칸의 마이크를 그리지 않는다. 눌러 봐야 안 되는 버튼을 두고 "이
+     * 기기에서는 안 돼요"를 띄우는 것보다 낫다 — 그 문구는 시안에도 없다.
+     */
+    val voiceAvailable: Boolean = false,
     val awaitingReply: Boolean = false,
     val severity: MedicalMateSeverity = MedicalMateSeverity.LEVEL_3,
     val questionDraft: String = "",
@@ -79,6 +86,14 @@ data class IntakeUiState(
 
     /** 보낼 것이 있는지. 빈 글이나 공백만 보내면 문답이 헛돈다. */
     val canSend: Boolean get() = draft.isNotBlank() && !awaitingReply
+
+    /**
+     * 말하는 중인 글.
+     *
+     * 음성일 때만 있다. 그때는 입력칸이 패널로 바뀌어 있어서 받아쓴 글을 볼 자리가 대화밖에
+     * 없다. 보내면 진짜 마디가 되고 이 자리는 비워진다.
+     */
+    val speaking: String? get() = draft.takeIf { inputMode == IntakeInputMode.VOICE && it.isNotBlank() }
 
     val canAddQuestion: Boolean get() = questionDraft.isNotBlank()
 

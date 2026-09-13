@@ -199,7 +199,11 @@ android {
 
     defaultConfig {
         applicationId = "com.mist.medicalmate"
-        minSdk = 24
+        // 26이다. ML Kit GenAI 음성 인식이 그 아래를 받지 않는다(#190). 24~25를 지키려면
+        // tools:overrideLibrary로 강제해야 하는데, 그 기기에 라이브러리 클래스가 없는 채로
+        // 설치되고 우리는 그 기기를 시험할 방법이 없다. 음성은 어차피 API 31 이상에서만
+        // 되므로 24~25 사용자가 그 강제로 얻는 것도 없다.
+        minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -249,9 +253,9 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
-        // minSdk 24에서 java.time을 쓰려면 필요하다. 켜지 않으면 lintDebug가
-        // NewApi 오류로 막는다(API 26 요구). 이 앱은 일정·복용 알림·카드 작성일까지
-        // 날짜를 계속 다뤄서 우회하면 나중에 타입을 전부 바꿔야 한다.
+        // minSdk가 26이 되면서 java.time 때문에 필요하던 이유는 사라졌다(그 API가 26부터
+        // 있다). 끄는 것은 따로 확인하고 한다 — desugaring이 java.time 말고도 여러 API를
+        // 채워 주고, 무엇이 걸려 있는지 확인하지 않고 끄면 런타임에만 드러난다.
         isCoreLibraryDesugaringEnabled = true
     }
     buildFeatures {
@@ -310,6 +314,7 @@ dependencies {
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
     implementation(libs.hilt.android)
     implementation(libs.kakao.user)
+    implementation(libs.mlkit.genai.speech)
     ksp(libs.hilt.compiler)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)

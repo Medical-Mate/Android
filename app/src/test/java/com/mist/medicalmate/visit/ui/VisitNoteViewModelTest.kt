@@ -1,6 +1,8 @@
 package com.mist.medicalmate.visit.ui
 
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
+import com.mist.medicalmate.core.speech.FakeSpeechToText
+import com.mist.medicalmate.core.speech.SpeechChunk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -92,8 +94,20 @@ class VisitNoteViewModelTest {
     }
 
     @Test
-    fun `마이크를 누르면 듣는 중이 된다`() {
-        val viewModel = viewModel()
+    fun `우하단 마이크를 누르면 패널이 뜨고 바로 듣는다`() {
+        // 누른 사람은 패널이 뜨자마자 말한다. 아직 아무것도 못 들었을 뿐이라 문구는
+        // "말씀해 주세요"다.
+        val viewModel = viewModel(FakeSpeechToText(keepOpen = true))
+
+        viewModel.onVoiceClick()
+
+        assertEquals(MedicalMateVoiceState.IDLE, viewModel.uiState.value.voice)
+    }
+
+    @Test
+    fun `말소리가 들어오면 듣고 있어요가 된다`() {
+        val speech = FakeSpeechToText(chunks = listOf(SpeechChunk.Partial("위염")), keepOpen = true)
+        val viewModel = viewModel(speech)
 
         viewModel.onVoiceClick()
 
@@ -101,14 +115,102 @@ class VisitNoteViewModelTest {
     }
 
     @Test
-    fun `듣는 중에 다시 누르면 멈춘다`() {
+    fun `듣는 중에 패널 마이크를 누르면 멈춘다`() {
         // 다 말했을 때 누르는 자리다. 패널은 남고 상태만 돌아온다.
-        val viewModel = viewModel()
+        val speech = FakeSpeechToText(chunks = listOf(SpeechChunk.Partial("위염")), keepOpen = true)
+        val viewModel = viewModel(speech)
+        viewModel.onVoiceClick()
 
-        viewModel.onVoiceClick()
-        viewModel.onVoiceClick()
+        viewModel.onMicClick()
 
         assertEquals(MedicalMateVoiceState.IDLE, viewModel.uiState.value.voice)
+    }
+
+    @Test
+    fun `받아쓴 글이 적던 메모 뒤에 붙는다`() {
+        val speech = FakeSpeechToText(chunks = listOf(SpeechChunk.Final("2주 뒤에 오래요")), keepOpen = true)
+        val viewModel = viewModel(speech)
+        viewModel.onNoteChange("위염이래요. ")
+
+        viewModel.onVoiceClick()
+
+        assertEquals("위염이래요. 2주 뒤에 오래요", viewModel.uiState.value.note)
+    }
+
+    @Test
+    fun `말이 끊겼다 이어져도 앞말이 남는다`() {
+        // 인식기는 잠깐 멈추면 그 발화를 확정하고 다음 발화를 처음부터 다시 센다. 누를 때의
+        // 글만 기준으로 삼으면 두 번째 말이 첫 번째 말을 지운다.
+        val speech =
+            FakeSpeechToText(
+                chunks =
+                listOf(
+                    SpeechChunk.Final("위염이래요"),
+                    SpeechChunk.Partial("약"),
+                    SpeechChunk.Final("약 일주일치 받았어요"),
+                ),
+                keepOpen = true,
+            )
+        val viewModel = viewModel(speech)
+
+        viewModel.onVoiceClick()
+
+        assertEquals("위염이래요 약 일주일치 받았어요", viewModel.uiState.value.note)
+    }
+
+    @Test
+    fun `이어 붙일 때 한 칸을 넣는다`() {
+        // 인식기가 앞뒤를 붙여 주지 않아 그대로 두면 "위염이래요약"이 된다.
+        val speech =
+            FakeSpeechToText(
+                chunks = listOf(SpeechChunk.Final("위염이래요"), SpeechChunk.Partial("약")),
+                keepOpen = true,
+            )
+        val viewModel = viewModel(speech)
+
+        viewModel.onVoiceClick()
+
+        assertEquals("위염이래요 약", viewModel.uiState.value.note)
+    }
+
+    @Test
+    fun `이미 띄어져 있으면 칸을 더 넣지 않는다`() {
+        val speech = FakeSpeechToText(chunks = listOf(SpeechChunk.Final("약 받았어요")), keepOpen = true)
+        val viewModel = viewModel(speech)
+        viewModel.onNoteChange("위염이래요. ")
+
+        viewModel.onVoiceClick()
+
+        assertEquals("위염이래요. 약 받았어요", viewModel.uiState.value.note)
+    }
+
+    @Test
+    fun `모델을 받는 동안은 정리하는 중이다`() {
+        // 처음 쓸 때 한 번이다. 시안의 PROCESSING 자리가 이 상태다.
+        val speech = FakeSpeechToText(chunks = listOf(SpeechChunk.Preparing), keepOpen = true)
+        val viewModel = viewModel(speech)
+
+        viewModel.onVoiceClick()
+
+        assertEquals(MedicalMateVoiceState.PROCESSING, viewModel.uiState.value.voice)
+    }
+
+    @Test
+    fun `마이크 권한을 거부하면 왜 안 되는지 적는다`() {
+        val viewModel = viewModel()
+
+        viewModel.onMicDenied()
+
+        assertEquals(MedicalMateVoiceState.DENIED, viewModel.uiState.value.voice)
+    }
+
+    @Test
+    fun `쓸 수 없는 기기에서는 마이크를 그리지 않는다`() {
+        val viewModel = viewModel(FakeSpeechToText(usable = false))
+
+        viewModel.checkVoice()
+
+        assertFalse(viewModel.uiState.value.voiceAvailable)
     }
 
     @Test
@@ -163,6 +265,6 @@ class VisitNoteViewModelTest {
         assertTrue(viewModel.uiState.value.visit.today)
     }
 
-    private fun viewModel() =
-        VisitNoteViewModel(Clock.fixed(Instant.parse("2026-09-12T01:00:00Z"), ZoneId.of("Asia/Seoul")))
+    private fun viewModel(speech: FakeSpeechToText = FakeSpeechToText()) =
+        VisitNoteViewModel(Clock.fixed(Instant.parse("2026-09-12T01:00:00Z"), ZoneId.of("Asia/Seoul")), speech)
 }

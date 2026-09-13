@@ -10,6 +10,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.mist.medicalmate.core.speech.rememberMicPermission
 import kotlinx.serialization.Serializable
 
 /**
@@ -99,6 +100,14 @@ private fun IntakeRoute(
         if (state.completed) onCompleted(state.sessionId)
     }
 
+    // 이 기기에서 음성을 쓸 수 있는지. 쓸 수 없으면 마이크를 그리지 않는다.
+    LaunchedEffect(Unit) { viewModel.voice.check() }
+
+    // 권한은 마이크를 누를 때 묻는다. 화면을 열자마자 묻지 않는다.
+    val askMic = rememberMicPermission(onGranted = viewModel.voice::onMicClick, onDenied = viewModel.voice::onDenied)
+    val askVoiceMode =
+        rememberMicPermission(onGranted = viewModel.voice::onVoiceMode, onDenied = viewModel.voice::onDenied)
+
     IntakeScreen(
         state = state,
         callbacks =
@@ -115,13 +124,13 @@ private fun IntakeRoute(
             onBodySearchChange = viewModel.bodyMap::onSearchChange,
             onDraftChange = viewModel::onDraftChange,
             onSendClick = viewModel::onSend,
-            onVoiceClick = { viewModel.onInputModeChange(IntakeInputMode.VOICE) },
-            onMicClick = viewModel::onMicClick,
+            onVoiceClick = askVoiceMode,
+            onMicClick = askMic,
             onTypeInsteadClick = { viewModel.onInputModeChange(IntakeInputMode.TEXT) },
             onSeverityChange = viewModel::onSeverityChange,
-            onQuestionDraftChange = viewModel::onQuestionDraftChange,
-            onAddQuestionClick = viewModel::onAddQuestion,
-            onRemoveQuestionClick = viewModel::onRemoveQuestion,
+            onQuestionDraftChange = viewModel.question::onDraftChange,
+            onAddQuestionClick = viewModel.question::onAdd,
+            onRemoveQuestionClick = viewModel.question::onRemove,
         ),
         modifier = modifier,
     )

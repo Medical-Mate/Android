@@ -491,6 +491,7 @@
     <string name="voice_listening_description">다 말씀하시면 버튼을 다시 눌러주세요</string>
     <string name="voice_processing_title">정리하는 중이에요</string>
     <string name="voice_processing_description">잠시만 기다려 주세요</string>
+    <string name="voice_next_hint">"다음"이라고 말하거나 버튼을 눌러주세요</string>
     <string name="voice_denied_title">마이크를 쓸 수 없어요</string>
     <string name="voice_denied_description">설정에서 마이크 권한을 켜주세요</string>
     <string name="voice_type_instead">직접 입력할게요</string>
