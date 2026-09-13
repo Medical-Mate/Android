@@ -1,6 +1,5 @@
 package com.mist.medicalmate.navigation
 
-import androidx.activity.BackEventCompat
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -8,7 +7,6 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.navigation.NavBackStackEntry
@@ -22,6 +20,8 @@ import androidx.navigation.NavBackStackEntry
  * 가로로 민다. 새 화면이 오른쪽에서 들어오고 물러나는 화면은 반대쪽으로 [PARALLAX]분의 1만
  * 움직인다. 둘이 같은 거리를 움직이면 두 장이 나란히 흐르는 것으로 보이고, 뒤에 있는 것이
  * 덜 움직여야 앞뒤가 읽힌다. 되돌아올 때는 그대로 뒤집는다.
+ *
+ * **가장자리를 쓸어 돌아가는 것도 같은 전환을 쓴다.** 돌아가는 길이 하나여야 한다.
  *
  * 디자인 문서에 화면 전환 규격이 없다. 시간과 easing은 Material의 표준 전환 값이다.
  */
@@ -49,28 +49,22 @@ internal object MedicalMateNavTransitions {
     }
 
     /**
-     * 가장자리를 쓸어 돌아가는 동안 아래에서 드러나는 화면.
+     * 가장자리를 쓸어 돌아갈 때.
      *
-     * 아무 것도 걸지 않는다. 기본값은 여기에 `fadeIn`을 걸어서, 위 화면이 줄어드는 동안
-     * 아래가 비어 보이다가 뒤늦게 떠오른다. 손가락을 따라 위가 벗겨지고 아래가 그대로
-     * 있어야 덮여 있던 것으로 읽힌다.
+     * 버튼으로 돌아갈 때와 같은 것을 쓴다. 쓸어내는 동안에는 이 전환이 손가락 위치만큼만
+     * 진행되므로, 화면이 손을 따라 오른쪽으로 밀리고 이전 화면이 왼쪽에서 따라 들어온다.
+     * 놓으면 남은 만큼이 이어서 돈다.
+     *
+     * 돌아가는 길이 하나여야 한다. 쓸어서 돌아간 것과 눌러서 돌아간 것이 다르게 움직이면
+     * 같은 동작이 두 가지로 보인다. 기본값이 그 자리에 축소를 걸어 두는데, 화면이 작아져
+     * 사라지는 것으로 읽혀서 걷어냈다.
      */
     val predictivePopEnter: AnimatedContentTransitionScope<NavBackStackEntry>.(Int) -> EnterTransition = {
-        EnterTransition.None
+        popEnter()
     }
 
-    /**
-     * 가장자리를 쓸어 돌아가는 동안 벗겨지는 화면.
-     *
-     * 줄이면서 쓸어낸 쪽으로 민다. platform의 예측 뒤로가기와 같은 방향이다. 기본값은
-     * 0.7까지 줄이는데 그러면 화면이 작아져 사라지는 것으로 읽힌다. [PREDICTIVE_SCALE]까지만
-     * 줄여서 뒤로 물러나는 것에 가깝게 둔다.
-     */
-    val predictivePopExit: AnimatedContentTransitionScope<NavBackStackEntry>.(Int) -> ExitTransition = { edge ->
-        scaleOut(targetScale = PREDICTIVE_SCALE) +
-            slideOutHorizontally { width ->
-                if (edge == BackEventCompat.EDGE_LEFT) width / PREDICTIVE_SHIFT else -width / PREDICTIVE_SHIFT
-            }
+    val predictivePopExit: AnimatedContentTransitionScope<NavBackStackEntry>.(Int) -> ExitTransition = {
+        popExit()
     }
 
     /** Material의 표준 전환 시간. 기본값 700은 한 화면 넘기는 데 길다. */
@@ -78,9 +72,4 @@ internal object MedicalMateNavTransitions {
 
     /** 물러나는 화면이 움직이는 몫. 앞의 화면이 네 배 더 움직인다. */
     private const val PARALLAX = 4
-
-    private const val PREDICTIVE_SCALE = 0.9f
-
-    /** 쓸어낸 쪽으로 미는 몫. 폭의 1/16이다. */
-    private const val PREDICTIVE_SHIFT = 16
 }
