@@ -229,6 +229,65 @@ class BriefCardViewModelTest {
         assertNull(content.card.hospital?.address)
     }
 
+    @Test
+    fun `뱃지는 확정이 아니라 진료를 마쳤는지로 갈린다`() {
+        // 저장하기가 카드를 확정하게 되면서(#196) 확정으로 판단하면 진료를 받기도 전에
+        // "진료 완료"가 뜬다. 서버도 둘을 다른 축으로 둔다.
+        val repository = FakeCardRepository()
+        val viewModel = BriefCardViewModel(repository)
+        viewModel.open(1)
+
+        viewModel.onSaveClick(onSaved = {})
+
+        val content = viewModel.uiState.value as BriefCardUiState.Content
+        assertEquals(BriefCard.Status.CONFIRMED, content.card.status)
+        assertFalse(content.card.visited)
+    }
+
+    @Test
+    fun `저장하기가 카드를 확정한다`() {
+        // 확정하지 않으면 진료 후 기록을 남길 수 없다. 서버가 확정한 카드에만 받는다(#196).
+        val repository = FakeCardRepository()
+        val viewModel = BriefCardViewModel(repository)
+        viewModel.open(1)
+        var left = false
+
+        viewModel.onSaveClick(onSaved = { left = true })
+
+        assertEquals(1L, repository.confirmedId)
+        assertTrue(left)
+    }
+
+    @Test
+    fun `이미 확정한 카드는 다시 확정하지 않는다`() {
+        // 두 번 확정하면 400이다.
+        val repository = FakeCardRepository(card = testCard.copy(status = BriefCard.Status.CONFIRMED))
+        val viewModel = BriefCardViewModel(repository)
+        viewModel.open(1)
+        var left = false
+
+        viewModel.onSaveClick(onSaved = { left = true })
+
+        assertNull(repository.confirmedId)
+        assertTrue(left)
+    }
+
+    @Test
+    fun `확정이 거절되면 화면을 나가지 않고 알린다`() {
+        // 나가 버리면 저장되지 않은 것을 저장된 것으로 알게 된다.
+        val repository = FakeCardRepository()
+        repository.confirmFails = true
+        val viewModel = BriefCardViewModel(repository)
+        viewModel.open(1)
+        var left = false
+
+        viewModel.onSaveClick(onSaved = { left = true })
+
+        val content = viewModel.uiState.value as BriefCardUiState.Content
+        assertTrue(content.saveFailed)
+        assertFalse(left)
+    }
+
     private fun editing(): BriefCardViewModel {
         val viewModel = BriefCardViewModel(FakeCardRepository())
         viewModel.open(1)
@@ -408,9 +467,15 @@ internal class FakeCardRepository(
         return result ?: ApiResult.Success(card)
     }
 
+    /** 확정만 실패해야 하는 시험이 있다. 카드 조회까지 실패하면 화면이 Content가 아니다. */
+    var confirmFails: Boolean = false
+
     override suspend fun confirm(cardId: Long): ApiResult<BriefCard> {
         confirmedId = cardId
-        return result ?: ApiResult.Success(card.copy(status = BriefCard.Status.CONFIRMED))
+        return when {
+            confirmFails -> OFFLINE
+            else -> result ?: ApiResult.Success(card.copy(status = BriefCard.Status.CONFIRMED))
+        }
     }
 
     override suspend fun delete(cardId: Long): ApiResult<Unit> {

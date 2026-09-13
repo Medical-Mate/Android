@@ -142,7 +142,7 @@ private fun CardHead(card: BriefCard) {
                     color = MedicalMateTheme.colors.fgDefault,
                     modifier = Modifier.weight(1f),
                 )
-                MedicalMateBadge(label = statusLabel(card.status), tone = statusTone(card.status))
+                MedicalMateBadge(label = visitedLabel(card.visited), tone = visitedTone(card.visited))
             }
             Text(
                 text = card.patientLine,
@@ -153,18 +153,20 @@ private fun CardHead(card: BriefCard) {
     }
 }
 
+/**
+ * 카드 머리의 뱃지.
+ *
+ * **카드 상태가 아니라 진료를 마쳤는지로 가른다.** 서버 문서가 둘을 다른 축으로 두고 "진료
+ * 완료 뱃지는 `visited`로 판단하세요"라고 적는다. 저장하기가 카드를 확정하게 되면서(#196)
+ * 확정으로 판단하면 진료를 받기도 전에 "진료 완료"가 뜬다.
+ */
 @Composable
-private fun statusLabel(status: BriefCard.Status): String = stringResource(
-    when (status) {
-        BriefCard.Status.BEFORE_VISIT -> R.string.brief_card_status_before_visit
-        BriefCard.Status.CONFIRMED -> R.string.brief_card_status_confirmed
-    },
+private fun visitedLabel(visited: Boolean): String = stringResource(
+    if (visited) R.string.brief_card_status_confirmed else R.string.brief_card_status_before_visit,
 )
 
-private fun statusTone(status: BriefCard.Status): MedicalMateBadgeTone = when (status) {
-    BriefCard.Status.BEFORE_VISIT -> MedicalMateBadgeTone.NEUTRAL
-    BriefCard.Status.CONFIRMED -> MedicalMateBadgeTone.SUCCESS
-}
+private fun visitedTone(visited: Boolean): MedicalMateBadgeTone =
+    if (visited) MedicalMateBadgeTone.SUCCESS else MedicalMateBadgeTone.NEUTRAL
 
 /**
  * 카드 맨 아래 한 줄. Figma `605:6276`.

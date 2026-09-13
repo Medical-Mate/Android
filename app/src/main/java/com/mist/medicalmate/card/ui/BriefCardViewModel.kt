@@ -135,6 +135,49 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
         }
     }
 
+    /**
+     * 하단 `저장하기`. 카드를 확정하고 화면을 나간다.
+     *
+     * **확정하지 않으면 진료 후 기록을 남길 수 없다.** 서버가
+     * `POST /api/cards/{cardId}/visit`을 확정한 카드에만 받는다. 카드는 `DRAFT`로 만들어지고
+     * 확정을 부르던 곳은 진료실 전달 버튼 하나였는데 그 버튼이 시안에서 빠지면서(#165)
+     * 확정이 아예 일어나지 않게 됐다. 기기에서 400으로 막히는 것을 확인했다(#196).
+     *
+     * 저장하기가 이 일을 맡는 이유는 IA가 `1e-1 | 저장하기 → 홈 · 최근 브리핑 카드`로 적고,
+     * 카드를 다 고치고 나가는 자리가 여기이기 때문이다. 그 전까지 이 버튼은 화면을 나가는
+     * 일만 했다.
+     *
+     * **확정한 뒤에 고치면 서버가 새 버전을 만든다.** 그것이 서버가 정한 모양이고
+     * [onEditDoneClick]이 이미 응답으로 온 카드로 갈아탄다.
+     *
+     * 이미 확정한 카드는 다시 부르지 않는다. 두 번 확정하면 400이다.
+     *
+     * [onSaved]는 화면 이동이다. 확정에 실패하면 부르지 않는다 — 나가 버리면 저장되지 않은
+     * 것을 저장된 것으로 알게 된다.
+     */
+    fun onSaveClick(onSaved: () -> Unit) {
+        val state = mutableUiState.value as? BriefCardUiState.Content ?: return
+        // 확정할 것이 없으면 나가기만 한다. 이미 확정했거나 부를 수 없는 id다.
+        val cardId = state.card.id.toLongOrNull()?.takeIf { state.card.status != BriefCard.Status.CONFIRMED }
+        if (cardId == null) {
+            onSaved()
+            return
+        }
+
+        viewModelScope.launch {
+            when (val result = repository.confirm(cardId)) {
+                is ApiResult.Success -> {
+                    mutableUiState.value =
+                        BriefCardUiState.Content(card = result.value.copy(hospital = state.card.hospital))
+                    onSaved()
+                }
+
+                is ApiResult.Rejected, is ApiResult.NetworkUnavailable ->
+                    mutableUiState.value = state.copy(saveFailed = true)
+            }
+        }
+    }
+
     /** Nav 우측 `취소`. 사본을 버리고 원래 값으로 돌아간다. */
     fun onCancelClick() {
         mutableUiState.update { state ->

@@ -38,8 +38,25 @@ data class BriefCard(
     val allergies: List<String>,
     val questions: List<String>,
     val hospital: BriefCardHospital? = null,
+    /**
+     * 이 카드로 진료를 마쳤는지. 카드 머리의 뱃지가 읽는 값이다.
+     *
+     * **[status]와 다른 축이다.** 서버 문서가 그렇게 못 박고 "진료 완료 뱃지는 `visited`로
+     * 판단하세요"라고 적는다. 확정은 "의사에게 보여줄 준비가 됐다"이고 진료 완료는 "그 카드에
+     * 진료 기록이 붙었다"다. 저장하기가 카드를 확정하게 되면서(#196) 둘을 섞으면 진료를
+     * 받기도 전에 "진료 완료"가 뜬다.
+     *
+     * **상세 응답에 이 값이 없어 늘 false다.** `CardSummary`에만 있다(Backend#101). 그래서
+     * 1e-1의 뱃지는 지금 언제나 `진료 전`이고, 진료를 마쳤는지는 목록(1j-4)에서만 갈린다.
+     */
+    val visited: Boolean = false,
 ) {
-    /** 백엔드 카드 상태 `draft` / `confirmed`에 대응한다. */
+    /**
+     * 백엔드 카드 상태 `DRAFT` / `CONFIRMED`에 대응한다.
+     *
+     * 화면에 그리는 값이 아니라 확정을 한 번만 부르려고 드는 값이다. 뱃지는 [visited]가
+     * 읽는다.
+     */
     enum class Status { BEFORE_VISIT, CONFIRMED }
 }
 

@@ -174,11 +174,15 @@ sealed interface VisitRecordUiState {
      *
      * [deleteRequested]는 삭제 확인 대화상자(1q-1-DC)가 떠 있는지다. 삭제를 취소하면 편집
      * 모드는 그대로 남아야 해서 편집 상태와 분리한다.
+     *
+     * [saveFailed]는 저장하기를 눌렀는데 서버가 받지 못한 경우다. 화면은 그대로 두고
+     * 알리기만 한다. 진료 직후에 적은 글이라 닫아 버리면 다시 적을 수 없다.
      */
     data class Content(
         val record: VisitRecord,
         val draft: VisitRecordDraft? = null,
         val deleteRequested: Boolean = false,
+        val saveFailed: Boolean = false,
     ) : VisitRecordUiState {
         val editing: Boolean get() = draft != null
 
