@@ -306,6 +306,7 @@
       제목은 첫 장만 두 줄이고 설명은 넷 다 세 줄이다.
     -->
     <string name="onboarding_next">다음</string>
+    <string name="onboarding_skip">건너뛰기</string>
     <string name="onboarding_start">시작하기</string>
 
     <string name="onboarding_prepare_title">말하기 어려웠던 증상,\n함께 준비해요.</string>

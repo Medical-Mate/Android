@@ -40,9 +40,14 @@ enum class MedicalMateEmptyStateType {
  * 환자는 방금 적은 증상이 날아갔다고 생각한다.
  *
  * 행동 버튼은 Tonal이다. 브랜드 채움은 실제 주 행동에만 쓴다(문서의 컴포넌트 규격).
+ * **없을 수도 있다** — 화면에 이미 같은 행동을 부르는 버튼이 있으면 마스터가 그 자리를
+ * 꺼 둔다(홈의 `1n-2`가 그렇다).
  *
- * 아이콘이 옅은 원 안에 들어간다. Figma 1n-2의 인스턴스가 그렇게 그려져 있다. 맨 아이콘만
- * 두면 빈 화면 가운데에 회색 획만 남아 무엇을 보라는 것인지 약하다.
+ * 아이콘이 옅은 브랜드 원 안에 들어간다. 맨 아이콘만 두면 빈 화면 가운데에 획만 남아
+ * 무엇을 보라는 것인지 약하다.
+ *
+ * 세로로 가운데 정렬한다. 마스터가 `justify-center`이고, 남은 높이를 받으면 그 안에서
+ * 가운데에 선다. 높이를 따로 주지 않으면 내용만큼만 차지해서 정렬이 드러나지 않는다.
  */
 @Composable
 fun MedicalMateEmptyState(
@@ -68,31 +73,39 @@ fun MedicalMateEmptyState(
         modifier =
         modifier
             .fillMaxWidth()
-            .padding(vertical = MedicalMateSpace.s32),
+            .padding(vertical = MedicalMateSpace.s40),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12),
+        verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12, Alignment.CenterVertically),
     ) {
         IconCircle(icon)
-        note?.let {
+        // 글 묶음은 마스터에서 한 칸이다. 원과의 간격이 12 + 4이고 제목과 설명 사이는 6이라,
+        // 바깥 간격 하나로 셋을 벌리면 제목과 설명이 한 덩어리로 읽히지 않는다.
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(top = MedicalMateSpace.s4),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s6),
+        ) {
+            note?.let {
+                Text(
+                    text = it,
+                    style = MedicalMateTheme.typography.bodyMStrong,
+                    color = colors.fgPrimary,
+                    textAlign = TextAlign.Center,
+                )
+            }
             Text(
-                text = it,
-                style = MedicalMateTheme.typography.bodyMStrong,
-                color = colors.fgPrimary,
+                text = title,
+                style = MedicalMateTheme.typography.headingM,
+                color = colors.fgDefault,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = description,
+                style = MedicalMateTheme.typography.bodyM,
+                color = colors.fgSubtle,
                 textAlign = TextAlign.Center,
             )
         }
-        Text(
-            text = title,
-            style = MedicalMateTheme.typography.headingS,
-            color = colors.fgDefault,
-            textAlign = TextAlign.Center,
-        )
-        Text(
-            text = description,
-            style = MedicalMateTheme.typography.bodyM,
-            color = colors.fgSubtle,
-            textAlign = TextAlign.Center,
-        )
         if (actionLabel != null && onActionClick != null) {
             MedicalMateButton(
                 onClick = onActionClick,
@@ -104,7 +117,7 @@ fun MedicalMateEmptyState(
     }
 }
 
-/** 옅은 원 안의 아이콘. 맨 아이콘만 두면 빈 화면 가운데에 회색 획만 남는다. */
+/** 옅은 브랜드 원 안의 아이콘. 맨 아이콘만 두면 빈 화면 가운데에 획만 남는다. */
 @Composable
 private fun IconCircle(@DrawableRes icon: Int) {
     Box(
@@ -112,7 +125,7 @@ private fun IconCircle(@DrawableRes icon: Int) {
         Modifier
             .size(EmptyStateCircleSize)
             .background(
-                color = MedicalMateTheme.colors.bgSubtle,
+                color = MedicalMateTheme.colors.bgPrimaryFaint,
                 shape = MedicalMateRadius.full,
             ),
         contentAlignment = Alignment.Center,
@@ -120,14 +133,14 @@ private fun IconCircle(@DrawableRes icon: Int) {
         Icon(
             painter = painterResource(icon),
             contentDescription = null,
-            tint = MedicalMateTheme.colors.fgMuted,
+            tint = MedicalMateTheme.colors.fgPrimary,
             modifier = Modifier.size(EmptyStateIconSize),
         )
     }
 }
 
 /** 빈 상태 그림은 기본 아이콘보다 크게 둔다. 화면 가운데를 채우는 유일한 요소다. */
-private val EmptyStateIconSize = 28.dp
+private val EmptyStateIconSize = 32.dp
 
-/** 아이콘을 감싸는 옅은 원. Figma 1n-2에서 재서 얻었다. */
+/** 아이콘을 감싸는 옅은 원. 마스터가 72이고 반경이 36이다. */
 private val EmptyStateCircleSize = 72.dp

@@ -20,7 +20,8 @@ internal data object OnboardingIntroDestination
  * 네 장이 한 목적지 안에서 넘어간다. 장마다 목적지를 두면 뒤로 가기로 장을 되짚을 수 있는데,
  * 시안에 뒤로 가는 길이 없고 마지막 장을 지나면 돌아올 자리도 없다.
  *
- * [onDoneClick]은 신상정보(1b-1)로 간다.
+ * [onDoneClick]은 신상정보(1b-1)로 간다. 건너뛰기도 같은 자리로 나간다 — 건너뛰는 것은
+ * 소개 네 장이지 그다음 신상정보가 아니다.
  */
 internal fun NavGraphBuilder.onboardingIntroDestination(onDoneClick: () -> Unit) {
     composable<OnboardingIntroDestination> {
@@ -43,5 +44,6 @@ private fun OnboardingRoute(onDoneClick: () -> Unit) {
     OnboardingScreen(
         page = page,
         onNextClick = { if (page.isLast) onDoneClick() else index += 1 },
+        onSkipClick = onDoneClick,
     )
 }

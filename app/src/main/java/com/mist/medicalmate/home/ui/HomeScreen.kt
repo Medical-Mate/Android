@@ -133,6 +133,10 @@ private fun HomeContent(
     callbacks: HomeCallbacks,
     modifier: Modifier = Modifier,
 ) {
+    if (content.savedCards.isEmpty() && content.upcoming.isEmpty()) {
+        EmptyHomeContent(content = content, callbacks = callbacks, modifier = modifier)
+        return
+    }
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding =
@@ -165,10 +169,57 @@ private fun HomeContent(
 }
 
 /**
+ * 카드도 일정도 없는 홈. Figma `1n-2`다.
+ *
+ * 목록이 아니라 한 화면이다. 시안이 오늘의 한 줄 · 시작 버튼 다음에 빈 상태를 두고, 그것이
+ * 남은 높이를 전부 받아 그 안에서 가운데에 선다(320x409). 목록으로 두면 빈 상태가 버튼
+ * 바로 밑에 붙고 그 아래가 통째로 빈다.
+ *
+ * **행동 버튼을 두지 않는다.** 시안의 인스턴스가 그 자리를 꺼 두었다. 바로 위에 "증상 정리
+ * 시작하기"가 있어서, 같은 곳으로 가는 버튼이 한 화면에 둘이 된다.
+ *
+ * 스크롤을 걸지 않는다. 남은 높이를 나눠 갖는 것과 스크롤은 같이 쓸 수 없고, 이 상태의
+ * 내용은 화면에 들어간다. 글꼴을 크게 키우면 빈 상태가 먼저 줄어든다.
+ */
+@Composable
+private fun EmptyHomeContent(content: HomeUiState.Content, callbacks: HomeCallbacks, modifier: Modifier = Modifier) {
+    Column(
+        modifier =
+        modifier
+            .fillMaxSize()
+            .padding(
+                start = MedicalMateSize.gutter,
+                end = MedicalMateSize.gutter,
+                top = MedicalMateSpace.s8,
+                bottom = MedicalMateSize.gutter,
+            ),
+        verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s16),
+    ) {
+        HomeHeader(
+            userInitial = content.userInitial,
+            hasUnreadNotification = content.hasUnreadNotification,
+            onNotificationClick = callbacks.onNotificationClick,
+            onProfileClick = callbacks.onProfileClick,
+        )
+        TodayLineCard(content.todayLine)
+        StartIntakeButton(onClick = callbacks.onStartIntakeClick)
+        content.resume?.let { resume ->
+            ResumeCard(resume = resume, onClick = { callbacks.onResumeClick(resume.intakeId) })
+        }
+        MedicalMateEmptyState(
+            type = MedicalMateEmptyStateType.NO_RECORD,
+            title = stringResource(R.string.home_empty_title),
+            description = stringResource(R.string.home_empty_description),
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+/**
  * 최근 브리핑 카드 구역.
  *
- * 카드가 없으면 목록 대신 빈 상태를 둔다. Figma `1n-2`가 그 화면이다. 제목만 남기고 빈
- * 목록을 두면 무엇을 해야 하는지 알 수 없다.
+ * 카드가 없는데 일정은 있는 경우다. 둘 다 없으면 화면이 [EmptyHomeContent]로 갈린다.
+ * 제목만 남기고 빈 목록을 두면 무엇을 해야 하는지 알 수 없어서 빈 상태를 둔다.
  */
 private fun LazyListScope.savedCardsSection(content: HomeUiState.Content, callbacks: HomeCallbacks) {
     if (content.savedCards.isEmpty()) {
