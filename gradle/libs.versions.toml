@@ -31,6 +31,8 @@ kotlinxCoroutines = "1.9.0"
 navigation = "2.10.0"
 datastore = "1.2.1"
 hilt = "2.60.1"
+# 3D 인체도(#211)를 그리는 렌더러. gltfio가 GLB를 읽고 Draco 압축을 푼다.
+filament = "1.75.1"
 # 온디바이스 엔진. AI 트랙이 llama.cpp 업스트림을 Snapdragon 툴체인으로 빌드해 릴리즈로 넘긴
 # 산출물이다(`Medical-Mate/AI`의 릴리즈 태그). 앱이 직접 빌드하지 않는다. 도커 툴체인이 필요한데
 # 이 개발 환경에 없다. 바뀌면 AI 쪽이 태그를 올려 다시 전달한다.
@@ -72,6 +74,9 @@ androidx-datastore-preferences = { group = "androidx.datastore", name = "datasto
 # minSdk 24에서 java.time을 쓰기 위한 core library desugaring
 desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugarJdkLibs" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
+filament-android = { group = "com.google.android.filament", name = "filament-android", version.ref = "filament" }
+# GLB 로더. Filament 네이티브 라이브러리도 함께 올린다.
+filament-gltfio = { group = "com.google.android.filament", name = "gltfio-android", version.ref = "filament" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
