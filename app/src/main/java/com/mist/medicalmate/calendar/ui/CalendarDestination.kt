@@ -22,12 +22,16 @@ internal data object CalendarDestination
  *
  * 날짜를 문자열로 담는다. `LocalDate`는 직렬화 규칙이 없어서 라우트에 그대로 넣을 수 없고,
  * ISO 문자열이 사람이 읽을 수 있어 딥링크로도 쓸 수 있다.
+ *
+ * [appointmentId]는 월 화면에서 누른 일정이다. 하루에 일정이 둘 이상일 수 있어서 어느 것을
+ * 눌렀는지를 들고 와야 한다 — 날짜만으로는 화면이 첫 건을 열고, 누른 것과 열린 것이 달랐다.
+ * 없으면 그 날 첫 일정을 연다(#179).
  */
 @Serializable
-internal data class CalendarDayDestination(val date: String)
+internal data class CalendarDayDestination(val date: String, val appointmentId: Long? = null)
 
 internal fun NavGraphBuilder.calendarDestination(
-    onDayOpen: (LocalDate) -> Unit,
+    onDayOpen: (date: LocalDate, appointmentId: Long?) -> Unit,
     onCardOpen: (String) -> Unit,
     onAddClick: () -> Unit,
     onTabSelect: (MedicalMateTab) -> Unit,
@@ -50,9 +54,11 @@ internal fun NavGraphBuilder.calendarDayDestination(
     onExit: () -> Unit,
 ) {
     composable<CalendarDayDestination> { entry ->
-        val date = LocalDate.parse(entry.toRoute<CalendarDayDestination>().date)
+        val route = entry.toRoute<CalendarDayDestination>()
+        val date = LocalDate.parse(route.date)
         CalendarDayRoute(
             date = date,
+            appointmentId = route.appointmentId,
             onCardOpen = onCardOpen,
             onScheduleConfirm = onScheduleConfirm,
             onRecordAdd = { cardId, cardTitle -> onRecordAdd(cardId, cardTitle, date) },
@@ -73,7 +79,7 @@ internal fun NavGraphBuilder.calendarDayDestination(
  */
 @Composable
 private fun CalendarMonthRoute(
-    onDayOpen: (LocalDate) -> Unit,
+    onDayOpen: (date: LocalDate, appointmentId: Long?) -> Unit,
     onCardOpen: (String) -> Unit,
     onAddClick: () -> Unit,
     onTabSelect: (MedicalMateTab) -> Unit,
@@ -90,7 +96,7 @@ private fun CalendarMonthRoute(
         onPreviousMonthClick = viewModel::onPreviousMonth,
         onNextMonthClick = viewModel::onNextMonth,
         onDayClick = viewModel::onDaySelect,
-        onScheduleClick = { onDayOpen(state.selected) },
+        onScheduleClick = { id -> onDayOpen(state.selected, id.toLongOrNull()) },
         onCardOpenClick = onCardOpen,
         onCardSheetDismiss = viewModel::onCardSheetDismiss,
         onAddClick = onAddClick,
@@ -110,6 +116,7 @@ private fun CalendarMonthRoute(
 @Composable
 private fun CalendarDayRoute(
     date: LocalDate,
+    appointmentId: Long?,
     onCardOpen: (String) -> Unit,
     onScheduleConfirm: (String?) -> Unit,
     onRecordAdd: (cardId: String, cardTitle: String) -> Unit,
@@ -120,7 +127,7 @@ private fun CalendarDayRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(date) { viewModel.load(date) }
+    LaunchedEffect(date, appointmentId) { viewModel.load(date, appointmentId) }
 
     CalendarDayScreen(
         state = state ?: return,

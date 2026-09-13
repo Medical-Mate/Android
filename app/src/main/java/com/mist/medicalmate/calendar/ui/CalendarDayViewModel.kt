@@ -53,13 +53,22 @@ internal constructor(
      *
      * 세 호출을 하나씩 기다린다. 화면 하나를 그리는 데 셋이 다 있어야 하고, 일자 화면은
      * 캘린더에서 한 번 들어올 때만 읽는다.
+     *
+     * **[appointmentId]는 월 화면에서 누른 일정이다.** 하루에 일정이 둘 이상일 수 있는데
+     * 날짜만으로 열면 첫 건이 나와서, 누른 것과 열린 것이 달랐다(#179). 없거나 그 날에서
+     * 못 찾으면 첫 건을 연다 — 지운 일정으로 돌아오는 경우가 그렇다.
+     *
+     * **화면은 여전히 한 건만 그린다.** 둘 이상일 때 어떻게 보일지는 시안에 없어 디자인
+     * 트랙에 물어 뒀다(#189).
      */
-    fun load(date: LocalDate) {
+    fun load(date: LocalDate, appointmentId: Long? = null) {
         viewModelScope.launch {
-            val appointment =
+            val live =
                 (repository.day(date) as? ApiResult.Success)
                     ?.value
-                    ?.firstOrNull { it.status != AppointmentStatus.CANCELED }
+                    ?.filter { it.status != AppointmentStatus.CANCELED }
+                    .orEmpty()
+            val appointment = live.firstOrNull { it.id == appointmentId } ?: live.firstOrNull()
             val record = (visitRepository.visits() as? ApiResult.Success)?.value?.firstOrNull { it.visitedOn == date }
             mutableUiState.value =
                 dayState(date).copy(
