@@ -122,6 +122,13 @@ data class VisitNoteUiState(
      * 그대로 남아 있고 음성 패널이 그 아래 선다. 그래서 "지금 음성인가"를 따로 든다.
      */
     val voice: MedicalMateVoiceState? = null,
+    /**
+     * 이 기기에서 음성을 쓸 수 있는지.
+     *
+     * 쓸 수 없으면 마이크를 그리지 않는다. 눌러 봐야 안 되는 버튼을 두고 "이 기기에서는
+     * 안 돼요"를 띄우는 것보다 낫다 — 그 문구는 시안에도 없다.
+     */
+    val voiceAvailable: Boolean = false,
 ) {
     val canSave: Boolean = note.isNotBlank()
 }

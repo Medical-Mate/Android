@@ -41,6 +41,13 @@ data class IntakeUiState(
     val draft: String = "",
     val inputMode: IntakeInputMode = IntakeInputMode.TEXT,
     val voice: MedicalMateVoiceState = MedicalMateVoiceState.IDLE,
+    /**
+     * 이 기기에서 음성을 쓸 수 있는지.
+     *
+     * 쓸 수 없으면 입력칸의 마이크를 그리지 않는다. 눌러 봐야 안 되는 버튼을 두고 "이
+     * 기기에서는 안 돼요"를 띄우는 것보다 낫다 — 그 문구는 시안에도 없다.
+     */
+    val voiceAvailable: Boolean = false,
     val awaitingReply: Boolean = false,
     val severity: MedicalMateSeverity = MedicalMateSeverity.LEVEL_3,
     val questionDraft: String = "",

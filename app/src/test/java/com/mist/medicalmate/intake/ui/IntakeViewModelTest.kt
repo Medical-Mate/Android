@@ -4,6 +4,8 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
 import com.mist.medicalmate.core.model.IntakeStep
 import com.mist.medicalmate.core.network.ApiResult
+import com.mist.medicalmate.core.speech.FakeSpeechToText
+import com.mist.medicalmate.core.speech.SpeechChunk
 import com.mist.medicalmate.intake.data.IntakeSession
 import com.mist.medicalmate.intake.data.IntakeSessionMessage
 import com.mist.medicalmate.intake.data.IntakeSessionStatus
@@ -29,7 +31,10 @@ import org.junit.Test
  * 세션 만들기는 여기서 늘 성공한다. 실패해도 문답이 그대로 진행된다는 것은
  * [IntakeSessionActionsTest]가 본다.
  */
-private fun intakeViewModel(repository: SessionRepository = FakeSessionRepository()) = IntakeViewModel(repository)
+private fun intakeViewModel(
+    repository: SessionRepository = FakeSessionRepository(),
+    speech: FakeSpeechToText = FakeSpeechToText(),
+) = IntakeViewModel(repository, speech)
 
 /** 부른 것을 기록만 한다. 시험마다 무엇을 보냈는지 확인할 수 있다. */
 private class FakeSessionRepository(
@@ -333,13 +338,89 @@ class IntakeViewModelTest {
 
     @Test
     fun `마이크는 대기와 듣는 중을 오간다`() {
-        val viewModel = intakeViewModel()
+        val viewModel = intakeViewModel(speech = FakeSpeechToText(keepOpen = true))
 
         viewModel.onMicClick()
         assertEquals(MedicalMateVoiceState.LISTENING, viewModel.uiState.value.voice)
 
         viewModel.onMicClick()
         assertEquals(MedicalMateVoiceState.IDLE, viewModel.uiState.value.voice)
+    }
+
+    @Test
+    fun `받아쓴 글이 입력칸에 들어간다`() {
+        // 보내는 것은 환자가 한다. 말이 끝나자마자 나가면 잘못 알아들은 것을 고칠 자리가 없다.
+        val speech = FakeSpeechToText(chunks = listOf(SpeechChunk.Final("배가 아파요")), keepOpen = true)
+        val viewModel = intakeViewModel(speech = speech)
+
+        viewModel.onMicClick()
+
+        assertEquals("배가 아파요", viewModel.uiState.value.draft)
+    }
+
+    @Test
+    fun `부분 결과는 앞선 것을 갈아끼운다`() {
+        // 말하는 중에 계속 갱신되는 값이다. 이어 붙이면 같은 말이 여러 번 쌓인다.
+        val speech =
+            FakeSpeechToText(
+                chunks = listOf(SpeechChunk.Partial("배가"), SpeechChunk.Partial("배가 아파요")),
+                keepOpen = true,
+            )
+        val viewModel = intakeViewModel(speech = speech)
+
+        viewModel.onMicClick()
+
+        assertEquals("배가 아파요", viewModel.uiState.value.draft)
+    }
+
+    @Test
+    fun `적던 글 뒤에 붙는다`() {
+        val speech = FakeSpeechToText(chunks = listOf(SpeechChunk.Final("아파요")), keepOpen = true)
+        val viewModel = intakeViewModel(speech = speech)
+        viewModel.onDraftChange("배가 ")
+
+        viewModel.onMicClick()
+
+        assertEquals("배가 아파요", viewModel.uiState.value.draft)
+    }
+
+    @Test
+    fun `못 알아들어도 적던 글은 그대로다`() {
+        val speech = FakeSpeechToText(chunks = listOf(SpeechChunk.Failed))
+        val viewModel = intakeViewModel(speech = speech)
+        viewModel.onDraftChange("배가 아파요")
+
+        viewModel.onMicClick()
+
+        assertEquals("배가 아파요", viewModel.uiState.value.draft)
+        assertEquals(MedicalMateVoiceState.IDLE, viewModel.uiState.value.voice)
+    }
+
+    @Test
+    fun `마이크 권한을 거부하면 왜 안 되는지 적는다`() {
+        val viewModel = intakeViewModel()
+
+        viewModel.onMicDenied()
+
+        assertEquals(MedicalMateVoiceState.DENIED, viewModel.uiState.value.voice)
+    }
+
+    @Test
+    fun `쓸 수 없는 기기에서는 마이크를 그리지 않는다`() {
+        val viewModel = intakeViewModel(speech = FakeSpeechToText(usable = false))
+
+        viewModel.checkVoice()
+
+        assertFalse(viewModel.uiState.value.voiceAvailable)
+    }
+
+    @Test
+    fun `쓸 수 있으면 마이크를 그린다`() {
+        val viewModel = intakeViewModel(speech = FakeSpeechToText(usable = true))
+
+        viewModel.checkVoice()
+
+        assertTrue(viewModel.uiState.value.voiceAvailable)
     }
 
     @Test
@@ -397,15 +478,15 @@ class IntakeViewModelTest {
     fun `질문을 적어 넣고 지운다`() {
         val viewModel = intakeViewModel()
 
-        viewModel.onQuestionDraftChange("검사를 받아야 하나요?")
-        viewModel.onAddQuestion()
-        viewModel.onQuestionDraftChange("진통제를 계속 먹어도 되나요?")
-        viewModel.onAddQuestion()
+        viewModel.question.onDraftChange("검사를 받아야 하나요?")
+        viewModel.question.onAdd()
+        viewModel.question.onDraftChange("진통제를 계속 먹어도 되나요?")
+        viewModel.question.onAdd()
 
         assertEquals(2, viewModel.uiState.value.questions.size)
         assertEquals("", viewModel.uiState.value.questionDraft)
 
-        viewModel.onRemoveQuestion(0)
+        viewModel.question.onRemove(0)
 
         assertEquals(listOf("진통제를 계속 먹어도 되나요?"), viewModel.uiState.value.questions)
     }
@@ -414,9 +495,9 @@ class IntakeViewModelTest {
     fun `빈 질문은 들어가지 않고 없는 자리를 지워도 그대로다`() {
         val viewModel = intakeViewModel()
 
-        viewModel.onQuestionDraftChange("  ")
-        viewModel.onAddQuestion()
-        viewModel.onRemoveQuestion(3)
+        viewModel.question.onDraftChange("  ")
+        viewModel.question.onAdd()
+        viewModel.question.onRemove(3)
 
         assertEquals(emptyList<String>(), viewModel.uiState.value.questions)
     }
@@ -526,8 +607,8 @@ class IntakeViewModelTest {
         viewModel.openChatStep()
         viewModel.onNext("꽤 아파요")
         viewModel.onNext("꽤 아파요")
-        viewModel.onQuestionDraftChange("검사를 받아야 하나요?")
-        viewModel.onAddQuestion()
+        viewModel.question.onDraftChange("검사를 받아야 하나요?")
+        viewModel.question.onAdd()
 
         viewModel.onNext("꽤 아파요")
 

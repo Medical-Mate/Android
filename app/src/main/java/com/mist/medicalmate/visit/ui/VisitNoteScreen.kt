@@ -77,8 +77,8 @@ fun VisitNoteScreen(state: VisitNoteUiState, callbacks: VisitNoteCallbacks, modi
         Box(modifier = Modifier.weight(1f)) {
             NoteContent(state = state, callbacks = callbacks)
             // 듣는 중에는 마이크를 패널이 들고 있다. 같은 조작이 화면에 둘 있으면 어느 것을
-            // 눌러야 멈추는지 알 수 없다.
-            if (state.voice == null) {
+            // 눌러야 멈추는지 알 수 없다. 음성을 쓸 수 없는 기기에서는 아예 그리지 않는다.
+            if (state.voice == null && state.voiceAvailable) {
                 MedicalMateFab(
                     onClick = callbacks.onVoiceClick,
                     icon = MedicalMateIcons.Mic,
@@ -106,6 +106,7 @@ data class VisitNoteCallbacks(
     val onBackClick: () -> Unit = {},
     val onNoteChange: (String) -> Unit = {},
     val onVoiceClick: () -> Unit = {},
+    val onMicClick: () -> Unit = {},
     val onTypeInsteadClick: () -> Unit = {},
     val onSaveClick: () -> Unit = {},
 )
@@ -152,7 +153,7 @@ private fun NoteContent(state: VisitNoteUiState, callbacks: VisitNoteCallbacks) 
         state.voice?.let { voice ->
             MedicalMateVoiceInput(
                 state = voice,
-                onMicClick = callbacks.onVoiceClick,
+                onMicClick = callbacks.onMicClick,
                 onTypeInsteadClick = callbacks.onTypeInsteadClick,
             )
         }

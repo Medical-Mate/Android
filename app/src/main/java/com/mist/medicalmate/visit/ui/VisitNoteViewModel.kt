@@ -1,13 +1,17 @@
 package com.mist.medicalmate.visit.ui
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
+import com.mist.medicalmate.core.speech.Dictation
+import com.mist.medicalmate.core.speech.SpeechToText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.time.Clock
 import java.time.LocalDate
 
@@ -27,7 +31,7 @@ import java.time.LocalDate
 @HiltViewModel
 class VisitNoteViewModel
 @Inject
-constructor(private val clock: Clock) : ViewModel() {
+constructor(private val clock: Clock, private val speech: SpeechToText) : ViewModel() {
     private val mutableUiState = MutableStateFlow(VisitNoteUiState(visit = VisitHeadline(LocalDate.now(clock))))
     val uiState: StateFlow<VisitNoteUiState> = mutableUiState.asStateFlow()
 
@@ -64,19 +68,55 @@ constructor(private val clock: Clock) : ViewModel() {
      * **받아쓰기는 아직 없다.** 패널과 상태까지가 지금 범위이고, 실제 인식은 증상 문답과 함께
      * 붙인다. 그래서 듣는 중에서 글이 들어오지 않는다.
      */
+    /**
+     * 받아쓰기.
+     *
+     * 받아쓴 글은 적던 메모 뒤에 붙는다. 말하는 중에 부분 결과가 계속 갱신되므로 누를 때의
+     * 글을 기준으로 매번 새로 붙인다.
+     */
+    private val dictation =
+        Dictation(
+            speech = speech,
+            scope = viewModelScope,
+            onVoice = { voice -> mutableUiState.update { it.copy(voice = voice) } },
+            onDictated = { note -> mutableUiState.update { it.copy(note = note) } },
+        )
+
+    /**
+     * 우하단 마이크. 음성 패널을 열고 닫는다.
+     *
+     * 패널이 닫혀 있으면 열기만 한다. 여는 것과 듣기 시작하는 것을 한 번에 하면 패널이 무엇을
+     * 하는 자리인지 보기 전에 녹음이 시작된다.
+     */
     fun onVoiceClick() {
         mutableUiState.update { state ->
-            val next =
-                when (state.voice) {
-                    null, MedicalMateVoiceState.IDLE -> MedicalMateVoiceState.LISTENING
-                    else -> MedicalMateVoiceState.IDLE
-                }
-            state.copy(voice = next)
+            if (state.voice == null) state.copy(voice = MedicalMateVoiceState.IDLE) else state
+        }
+        if (mutableUiState.value.voice != MedicalMateVoiceState.IDLE) dictation.stop()
+    }
+
+    /** 패널 안의 마이크. 권한이 확인된 뒤에 불린다. */
+    fun onMicClick() {
+        val state = mutableUiState.value
+        dictation.onMicClick(listening = state.voice == MedicalMateVoiceState.LISTENING, base = state.note)
+    }
+
+    /** 마이크 권한을 거부했다. */
+    fun onMicDenied() {
+        dictation.onDenied()
+    }
+
+    /** 이 기기에서 음성을 쓸 수 있는지. 쓸 수 없으면 마이크를 그리지 않는다. */
+    fun checkVoice() {
+        viewModelScope.launch {
+            val usable = speech.available()
+            mutableUiState.update { it.copy(voiceAvailable = usable) }
         }
     }
 
     /** 음성 패널의 "직접 입력할게요". 패널을 닫고 적던 글로 돌아간다. */
     fun onTypeInsteadClick() {
+        dictation.stop()
         mutableUiState.update { it.copy(voice = null) }
     }
 }

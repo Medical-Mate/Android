@@ -1,6 +1,8 @@
 package com.mist.medicalmate.visit.ui
 
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
+import com.mist.medicalmate.core.speech.FakeSpeechToText
+import com.mist.medicalmate.core.speech.SpeechChunk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -92,10 +94,22 @@ class VisitNoteViewModelTest {
     }
 
     @Test
-    fun `마이크를 누르면 듣는 중이 된다`() {
+    fun `우하단 마이크는 패널을 열기만 한다`() {
+        // 여는 것과 듣기 시작하는 것을 한 번에 하면 패널이 무엇을 하는 자리인지 보기 전에
+        // 녹음이 시작된다. 권한도 그 자리에서 묻게 돼 왜 묻는지가 흐려진다.
         val viewModel = viewModel()
 
         viewModel.onVoiceClick()
+
+        assertEquals(MedicalMateVoiceState.IDLE, viewModel.uiState.value.voice)
+    }
+
+    @Test
+    fun `패널의 마이크를 누르면 듣는 중이 된다`() {
+        val viewModel = viewModel(FakeSpeechToText(keepOpen = true))
+        viewModel.onVoiceClick()
+
+        viewModel.onMicClick()
 
         assertEquals(MedicalMateVoiceState.LISTENING, viewModel.uiState.value.voice)
     }
@@ -103,12 +117,53 @@ class VisitNoteViewModelTest {
     @Test
     fun `듣는 중에 다시 누르면 멈춘다`() {
         // 다 말했을 때 누르는 자리다. 패널은 남고 상태만 돌아온다.
-        val viewModel = viewModel()
+        val viewModel = viewModel(FakeSpeechToText(keepOpen = true))
+        viewModel.onVoiceClick()
 
-        viewModel.onVoiceClick()
-        viewModel.onVoiceClick()
+        viewModel.onMicClick()
+        viewModel.onMicClick()
 
         assertEquals(MedicalMateVoiceState.IDLE, viewModel.uiState.value.voice)
+    }
+
+    @Test
+    fun `받아쓴 글이 적던 메모 뒤에 붙는다`() {
+        val speech = FakeSpeechToText(chunks = listOf(SpeechChunk.Final("2주 뒤에 오래요")), keepOpen = true)
+        val viewModel = viewModel(speech)
+        viewModel.onNoteChange("위염이래요. ")
+
+        viewModel.onMicClick()
+
+        assertEquals("위염이래요. 2주 뒤에 오래요", viewModel.uiState.value.note)
+    }
+
+    @Test
+    fun `모델을 받는 동안은 정리하는 중이다`() {
+        // 처음 쓸 때 한 번이다. 시안의 PROCESSING 자리가 이 상태다.
+        val speech = FakeSpeechToText(chunks = listOf(SpeechChunk.Preparing), keepOpen = true)
+        val viewModel = viewModel(speech)
+
+        viewModel.onMicClick()
+
+        assertEquals(MedicalMateVoiceState.PROCESSING, viewModel.uiState.value.voice)
+    }
+
+    @Test
+    fun `마이크 권한을 거부하면 왜 안 되는지 적는다`() {
+        val viewModel = viewModel()
+
+        viewModel.onMicDenied()
+
+        assertEquals(MedicalMateVoiceState.DENIED, viewModel.uiState.value.voice)
+    }
+
+    @Test
+    fun `쓸 수 없는 기기에서는 마이크를 그리지 않는다`() {
+        val viewModel = viewModel(FakeSpeechToText(usable = false))
+
+        viewModel.checkVoice()
+
+        assertFalse(viewModel.uiState.value.voiceAvailable)
     }
 
     @Test
@@ -163,6 +218,6 @@ class VisitNoteViewModelTest {
         assertTrue(viewModel.uiState.value.visit.today)
     }
 
-    private fun viewModel() =
-        VisitNoteViewModel(Clock.fixed(Instant.parse("2026-09-12T01:00:00Z"), ZoneId.of("Asia/Seoul")))
+    private fun viewModel(speech: FakeSpeechToText = FakeSpeechToText()) =
+        VisitNoteViewModel(Clock.fixed(Instant.parse("2026-09-12T01:00:00Z"), ZoneId.of("Asia/Seoul")), speech)
 }

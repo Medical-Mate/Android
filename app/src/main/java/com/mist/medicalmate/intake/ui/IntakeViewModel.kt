@@ -6,6 +6,8 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
 import com.mist.medicalmate.core.model.IntakeStep
 import com.mist.medicalmate.core.network.ApiResult
+import com.mist.medicalmate.core.speech.Dictation
+import com.mist.medicalmate.core.speech.SpeechToText
 import com.mist.medicalmate.intake.data.IntakeSessionMessage
 import com.mist.medicalmate.intake.data.SessionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,9 +32,15 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class IntakeViewModel
 @Inject
-internal constructor(private val repository: SessionRepository) : ViewModel() {
+internal constructor(
+    private val repository: SessionRepository,
+    private val speech: SpeechToText,
+) : ViewModel() {
     private val mutableUiState = MutableStateFlow(IntakeUiState())
     val uiState: StateFlow<IntakeUiState> = mutableUiState.asStateFlow()
+
+    /** 4단계 질문 목록 조작. 왜 나눴는지는 [IntakeQuestionActions]에 있다. */
+    val question = IntakeQuestionActions { change -> mutableUiState.update { it.change() } }
 
     /** 인체도 단계의 조작. 왜 나눴는지는 [BodyMapActions]에 있다. */
     val bodyMap = BodyMapActions { transform ->
@@ -93,57 +101,45 @@ internal constructor(private val repository: SessionRepository) : ViewModel() {
 
     /** 글과 음성을 바꾼다. 바꿀 때 음성 상태를 대기로 되돌린다. */
     fun onInputModeChange(mode: IntakeInputMode) {
+        if (mode == IntakeInputMode.TEXT) dictation.stop()
         mutableUiState.update { it.copy(inputMode = mode, voice = MedicalMateVoiceState.IDLE) }
     }
 
     /**
-     * 마이크를 눌렀다. 대기와 듣는 중을 오간다.
+     * 받아쓰기.
      *
-     * 받아쓴 글은 아직 없다. 멈춰도 대화에 아무것도 붙지 않는다.
+     * 받아쓴 글은 입력칸에 들어간다. 보내는 것은 환자가 한다 — 말이 끝나자마자 나가면 잘못
+     * 알아들은 것을 고칠 자리가 없다.
      */
+    private val dictation =
+        Dictation(
+            speech = speech,
+            scope = viewModelScope,
+            onVoice = { voice -> mutableUiState.update { it.copy(voice = voice ?: MedicalMateVoiceState.IDLE) } },
+            onDictated = { draft -> mutableUiState.update { it.copy(draft = draft) } },
+        )
+
+    /** 마이크를 눌렀다. 권한이 확인된 뒤에 불린다. */
     fun onMicClick() {
-        mutableUiState.update {
-            val next =
-                if (it.voice == MedicalMateVoiceState.LISTENING) {
-                    MedicalMateVoiceState.IDLE
-                } else {
-                    MedicalMateVoiceState.LISTENING
-                }
-            it.copy(voice = next)
+        val state = mutableUiState.value
+        dictation.onMicClick(listening = state.voice == MedicalMateVoiceState.LISTENING, base = state.draft)
+    }
+
+    /** 마이크 권한을 거부했다. */
+    fun onMicDenied() {
+        dictation.onDenied()
+    }
+
+    /** 이 기기에서 음성을 쓸 수 있는지. 쓸 수 없으면 마이크를 그리지 않는다. */
+    fun checkVoice() {
+        viewModelScope.launch {
+            val usable = speech.available()
+            mutableUiState.update { it.copy(voiceAvailable = usable) }
         }
     }
 
     fun onSeverityChange(severity: MedicalMateSeverity) {
         mutableUiState.update { it.copy(severity = severity) }
-    }
-
-    fun onQuestionDraftChange(draft: String) {
-        mutableUiState.update { it.copy(questionDraft = draft) }
-    }
-
-    fun onAddQuestion() {
-        mutableUiState.update {
-            if (!it.canAddQuestion) {
-                it
-            } else {
-                it.copy(
-                    questions = it.questions + it.questionDraft.trim(),
-                    questionDraft = "",
-                )
-            }
-        }
-    }
-
-    fun onRemoveQuestion(index: Int) {
-        mutableUiState.update {
-            if (index !in
-                it.questions.indices
-            ) {
-                it
-            } else {
-                it.copy(questions = it.questions.filterIndexed { i, _ -> i != index })
-            }
-        }
     }
 
     /**

@@ -180,11 +180,15 @@ internal fun ChatInput(state: IntakeUiState, callbacks: IntakeCallbacks) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4),
                     ) {
-                        MedicalMateIconButton(
-                            onClick = callbacks.onVoiceClick,
-                            icon = MedicalMateIcons.Mic,
-                            contentDescription = stringResource(R.string.intake_chat_voice),
-                        )
+                        // 음성을 쓸 수 없는 기기에서는 그리지 않는다. 직접 입력은 그대로라
+                        // 막히는 흐름이 없다.
+                        if (state.voiceAvailable) {
+                            MedicalMateIconButton(
+                                onClick = callbacks.onVoiceClick,
+                                icon = MedicalMateIcons.Mic,
+                                contentDescription = stringResource(R.string.intake_chat_voice),
+                            )
+                        }
                         MedicalMateIconButton(
                             onClick = callbacks.onSendClick,
                             icon = MedicalMateIcons.ArrowUp,
