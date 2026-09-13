@@ -8,6 +8,8 @@ import com.mist.medicalmate.calendar.data.AppointmentStatus
 import com.mist.medicalmate.card.data.CardListItem
 import com.mist.medicalmate.card.data.CardRepository
 import com.mist.medicalmate.core.network.ApiResult
+import com.mist.medicalmate.visit.data.VisitListItem
+import com.mist.medicalmate.visit.data.VisitRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,6 +42,7 @@ class CalendarViewModel
 internal constructor(
     private val repository: AppointmentRepository,
     private val cardRepository: CardRepository,
+    private val visitRepository: VisitRepository,
     private val clock: Clock,
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(emptyState(LocalDate.now(clock)))
@@ -86,7 +89,9 @@ internal constructor(
         viewModelScope.launch {
             val appointments = (repository.month(month) as? ApiResult.Success)?.value.orEmpty()
             val cards = (cardRepository.cards() as? ApiResult.Success)?.value.orEmpty()
-            mutableUiState.update { it.withMonth(appointments, cards, month, today) }
+            // 확정하지 않은 재방문도 달력에 찍는다. 뽑아 두기만 한 날은 일정에 없다(#186).
+            val revisits = (visitRepository.visits() as? ApiResult.Success)?.value.orEmpty()
+            mutableUiState.update { it.withMonth(appointments, cards, revisits, month, today) }
         }
     }
 }
@@ -94,6 +99,7 @@ internal constructor(
 private fun CalendarUiState.withMonth(
     appointments: List<Appointment>,
     cards: List<CardListItem>,
+    visits: List<VisitListItem>,
     month: YearMonth,
     today: LocalDate,
 ): CalendarUiState {
@@ -104,10 +110,32 @@ private fun CalendarUiState.withMonth(
         appointments = live,
         cards = monthCards,
         recordDays = monthCards.map { it.writtenOn.dayOfMonth }.toSet(),
-        plannedDays = live.filter { it.at.toLocalDate() >= today }.map { it.at.dayOfMonth }.toSet(),
+        plannedDays = plannedDays(live, visits, month, today),
         schedules = onSelected.map { it.toSchedule(today) },
         cardSheet = if (onSelected.isEmpty()) monthCards.cardOn(selected) else null,
     )
+}
+
+/**
+ * 예정 표시를 찍을 날.
+ *
+ * 잡아 둔 일정과 **아직 확정하지 않은 재방문**을 합친다(#186). 재방문은 진료 후 기록에서 AI가
+ * 뽑아 둔 날이고 일정으로는 아직 없다. 그 날이 달력에 안 보이면 환자가 확정하러 갈 길이 없다.
+ *
+ * 지난 날은 빼고 그 달의 것만 남긴다.
+ */
+private fun plannedDays(
+    appointments: List<Appointment>,
+    visits: List<VisitListItem>,
+    month: YearMonth,
+    today: LocalDate,
+): Set<Int> {
+    val scheduled = appointments.map { it.at.toLocalDate() }
+    val revisits = visits.mapNotNull { it.followUpDate }
+    return (scheduled + revisits)
+        .filter { it >= today && YearMonth.from(it) == month }
+        .map { it.dayOfMonth }
+        .toSet()
 }
 
 /** 그 날 쓴 카드. 여럿이면 첫 장이다. 시안의 시트도 한 장을 보여준다. */

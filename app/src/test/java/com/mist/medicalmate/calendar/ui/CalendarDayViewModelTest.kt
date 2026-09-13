@@ -247,6 +247,41 @@ class CalendarDayViewModelTest {
     }
 
     @Test
+    fun `잡아 둔 일정이 없으면 뽑아 둔 재방문이 선다`() {
+        // 시각이 없는 1r-2-A 상태다. 거기서 확정하면 일정 추가가 열려 일정이 만들어진다(#186).
+        val withRevisit = testVisit.copy(followUpDate = LocalDate.of(2026, 9, 26))
+        val viewModel = dayViewModel(appointments = listOf(testAppointment), visits = listOf(withRevisit))
+
+        viewModel.load(VisitDate)
+
+        val next = viewModel.state().nextEvent
+        assertEquals("9월 26일 (토)", next?.chip)
+        assertNull(next?.at)
+    }
+
+    @Test
+    fun `잡아 둔 일정이 뽑아 둔 재방문을 이긴다`() {
+        // 확정한 것이 뽑아 둔 것보다 정확하다.
+        val withRevisit = testVisit.copy(followUpDate = LocalDate.of(2026, 9, 30))
+        val viewModel =
+            dayViewModel(appointments = listOf(testAppointment, nextAppointment), visits = listOf(withRevisit))
+
+        viewModel.load(VisitDate)
+
+        assertEquals("D-15", viewModel.state().nextEvent?.chip)
+    }
+
+    @Test
+    fun `지난 재방문은 다음 일정이 되지 않는다`() {
+        val past = testVisit.copy(followUpDate = VisitDate.minusDays(1))
+        val viewModel = dayViewModel(appointments = listOf(testAppointment), visits = listOf(past))
+
+        viewModel.load(VisitDate)
+
+        assertNull(viewModel.state().nextEvent)
+    }
+
+    @Test
     fun `그 날 일정은 다음 일정이 되지 않는다`() {
         // 위에 이미 "이 날 일정"으로 서 있다.
         val viewModel = dayViewModel(appointments = listOf(testAppointment), visits = listOf(testVisit))

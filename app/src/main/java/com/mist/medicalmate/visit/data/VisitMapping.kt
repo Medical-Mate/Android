@@ -1,6 +1,8 @@
 package com.mist.medicalmate.visit.data
 
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /**
  * 응답을 화면 값으로 옮긴다.
@@ -14,14 +16,14 @@ internal fun VisitResponse.toVisit() = Visit(
     cardId = cardId,
     clinic = clinicName,
     visitedOn = visitedOn?.let(LocalDate::parse),
-    items = axes.toItems(),
+    items = axes.toItems().withRevisitDate(followUp?.toFollowUp()),
     followUp = followUp?.toFollowUp(),
     patientNotes = patientNotes,
     rawNote = rawNote,
 )
 
 internal fun ClassifyMemoResponse.toClassification() = VisitClassification(
-    items = axes.toItems(),
+    items = axes.toItems().withRevisitDate(followUp?.toFollowUp()),
     followUp = followUp?.toFollowUp(),
     patientNotes = patientNotes,
     labels = labels,
@@ -52,6 +54,26 @@ private fun Map<String, VisitAxisResponse>.toItems(): List<VisitItem> {
     return (known + rest).mapNotNull { axis ->
         val value = this[axis]?.value?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
         VisitItem(axis = axis, label = axisLabel(axis), value = value)
+    }
+}
+
+/**
+ * 재방문 줄에 날짜를 덧붙인다.
+ *
+ * 축의 값은 환자가 말한 그대로다("2주 뒤"). 그것만으로는 달력의 어느 날인지 알 수 없고, 날짜만
+ * 적으면 환자가 한 말이 사라진다. 둘을 함께 적어 시안의 `2주 뒤 (9월 27일 전후)`가 된다.
+ *
+ * **[VisitFollowUp.approximate]면 "전후"를 붙인다.** "2주 뒤"는 날짜가 아니라 범위라서, 정확한
+ * 날짜처럼 그리면 그날이 아니면 안 되는 것으로 읽힌다.
+ *
+ * 축 이름과 같은 이유로 여기 둔다 — 화면 둘(1q-1·1j-3)이 같은 줄을 그리고, 조립 규칙이 두
+ * 곳에 있으면 갈린다.
+ */
+private fun List<VisitItem>.withRevisitDate(followUp: VisitFollowUp?): List<VisitItem> {
+    val date = followUp?.date ?: return this
+    val note = date.format(REVISIT_DATE) + if (followUp.approximate) " 전후" else ""
+    return map { item ->
+        if (item.axis != AXIS_FOLLOW_UP) item else item.copy(value = "${item.value} ($note)")
     }
 }
 
@@ -87,3 +109,6 @@ internal const val AXIS_TESTS = "tests"
 internal const val AXIS_MEDICATION = "medication_instructions"
 
 internal const val AXIS_FOLLOW_UP = "follow_up"
+
+/** 시안의 "9월 27일". */
+private val REVISIT_DATE: DateTimeFormatter = DateTimeFormatter.ofPattern("M월 d일", Locale.KOREAN)

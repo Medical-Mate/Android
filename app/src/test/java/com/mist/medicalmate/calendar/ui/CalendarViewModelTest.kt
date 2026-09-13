@@ -4,6 +4,8 @@ import com.mist.medicalmate.calendar.data.AppointmentStatus
 import com.mist.medicalmate.card.data.CardListItem
 import com.mist.medicalmate.card.ui.FakeCardRepository
 import com.mist.medicalmate.core.network.ApiResult
+import com.mist.medicalmate.visit.data.FakeVisitRepository
+import com.mist.medicalmate.visit.data.VisitListItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -51,6 +53,39 @@ class CalendarViewModelTest {
 
         assertEquals(setOf(4), state.recordDays)
         assertEquals(setOf(12), state.plannedDays)
+    }
+
+    @Test
+    fun `확정하지 않은 재방문도 예정으로 찍힌다`() {
+        // 뽑아 두기만 한 날은 일정에 없다. 달력에 안 보이면 확정하러 갈 길이 없다(#186).
+        val revisit =
+            VisitListItem(
+                id = "9",
+                cardId = 1,
+                cardTitle = "갈비뼈",
+                clinic = null,
+                visitedOn = LocalDate.of(2026, 9, 5),
+                followUpDate = LocalDate.of(2026, 9, 26),
+            )
+
+        val state = monthViewModel(visits = listOf(revisit)).uiState.value
+
+        assertEquals(setOf(12, 26), state.plannedDays)
+    }
+
+    @Test
+    fun `지난 재방문은 찍지 않는다`() {
+        val past =
+            VisitListItem(
+                id = "9",
+                cardId = 1,
+                cardTitle = "갈비뼈",
+                clinic = null,
+                visitedOn = LocalDate.of(2026, 9, 1),
+                followUpDate = LocalDate.of(2026, 9, 2),
+            )
+
+        assertEquals(setOf(12), monthViewModel(visits = listOf(past)).uiState.value.plannedDays)
     }
 
     @Test
@@ -184,9 +219,13 @@ class CalendarViewModelTest {
 }
 
 /** 9월 12일 하나를 돌려주는 저장소로 세운다. 오늘은 9월 11일이다. */
-private fun monthViewModel(appointments: List<Appointment> = listOf(monthAppointment)) = CalendarViewModel(
+private fun monthViewModel(
+    appointments: List<Appointment> = listOf(monthAppointment),
+    visits: List<VisitListItem> = emptyList(),
+) = CalendarViewModel(
     repository = FakeMonthRepository(appointments),
     cardRepository = FakeCardRepository(list = ApiResult.Success(monthCards)),
+    visitRepository = FakeVisitRepository(list = ApiResult.Success(visits)),
     clock = Clock.fixed(Instant.parse("2026-09-11T00:00:00Z"), ZoneId.of("Asia/Seoul")),
 ).apply { load() }
 
