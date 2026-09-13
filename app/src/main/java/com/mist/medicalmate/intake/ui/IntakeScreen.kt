@@ -1,21 +1,18 @@
 package com.mist.medicalmate.intake.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateScreenPreviews
 import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
-import com.mist.medicalmate.core.designsystem.MedicalMateSize
-import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
+import com.mist.medicalmate.core.designsystem.component.MedicalMateBottomCtaBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateProgressIndicator
@@ -123,22 +120,14 @@ private val previewChatState =
  * 문답 단계만 입력이 붙고 나머지는 다음 버튼이다. 문답에서도 물어볼 것이 남지 않으면
  * 다음 버튼이 함께 나온다. **시안에 문답을 끝내는 조작이 없다.** 그대로 두면 통증
  * 강도로 갈 방법이 없어서 넣었고 디자인 트랙에 남겼다(#69).
+ *
+ * **`Bottom CTA Bar`를 쓴다.** 같은 모양을 직접 짜 두는 바람에 아래 여백이 8이었고
+ * (컴포넌트는 안전 여백 24다) 버튼이 화면 바닥에 붙어 보였다. 자식 간격도 12가 아니라
+ * 10이 맞는 값이다.
  */
 @Composable
 private fun IntakeFooter(state: IntakeUiState, callbacks: IntakeCallbacks) {
-    Column(
-        modifier =
-        Modifier
-            .fillMaxWidth()
-            .background(MedicalMateTheme.colors.bgSurface)
-            .padding(
-                start = MedicalMateSize.gutter,
-                end = MedicalMateSize.gutter,
-                top = MedicalMateSpace.s12,
-                bottom = MedicalMateSpace.s8,
-            ),
-        verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12),
-    ) {
+    MedicalMateBottomCtaBar {
         when (state.step) {
             IntakeStep.SYMPTOM_CHAT -> {
                 if (state.chatFinished) {

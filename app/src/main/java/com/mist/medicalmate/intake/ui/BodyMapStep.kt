@@ -3,6 +3,7 @@ package com.mist.medicalmate.intake.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
@@ -183,6 +184,10 @@ private fun ZoneCard(state: BodyMapUiState, callbacks: IntakeCallbacks) {
  * 생기는 증상(발진)이라 한 점으로 찍을 수 없다. 구역 단계가 없어서 누르면 바로 정해진다.
  *
  * 목록 전환을 같은 줄 오른쪽에 붙였다. 따로 줄을 두면 판이 그만큼 더 밀려 내려간다.
+ *
+ * **그 버튼에 `weight`를 주지 않는다.** 남은 폭을 전부 먹으면 라벨이 그 안에서 가운데
+ * 정렬돼 칩과의 간격이 들쭉날쭉해 보인다. 빈 자리를 [Spacer]가 밀고 버튼은 제 폭으로
+ * 오른쪽 끝에 선다.
  */
 @Composable
 private fun SideAnchorRow(state: BodyMapUiState, callbacks: IntakeCallbacks) {
@@ -198,12 +203,12 @@ private fun SideAnchorRow(state: BodyMapUiState, callbacks: IntakeCallbacks) {
                 onClick = { callbacks.onBodySideAnchorClick(anchor.id) },
             )
         }
+        Spacer(modifier = Modifier.weight(1f))
         MedicalMateButton(
             onClick = callbacks.onBodyListModeToggle,
             label = stringResource(R.string.body_map_use_list),
             type = MedicalMateButtonType.GHOST,
             size = MedicalMateButtonSize.S,
-            modifier = Modifier.weight(1f),
         )
     }
 }

@@ -1,5 +1,9 @@
 package com.mist.medicalmate.intake.ui
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -10,6 +14,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonSize
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonType
+import com.mist.medicalmate.core.designsystem.component.MedicalMateDivider
 import com.mist.medicalmate.core.designsystem.component.MedicalMateListRow
 import com.mist.medicalmate.core.designsystem.component.MedicalMateRadio
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSearchField
@@ -40,13 +45,17 @@ internal fun BodyMapPartList(state: BodyMapUiState, callbacks: IntakeCallbacks, 
         color = MedicalMateTheme.colors.fgDefault,
         modifier = modifier,
     )
-    MedicalMateButton(
-        onClick = callbacks.onBodyListModeToggle,
-        label = stringResource(R.string.body_map_use_image),
-        type = MedicalMateButtonType.OUTLINE,
-        size = MedicalMateButtonSize.M,
-        modifier = Modifier.fillMaxWidth(),
-    )
+    // 모드 전환은 두 화면에서 같은 동작이라 같은 무게로 둔다. 인체도 쪽은 칩 줄 오른쪽의
+    // Ghost S인데 여기만 전체 폭 Outline이면 같은 일이 다른 크기로 보이고, 큰 버튼이
+    // 목록 위 한 줄을 통째로 먹어 보이는 줄이 줄어든다.
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        MedicalMateButton(
+            onClick = callbacks.onBodyListModeToggle,
+            label = stringResource(R.string.body_map_use_image),
+            type = MedicalMateButtonType.GHOST,
+            size = MedicalMateButtonSize.S,
+        )
+    }
     MedicalMateSearchField(
         value = state.search,
         onValueChange = callbacks.onBodySearchChange,
@@ -60,6 +69,25 @@ internal fun BodyMapPartList(state: BodyMapUiState, callbacks: IntakeCallbacks, 
 
         else -> AnchorRows(selection = state.selection, callbacks = callbacks)
     }
+}
+
+/**
+ * 줄을 목록으로 묶는다.
+ *
+ * **바깥 간격을 쓰지 않는다.** 단계 본문이 자식 사이를 14 벌리는데, 그 값이 목록 줄에도
+ * 걸려서 줄마다 떨어져 버렸다. 목록으로 읽히지 않고 흩어진 버튼처럼 보인다. 줄은 저마다
+ * 최소 높이가 있고 사이는 구분선이 가른다 — 디자인 시스템의 목록이 그 모양이다.
+ */
+@Composable
+private fun PartRows(content: @Composable ColumnScope.() -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth(), content = content)
+}
+
+/** 목록의 둘째 줄부터 그 위에 구분선을 둔다. */
+@Composable
+private fun ColumnScope.PartRow(first: Boolean, content: @Composable () -> Unit) {
+    if (!first) MedicalMateDivider()
+    content()
 }
 
 /**
@@ -83,17 +111,27 @@ private fun SearchRows(state: BodyMapUiState, callbacks: IntakeCallbacks) {
         )
         return
     }
-    state.searchResults.forEach { match ->
-        val anchorId = bodyMapAnchorIdOfZone(match.id)
-        if (anchorId == null) {
-            AnchorResultRows(anchorId = match.id, selection = state.selection, callbacks = callbacks)
-        } else {
-            bodyMapChoicesForZone(anchorId, match.id).forEach { choice ->
-                MedicalMateRadio(
-                    selected = state.selection == choice,
-                    onSelect = { callbacks.onBodyPartSelect(choice) },
-                    label = choice.title(),
+    PartRows {
+        var first = true
+        state.searchResults.forEach { match ->
+            val anchorId = bodyMapAnchorIdOfZone(match.id)
+            if (anchorId == null) {
+                AnchorResultRows(
+                    anchorId = match.id,
+                    selection = state.selection,
+                    callbacks = callbacks,
+                    isFirst = { first.also { first = false } },
                 )
+            } else {
+                bodyMapChoicesForZone(anchorId, match.id).forEach { choice ->
+                    PartRow(first = first.also { first = false }) {
+                        MedicalMateRadio(
+                            selected = state.selection == choice,
+                            onSelect = { callbacks.onBodyPartSelect(choice) },
+                            label = choice.title(),
+                        )
+                    }
+                }
             }
         }
     }
@@ -101,22 +139,31 @@ private fun SearchRows(state: BodyMapUiState, callbacks: IntakeCallbacks) {
 
 /** 검색에 걸린 앵커. 목록의 앵커 줄과 같게 그린다. */
 @Composable
-private fun AnchorResultRows(anchorId: String, selection: BodyMapSelection?, callbacks: IntakeCallbacks) {
+private fun ColumnScope.AnchorResultRows(
+    anchorId: String,
+    selection: BodyMapSelection?,
+    callbacks: IntakeCallbacks,
+    isFirst: () -> Boolean,
+) {
     val anchor = bodyMapAnchorOf(anchorId)
     if (anchor.zones.isEmpty()) {
         val choice = BodyMapSelection(anchorId)
-        MedicalMateRadio(
-            selected = selection == choice,
-            onSelect = { callbacks.onBodySideAnchorClick(anchorId) },
-            label = choice.title(),
-        )
+        PartRow(first = isFirst()) {
+            MedicalMateRadio(
+                selected = selection == choice,
+                onSelect = { callbacks.onBodySideAnchorClick(anchorId) },
+                label = choice.title(),
+            )
+        }
     } else {
         anchor.points.forEach { point ->
-            AnchorRow(
-                entry = BodyMapSelection(anchorId, side = point.side),
-                selection = selection,
-                onClick = callbacks.onBodyAnchorFocus,
-            )
+            PartRow(first = isFirst()) {
+                AnchorRow(
+                    entry = BodyMapSelection(anchorId, side = point.side),
+                    selection = selection,
+                    onClick = callbacks.onBodyAnchorFocus,
+                )
+            }
         }
     }
 }
@@ -132,21 +179,28 @@ private fun AnchorResultRows(anchorId: String, selection: BodyMapSelection?, cal
  */
 @Composable
 private fun AnchorRows(selection: BodyMapSelection?, callbacks: IntakeCallbacks) {
-    bodyMapAnchors.forEach { anchor ->
-        if (anchor.zones.isEmpty()) {
-            val choice = BodyMapSelection(anchor.id)
-            MedicalMateRadio(
-                selected = selection == choice,
-                onSelect = { callbacks.onBodySideAnchorClick(anchor.id) },
-                label = choice.title(),
-            )
-        } else {
-            anchor.points.forEach { point ->
-                AnchorRow(
-                    entry = BodyMapSelection(anchor.id, side = point.side),
-                    selection = selection,
-                    onClick = callbacks.onBodyAnchorFocus,
-                )
+    PartRows {
+        var first = true
+        bodyMapAnchors.forEach { anchor ->
+            if (anchor.zones.isEmpty()) {
+                val choice = BodyMapSelection(anchor.id)
+                PartRow(first = first.also { first = false }) {
+                    MedicalMateRadio(
+                        selected = selection == choice,
+                        onSelect = { callbacks.onBodySideAnchorClick(anchor.id) },
+                        label = choice.title(),
+                    )
+                }
+            } else {
+                anchor.points.forEach { point ->
+                    PartRow(first = first.also { first = false }) {
+                        AnchorRow(
+                            entry = BodyMapSelection(anchor.id, side = point.side),
+                            selection = selection,
+                            onClick = callbacks.onBodyAnchorFocus,
+                        )
+                    }
+                }
             }
         }
     }
@@ -177,12 +231,16 @@ private fun ZoneRows(
     callbacks: IntakeCallbacks,
 ) {
     MedicalMateSectionHeader(title = focus.title())
-    bodyMapZoneChoices(anchor, focus.side).forEach { choice ->
-        MedicalMateRadio(
-            selected = selection == choice,
-            onSelect = { callbacks.onBodyPartSelect(choice) },
-            label = choice.title(),
-        )
+    PartRows {
+        bodyMapZoneChoices(anchor, focus.side).forEachIndexed { index, choice ->
+            PartRow(first = index == 0) {
+                MedicalMateRadio(
+                    selected = selection == choice,
+                    onSelect = { callbacks.onBodyPartSelect(choice) },
+                    label = choice.title(),
+                )
+            }
+        }
     }
     MedicalMateButton(
         onClick = callbacks.onBodyFocusClear,
