@@ -97,13 +97,13 @@ internal val HospitalPickPurpose.beforeVisit: Boolean
 /**
  * 검색 결과 한 곳.
  *
- * **이름뿐이다.** 서버가 심평원에서 이름과 홈페이지만 가져오고 id를 매기지 않는다. 이름이 곧
- * 식별자이고, 일정 등록의 `clinicName`에 이 값을 그대로 넣는다.
+ * **id가 없다.** 서버가 심평원에서 가져오면서 id를 매기지 않는다. 이름이 곧 식별자이고,
+ * 일정 등록의 `clinicName`에 그 값을 그대로 넣는다.
  *
- * 홈페이지는 담지 않는다. 작은 의원은 대부분 비어 있고, 고르는 화면에 링크를 두면 줄 전체가
- * 선택 영역인 것과 부딪친다. 쓸 자리가 생기면 응답에서 다시 가져온다.
+ * [address]는 우리가 요청해서 받은 값이다(Backend#80). 같은 이름의 다른 지점을 구별할 수 있는
+ * 유일한 값이라 결과 줄에 함께 적는다. 심평원에 없는 곳은 비어 있고 그때는 줄을 그리지 않는다.
  */
-data class Hospital(val name: String)
+data class Hospital(val name: String, val address: String? = null)
 
 /**
  * 1p 진료 후 메모. Figma `405:1926`.

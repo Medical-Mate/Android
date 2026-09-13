@@ -37,7 +37,7 @@ constructor(private val api: HospitalApi, private val json: Json) :
         apiCall(json) { api.hospitals(query = query.trim(), size = PAGE_SIZE) }
             .map { response ->
                 HospitalSearchResult(
-                    hospitals = response.hospitals.map { Hospital(name = it.name) },
+                    hospitals = response.hospitals.map { Hospital(name = it.name, address = it.address) },
                     total = response.totalCount,
                 )
             }

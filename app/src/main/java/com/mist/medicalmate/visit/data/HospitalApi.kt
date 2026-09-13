@@ -18,10 +18,11 @@ internal interface HospitalApi {
 }
 
 /**
- * @param url 홈페이지. **없는 병원이 많다.** 작은 의원은 대부분 비어 있고 null이 정상이다.
+ * @param address 주소. 우리가 요청해서 홈페이지 자리를 대신했다(Backend#80). 같은 이름의 다른
+ *   지점을 구별할 수 있는 유일한 값이다. 심평원에 없는 곳은 비어 있을 수 있다.
  */
 @Serializable
-internal data class HospitalResponse(val name: String, val url: String? = null)
+internal data class HospitalResponse(val name: String, val address: String? = null)
 
 /** @param totalCount 조건에 맞는 전체 건수. 받은 목록보다 클 수 있다. */
 @Serializable
