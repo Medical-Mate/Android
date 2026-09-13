@@ -12,6 +12,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonSize
+import com.mist.medicalmate.core.model.IntakeStep
 import java.time.LocalDate
 
 /**
@@ -38,8 +39,7 @@ private val previewContent =
         HomeResume(
             intakeId = "intake-1",
             symptomTitle = "복부 통증",
-            answeredSteps = 2,
-            totalSteps = 4,
+            step = IntakeStep.SYMPTOM_CHAT,
         ),
         savedCards =
         listOf(

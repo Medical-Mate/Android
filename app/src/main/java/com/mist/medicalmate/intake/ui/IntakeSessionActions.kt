@@ -1,7 +1,10 @@
 package com.mist.medicalmate.intake.ui
 
+import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
+import com.mist.medicalmate.core.model.IntakeStep
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.intake.data.IntakeSession
+import com.mist.medicalmate.intake.data.IntakeSessionStatus
 import com.mist.medicalmate.intake.data.SessionRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -106,16 +109,37 @@ private fun IntakeUiState.restoredWith(session: IntakeSession): IntakeUiState {
             )
         }
     return copy(
-        step = IntakeStep.SYMPTOM_CHAT,
+        step = session.leftAt(),
         sessionId = session.id,
         bodyPart = session.siteText,
         messages = restored.ifEmpty { openingFor(session.siteText) },
+        chatFinished = session.status != IntakeSessionStatus.IN_PROGRESS,
+        severity = session.severityLevel?.let(::severityOf) ?: severity,
         // 적어 둔 질문이 있으면 그것이, 없으면 AI 후보가 들어 있다. 저장소가 그 규칙을 든다.
         questions = session.questions.ifEmpty { questions },
         restoring = false,
         restoreFailed = false,
     )
 }
+
+/**
+ * 나갔던 단계.
+ *
+ * 시안 흐름 주석이 "문답 이탈 시 임시저장 UI 연결(홈에서 진입 → 이전 단계 복귀)"이라고
+ * 적었다. 무조건 문답으로 열면 강도를 고르고 나간 사람이 다 끝낸 문답을 다시 지나야 한다.
+ *
+ * 강도는 3단계에서 4단계로 넘어갈 때 저장한다. 그래서 강도가 있으면 4단계까지 갔던 것이고,
+ * 강도 없이 문답만 끝났으면 3단계다. 질문으로는 가릴 수 없다 — 적어 둔 것이 없어도 AI 후보가
+ * 들어 있어서 환자가 그 단계를 봤는지 알 수 없다.
+ */
+private fun IntakeSession.leftAt(): IntakeStep = when {
+    severityLevel != null -> IntakeStep.QUESTIONS
+    status != IntakeSessionStatus.IN_PROGRESS -> IntakeStep.SEVERITY
+    else -> IntakeStep.SYMPTOM_CHAT
+}
+
+/** 서버가 준 1~5를 눈금으로. 밖이면 화면의 기본값을 그대로 둔다. */
+private fun severityOf(level: Int): MedicalMateSeverity? = MedicalMateSeverity.entries.firstOrNull { it.level == level }
 
 /**
  * 서버에 마디가 하나도 없을 때 첫 물음을 다시 연다.

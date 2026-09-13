@@ -1,5 +1,6 @@
 package com.mist.medicalmate.home.ui
 
+import com.mist.medicalmate.core.model.IntakeStep
 import com.mist.medicalmate.core.network.ApiErrorCode
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.home.data.HomeRepository
@@ -130,7 +131,7 @@ class HomeViewModelTest {
                     daysSinceLastVisit = 12,
                     nextVisit = LocalDate.of(2026, 9, 12),
                 ),
-                resume = HomeResume(intakeId = "7", symptomTitle = "복부", answeredSteps = 2, totalSteps = 4),
+                resume = HomeResume(intakeId = "7", symptomTitle = "복부", step = IntakeStep.SYMPTOM_CHAT),
                 savedCards =
                 listOf(
                     SavedCardSummary(

@@ -1,5 +1,7 @@
 package com.mist.medicalmate.intake.ui
 
+import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
+import com.mist.medicalmate.core.model.IntakeStep
 import com.mist.medicalmate.core.network.ApiErrorCode
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.intake.data.IntakeSession
@@ -95,6 +97,50 @@ class IntakeSessionActionsTest {
         assertEquals(IntakeStep.SYMPTOM_CHAT, state.step)
         assertEquals("명치", state.bodyPart)
         assertEquals(7L, state.sessionId)
+    }
+
+    @Test
+    fun `강도를 고르고 나갔으면 질문 단계로 돌아간다`() = runTest {
+        // 강도는 3단계에서 4단계로 넘어갈 때 저장한다. 값이 있으면 4단계까지 간 것이다.
+        var state = IntakeUiState()
+        val past = savedSession.copy(status = IntakeSessionStatus.COMPLETED, severityLevel = 4)
+
+        actions(FixedRepository(ApiResult.Success(past)), update = { state = it(state) }).restore(7)
+
+        assertEquals(IntakeStep.QUESTIONS, state.step)
+    }
+
+    @Test
+    fun `고른 강도가 눈금에 얹힌다`() = runTest {
+        // 돌아간 단계만 맞고 눈금이 기본값이면 고른 적 없는 값이 저장된다.
+        var state = IntakeUiState()
+        val past = savedSession.copy(status = IntakeSessionStatus.COMPLETED, severityLevel = 4)
+
+        actions(FixedRepository(ApiResult.Success(past)), update = { state = it(state) }).restore(7)
+
+        assertEquals(MedicalMateSeverity.LEVEL_4, state.severity)
+    }
+
+    @Test
+    fun `문답만 끝나고 나갔으면 강도 단계로 돌아간다`() = runTest {
+        var state = IntakeUiState()
+        val ended = savedSession.copy(status = IntakeSessionStatus.COMPLETED)
+
+        actions(FixedRepository(ApiResult.Success(ended)), update = { state = it(state) }).restore(7)
+
+        assertEquals(IntakeStep.SEVERITY, state.step)
+        assertTrue(state.chatFinished)
+    }
+
+    @Test
+    fun `적어 둔 질문이 있어도 그것만으로 단계를 올리지 않는다`() = runTest {
+        // 적어 둔 것이 없어도 AI 후보가 questions 자리에 들어온다. 환자가 그 단계를 봤다는
+        // 증거가 아니다.
+        var state = IntakeUiState()
+
+        actions(FixedRepository(ApiResult.Success(withCandidates)), update = { state = it(state) }).restore(7)
+
+        assertEquals(IntakeStep.SYMPTOM_CHAT, state.step)
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.mist.medicalmate.home.data
 
 import com.mist.medicalmate.core.model.CurrentUserProvider
+import com.mist.medicalmate.core.model.IntakeStep
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.core.network.apiCall
 import com.mist.medicalmate.home.ui.HomeResume
@@ -89,12 +90,22 @@ private fun HomeResponse.todayLine(today: LocalDate, nextVisit: LocalDate?): Hom
     )
 }
 
-/** 임시저장된 문답. 진행도를 숫자 둘로 그대로 옮긴다. */
+/**
+ * 임시저장된 문답.
+ *
+ * **서버의 진행도를 그대로 옮기지 않는다**(#176). `progressCurrent` / `progressTotal`은 문답
+ * 왕복을 센 것이고 상한이 20이다. 그대로 찍으면 "20단계 중 0단계까지 답했어요"가 되는데
+ * 환자가 보는 증상 정리는 네 단계다.
+ *
+ * 부위를 짚어야 세션이 생기므로 1단계는 이미 끝난 것이고, 문답에 한 마디라도 답했으면
+ * 2단계다. 응답에 강도도 질문도 없어서 3·4단계는 여기서 가려낼 수 없다. 이름대로
+ * `IN_PROGRESS`인 세션만 담긴다면 그 카드가 가리키는 것은 늘 문답 중인 세션이라 이 규칙으로
+ * 맞는다. 어느 쪽인지 백엔드에 확인 중이다.
+ */
 private fun InProgressSessionResponse.toResume() = HomeResume(
     intakeId = sessionId.toString(),
     symptomTitle = siteText.orEmpty(),
-    answeredSteps = progressCurrent,
-    totalSteps = progressTotal,
+    step = if (progressCurrent > 0) IntakeStep.SYMPTOM_CHAT else IntakeStep.BODY_PART,
 )
 
 /** 서버는 다음 일정 하나만 준다. 화면은 목록으로 받으므로 0개나 1개가 된다. */

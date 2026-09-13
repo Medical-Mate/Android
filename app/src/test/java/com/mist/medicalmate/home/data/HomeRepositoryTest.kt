@@ -1,6 +1,7 @@
 package com.mist.medicalmate.home.data
 
 import com.mist.medicalmate.core.model.CurrentUserProvider
+import com.mist.medicalmate.core.model.IntakeStep
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.home.ui.HomeTodayLine
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -53,15 +54,41 @@ class HomeRepositoryTest {
         val snapshot = load(
             HomeResponse(
                 inProgressSession =
-                InProgressSessionResponse(sessionId = 7, siteText = "복부", progressCurrent = 2, progressTotal = 4),
+                InProgressSessionResponse(sessionId = 7, siteText = "복부", progressCurrent = 2, progressTotal = 20),
             ),
         )
 
         val resume = requireNotNull(snapshot.resume)
         assertEquals("7", resume.intakeId)
         assertEquals("복부", resume.symptomTitle)
-        assertEquals(2, resume.answeredSteps)
-        assertEquals(4, resume.totalSteps)
+        assertEquals(IntakeStep.SYMPTOM_CHAT, resume.step)
+    }
+
+    @Test
+    fun `서버의 왕복 수를 단계로 쓰지 않는다`() = runTest {
+        // 상한이 20이다. 그대로 찍으면 "20단계 중 2단계"가 된다.
+        val snapshot = load(
+            HomeResponse(
+                inProgressSession =
+                InProgressSessionResponse(sessionId = 7, siteText = "복부", progressCurrent = 2, progressTotal = 20),
+            ),
+        )
+
+        assertEquals(IntakeStep.total, 4)
+        assertEquals(2, requireNotNull(snapshot.resume).step.number)
+    }
+
+    @Test
+    fun `한 마디도 answer 안 했으면 부위까지만 답한 것이다`() = runTest {
+        // 세션은 부위를 짚어야 생긴다. 그래서 왕복이 0이어도 1단계는 끝나 있다.
+        val snapshot = load(
+            HomeResponse(
+                inProgressSession =
+                InProgressSessionResponse(sessionId = 7, siteText = "오른쪽 손목", progressCurrent = 0, progressTotal = 20),
+            ),
+        )
+
+        assertEquals(IntakeStep.BODY_PART, requireNotNull(snapshot.resume).step)
     }
 
     @Test

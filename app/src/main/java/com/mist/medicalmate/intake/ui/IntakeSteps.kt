@@ -29,6 +29,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateNotice
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSeveritySlider
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTextField
+import com.mist.medicalmate.core.model.IntakeStep
 
 /**
  * 단계별 본문. [IntakeScreen]에서만 쓴다.

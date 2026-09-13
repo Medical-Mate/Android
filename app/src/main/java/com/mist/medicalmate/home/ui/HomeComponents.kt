@@ -26,6 +26,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateCardEmphasis
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateListRow
 import com.mist.medicalmate.core.designsystem.component.MedicalMateListRowType
+import com.mist.medicalmate.core.model.IntakeStep
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
@@ -178,8 +179,8 @@ internal fun ResumeCard(resume: HomeResume, onClick: () -> Unit) {
             stringResource(
                 R.string.home_resume_progress,
                 resume.symptomTitle,
-                resume.totalSteps,
-                resume.answeredSteps,
+                IntakeStep.total,
+                resume.step.number,
             ),
             style = MedicalMateTheme.typography.bodyM,
             color = MedicalMateTheme.colors.fgSubtle,

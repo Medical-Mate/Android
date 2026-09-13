@@ -2,28 +2,7 @@ package com.mist.medicalmate.intake.ui
 
 import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
-
-/**
- * 증상 정리의 네 단계. Figma의 진행 표시가 `증상 문답 n / 4`다.
- *
- * 1단계 아픈 부위는 인체도다(1l-1·1l-2·1l-3). 앵커를 짚고 구역까지 고르면 다음으로
- * 넘어간다. 문답이 "짚은 부위"를 전제로 시작하므로 이 단계를 건너뛸 수 없다.
- */
-enum class IntakeStep {
-    BODY_PART,
-    SYMPTOM_CHAT,
-    SEVERITY,
-    QUESTIONS,
-    ;
-
-    val number: Int get() = ordinal + 1
-
-    val isLast: Boolean get() = this == entries.last()
-
-    companion object {
-        val total: Int = entries.size
-    }
-}
+import com.mist.medicalmate.core.model.IntakeStep
 
 /**
  * 문답의 한 마디. Figma `313:999` Bubble.

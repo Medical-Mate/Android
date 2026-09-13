@@ -2,6 +2,7 @@ package com.mist.medicalmate.intake.ui
 
 import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
+import com.mist.medicalmate.core.model.IntakeStep
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.intake.data.IntakeSession
 import com.mist.medicalmate.intake.data.IntakeSessionMessage
