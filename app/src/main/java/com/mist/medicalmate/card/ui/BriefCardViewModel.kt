@@ -4,10 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mist.medicalmate.card.data.CardRepository
 import com.mist.medicalmate.core.network.ApiResult
-import com.mist.medicalmate.profile.data.HealthEdit
-import com.mist.medicalmate.profile.data.HealthField
-import com.mist.medicalmate.profile.data.HealthProfileRepository
-import com.mist.medicalmate.profile.data.HealthStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,10 +27,7 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class BriefCardViewModel
 @Inject
-internal constructor(
-    private val repository: CardRepository,
-    private val healthProfile: HealthProfileRepository,
-) : ViewModel() {
+internal constructor(private val repository: CardRepository) : ViewModel() {
     private val mutableUiState = MutableStateFlow<BriefCardUiState>(BriefCardUiState.Loading)
     val uiState: StateFlow<BriefCardUiState> = mutableUiState.asStateFlow()
 
@@ -76,19 +69,10 @@ internal constructor(
                 if (card == null) {
                     BriefCardUiState.Failed
                 } else {
-                    BriefCardUiState.Content(card = card.copy(hospital = hospital).withHealth(health()))
+                    BriefCardUiState.Content(card = card.copy(hospital = hospital))
                 }
         }
     }
-
-    /**
-     * 카드에 얹을 건강 정보.
-     *
-     * 서버 카드 응답에 없어서 프로필에서 읽는다(#167). 못 읽으면 그 줄들이 빠진 카드를
-     * 그린다. 카드 본문은 이미 서버에서 왔고, 건강 정보가 없다고 화면 전체를 실패로 두면
-     * 정작 보여줄 것을 못 보여준다.
-     */
-    private suspend fun health(): HealthEdit? = (healthProfile.profile() as? ApiResult.Success)?.value?.health
 
     /**
      * 병원 `변경`에서 골라 돌아왔다.
@@ -225,32 +209,4 @@ internal constructor(
             if (repository.delete(cardId) is ApiResult.Success) onDeleted()
         }
     }
-}
-
-/**
- * 프로필의 건강 정보를 카드에 얹는다.
- *
- * 복용약과 기저질환은 카드 안에 줄로, 알러지는 카드 밖 경고로 간다. 처방을 바꾸는 값이라
- * 다른 정보와 같은 무게로 두지 않는 것이 시안의 판단이다.
- *
- * **적은 것이 없으면 줄을 만들지 않는다.** "없어요"와 "잘 모르겠어요"를 카드에 적지 않는다.
- * 진료실에서 읽는 사람에게 필요한 것은 무엇을 먹고 있느냐이고, 비어 있다는 사실은 그 자리에
- * 아무것도 없는 것으로 충분히 전해진다.
- */
-private fun BriefCard.withHealth(health: HealthEdit?): BriefCard {
-    if (health == null) return this
-    val rows =
-        listOfNotNull(
-            health.medications.toCardItem("복용약"),
-            health.conditions.toCardItem("기저질환"),
-        )
-    return copy(
-        health = rows,
-        allergies = health.allergies.takeIf { it.status == HealthStatus.KNOWN }?.items.orEmpty(),
-    )
-}
-
-private fun HealthField.toCardItem(key: String): BriefCardItem? {
-    if (status != HealthStatus.KNOWN || items.isEmpty()) return null
-    return BriefCardItem(key = key, value = items.joinToString(" · "))
 }

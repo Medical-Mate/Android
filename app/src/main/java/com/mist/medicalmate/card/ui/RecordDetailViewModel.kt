@@ -148,14 +148,14 @@ private fun Appointment.toPending() = RecordStep.Pending(
  * 접으면 앞 세 줄, 펴면 나머지 줄과 강도 · 알러지 · 질문까지 나온다(1j-3-X). 세 줄인 이유는
  * 시안이 부위 · 기간 · 양상을 접힌 상태로 보여주기 때문이다.
  *
- * 건강 정보는 카드 응답에 없어서 지금 비어 있다. 브리핑 카드 화면은 프로필에서 읽어 얹는데,
- * 여기는 지난 진료를 다시 읽는 자리라 오늘의 프로필을 얹으면 그때 먹던 약이 아니게 된다.
- * 서버가 카드에 실어 주면(Backend#84) 그 값이 그대로 온다.
+ * **건강 정보가 카드에서 온다**(#181). 전에는 카드 응답에 없어 비어 있었다. 브리핑 카드
+ * 화면이 프로필에서 읽어 얹고 있었는데, 여기는 지난 진료를 다시 읽는 자리라 오늘의 프로필을
+ * 얹으면 그때 먹던 약이 아니게 된다. 이제 서버가 카드에 박아 준다.
  */
 private fun BriefCard.toStep() = RecordStep.Block(
     at = "브리핑 카드",
     title = "진료 전에 정리한 것",
-    items = items.map { RecordDetailItem(key = it.key, value = it.value) },
+    items = (items + health).map { RecordDetailItem(key = it.key, value = it.value) },
     card =
     RecordStepCard(
         collapsedItemCount = COLLAPSED_ITEMS,

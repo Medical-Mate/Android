@@ -150,11 +150,57 @@ class CardMappingTest {
         assertTrue(item.title.dropLast(1) == item.title.dropLast(1).trimEnd())
     }
 
+    @Test
+    fun `복용약과 기저질환이 카드 줄로 온다`() {
+        // 전에는 카드 응답에 없어 화면이 프로필에서 읽어 얹었다. 이제 서버가 박아 준다(#181).
+        val card = response(patient = FILLED_PATIENT).toBriefCard()
+
+        assertEquals(listOf("복용약", "기저질환"), card.health.map { it.key })
+        assertEquals(listOf("혈압약 · 진통제", "고혈압"), card.health.map { it.value })
+    }
+
+    @Test
+    fun `알러지는 줄이 아니라 경고로 간다`() {
+        // 처방을 바꾸는 값이라 카드 밖 경고 면에 얹힌다.
+        val card = response(patient = FILLED_PATIENT).toBriefCard()
+
+        assertEquals(listOf("페니실린", "조개"), card.allergies)
+        assertTrue(card.health.none { it.key == "알러지" })
+    }
+
+    @Test
+    fun `적은 것이 없는 갈래는 줄을 만들지 않는다`() {
+        // "없어요"와 "잘 모르겠어요"를 카드에 적지 않는다. 비어 있다는 것은 빈 자리로 전해진다.
+        val card =
+            response(
+                patient =
+                PatientResponse(
+                    medications = CardListFieldResponse(status = "NONE"),
+                    conditions = CardListFieldResponse(status = "UNKNOWN"),
+                    allergies = CardTextFieldResponse(status = "NONE"),
+                ),
+            ).toBriefCard()
+
+        assertTrue(card.health.isEmpty())
+        assertTrue(card.allergies.isEmpty())
+    }
+
+    @Test
+    fun `건강 정보가 없는 응답도 카드가 된다`() {
+        // 옛 카드에는 이 값이 없다. 그 줄만 빠지고 본문은 그대로 그린다.
+        val card = response().toBriefCard()
+
+        assertTrue(card.health.isEmpty())
+        assertTrue(card.allergies.isEmpty())
+        assertEquals("왼쪽 무릎이 아파요", card.title)
+    }
+
     private fun axis(status: String, value: String? = null) =
         AxisResponse(status = status, value = value, evidence = listOfNotNull(value))
 
     private fun response(
         status: String = "DRAFT",
+        patient: PatientResponse = PatientResponse(name = "김OO", age = 32, sex = "FEMALE"),
         axes: Map<String, AxisResponse> = mapOf(
             "site" to axis("FILLED", "왼쪽 무릎"),
             "onset" to axis("FILLED", "3주 전"),
@@ -163,7 +209,7 @@ class CardMappingTest {
     ) = CardResponse(
         cardId = 1,
         status = status,
-        patient = PatientResponse(name = "김OO", age = 32, sex = "FEMALE"),
+        patient = patient,
         chiefComplaint = "왼쪽 무릎이 아파요",
         axes = axes,
         questions = listOf("검사를 받아야 하나요?"),
@@ -172,5 +218,16 @@ class CardMappingTest {
 
     private companion object {
         const val CREATED_AT = "2026-09-04T09:00:00+09:00"
+
+        /** 세 갈래를 다 적어 둔 환자. 알러지는 한 줄로 와서 쉼표로 나눈다. */
+        val FILLED_PATIENT =
+            PatientResponse(
+                name = "김OO",
+                age = 32,
+                sex = "FEMALE",
+                medications = CardListFieldResponse(status = "KNOWN", items = listOf("혈압약", "진통제")),
+                conditions = CardListFieldResponse(status = "KNOWN", items = listOf("고혈압")),
+                allergies = CardTextFieldResponse(status = "KNOWN", text = "페니실린, 조개"),
+            )
     }
 }

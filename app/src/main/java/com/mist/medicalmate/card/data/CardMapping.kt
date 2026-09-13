@@ -24,8 +24,8 @@ internal fun CardResponse.toBriefCard(): BriefCard = BriefCard(
     // 강도는 KV 줄이 아니라 눈금이다. 시안이 칩·낱말·NRS 등가를 한 줄로 그리고, 그 모양은
     // 줄 하나로 낼 수 없다. 그래서 축에서 빼 따로 든다.
     severity = axes[AXIS_SEVERITY]?.toSeverity(),
-    // 카드 응답에 건강 정보가 없다. 화면이 프로필에서 읽어 얹는다(#167).
-    allergies = emptyList(),
+    health = patient.toHealthRows(),
+    allergies = patient?.allergies.toItems(),
     questions = questions,
     // `CardResponse`에 병원이 없다. 목록 응답에만 `clinicName`이 있다.
     hospital = null,
@@ -49,6 +49,38 @@ internal fun HandoffResponse.toBriefCard(cardId: Long): BriefCard = CardResponse
     departmentGuidance = departmentGuidance,
     createdAt = confirmedAt,
 ).toBriefCard()
+
+/**
+ * 카드 안에 줄로 서는 건강 정보.
+ *
+ * 복용약과 기저질환만이다. 알러지는 카드 밖 경고로 따로 간다 — 처방을 바꾸는 값이라 다른
+ * 정보와 같은 무게로 두지 않는 것이 시안의 판단이다.
+ *
+ * **적은 것이 없으면 줄을 만들지 않는다.** "없어요"와 "잘 모르겠어요"를 카드에 적지 않는다.
+ * 진료실에서 읽는 사람에게 필요한 것은 무엇을 먹고 있느냐이고, 비어 있다는 사실은 그 자리에
+ * 아무것도 없는 것으로 충분히 전해진다.
+ */
+private fun PatientResponse?.toHealthRows(): List<BriefCardItem> = listOfNotNull(
+    this?.medications.toRow("복용약"),
+    this?.conditions.toRow("기저질환"),
+)
+
+private fun CardListFieldResponse?.toRow(key: String): BriefCardItem? {
+    if (this?.status != STATUS_KNOWN || items.isEmpty()) return null
+    return BriefCardItem(key = key, value = items.joinToString(" · "))
+}
+
+/**
+ * 알러지 한 줄을 칩으로 나눈다.
+ *
+ * 저장할 때 쉼표로 이어 보낸 그대로 온다. `profile`도 같은 규칙으로 나누는데 그 함수를 같이
+ * 쓰지 않는다 — 한 도메인이 다른 도메인을 직접 참조하지 않고, 두 응답이 지금 같아 보여도
+ * 같이 움직인다는 보장이 없다.
+ */
+private fun CardTextFieldResponse?.toItems(): List<String> {
+    if (this?.status != STATUS_KNOWN) return emptyList()
+    return text.orEmpty().split(",").map(String::trim).filter(String::isNotEmpty)
+}
 
 /** 시안의 "김OO · 32세 여 · 2026.09.04 작성". */
 private fun CardResponse.patientLine(): String = listOfNotNull(
@@ -145,6 +177,9 @@ private const val STATUS_UNKNOWN = "UNKNOWN"
 private const val STATUS_AMBIGUOUS = "AMBIGUOUS"
 
 private const val STATUS_CONFIRMED = "CONFIRMED"
+
+/** 값이 있다고 답한 것. `NONE`은 없다는 답이고 `UNKNOWN`은 모른다는 답이라 카드에 적지 않는다. */
+private const val STATUS_KNOWN = "KNOWN"
 
 private const val UNKNOWN_LABEL = "잘 모르겠어요"
 
