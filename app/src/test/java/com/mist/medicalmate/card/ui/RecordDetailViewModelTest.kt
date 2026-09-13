@@ -6,6 +6,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.visit.data.FakeVisitRepository
 import com.mist.medicalmate.visit.data.Visit
+import com.mist.medicalmate.visit.data.VisitItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -68,8 +69,8 @@ class RecordDetailViewModelTest {
         val step = detail.steps.single() as RecordStep.Block
         assertEquals("09.12 · 진료 후 기록", step.at)
         assertEquals("진료에서 들은 것", step.title)
-        assertEquals(listOf("한 것", "결과", "처방"), step.items.map { it.key })
-        assertEquals(listOf("혈액검사", "위염 초기", "2주분"), step.items.map { it.value })
+        assertEquals(listOf("소견", "검사", "약"), step.items.map { it.key })
+        assertEquals(listOf("위염 초기", "혈액검사", "2주분"), step.items.map { it.value })
     }
 
     @Test
@@ -137,10 +138,14 @@ class RecordDetailViewModelTest {
     }
 
     @Test
-    fun `값이 없는 줄은 만들지 않는다`() {
-        val step = content(FULL.copy(result = null, prescription = "  ")).detail.steps.single() as RecordStep.Block
+    fun `모르는 축도 줄로 나온다`() {
+        // 항목 이름이 닫힌 목록이 아니다. 아는 것만 그리면 환자가 적은 줄이 사라진다.
+        val extra = VisitItem(axis = "referral", label = "referral", value = "큰 병원 가보래요")
+        val step =
+            content(FULL.copy(items = FULL.items + extra)).detail.steps.single { it is RecordStep.Block }
+                as RecordStep.Block
 
-        assertEquals(listOf("한 것"), step.items.map { it.key })
+        assertEquals("큰 병원 가보래요", step.items.last().value)
     }
 
     @Test
@@ -262,9 +267,14 @@ class RecordDetailViewModelTest {
                 cardId = 3,
                 clinic = "서울OO병원 내과",
                 visitedOn = LocalDate.of(2026, 9, 12),
-                whatWasDone = "혈액검사",
-                result = "위염 초기",
-                prescription = "2주분",
+                items =
+                listOf(
+                    VisitItem(axis = "findings", label = "소견", value = "위염 초기"),
+                    VisitItem(axis = "tests", label = "검사", value = "혈액검사"),
+                    VisitItem(axis = "medication_instructions", label = "약", value = "2주분"),
+                ),
+                followUp = null,
+                patientNotes = emptyList(),
                 rawNote = "배가 아파서 갔더니 위염이래요",
             )
     }

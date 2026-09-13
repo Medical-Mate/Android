@@ -44,7 +44,7 @@
     <string name="record_delete">삭제</string>
     <string name="record_delete_count">%1$d건 삭제</string>
     <string name="record_delete_title">기록 %1$d건을 삭제할까요?</string>
-    <string name="record_delete_body">브리핑 카드와 문답도 함께 사라지고 되돌릴 수 없어요. 잡아둔 일정은 남아요.</string>
+    <string name="record_delete_body">선택한 기록이 사라지고 되돌릴 수 없어요.</string>
     <string name="record_delete_confirm">삭제</string>
 
     <!-- Figma 1j-4(1122:4830) 브리핑 카드 전체. 홈의 "전체 보기"에서 들어온다. -->
@@ -58,7 +58,7 @@
     <string name="brief_card_list_delete">삭제</string>
     <string name="brief_card_list_delete_count">%1$d장 삭제</string>
     <string name="brief_card_list_delete_title">브리핑 카드 %1$d장을 삭제할까요?</string>
-    <string name="brief_card_list_delete_body">문답과 진료 기록도 함께 사라지고 되돌릴 수 없어요. 잡아둔 일정은 남아요.</string>
+    <string name="brief_card_list_delete_body">연결된 진료 기록은 남고 선택한 카드는 사라져요.</string>
     <string name="brief_card_list_delete_confirm">삭제</string>
     <string name="brief_card_list_failed_title">카드를 불러오지 못했어요</string>
     <string name="brief_card_list_failed_description">인터넷 연결을 확인하고 다시 시도해주세요</string>
@@ -232,7 +232,7 @@
     <string name="brief_card_question_placeholder">물어볼 것을 적어주세요</string>
     <string name="brief_card_delete">브리핑 카드 삭제</string>
     <string name="brief_card_delete_title">이 브리핑 카드를 삭제할까요?</string>
-    <string name="brief_card_delete_body">문답과 진료 기록도 함께 사라지고 되돌릴 수 없어요. 잡아둔 일정은 남아요.</string>
+    <string name="brief_card_delete_body">연결된 진료 기록은 남고 이 카드는 사라져요.</string>
     <string name="brief_card_delete_confirm">삭제</string>
 
     <string name="handoff_title">진료실 화면</string>

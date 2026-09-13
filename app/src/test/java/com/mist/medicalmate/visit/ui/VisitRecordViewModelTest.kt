@@ -9,7 +9,6 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -212,9 +211,10 @@ class VisitRecordViewModelTest {
         assertEquals(3L, repository.cardId)
         assertEquals(CLINIC, request?.clinicName)
         assertEquals(TODAY, request?.visitedOn)
-        assertEquals("혈액검사 시행", request?.whatWasDone)
-        assertEquals("위염 초기 소견", request?.result)
-        assertEquals("2주분 처방", request?.prescription)
+        assertEquals(
+            listOf("findings" to "위염 초기 소견", "tests" to "혈액검사 시행", "medication_instructions" to "2주분 처방"),
+            request?.items?.map { it.axis to it.value },
+        )
         assertEquals(NOTE, request?.rawNote)
         // 저장이 끝나면 흐름이 시작된 캘린더 일자로 돌아간다. 기록 id는 더 쓰지 않는다.
         assertTrue(left)
@@ -222,21 +222,19 @@ class VisitRecordViewModelTest {
 
     @Test
     fun `비운 줄은 보내지 않는다`() {
+        // 안 적은 것과 빈 문자열은 다르다. 빈 줄을 보내면 서버가 UNKNOWN으로 박는다.
         val repository = FakeVisitRepository()
         val viewModel = viewModel(repository).apply { load(CLINIC, NOTE) }
 
         viewModel.onSaveClick(cardId = "3", onSaved = {})
 
-        val request = repository.request
-        assertNull(request?.whatWasDone)
-        assertNull(request?.result)
-        assertNull(request?.prescription)
-        assertEquals(NOTE, request?.rawNote)
+        assertEquals(emptyList<Pair<String, String>>(), repository.request?.items?.map { it.axis to it.value })
+        assertEquals(NOTE, repository.request?.rawNote)
     }
 
     @Test
-    fun `재방문 줄은 보낼 자리가 없다`() {
-        // POST /api/cards/{id}/visit에 재방문 날짜 필드가 없다. #148에 적어 뒀다.
+    fun `재방문 줄도 축으로 간다`() {
+        // follow_up 축이 생겼다(#178). 전에는 보낼 자리가 없어 버려졌다.
         val repository = FakeVisitRepository()
         val viewModel = viewModel(repository).apply { load(CLINIC, NOTE) }
         viewModel.onEditClick()
@@ -245,8 +243,7 @@ class VisitRecordViewModelTest {
 
         viewModel.onSaveClick(cardId = "3", onSaved = {})
 
-        val request = repository.request
-        assertFalse(listOfNotNull(request?.whatWasDone, request?.result, request?.prescription).contains("2주 뒤"))
+        assertEquals("follow_up" to "2주 뒤", repository.request?.items?.single()?.let { it.axis to it.value })
     }
 
     @Test

@@ -206,7 +206,15 @@ data class VisitRecord(
     val caption: String,
 )
 
-/** [tone]이 값의 색을 정한다. 재방문 날짜는 브랜드색으로 세운다. */
-data class VisitRecordItem(val key: String, val value: String, val tone: Tone = Tone.DEFAULT) {
+/**
+ * 분류 결과의 한 줄.
+ *
+ * [key]는 화면에 적는 이름이고 [axis]는 서버 축 id다. 둘을 나눠 두는 이유는 항목 이름이 닫힌
+ * 목록이 아니기 때문이다(#178) — AI가 축을 늘리면 이름을 모르는 줄이 생기고, 그때 표시는
+ * 축 id로 하더라도 저장은 그 축으로 나가야 한다.
+ *
+ * [tone]이 값의 색을 정한다. 재방문 날짜는 브랜드색으로 세운다.
+ */
+data class VisitRecordItem(val key: String, val value: String, val tone: Tone = Tone.DEFAULT, val axis: String = "") {
     enum class Tone { DEFAULT, LINK }
 }

@@ -3,7 +3,12 @@ package com.mist.medicalmate.visit.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mist.medicalmate.core.network.ApiResult
+import com.mist.medicalmate.visit.data.AXIS_FINDINGS
+import com.mist.medicalmate.visit.data.AXIS_FOLLOW_UP
+import com.mist.medicalmate.visit.data.AXIS_MEDICATION
+import com.mist.medicalmate.visit.data.AXIS_TESTS
 import com.mist.medicalmate.visit.data.NewVisit
+import com.mist.medicalmate.visit.data.NewVisitItem
 import com.mist.medicalmate.visit.data.VisitRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
@@ -136,8 +141,8 @@ internal constructor(
  * 미리 있어야 한다. 그리고 [VisitRecordItem.key]가 저장할 때 어느 서버 필드인지를 가리키는
  * 이름이기도 하다. 위치로 찾으면 한 줄을 지운 뒤에 어긋난다.
  *
- * 재방문 줄은 서버로 가지 않는다. `POST /api/cards/{id}/visit`에 재방문 날짜 자리가 없다.
- * 하단의 "캘린더에 재방문 일정 등록" 체크와 함께 정해야 할 자리라 #148에 적어 뒀다.
+ * 재방문 줄도 서버로 간다. `follow_up` 축이 생겼다(#178). 다만 날짜로 뽑은 값(`followUp`)은
+ * 아직 보내지 않는다 — 그 값을 만드는 것이 AI 분류이고 1p의 정리가 아직 안 붙었다.
  *
  * [VisitRecord.caption]은 비워 둔다. "AI가 메모를 4가지로 나눴어요"라고 적을 근거가 아직
  * 없다. 빈 값이면 화면이 그 줄을 그리지 않는다.
@@ -148,42 +153,42 @@ private fun newRecord(clinic: String?, note: String, today: LocalDate) = VisitRe
     clinicLine = listOfNotNull(clinic, today.format(VISITED_ON)).joinToString(" · "),
     items =
     listOf(
-        VisitRecordItem(key = KEY_RESULT, value = ""),
-        VisitRecordItem(key = KEY_DONE, value = ""),
-        VisitRecordItem(key = KEY_PRESCRIPTION, value = ""),
-        VisitRecordItem(key = KEY_REVISIT, value = "", tone = VisitRecordItem.Tone.LINK),
+        VisitRecordItem(key = KEY_RESULT, value = "", axis = AXIS_FINDINGS),
+        VisitRecordItem(key = KEY_DONE, value = "", axis = AXIS_TESTS),
+        VisitRecordItem(key = KEY_PRESCRIPTION, value = "", axis = AXIS_MEDICATION),
+        VisitRecordItem(key = KEY_REVISIT, value = "", tone = VisitRecordItem.Tone.LINK, axis = AXIS_FOLLOW_UP),
     ),
     memo = note,
     caption = "",
 )
 
 /**
- * 화면의 네 줄을 서버의 세 필드로.
+ * 화면의 줄을 서버 축으로.
  *
- * 지운 줄과 비운 줄은 보내지 않는다. 안 적은 것과 빈 문자열은 다르다.
+ * **지운 줄과 비운 줄은 보내지 않는다.** 안 적은 것과 빈 문자열은 다르다. 값이 있는 줄만
+ * 담고, 축이 없는 줄(있으면 안 되지만)도 뺀다.
+ *
+ * `status`와 `source`는 보내지 않는다. 서버가 정한다.
  */
 private fun VisitRecord.toNewVisit(today: LocalDate) = NewVisit(
     clinicName = clinic,
     visitedOn = today,
-    whatWasDone = valueOf(KEY_DONE),
-    result = valueOf(KEY_RESULT),
-    prescription = valueOf(KEY_PRESCRIPTION),
+    items =
+    items.mapNotNull { item ->
+        if (item.axis.isBlank() || item.value.isBlank()) return@mapNotNull null
+        NewVisitItem(axis = item.axis, value = item.value)
+    },
     rawNote = memo,
 )
 
-private fun VisitRecord.valueOf(key: String): String? =
-    items.firstOrNull { it.key == key }?.value?.takeIf { it.isNotBlank() }
-
-/** 진료에서 들은 것. 서버의 `result`. */
+/** 진료에서 들은 것. */
 private const val KEY_RESULT = "소견"
 
-/** 진료에서 한 것. 서버의 `whatWasDone`. */
+/** 진료에서 한 것. */
 private const val KEY_DONE = "검사"
 
-/** 서버의 `prescription`. */
 private const val KEY_PRESCRIPTION = "약"
 
-/** 서버에 대응하는 자리가 없다. */
 private const val KEY_REVISIT = "재방문"
 
 private val VISITED_ON: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy.MM.dd", Locale.KOREAN)

@@ -19,6 +19,18 @@ interface VisitRepository {
      * @param cardId 확정한 카드여야 한다. 카드 하나에 기록 하나다.
      */
     suspend fun create(cardId: Long, visit: NewVisit): ApiResult<Visit>
+
+    /** 기록 하나를 지운다. 카드는 남는다. */
+    suspend fun delete(visitId: Long): ApiResult<Unit>
+
+    /**
+     * 여러 건을 지우고 **실제로 지워진 id만** 돌려준다.
+     *
+     * 한 번에 지우는 API가 없어서 한 건씩 부른다. 일부가 실패해도 나머지는 계속 지운다.
+     * 하나 실패했다고 멈추면 이미 지운 것과 화면이 어긋나고, 다시 누르면 지운 것을 또
+     * 부르게 된다.
+     */
+    suspend fun deleteAll(visitIds: Set<String>): Set<String>
 }
 
 /**
@@ -30,11 +42,15 @@ interface VisitRepository {
 data class NewVisit(
     val clinicName: String? = null,
     val visitedOn: LocalDate? = null,
-    val whatWasDone: String? = null,
-    val result: String? = null,
-    val prescription: String? = null,
+    /** 적은 항목. 축 id와 값만 보낸다. 상태와 출처는 서버가 정한다. */
+    val items: List<NewVisitItem> = emptyList(),
+    val followUp: VisitFollowUp? = null,
+    /** 어느 항목에도 들어가지 않은 문장. */
+    val patientNotes: List<String> = emptyList(),
     val rawNote: String? = null,
 )
+
+data class NewVisitItem(val axis: String, val value: String)
 
 internal class DefaultVisitRepository
 @Inject
@@ -52,13 +68,26 @@ constructor(private val api: VisitApi, private val json: Json) :
             CreateVisitRequest(
                 clinicName = visit.clinicName,
                 visitedOn = visit.visitedOn?.toString(),
-                whatWasDone = visit.whatWasDone,
-                result = visit.result,
-                prescription = visit.prescription,
+                axes = visit.items.map { VisitAxisRequest(axis = it.axis, value = it.value) },
+                followUp =
+                visit.followUp?.let {
+                    FollowUpRequest(
+                        date = it.date.toString(),
+                        text = it.text,
+                        approximate = it.approximate,
+                    )
+                },
+                patientNotes = visit.patientNotes,
                 rawNote = visit.rawNote,
             ),
         )
     }.map { it.toVisit() }
+
+    override suspend fun delete(visitId: Long): ApiResult<Unit> = apiCall(json) { api.delete(visitId) }
+
+    override suspend fun deleteAll(visitIds: Set<String>): Set<String> = visitIds
+        .mapNotNull { id -> id.toLongOrNull()?.takeIf { delete(it) is ApiResult.Success }?.let { id } }
+        .toSet()
 }
 
 /** 목록의 기록 한 줄. 원문은 담기지 않는다. */
@@ -67,45 +96,44 @@ data class VisitListItem(
     /**
      * 이 기록이 매달린 카드.
      *
-     * 기록 목록(1j-1)에서 지우면 서버가 지우는 것이 그 카드다. 기록만 지우는 API가 없다.
+     * **없을 수 있다.** 카드를 지워도 기록은 남고 그때 연결만 끊긴다. 줄의 제목은 [cardTitle]로
+     * 그린다 — 카드를 만들 때 박아둔 값이라 연결이 끊겨도 남아 있다.
      */
     val cardId: Long?,
     val cardTitle: String,
     val clinic: String?,
     val visitedOn: LocalDate,
+    /** 다시 오라고 들은 날. 달력에 점을 찍는 데 쓴다. */
+    val followUpDate: LocalDate? = null,
 )
 
 /**
  * 기록 하나.
  *
- * 서버가 한 것·결과·처방 셋으로 고정해서 준다. 카드의 축과 달리 가변이 아니다.
+ * **항목이 가변이다**(#178). 브리핑 카드처럼 축 목록이고 AI가 축을 늘려도 실린다. 값이 없는
+ * 항목은 줄이 없다.
  */
 data class Visit(
     val id: String,
     val cardId: Long?,
     val clinic: String?,
     val visitedOn: LocalDate?,
-    val whatWasDone: String?,
-    val result: String?,
-    val prescription: String?,
+    val items: List<VisitItem>,
+    val followUp: VisitFollowUp?,
+    val patientNotes: List<String>,
     val rawNote: String?,
 )
 
-private fun VisitSummaryResponse.toListItem() = VisitListItem(
-    id = visitId.toString(),
-    cardId = cardId,
-    cardTitle = cardTitle.orEmpty(),
-    clinic = clinicName,
-    visitedOn = LocalDate.parse(visitedOn),
-)
+/** 기록의 한 줄. [axis]는 서버 축 id이고 [label]은 화면에 적는 이름이다. */
+data class VisitItem(val axis: String, val label: String, val value: String)
 
-private fun VisitResponse.toVisit() = Visit(
-    id = visitId.toString(),
-    cardId = cardId,
-    clinic = clinicName,
-    visitedOn = visitedOn?.let(LocalDate::parse),
-    whatWasDone = whatWasDone,
-    result = result,
-    prescription = prescription,
-    rawNote = rawNote,
-)
+/**
+ * 다시 오라고 들은 날.
+ *
+ * [approximate]면 환자가 "2주 뒤"처럼 범위로 말한 것이다. 화면이 "9월 27일 전후"로 적는다.
+ * 정확한 날짜처럼 그리면 그날이 아니면 안 되는 것으로 읽힌다.
+ *
+ * **이 값으로 일정이 생기지 않는다.** 서버가 저장만 하고, 캘린더에 올리는 것은 환자가 보고
+ * 정하는 흐름(1r-2-A)이다. AI가 날짜를 잘못 뽑을 수 있어서 조용히 일정이 생기면 안 된다.
+ */
+data class VisitFollowUp(val date: LocalDate, val text: String?, val approximate: Boolean)

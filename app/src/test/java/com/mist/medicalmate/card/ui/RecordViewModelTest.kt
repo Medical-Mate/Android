@@ -31,7 +31,7 @@ class RecordViewModelTest {
 
     @Test
     fun `불러오기 전에는 편집으로 들어갈 수 없다`() {
-        val viewModel = RecordViewModel(FakeVisitRepository(), FakeCardRepository())
+        val viewModel = RecordViewModel(FakeVisitRepository())
 
         viewModel.onEditStart()
 
@@ -68,7 +68,7 @@ class RecordViewModelTest {
 
     @Test
     fun `읽지 못하면 실패다`() {
-        val viewModel = RecordViewModel(FakeVisitRepository(list = FakeVisitRepository.OFFLINE), FakeCardRepository())
+        val viewModel = RecordViewModel(FakeVisitRepository(list = FakeVisitRepository.OFFLINE))
 
         viewModel.load()
 
@@ -202,23 +202,23 @@ class RecordViewModelTest {
     }
 
     @Test
-    fun `기록을 지우면 그 카드를 지운다`() {
-        // 기록만 지우는 API가 없다. 서버가 지우는 것은 카드이고 문답도 함께 사라진다.
-        val cards = FakeCardRepository()
-        val viewModel = loaded(cards)
+    fun `기록을 지우면 기록이 지워진다`() {
+        // 카드가 아니라 기록이다(#178). 전에는 카드 삭제로 나가서 문답까지 사라졌다.
+        val repository = FakeVisitRepository(list = ApiResult.Success(VISITS))
+        val viewModel = RecordViewModel(repository).apply { load() }
         viewModel.onEditStart()
         viewModel.onSelectChange("11", true)
         viewModel.onDeleteClick()
 
         viewModel.onDeleteConfirm()
 
-        assertEquals(listOf(101L), cards.deleted)
+        assertEquals(listOf("11"), repository.deletedIds)
     }
 
     @Test
     fun `안 지워진 기록은 목록에 남는다`() {
-        val cards = FakeCardRepository(deleteFails = setOf("103"))
-        val viewModel = loaded(cards)
+        val repository = FakeVisitRepository(list = ApiResult.Success(VISITS)).apply { deleteFails = setOf("13") }
+        val viewModel = RecordViewModel(repository).apply { load() }
         viewModel.onEditStart()
         viewModel.onSelectChange("13", true)
         viewModel.onSelectChange("11", true)
@@ -242,8 +242,7 @@ class RecordViewModelTest {
         assertEquals(emptyList<RecordGroup>(), viewModel.content().groups)
     }
 
-    private fun loaded(cards: FakeCardRepository = FakeCardRepository()) =
-        RecordViewModel(FakeVisitRepository(list = ApiResult.Success(VISITS)), cards).apply { load() }
+    private fun loaded() = RecordViewModel(FakeVisitRepository(list = ApiResult.Success(VISITS))).apply { load() }
 
     private fun RecordViewModel.content(): RecordUiState.Content = uiState.value as RecordUiState.Content
 

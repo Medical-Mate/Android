@@ -2,6 +2,7 @@ package com.mist.medicalmate.visit.data
 
 import kotlinx.serialization.Serializable
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
@@ -33,6 +34,15 @@ internal interface VisitApi {
      */
     @POST("api/cards/{cardId}/visit")
     suspend fun create(@Path("cardId") cardId: Long, @Body request: CreateVisitRequest): VisitResponse
+
+    /**
+     * 기록 하나를 지운다. 카드는 남는다.
+     *
+     * 전에는 이 자리가 없어서 기록 삭제가 카드 삭제로 나갔고, 기록 한 건을 지우려던 사람이
+     * 카드와 문답까지 잃었다(#157).
+     */
+    @DELETE("api/visits/{visitId}")
+    suspend fun delete(@Path("visitId") visitId: Long)
 }
 
 @Serializable
@@ -42,12 +52,16 @@ internal data class VisitSummaryResponse(
     val cardTitle: String? = null,
     val clinicName: String? = null,
     val visitedOn: String,
+    val followUpDate: String? = null,
 )
 
 /**
- * @param whatWasDone 진료에서 한 것.
- * @param result 들은 결과.
- * @param prescription 처방.
+ * 기록 하나.
+ *
+ * **항목이 가변이다**(#178). 전에는 `whatWasDone`·`result`·`prescription` 셋으로 고정이었다.
+ * 지금은 브리핑 카드와 같은 모양의 축 맵이고 AI가 축을 늘려도 실린다. 못 찾은 항목은 빈 값이
+ * 아니라 **키가 없다.**
+ *
  * @param rawNote 환자가 적은 원문. 상세에만 온다.
  */
 @Serializable
@@ -56,18 +70,60 @@ internal data class VisitResponse(
     val cardId: Long? = null,
     val clinicName: String? = null,
     val visitedOn: String? = null,
-    val whatWasDone: String? = null,
-    val result: String? = null,
-    val prescription: String? = null,
+    val axes: Map<String, VisitAxisResponse> = emptyMap(),
+    val followUp: FollowUpResponse? = null,
+    val patientNotes: List<String> = emptyList(),
     val rawNote: String? = null,
 )
 
+/**
+ * 축 하나.
+ *
+ * 카드의 축과 모양이 같지만 타입을 함께 쓰지 않는다. 한 도메인이 다른 도메인을 참조하지 않고,
+ * 두 계약이 지금 같아 보여도 같이 움직인다는 보장이 없다.
+ */
+@Serializable
+internal data class VisitAxisResponse(
+    val axis: String? = null,
+    val status: String? = null,
+    val value: String? = null,
+    val evidence: List<String> = emptyList(),
+    val source: String? = null,
+)
+
+/** @param approximate "2주 뒤"처럼 범위로 말한 것. 화면이 "전후"를 붙인다. */
+@Serializable
+internal data class FollowUpResponse(
+    val date: String? = null,
+    val text: String? = null,
+    val approximate: Boolean = false,
+)
+
+/**
+ * 남길 기록.
+ *
+ * **`status`와 `source`를 보내지 않는다.** 값이 있으면 `FILLED`, 비었으면 `UNKNOWN`이고 출처는
+ * 서버가 `PATIENT_EDIT`로 박는다. 앱이 "AI가 뽑았다"고 주장할 수 있으면 의사 화면의 출처
+ * 표시가 의미를 잃는다.
+ *
+ * @param patientNotes 어느 항목에도 들어가지 않은 문장.
+ */
 @Serializable
 internal data class CreateVisitRequest(
     val clinicName: String? = null,
     val visitedOn: String? = null,
-    val whatWasDone: String? = null,
-    val result: String? = null,
-    val prescription: String? = null,
+    val axes: List<VisitAxisRequest> = emptyList(),
+    val followUp: FollowUpRequest? = null,
+    val patientNotes: List<String> = emptyList(),
     val rawNote: String? = null,
+)
+
+@Serializable
+internal data class VisitAxisRequest(val axis: String, val value: String)
+
+@Serializable
+internal data class FollowUpRequest(
+    val date: String? = null,
+    val text: String? = null,
+    val approximate: Boolean = false,
 )
