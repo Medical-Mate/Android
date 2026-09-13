@@ -2,6 +2,7 @@ package com.mist.medicalmate.visit.ui
 
 import androidx.annotation.Keep
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
+import com.mist.medicalmate.visit.data.VisitFollowUp
 import java.time.LocalDate
 
 /**
@@ -114,7 +115,6 @@ data class Hospital(val name: String)
 data class VisitNoteUiState(
     val visit: VisitHeadline,
     val note: String = "",
-    val organizing: Boolean = false,
     /**
      * 음성으로 적는 중인지. 꺼져 있으면 [MedicalMateVoiceState.IDLE]이 아니라 null이다.
      *
@@ -123,7 +123,7 @@ data class VisitNoteUiState(
      */
     val voice: MedicalMateVoiceState? = null,
 ) {
-    val canSave: Boolean = note.isNotBlank() && !organizing
+    val canSave: Boolean = note.isNotBlank()
 }
 
 /**
@@ -203,7 +203,9 @@ data class VisitRecordDraft(val items: List<VisitRecordItem>) {
  * AI가 메모를 나눈 결과.
  *
  * [items]는 소견·검사·약·재방문 넷이다. 개수를 고정하지 않는 이유는 AI가 찾지 못한 항목이
- * 빠질 수 있기 때문이다. [caption]이 몇 가지로 나눴는지 알리고, 알릴 것이 없으면 비어 있다.
+ * 빠질 수 있기 때문이다. [classifiedCount]가 AI가 몇 가지로 나눴는지다. AI를 거치지 않았거나
+ * 나눈 것이 없으면 null이고, 그때 화면은 그 줄을 그리지 않는다. 문구가 아니라 수로 드는 것은
+ * 카피가 문자열 리소스에 있어야 하기 때문이다.
  *
  * [clinic]은 병원 이름만이고 [clinicLine]은 화면에 그리는 "서울OO병원 · 2026.09.12"다. 저장할
  * 때 이름만 필요해서 날짜가 붙기 전 값을 따로 든다.
@@ -214,7 +216,11 @@ data class VisitRecord(
     val clinicLine: String,
     val items: List<VisitRecordItem>,
     val memo: String,
-    val caption: String,
+    val classifiedCount: Int? = null,
+    /** 어느 항목에도 들어가지 않은 문장. 저장 요청에 그대로 실린다. */
+    val patientNotes: List<String> = emptyList(),
+    /** AI가 뽑은 재방문 날짜. 저장 요청에 실린다. 일정은 이 값으로 생기지 않는다. */
+    val followUp: VisitFollowUp? = null,
 )
 
 /**

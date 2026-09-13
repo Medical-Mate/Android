@@ -67,7 +67,7 @@ internal fun VisitRecordCard(state: VisitRecordUiState.Content, callbacks: Visit
         }
         MedicalMateDivider()
         Memo(memo = state.record.memo)
-        if (!state.editing && state.record.caption.isNotBlank()) Caption(state.record.caption)
+        state.record.classifiedCount?.takeIf { !state.editing }?.let { Caption(it) }
     }
 }
 
@@ -108,14 +108,14 @@ private fun Memo(memo: String) {
 
 /** AI가 몇 가지로 나눴는지. 옆의 툴팁이 무엇을 기준으로 나눴는지 알린다. */
 @Composable
-private fun Caption(caption: String) {
+private fun Caption(count: Int) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = caption,
+            text = stringResource(R.string.visit_record_caption, count),
             style = MedicalMateTheme.typography.bodyS,
             color = MedicalMateTheme.colors.fgSubtle,
         )

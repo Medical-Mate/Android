@@ -43,6 +43,15 @@ internal interface VisitApi {
      */
     @DELETE("api/visits/{visitId}")
     suspend fun delete(@Path("visitId") visitId: Long)
+
+    /**
+     * 적어 둔 메모를 항목으로 나눈다.
+     *
+     * **저장하지 않는다.** 카드에도 매이지 않아서 저장 전에 부를 수 있다. 나눈 결과를 그대로
+     * [create]의 요청으로 옮기면 된다.
+     */
+    @POST("api/visits/classify")
+    suspend fun classify(@Body request: ClassifyMemoRequest): ClassifyMemoResponse
 }
 
 @Serializable
@@ -120,6 +129,32 @@ internal data class CreateVisitRequest(
 
 @Serializable
 internal data class VisitAxisRequest(val axis: String, val value: String)
+
+/**
+ * @param labels 직전 응답의 분류. **있으면 반드시 함께 보낸다.** 안 보내면 줄 하나를 옮길
+ *   때마다 AI 모델 호출이 나가고, 그 비용이 서버 크레딧과 같은 주머니에서 빠진다. 보내면
+ *   모델을 부르지 않고 재조립만 한다.
+ */
+@Serializable
+internal data class ClassifyMemoRequest(
+    val memo: String,
+    val visitedOn: String? = null,
+    val clinicName: String? = null,
+    val labels: Map<String, String>? = null,
+)
+
+/**
+ * @param sentences 메모를 문장으로 나눈 것. 인덱스가 [labels]의 키다.
+ * @param patientNotes 어느 항목에도 들어가지 않은 문장.
+ */
+@Serializable
+internal data class ClassifyMemoResponse(
+    val axes: Map<String, VisitAxisResponse> = emptyMap(),
+    val sentences: List<String> = emptyList(),
+    val labels: Map<String, String> = emptyMap(),
+    val patientNotes: List<String> = emptyList(),
+    val followUp: FollowUpResponse? = null,
+)
 
 @Serializable
 internal data class FollowUpRequest(

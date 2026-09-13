@@ -210,7 +210,6 @@ private fun VisitNoteRoute(
         VisitNoteCallbacks(
             onBackClick = onExit,
             onNoteChange = viewModel::onNoteChange,
-            onOrganizeClick = viewModel::onOrganizeClick,
             onVoiceClick = viewModel::onVoiceClick,
             onTypeInsteadClick = viewModel::onTypeInsteadClick,
             // 적은 원문이 그대로 다음 화면으로 간다. 1q-1이 그 글을 보여주고 저장한다.

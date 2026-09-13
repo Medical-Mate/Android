@@ -2,6 +2,7 @@ package com.mist.medicalmate.visit.data
 
 import com.mist.medicalmate.core.network.ApiResult
 import java.io.IOException
+import java.time.LocalDate
 
 /**
  * 진료 기록 저장소 대역.
@@ -55,6 +56,22 @@ internal class FakeVisitRepository(
     override suspend fun delete(visitId: Long): ApiResult<Unit> {
         deletedIds += visitId.toString()
         return if (visitId.toString() in deleteFails) OFFLINE else ApiResult.Success(Unit)
+    }
+
+    /** 나눈 결과. 기본은 실패라 화면이 빈 네 줄로 열린다. */
+    var classification: ApiResult<VisitClassification> = OFFLINE
+
+    /** 나눠 달라고 받은 요청. labels를 돌려보내는지가 관심사다. */
+    var classifyRequests = mutableListOf<Map<String, String>?>()
+
+    override suspend fun classify(
+        memo: String,
+        visitedOn: LocalDate?,
+        clinic: String?,
+        labels: Map<String, String>?,
+    ): ApiResult<VisitClassification> {
+        classifyRequests += labels
+        return classification
     }
 
     override suspend fun deleteAll(visitIds: Set<String>): Set<String> = visitIds

@@ -1,16 +1,13 @@
 package com.mist.medicalmate.visit.ui
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import java.time.Clock
 import java.time.LocalDate
 
@@ -21,12 +18,11 @@ import java.time.LocalDate
  * 카드 제목은 이 기록이 붙을 카드다. 둘 다 라우트를 타고 따라오므로 서버를 다시 부르지
  * 않는다.
  *
- * [onOrganizeClick]이 AI에게 문장을 다듬어 달라고 하는 자리다. 지금은 픽스처를 넣고
- * [VisitNoteUiState.organizing] 동안 입력을 잠근다. 다듬는 중에 환자가 계속 적으면 결과가
- * 덮어써서 방금 적은 문장이 사라진다.
+ * **메모를 나누는 일은 여기서 하지 않는다**(#183). "AI로 정리하기" 칩과 하단 저장하기가 둘 다
+ * 1q-1로 보내고, `POST /api/visits/classify`는 결과를 그리는 그 화면이 부른다. 축 맵을 라우트에
+ * 실어 나르지 않아도 된다.
  *
- * 원문을 지우지 않는다. 다듬은 결과가 마음에 들지 않을 수 있고, 1q-1이 원문을 그대로
- * 보여주므로 흐름 끝까지 남아 있어야 한다.
+ * 원문을 지우지 않는다. 1q-1이 원문을 그대로 보여주므로 흐름 끝까지 남아 있어야 한다.
  */
 @HiltViewModel
 class VisitNoteViewModel
@@ -82,19 +78,5 @@ constructor(private val clock: Clock) : ViewModel() {
     /** 음성 패널의 "직접 입력할게요". 패널을 닫고 적던 글로 돌아간다. */
     fun onTypeInsteadClick() {
         mutableUiState.update { it.copy(voice = null) }
-    }
-
-    fun onOrganizeClick() {
-        if (mutableUiState.value.organizing) return
-        mutableUiState.update { it.copy(organizing = true) }
-        viewModelScope.launch {
-            delay(ORGANIZE_DELAY_MILLIS)
-            mutableUiState.update { it.copy(note = PREVIEW_VISIT_NOTE, organizing = false) }
-        }
-    }
-
-    companion object {
-        /** AI 응답을 기다리는 것처럼 보이게 두는 시간. 연동하면 사라진다. */
-        private const val ORGANIZE_DELAY_MILLIS = 700L
     }
 }

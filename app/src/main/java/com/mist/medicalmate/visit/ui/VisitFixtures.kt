@@ -37,5 +37,5 @@ internal val previewVisitRecord =
             ),
         ),
         memo = PREVIEW_VISIT_NOTE,
-        caption = "AI가 메모를 4가지로 나눴어요",
+        classifiedCount = 4,
     )

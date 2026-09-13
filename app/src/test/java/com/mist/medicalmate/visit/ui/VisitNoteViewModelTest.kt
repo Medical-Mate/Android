@@ -4,9 +4,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -135,40 +133,14 @@ class VisitNoteViewModelTest {
     }
 
     @Test
-    fun `정리하는 동안은 저장을 막는다`() = runTest {
+    fun `정리하기 칩은 저장하기와 같은 자리로 간다`() {
+        // 둘 다 메모를 분류로 보내는 같은 동작이다(#183). 나누는 것은 결과를 그리는 1q-1이
+        // 부른다. 여기서는 메모를 들고 넘어갈 수 있는지만 본다.
         val viewModel = viewModel()
+
         viewModel.onNoteChange("위염이라고 하셨어요")
 
-        viewModel.onOrganizeClick()
-
-        assertTrue(viewModel.uiState.value.organizing)
-        assertFalse(viewModel.uiState.value.canSave)
-    }
-
-    @Test
-    fun `정리가 끝나면 다듬은 문장이 들어온다`() = runTest {
-        val viewModel = viewModel()
-        viewModel.onNoteChange("위염이라고 하셨어요")
-
-        viewModel.onOrganizeClick()
-        advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        assertFalse(state.organizing)
-        assertEquals(PREVIEW_VISIT_NOTE, state.note)
-        assertTrue(state.canSave)
-    }
-
-    @Test
-    fun `정리 중에 다시 눌러도 한 번만 돈다`() = runTest {
-        val viewModel = viewModel()
-        viewModel.onNoteChange("위염이라고 하셨어요")
-
-        viewModel.onOrganizeClick()
-        viewModel.onOrganizeClick()
-        advanceUntilIdle()
-
-        assertEquals(PREVIEW_VISIT_NOTE, viewModel.uiState.value.note)
+        assertTrue(viewModel.uiState.value.canSave)
     }
 
     @Test

@@ -20,6 +20,13 @@ internal fun VisitResponse.toVisit() = Visit(
     rawNote = rawNote,
 )
 
+internal fun ClassifyMemoResponse.toClassification() = VisitClassification(
+    items = axes.toItems(),
+    followUp = followUp?.toFollowUp(),
+    patientNotes = patientNotes,
+    labels = labels,
+)
+
 internal fun VisitSummaryResponse.toListItem() = VisitListItem(
     id = visitId.toString(),
     cardId = cardId,

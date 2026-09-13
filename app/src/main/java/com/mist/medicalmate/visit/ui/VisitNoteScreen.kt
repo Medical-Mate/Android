@@ -5,18 +5,25 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -98,14 +105,27 @@ fun VisitNoteScreen(state: VisitNoteUiState, callbacks: VisitNoteCallbacks, modi
 data class VisitNoteCallbacks(
     val onBackClick: () -> Unit = {},
     val onNoteChange: (String) -> Unit = {},
-    val onOrganizeClick: () -> Unit = {},
     val onVoiceClick: () -> Unit = {},
     val onTypeInsteadClick: () -> Unit = {},
     val onSaveClick: () -> Unit = {},
 )
 
+/**
+ * 적는 칸이 글에 따라 자란다.
+ *
+ * **자란 끝을 따라간다**(#183). 키보드가 올라오면 보이는 높이가 줄고, 칸이 아래로 자라면
+ * 방금 친 글자가 키보드 뒤로 들어간다. 칸 바로 아래 줄을 시야로 불러 칸의 아랫변이 늘 보이게
+ * 한다 — 칸 자체를 부르면 칸이 화면보다 길어졌을 때 윗변에 맞춰져 커서가 도로 가린다.
+ */
 @Composable
 private fun NoteContent(state: VisitNoteUiState, callbacks: VisitNoteCallbacks) {
+    val bottomOfBox = remember { BringIntoViewRequester() }
+    val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
+
+    LaunchedEffect(state.note, imeBottom) {
+        if (imeBottom > 0) bottomOfBox.bringIntoView()
+    }
+
     Column(
         modifier =
         Modifier
@@ -120,10 +140,13 @@ private fun NoteContent(state: VisitNoteUiState, callbacks: VisitNoteCallbacks) 
             value = state.note,
             onValueChange = callbacks.onNoteChange,
             placeholder = stringResource(R.string.visit_note_placeholder),
-            enabled = !state.organizing,
             maxLength = NOTE_MAX_LENGTH,
         )
-        OrganizeRow(state = state, onOrganizeClick = callbacks.onOrganizeClick)
+        OrganizeRow(
+            state = state,
+            onOrganizeClick = callbacks.onSaveClick,
+            modifier = Modifier.bringIntoViewRequester(bottomOfBox),
+        )
         // 음성 패널은 적던 글 아래에 선다. 증상 문답(1c-3·1c-4)과 같은 컴포넌트다. 그쪽은
         // 입력 자리를 통째로 갈아끼우지만 여기는 적어 둔 글이 그대로 남아야 한다.
         state.voice?.let { voice ->
@@ -233,10 +256,17 @@ private val HeadlineDate: DateTimeFormatter = DateTimeFormatter.ofPattern("M월 
  * 칩으로 둔다. 화면의 주 행동은 저장하기이고, 이것은 적은 글을 다듬는 보조 조작이다.
  * 눌러도 화면이 바뀌지 않으므로 선택 상태가 아니라 누르는 조작으로 쓴다.
  */
+/**
+ * AI로 정리하기 칩.
+ *
+ * **하단 저장하기와 같은 자리로 간다**(#183). 둘 다 메모를 분류로 보내는 같은 동작이고,
+ * 나누는 것은 결과를 그리는 1q-1이 부른다. 칩이 따로 하는 일은 없고 시안이 그 자리에 둔
+ * 진입점이다.
+ */
 @Composable
-private fun OrganizeRow(state: VisitNoteUiState, onOrganizeClick: () -> Unit) {
+private fun OrganizeRow(state: VisitNoteUiState, onOrganizeClick: () -> Unit, modifier: Modifier = Modifier) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -244,7 +274,7 @@ private fun OrganizeRow(state: VisitNoteUiState, onOrganizeClick: () -> Unit) {
             label = stringResource(R.string.visit_note_organize),
             selected = false,
             onClick = onOrganizeClick,
-            enabled = state.note.isNotBlank() && !state.organizing,
+            enabled = state.canSave,
         )
         // 툴팁 트리거는 블록 우측 끝에 둔다(Figma 툴팁 배치 규칙).
         MedicalMateTooltip(
