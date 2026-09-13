@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -23,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -48,6 +50,11 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
  *
  * [errorText]는 무엇이 잘못됐는지가 아니라 어떻게 고치는지를 적는다. 문서의 컴포넌트 규격이 "행동
  * 지침을 함께 표시"하라고 하고, 9절은 비활성만으로 필수 행동을 숨기지 말라고 한다.
+ *
+ * [onSend]를 주면 키보드의 엔터가 보내기가 된다(#176). 한 줄 필드라 엔터로 줄을 바꿀 일이
+ * 없고, 적고 나서 손을 옮겨 버튼을 누르는 왕복이 사라진다. **적을 것이 없을 때도 그 자리를
+ * 지킨다** — 적는 동안 IME 동작이 바뀌면 키보드가 다시 뜨고 한글 조합이 끊긴다. 보낼 수
+ * 있는지는 받는 쪽이 판단한다.
  */
 @Composable
 fun MedicalMateTextField(
@@ -60,6 +67,7 @@ fun MedicalMateTextField(
     errorText: String? = null,
     enabled: Boolean = true,
     keyboardType: KeyboardType = KeyboardType.Text,
+    onSend: (() -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
 ) {
     val colors = MedicalMateTheme.colors
@@ -111,6 +119,7 @@ fun MedicalMateTextField(
                     singleLine = true,
                     interactionSource = interactionSource,
                     keyboardType = keyboardType,
+                    onSend = onSend,
                     modifier = Modifier.weight(1f),
                 )
                 trailing?.invoke()
@@ -253,6 +262,7 @@ private fun FieldText(
     interactionSource: MutableInteractionSource,
     keyboardType: KeyboardType,
     modifier: Modifier = Modifier,
+    onSend: (() -> Unit)? = null,
 ) {
     val colors = MedicalMateTheme.colors
 
@@ -276,7 +286,12 @@ private fun FieldText(
             ),
             cursorBrush = SolidColor(colors.borderFocus),
             interactionSource = interactionSource,
-            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            keyboardOptions =
+            KeyboardOptions(
+                keyboardType = keyboardType,
+                imeAction = if (onSend != null) ImeAction.Send else ImeAction.Default,
+            ),
+            keyboardActions = KeyboardActions(onSend = { onSend?.invoke() }),
             modifier = Modifier.fillMaxWidth(),
         )
     }

@@ -173,6 +173,7 @@ internal fun ChatInput(state: IntakeUiState, callbacks: IntakeCallbacks) {
                 value = state.draft,
                 onValueChange = callbacks.onDraftChange,
                 placeholder = stringResource(R.string.intake_chat_placeholder),
+                onSend = callbacks.onSendClick,
                 trailing = {
                     // Actions 슬롯. 버튼끼리는 4로 붙인다.
                     Row(
