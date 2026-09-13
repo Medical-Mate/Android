@@ -46,11 +46,14 @@ internal class FakeVisitRepository(
         return details[visitId] ?: detail
     }
 
+    /** 저장이 거절되는 경우를 만든다. 확정하지 않은 카드에 서버가 400을 준다(#196). */
+    var createFails: Boolean = false
+
     override suspend fun create(cardId: Long, visit: NewVisit): ApiResult<Visit> {
         createCount += 1
         this.cardId = cardId
         request = visit
-        return saved
+        return if (createFails) OFFLINE else saved
     }
 
     override suspend fun delete(visitId: Long): ApiResult<Unit> {

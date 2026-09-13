@@ -306,6 +306,37 @@ class VisitRecordViewModelTest {
     }
 
     @Test
+    fun `저장이 거절되면 화면을 나가지 않고 알린다`() {
+        // 확정하지 않은 카드에 서버가 400을 준다(#196). 아무 말도 하지 않으면 버튼이 안 먹는
+        // 것으로 읽고 계속 누른다 — 기기에서 세 번 눌러 세 번 거절당했다.
+        val repository = FakeVisitRepository()
+        repository.createFails = true
+        val viewModel = filled(repository)
+        var left = false
+
+        viewModel.onSaveClick(cardId = "3", onSaved = { left = true })
+
+        val content = viewModel.uiState.value as VisitRecordUiState.Content
+        assertTrue(content.saveFailed)
+        assertFalse(left)
+    }
+
+    @Test
+    fun `다시 저장하면 실패 표시가 먼저 지워진다`() {
+        // 남아 있으면 두 번째 시도가 성공해도 실패 문구가 그대로 보인다.
+        val repository = FakeVisitRepository()
+        repository.createFails = true
+        val viewModel = filled(repository)
+        viewModel.onSaveClick(cardId = "3", onSaved = {})
+
+        repository.createFails = false
+        viewModel.onSaveClick(cardId = "3", onSaved = {})
+
+        val content = viewModel.uiState.value as VisitRecordUiState.Content
+        assertFalse(content.saveFailed)
+    }
+
+    @Test
     fun `오늘이 아니라 흐름이 시작된 날로 저장한다`() {
         // 어제 진료를 오늘 적을 수 있다. 오늘로 박으면 그 일자 화면에 영영 나오지 않는다.
         val yesterday = TODAY.minusDays(1)

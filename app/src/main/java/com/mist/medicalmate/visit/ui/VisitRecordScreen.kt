@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -132,6 +133,9 @@ private fun ColumnScope.RecordContent(state: VisitRecordUiState.Content, callbac
  * 읽을 때는 일정 등록 체크와 저장하기다. 편집 중에는 `진료 후 기록 삭제` 하나가 되고 체크는
  * 숨는다. 사본을 옮기는 것은 Nav 우측 `확인`이 하므로 저장하기를 함께 두면 같은 일이 두
  * 번이 된다.
+ *
+ * 저장에 실패하면 버튼 위에 그 사실을 적는다. 아무 말도 하지 않으면 버튼이 안 먹는 것으로
+ * 읽고 계속 누르게 된다 — 기기에서 실제로 세 번 눌러 세 번 거절당했다(#198).
  */
 @Composable
 private fun Footer(state: VisitRecordUiState.Content, callbacks: VisitRecordCallbacks) {
@@ -147,6 +151,13 @@ private fun Footer(state: VisitRecordUiState.Content, callbacks: VisitRecordCall
             // **재방문 일정 등록 체크가 없다.** 시안에서 빠졌다(#170). 저장 요청에 재방문
             // 날짜를 실을 자리가 없어서 눌러도 아무 일이 없던 자리이기도 하다. 재방문이
             // 캘린더로 이어지는 길은 일자 화면의 "다음 일정"(1r-2-A)이 맡는다.
+            if (state.saveFailed) {
+                Text(
+                    text = stringResource(R.string.visit_record_save_failed),
+                    style = MedicalMateTheme.typography.bodyS,
+                    color = MedicalMateTheme.colors.fgDanger,
+                )
+            }
             MedicalMateButton(
                 label = stringResource(R.string.visit_record_save),
                 onClick = callbacks.onSaveClick,
