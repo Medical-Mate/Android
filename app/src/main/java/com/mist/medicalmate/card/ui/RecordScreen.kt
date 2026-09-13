@@ -7,13 +7,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateScreenPreviews
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
-import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateBottomCtaBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
@@ -145,45 +143,35 @@ private fun DeleteBar(count: Int, onDeleteClick: () -> Unit) {
     }
 }
 
-/** 1j-2. 빈 상태를 화면 위쪽에 둔다. Figma가 가운데가 아니라 1/4 지점에 놓았다. */
+/** 목록을 못 읽었을 때. 빈 상태와 같은 자리에 둔다. 시안에 이 화면은 없다. */
 @Composable
 private fun ColumnScope.FailedContent(onRetryClick: () -> Unit) {
-    Column(
-        modifier =
-        Modifier
-            .fillMaxWidth()
-            .weight(1f)
-            .padding(horizontal = MedicalMateSize.gutter),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        MedicalMateEmptyState(
-            type = MedicalMateEmptyStateType.NO_RESULT,
-            title = stringResource(R.string.record_failed_title),
-            description = stringResource(R.string.record_failed_description),
-            actionLabel = stringResource(R.string.record_retry),
-            onActionClick = onRetryClick,
-        )
-    }
+    MedicalMateEmptyState(
+        type = MedicalMateEmptyStateType.NO_RESULT,
+        title = stringResource(R.string.record_failed_title),
+        description = stringResource(R.string.record_failed_description),
+        actionLabel = stringResource(R.string.record_retry),
+        onActionClick = onRetryClick,
+        modifier = Modifier.weight(1f).padding(horizontal = MedicalMateSize.gutter),
+    )
 }
 
-/** 기록이 하나도 없을 때. */
+/**
+ * 기록이 하나도 없을 때. Figma `1j-2`다.
+ *
+ * 상단 바 아래 남은 높이를 전부 받아 그 안에서 가운데에 선다. 시안이 677 안에 282를
+ * y=193.5에 뒀는데 가운데(197.5)와 4 차이다. 위쪽에 붙여 두면 아래가 통째로 빈다.
+ */
 @Composable
 private fun ColumnScope.EmptyContent(onStartIntakeClick: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .weight(1f)
-            .fillMaxWidth()
-            .padding(horizontal = MedicalMateSize.gutter, vertical = MedicalMateSpace.s40),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        MedicalMateEmptyState(
-            type = MedicalMateEmptyStateType.NO_RECORD,
-            title = stringResource(R.string.record_empty_title),
-            description = stringResource(R.string.record_empty_description),
-            actionLabel = stringResource(R.string.record_empty_action),
-            onActionClick = onStartIntakeClick,
-        )
-    }
+    MedicalMateEmptyState(
+        type = MedicalMateEmptyStateType.NO_RECORD,
+        title = stringResource(R.string.record_empty_title),
+        description = stringResource(R.string.record_empty_description),
+        actionLabel = stringResource(R.string.record_empty_action),
+        onActionClick = onStartIntakeClick,
+        modifier = Modifier.weight(1f).padding(horizontal = MedicalMateSize.gutter),
+    )
 }
 
 @MedicalMateScreenPreviews
