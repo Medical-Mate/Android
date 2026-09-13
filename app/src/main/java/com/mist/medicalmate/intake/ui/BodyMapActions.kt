@@ -75,7 +75,16 @@ class BodyMapActions(private val update: ((BodyMapUiState) -> BodyMapUiState) ->
 
     /** 인체도와 목록을 오간다. 고른 부위는 양쪽이 같은 값이라 그대로 둔다. */
     fun onListModeToggle() {
-        update { it.copy(byList = !it.byList, search = "", searchResults = emptyList()) }
+        update { it.copy(byList = !it.byList, byMap3d = false, search = "", searchResults = emptyList()) }
+    }
+
+    /**
+     * 3D 인체도로 짚는 화면을 여닫는다. 테스트용이다(#211).
+     *
+     * 목록과 함께 켜지지 않게 한다. 셋이 같은 자리를 쓴다.
+     */
+    fun onMap3dToggle() {
+        update { it.copy(byMap3d = !it.byMap3d, byList = false, search = "", searchResults = emptyList()) }
     }
 
     /**
