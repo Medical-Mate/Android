@@ -68,7 +68,7 @@ internal constructor(
      */
     fun onDaySelect(date: LocalDate) {
         mutableUiState.update { state ->
-            val schedules = state.appointments.filter { it.at.toLocalDate() == date }
+            val schedules = state.appointments.filter { it.on == date }
             state.copy(
                 selected = date,
                 schedules = schedules.map { it.toSchedule(state.today) },
@@ -105,7 +105,7 @@ private fun CalendarUiState.withMonth(
 ): CalendarUiState {
     val live = appointments.filter { it.status != AppointmentStatus.CANCELED }
     val monthCards = cards.filter { YearMonth.from(it.writtenOn) == month }
-    val onSelected = live.filter { it.at.toLocalDate() == selected }
+    val onSelected = live.filter { it.on == selected }
     return copy(
         appointments = live,
         cards = monthCards,
@@ -130,7 +130,7 @@ private fun plannedDays(
     month: YearMonth,
     today: LocalDate,
 ): Set<Int> {
-    val scheduled = appointments.map { it.at.toLocalDate() }
+    val scheduled = appointments.map { it.on }
     val revisits = visits.mapNotNull { it.followUpDate }
     return (scheduled + revisits)
         .filter { it >= today && YearMonth.from(it) == month }
@@ -157,9 +157,9 @@ private fun emptyState(today: LocalDate) = CalendarUiState(
 private fun Appointment.toSchedule(today: LocalDate) = CalendarSchedule(
     id = id.toString(),
     title = title,
-    time = at.toLocalTime().format(TIME_FORMAT),
-    detail = cardTitle.orEmpty(),
-    dday = at.toLocalDate().toEpochDay() - today.toEpochDay(),
+    time = time?.format(TIME_FORMAT),
+    detail = cards.firstOrNull()?.title.orEmpty(),
+    dday = on.toEpochDay() - today.toEpochDay(),
 )
 
 /** 시안의 "오전 10:30". 기기 언어가 한국어가 아니어도 한 줄 안에서 언어가 갈리지 않게 한다. */

@@ -29,17 +29,29 @@ internal data class HomeResponse(
     val recentCards: List<CardSummaryResponse> = emptyList(),
 )
 
+/**
+ * 다음 일정.
+ *
+ * **날짜와 시각이 따로 온다**(#202). [scheduledTime]이 없으면 시간 미정이다. 카드도 한 장이
+ * 아니라 목록이다. 전에는 `scheduledAt` 하나와 `cardId`·`cardTitle`이었고, 서버가 모양을
+ * 바꾸면서 홈에서 앱이 죽었다.
+ */
 @Serializable
 internal data class AppointmentResponse(
     val appointmentId: Long,
     val clinicName: String? = null,
     val department: String? = null,
     val purpose: String? = null,
-    val scheduledAt: String,
+    val scheduledOn: String,
+    val scheduledTime: String? = null,
     val status: String? = null,
-    val cardId: Long? = null,
-    val cardTitle: String? = null,
+    val origin: String? = null,
+    val cards: List<LinkedCardResponse> = emptyList(),
 )
+
+/** 일정에 붙은 카드. */
+@Serializable
+internal data class LinkedCardResponse(val cardId: Long, val title: String? = null)
 
 /**
  * 임시저장된 문답.

@@ -229,7 +229,7 @@ internal fun ScheduleRow(schedule: HomeSchedule, today: LocalDate, onClick: () -
         stringResource(
             R.string.home_schedule_meta,
             schedule.date.format(scheduleDate),
-            schedule.time,
+            schedule.time ?: stringResource(R.string.calendar_time_unset),
         ),
         badge = stringResource(R.string.home_schedule_dday, daysUntil(today, schedule.date)),
         badgeTone = MedicalMateBadgeTone.BRAND,

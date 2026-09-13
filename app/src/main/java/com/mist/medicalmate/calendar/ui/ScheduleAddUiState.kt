@@ -12,9 +12,9 @@ import java.time.LocalTime
  * [hospital]과 [date]가 필수다. 나머지는 선택이다.
  *
  * **시간은 필수가 아니다.** 진료 시각을 아직 모르고 날짜만 잡아 두는 일이 흔하다. 시안도
- * 그 칸에 필수 표시를 두지 않는다. 안 고르면 [DEFAULT_TIME]으로 저장한다 — 서버
- * `scheduledAt`이 시각을 요구하고 "미정"을 실을 자리가 없다(Backend#82). 저장한 뒤 일자
- * 화면에 그 시각이 그대로 보이므로 무엇이 들어갔는지는 감춰지지 않는다.
+ * 그 칸에 필수 표시를 두지 않는다. 안 고르면 시각 없이 저장한다(#202) — 서버가 시간 미정을
+ * 담는 자리를 열었다. 전에는 `scheduledAt`이 시각을 요구해 오전 9시로 박고 있었고, 환자가
+ * 고르지 않은 시각이 일자 화면에 그대로 떴다.
  */
 data class ScheduleAddUiState(
     val cards: List<ScheduleAddCard> = emptyList(),
@@ -41,14 +41,6 @@ data class ScheduleAddUiState(
 
     val dateMissing: Boolean get() = showErrors && date == null
 }
-
-/**
- * 시간을 고르지 않았을 때 저장하는 시각.
- *
- * 진료가 시작되는 무렵이다. 한밤중(00:00)으로 두면 일자 화면에 "오전 12:00"이 떠서 잘못
- * 고른 것처럼 보인다.
- */
-val DEFAULT_TIME: LocalTime = LocalTime.of(9, 0)
 
 /** 가져갈 카드 후보 한 장. */
 data class ScheduleAddCard(val id: String, val title: String, val meta: String, val picked: Boolean = false)

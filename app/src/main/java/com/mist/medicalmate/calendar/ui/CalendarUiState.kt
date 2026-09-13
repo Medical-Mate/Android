@@ -40,7 +40,8 @@ data class CalendarUiState(
  * [dday]는 오늘로부터 남은 일수다. 화면이 열린 날 기준이라 저장해 두지 않고 계산해서
  * 넣는다. 지난 일정은 음수가 되고 화면이 표시를 감춘다.
  */
-data class CalendarSchedule(val id: String, val title: String, val time: String, val detail: String, val dday: Long)
+/** [time]이 없으면 시간 미정이다. 화면이 그 자리에 "시간 미정"을 적는다(#202). */
+data class CalendarSchedule(val id: String, val title: String, val time: String?, val detail: String, val dday: Long)
 
 /**
  * 캘린더 일자 화면의 상태. Figma 1r-2 `406:2514`, 1r-2-A `1060:2879`, 1r-2-A2 `1060:2998`.

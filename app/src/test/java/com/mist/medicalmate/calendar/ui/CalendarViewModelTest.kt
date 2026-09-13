@@ -1,5 +1,6 @@
 package com.mist.medicalmate.calendar.ui
 import com.mist.medicalmate.calendar.data.Appointment
+import com.mist.medicalmate.calendar.data.AppointmentCard
 import com.mist.medicalmate.calendar.data.AppointmentEdit
 import com.mist.medicalmate.calendar.data.AppointmentStatus
 import com.mist.medicalmate.calendar.data.NewAppointment
@@ -23,7 +24,7 @@ import org.junit.Test
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
-import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.YearMonth
 import java.time.ZoneId
 
@@ -248,10 +249,10 @@ private val monthAppointment =
     Appointment(
         id = 1,
         title = "서울OO병원 내과 재진",
-        at = LocalDateTime.of(2026, 9, 12, 10, 30),
+        on = LocalDate.of(2026, 9, 12),
+        time = LocalTime.of(10, 30),
         status = AppointmentStatus.SCHEDULED,
-        cardId = 1,
-        cardTitle = "복부 통증 · 3주",
+        cards = listOf(AppointmentCard(id = 1, title = "복부 통증 · 3주")),
     )
 
 private class FakeMonthRepository(private val appointments: List<Appointment>) :

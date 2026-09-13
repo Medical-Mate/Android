@@ -196,8 +196,9 @@ class HomeRepositoryTest {
             AppointmentResponse(
                 appointmentId = 1,
                 clinicName = "서울OO병원 내과",
-                scheduledAt = "2026-09-12T10:30:00+09:00",
-                cardTitle = "서울OO병원 내과 재진",
+                scheduledOn = "2026-09-12",
+                scheduledTime = "10:30:00",
+                cards = listOf(LinkedCardResponse(cardId = 1, title = "서울OO병원 내과 재진")),
             )
 
         val confirmedCard =

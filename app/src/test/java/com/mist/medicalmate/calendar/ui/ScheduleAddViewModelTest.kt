@@ -1,5 +1,6 @@
 package com.mist.medicalmate.calendar.ui
 import com.mist.medicalmate.calendar.data.Appointment
+import com.mist.medicalmate.calendar.data.AppointmentCard
 import com.mist.medicalmate.calendar.data.AppointmentEdit
 import com.mist.medicalmate.calendar.data.AppointmentRepository
 import com.mist.medicalmate.calendar.data.AppointmentStatus
@@ -21,7 +22,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
-import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.YearMonth
 
@@ -217,7 +217,8 @@ class ScheduleAddViewModelTest {
 
         viewModel.onSaveClick {}
 
-        assertEquals(LocalDateTime.of(2026, 9, 26, 10, 30), repository.createdAt)
+        assertEquals(LocalDate.of(2026, 9, 26), repository.createdOn)
+        assertEquals(LocalTime.of(10, 30), repository.createdTime)
         assertEquals("서울OO병원 내과", repository.createdClinic)
     }
 
@@ -299,8 +300,10 @@ class ScheduleAddViewModelTest {
 
         viewModel.onSaveClick {}
 
-        // 서버가 시각 없는 일정을 받지 못해 기본 시각으로 나간다.
-        assertEquals(LocalDateTime.of(2026, 9, 26, 9, 0), repository.createdAt)
+        // 시각 없이 나간다. 서버가 "시간 미정"으로 만든다(#202). 전에는 자리가 없어 오전
+        // 9시로 박았고, 환자가 고르지 않은 시각이 일자 화면에 그대로 떴다.
+        assertEquals(LocalDate.of(2026, 9, 26), repository.createdOn)
+        assertNull(repository.createdTime)
     }
 
     @Test
@@ -347,9 +350,11 @@ private val pickableCards =
 
 /** 무엇을 보냈는지 기록한다. */
 internal class RecordingAppointmentRepository : AppointmentRepository {
-    var createdAt: LocalDateTime? = null
+    var createdOn: LocalDate? = null
+
+    var createdTime: LocalTime? = null
     var createdClinic: String? = null
-    var createdCardId: Long? = null
+    var createdCardIds: List<Long> = emptyList()
     var createCount = 0
 
     override suspend fun month(month: YearMonth) = ApiResult.Success(emptyList<Appointment>())
@@ -363,18 +368,19 @@ internal class RecordingAppointmentRepository : AppointmentRepository {
 
     override suspend fun create(appointment: NewAppointment): ApiResult<Appointment> {
         createCount += 1
-        createdAt = appointment.at
+        createdOn = appointment.on
+        createdTime = appointment.time
         createdClinic = appointment.clinicName
-        createdCardId = appointment.cardId
+        createdCardIds = appointment.cardIds
         createdTodos = appointment.todos
         return ApiResult.Success(
             Appointment(
                 id = 1,
                 title = appointment.clinicName.orEmpty(),
-                at = appointment.at,
+                on = appointment.on,
+                time = appointment.time,
                 status = AppointmentStatus.SCHEDULED,
-                cardId = appointment.cardId,
-                cardTitle = null,
+                cards = appointment.cardIds.map { AppointmentCard(id = it, title = null) },
             ),
         )
     }
@@ -382,9 +388,10 @@ internal class RecordingAppointmentRepository : AppointmentRepository {
     override suspend fun update(id: Long, edit: AppointmentEdit) = create(
         NewAppointment(
             clinicName = null,
-            at = edit.at ?: LocalDateTime.now(),
+            on = edit.on ?: LocalDate.now(),
+            time = edit.time,
             purpose = edit.purpose,
-            cardId = edit.cardId,
+            cardIds = edit.cardIds.orEmpty(),
             todos = edit.todos.orEmpty(),
         ),
     )

@@ -91,7 +91,10 @@ internal constructor(
         if (cardId == null) return null
         return (appointments.upcoming() as? ApiResult.Success)
             ?.value
-            ?.firstOrNull { it.cardId == cardId && it.status != AppointmentStatus.CANCELED }
+            ?.firstOrNull { appointment ->
+                appointment.cards.any { it.id == cardId } &&
+                    appointment.status != AppointmentStatus.CANCELED
+            }
     }
 
     fun onExpandToggle(index: Int) {
@@ -137,9 +140,10 @@ private fun Visit.toDetail(card: BriefCard?, next: Appointment?): RecordDetail {
  * 시안의 점선 블록이다. 날짜는 칩 자리에, 병원과 시각은 둘째 줄에 온다.
  */
 private fun Appointment.toPending() = RecordStep.Pending(
-    at = at.toLocalDate().format(PENDING_AT),
+    at = on.format(PENDING_AT),
     message = "재방문 예약됨",
-    detail = listOf(title, at.toLocalTime().format(PENDING_TIME)).joinToString(" · "),
+    // 시각이 없으면 병원만 적는다. 시간 미정인 일정이다(#202).
+    detail = listOfNotNull(title, time?.format(PENDING_TIME)).joinToString(" · "),
 )
 
 /**

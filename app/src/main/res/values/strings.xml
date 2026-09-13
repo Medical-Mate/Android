@@ -135,6 +135,8 @@
     <string name="calendar_next_month">다음달</string>
     <string name="calendar_month">%1$d년 %2$d월</string>
     <string name="calendar_add_schedule">일정 추가</string>
+    <!-- 시각을 정하지 않고 날짜만 잡아 둔 일정(#202). -->
+    <string name="calendar_time_unset">시간 미정</string>
     <string name="calendar_legend_record">기록 있음</string>
     <string name="calendar_legend_planned">예정</string>
     <!-- 월 격자의 요일 머리글. 일요일 시작. -->

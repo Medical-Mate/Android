@@ -185,7 +185,7 @@ private fun ColumnScope.ScheduleSection(state: CalendarDayUiState) {
             color = MedicalMateTheme.colors.fgDefault,
         )
         Text(
-            text = schedule.time,
+            text = schedule.time ?: stringResource(R.string.calendar_time_unset),
             style = MedicalMateTheme.typography.bodyM,
             color = MedicalMateTheme.colors.fgSubtle,
         )
