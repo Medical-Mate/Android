@@ -45,14 +45,6 @@ interface CardRepository {
     suspend fun deleteAll(cardIds: Set<String>): Set<String>
 
     suspend fun confirm(cardId: Long): ApiResult<BriefCard>
-
-    /**
-     * 진료실에서 보여주는 화면.
-     *
-     * 확정한 카드만 열린다. 여는 순간이 전달 시각으로 기록되므로, 그냥 카드 조회로 대신하면
-     * 서버에 "보여줬다"가 남지 않는다.
-     */
-    suspend fun handoff(cardId: Long): ApiResult<BriefCard>
 }
 
 internal class DefaultCardRepository
@@ -93,9 +85,6 @@ constructor(private val api: CardApi, private val json: Json) :
 
     override suspend fun confirm(cardId: Long): ApiResult<BriefCard> =
         apiCall(json) { api.confirm(cardId) }.map { it.toBriefCard() }
-
-    override suspend fun handoff(cardId: Long): ApiResult<BriefCard> =
-        apiCall(json) { api.handoff(cardId) }.map { it.toBriefCard(cardId) }
 }
 
 /** 고친 축 하나. 서버가 `{"axis":"onset","value":"3주 전"}`으로 받는다. */

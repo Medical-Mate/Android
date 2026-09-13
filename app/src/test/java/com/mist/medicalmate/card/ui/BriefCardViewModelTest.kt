@@ -413,8 +413,6 @@ internal class FakeCardRepository(
         return result ?: ApiResult.Success(card.copy(status = BriefCard.Status.CONFIRMED))
     }
 
-    override suspend fun handoff(cardId: Long) = result ?: ApiResult.Success(card)
-
     override suspend fun delete(cardId: Long): ApiResult<Unit> {
         deleted += cardId
         return if (cardId.toString() in deleteFails) OFFLINE else ApiResult.Success(Unit)

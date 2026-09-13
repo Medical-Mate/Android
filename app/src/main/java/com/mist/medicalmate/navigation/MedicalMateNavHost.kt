@@ -15,10 +15,8 @@ import com.mist.medicalmate.auth.ui.SessionUiState
 import com.mist.medicalmate.calendar.ui.CalendarDestination
 import com.mist.medicalmate.card.ui.BriefCardDestination
 import com.mist.medicalmate.card.ui.BriefCardListDestination
-import com.mist.medicalmate.card.ui.HandoffDestination
 import com.mist.medicalmate.card.ui.RecordDestination
 import com.mist.medicalmate.card.ui.briefCardDestination
-import com.mist.medicalmate.card.ui.handoffDestination
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
 import com.mist.medicalmate.home.ui.HomeDestination
 import com.mist.medicalmate.home.ui.homeDestination
@@ -88,10 +86,8 @@ internal fun MedicalMateNavHost(
                     launchSingleTop = true
                 }
             },
-            onHandoff = { cardId -> navController.navigate(HandoffDestination(cardId)) },
             onExit = { navController.popBackStack() },
         )
-        handoffDestination(onDone = { navController.popBackStack() })
         homeDestination(
             // 이어서 하기는 서버가 들고 있는 문답 id를 함께 넘긴다. 새로 시작하면 null이다.
             onIntakeClick = { sessionId ->

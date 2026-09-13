@@ -123,21 +123,6 @@ class CardMappingTest {
     }
 
     @Test
-    fun `전달 응답은 넘겨받은 id와 확정 상태를 쓴다`() {
-        val card =
-            HandoffResponse(
-                patient = PatientResponse(name = "김OO", age = 32, sex = "FEMALE"),
-                chiefComplaint = "왼쪽 무릎이 아파요",
-                axes = mapOf("site" to axis("FILLED", "왼쪽 무릎")),
-                confirmedAt = "2026-09-04T09:00:00+09:00",
-            ).toBriefCard(cardId = 42)
-
-        assertEquals("42", card.id)
-        assertEquals(BriefCard.Status.CONFIRMED, card.status)
-        assertEquals("왼쪽 무릎", card.items.single().value)
-    }
-
-    @Test
     fun `목록 제목이 길면 줄인다`() {
         // 서버가 환자 원문을 제목 자리에 준다. 목록 줄은 한 줄이라 넘치면 무엇인지 알 수 없다.
         val long = "왼쪽 무릎이 계단 내려갈 때마다 시큰거리고 밤에도 욱신거려요"

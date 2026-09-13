@@ -97,7 +97,6 @@ data class BriefCardCallbacks(
     val onDeleteClick: () -> Unit = {},
     val onDeleteDismiss: () -> Unit = {},
     val onDeleteConfirm: () -> Unit = {},
-    val onHandoffClick: () -> Unit = {},
     val onRetryClick: () -> Unit = {},
 )
 

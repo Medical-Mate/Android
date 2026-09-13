@@ -135,37 +135,6 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
         }
     }
 
-    /**
-     * 하단 `진료실에서 보여주기`. 전달 화면으로 가기 전에 카드를 확정한다.
-     *
-     * 전달 경로는 확정한 카드만 연다. 초안이면 400이다. 이미 확정한 카드를 다시 확정해도
-     * 400이므로 그때는 그냥 넘어간다. 확정 상태를 화면이 들고 있어서 다시 부를 일이 없다.
-     *
-     * [onConfirmed]는 화면 이동이다. 확정에 실패하면 부르지 않는다. 전달 화면이 열리자마자
-     * 400으로 비어 버리는 것보다 여기서 멈추는 편이 낫다.
-     */
-    fun onHandoffClick(onConfirmed: (String) -> Unit) {
-        val state = mutableUiState.value as? BriefCardUiState.Content ?: return
-        val cardId = state.card.id.toLongOrNull()
-        if (cardId == null || state.card.status == BriefCard.Status.CONFIRMED) {
-            // 이미 확정했으면 그대로 간다. 다시 확정하면 400이다.
-            if (cardId != null) onConfirmed(state.card.id)
-            return
-        }
-
-        viewModelScope.launch {
-            when (val result = repository.confirm(cardId)) {
-                is ApiResult.Success -> {
-                    mutableUiState.value = state.copy(card = result.value.copy(hospital = state.card.hospital))
-                    onConfirmed(result.value.id)
-                }
-
-                is ApiResult.Rejected, is ApiResult.NetworkUnavailable ->
-                    mutableUiState.value = state.copy(saveFailed = true)
-            }
-        }
-    }
-
     /** Nav 우측 `취소`. 사본을 버리고 원래 값으로 돌아간다. */
     fun onCancelClick() {
         mutableUiState.update { state ->

@@ -1,6 +1,5 @@
 package com.mist.medicalmate.card.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,7 +11,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.mist.medicalmate.R
-import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateBadge
@@ -235,34 +233,4 @@ internal fun QuestionsCallout(
         modifier = modifier,
         edit = edit,
     )
-}
-
-/**
- * 진료실 화면 맨 위 안내. Figma `404:1837`.
- *
- * 폰을 건네받은 의사가 처음 읽는 줄이다. 이 화면이 환자가 미리 정리한 것이라는 사실을
- * 밝힌다. 툴팁으로 무엇을 어떻게 정리했는지를 덧붙인다.
- */
-@Composable
-internal fun HandoffHeader(modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(color = MedicalMateTheme.colors.bgSubtle, shape = MedicalMateRadius.md)
-            .padding(start = MedicalMateSpace.s16, end = MedicalMateSpace.s4),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = stringResource(R.string.handoff_header),
-            style = MedicalMateTheme.typography.bodyS,
-            color = MedicalMateTheme.colors.fgSubtle,
-            modifier = Modifier
-                .weight(1f)
-                .padding(vertical = MedicalMateSpace.s14),
-        )
-        MedicalMateTooltip(
-            text = stringResource(R.string.handoff_tooltip),
-            contentDescription = stringResource(R.string.handoff_tooltip_open),
-        )
-    }
 }
