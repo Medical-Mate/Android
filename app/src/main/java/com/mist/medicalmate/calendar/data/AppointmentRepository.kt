@@ -25,32 +25,9 @@ interface AppointmentRepository {
 
     suspend fun upcoming(): ApiResult<List<Appointment>>
 
-    /**
-     * 일정을 만든다.
-     *
-     * @param cardId 가져갈 카드. 선택이다. 카드 없이 "다음 주 치과"만 적을 수 있어야 한다.
-     */
-    suspend fun create(
-        clinicName: String?,
-        department: String?,
-        purpose: String?,
-        at: LocalDateTime,
-        cardId: Long?,
-    ): ApiResult<Appointment>
+    suspend fun create(appointment: NewAppointment): ApiResult<Appointment>
 
-    /**
-     * 일정을 고친다.
-     *
-     * @param clearCard 카드 연결을 끊는다. `cardId = null`은 "안 바꿈"이라 이 플래그가 따로
-     *   필요하다. 둘을 함께 보내지 않는다.
-     */
-    suspend fun update(
-        id: Long,
-        at: LocalDateTime? = null,
-        purpose: String? = null,
-        cardId: Long? = null,
-        clearCard: Boolean = false,
-    ): ApiResult<Appointment>
+    suspend fun update(id: Long, edit: AppointmentEdit): ApiResult<Appointment>
 
     suspend fun delete(id: Long): ApiResult<Unit>
 }
@@ -72,39 +49,29 @@ constructor(
     override suspend fun upcoming(): ApiResult<List<Appointment>> =
         apiCall(json) { api.upcoming() }.map { list -> list.map { it.toAppointment() } }
 
-    override suspend fun create(
-        clinicName: String?,
-        department: String?,
-        purpose: String?,
-        at: LocalDateTime,
-        cardId: Long?,
-    ): ApiResult<Appointment> = apiCall(json) {
+    override suspend fun create(appointment: NewAppointment): ApiResult<Appointment> = apiCall(json) {
         api.create(
             CreateAppointmentRequest(
-                clinicName = clinicName,
-                department = department,
-                purpose = purpose,
-                scheduledAt = at.toServerTime(),
-                cardId = cardId,
+                clinicName = appointment.clinicName,
+                department = appointment.department,
+                purpose = appointment.purpose,
+                scheduledAt = appointment.at.toServerTime(),
+                cardId = appointment.cardId,
+                todos = appointment.todos.map { TodoResponse(text = it.text, done = it.done) },
             ),
         )
     }.map { it.toAppointment() }
 
-    override suspend fun update(
-        id: Long,
-        at: LocalDateTime?,
-        purpose: String?,
-        cardId: Long?,
-        clearCard: Boolean,
-    ): ApiResult<Appointment> = apiCall(json) {
+    override suspend fun update(id: Long, edit: AppointmentEdit): ApiResult<Appointment> = apiCall(json) {
         api.update(
             id,
             UpdateAppointmentRequest(
-                purpose = purpose,
-                scheduledAt = at?.toServerTime(),
+                purpose = edit.purpose,
+                scheduledAt = edit.at?.toServerTime(),
                 // 카드를 끊는 요청에는 id를 싣지 않는다. 서버가 둘을 함께 받으면 어느 쪽인지 모른다.
-                cardId = cardId.takeUnless { clearCard },
-                clearCard = true.takeIf { clearCard },
+                cardId = edit.cardId.takeUnless { edit.clearCard },
+                clearCard = true.takeIf { edit.clearCard },
+                todos = edit.todos?.map { TodoResponse(text = it.text, done = it.done) },
             ),
         )
     }.map { it.toAppointment() }
@@ -127,7 +94,48 @@ data class Appointment(
     val status: AppointmentStatus,
     val cardId: Long?,
     val cardTitle: String?,
+    /** 진료 전 할 일. 그 일정에 매달린다. */
+    val todos: List<AppointmentTodo> = emptyList(),
 )
+
+/**
+ * 만들 일정.
+ *
+ * @param cardId 가져갈 카드. 선택이다. 카드 없이 "다음 주 치과"만 적을 수 있어야 한다.
+ */
+data class NewAppointment(
+    val clinicName: String?,
+    val at: LocalDateTime,
+    val department: String? = null,
+    val purpose: String? = null,
+    val cardId: Long? = null,
+    val todos: List<AppointmentTodo> = emptyList(),
+)
+
+/**
+ * 고칠 것.
+ *
+ * null은 "안 바꿈"이다.
+ *
+ * @param clearCard 카드 연결을 끊는다. [cardId]가 null인 것은 "안 바꿈"이라 이 플래그가 따로
+ *   필요하다. 둘을 함께 보내지 않는다.
+ * @param todos 통째로 갈아끼운다. 지운 줄이 남지 않으려면 화면에 있는 것을 전부 보내야 한다.
+ */
+data class AppointmentEdit(
+    val at: LocalDateTime? = null,
+    val purpose: String? = null,
+    val cardId: Long? = null,
+    val clearCard: Boolean = false,
+    val todos: List<AppointmentTodo>? = null,
+)
+
+/**
+ * 할 일 한 줄.
+ *
+ * 서버가 id를 매기지 않는다. 화면의 key는 앱이 차례로 만든다 — 같은 글이 두 줄 있을 수 있어
+ * 글을 key로 쓸 수 없다.
+ */
+data class AppointmentTodo(val text: String, val done: Boolean = false)
 
 enum class AppointmentStatus { SCHEDULED, DONE, CANCELED }
 
@@ -138,6 +146,7 @@ private fun AppointmentResponse.toAppointment() = Appointment(
     status = statusOf(status),
     cardId = cardId,
     cardTitle = cardTitle,
+    todos = todos.map { AppointmentTodo(text = it.text, done = it.done) },
 )
 
 /**

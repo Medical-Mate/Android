@@ -3,8 +3,10 @@ package com.mist.medicalmate.calendar.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mist.medicalmate.calendar.data.Appointment
+import com.mist.medicalmate.calendar.data.AppointmentEdit
 import com.mist.medicalmate.calendar.data.AppointmentRepository
 import com.mist.medicalmate.calendar.data.AppointmentStatus
+import com.mist.medicalmate.calendar.data.AppointmentTodo
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.visit.data.VisitListItem
 import com.mist.medicalmate.visit.data.VisitRepository
@@ -65,7 +67,7 @@ internal constructor(
                     card = appointment?.toDayCard(),
                     record = record?.toDayRecord(),
                     // 진료가 끝난 날에는 진료 전 할 일을 두지 않는다. 시안 1r-2-A도 그렇다.
-                    todos = if (record == null) dayState(date).todos else emptyList(),
+                    todos = if (record == null) appointment?.todos.toDayTodos() else emptyList(),
                     nextEvent = record?.let { nextEvent(date, it) },
                 )
         }
@@ -95,39 +97,27 @@ internal constructor(
         return record.followUpDate?.takeIf { it > date }?.toRevisit(record.clinic)
     }
 
-    /** 할 일 체크. 편집 중이면 사본을 고친다. */
-    fun onTodoToggle(id: String, done: Boolean) {
-        mutableUiState.update { state ->
-            state?.copy(todos = state.todos.map { if (it.id == id) it.copy(done = done) else it })
-        }
-    }
-
-    fun onEditStart() {
-        mutableUiState.update { it?.copy(todoDraft = it.todos) }
-    }
-
-    /** 편집을 버린다. 사본을 지우면 본값이 그대로 남는다. */
-    fun onEditCancel() {
-        mutableUiState.update { it?.copy(todoDraft = null, deleteRequested = false) }
-    }
-
-    /** 편집을 마친다. 사본이 본값이 된다. */
-    fun onEditDone() {
-        mutableUiState.update { state ->
-            state?.copy(todos = state.todoDraft ?: state.todos, todoDraft = null)
-        }
-    }
+    /** 할 일 조작. 다섯 가지라 여기 얹으면 한 클래스가 너무 많은 일을 한다. */
+    val todo =
+        CalendarDayTodoActions(
+            editing = { mutableUiState.value?.todoDraft != null },
+            update = { change -> mutableUiState.update { it?.change() } },
+            save = ::saveTodos,
+        )
 
     /**
-     * 할 일 줄의 ×.
+     * 할 일을 일정에 남긴다.
      *
-     * 확인을 붙이지 않는다. 개체가 아니라 안의 항목이고, 편집을 벗어나기 전이면 취소가
-     * 실행 취소를 대신한다.
+     * **통째로 갈아끼운다.** 지운 줄이 남지 않으려면 화면에 있는 것을 전부 보내야 한다.
+     *
+     * 일정이 없으면 보낼 곳이 없다. 할 일은 일정에 매달린 값이라 그 날 일정이 없으면 화면에도
+     * 할 일이 없다.
      */
-    fun onTodoDelete(id: String) {
-        mutableUiState.update { state ->
-            state?.copy(todoDraft = state.todoDraft?.filterNot { it.id == id })
-        }
+    private fun saveTodos() {
+        val state = mutableUiState.value ?: return
+        val id = state.schedule?.id?.toLongOrNull() ?: return
+        val todos = state.todos.map { AppointmentTodo(text = it.label, done = it.done) }
+        viewModelScope.launch { repository.update(id = id, edit = AppointmentEdit(todos = todos)) }
     }
 
     fun onScheduleDeleteClick() {
@@ -193,6 +183,14 @@ private fun Appointment.toNextEvent(today: LocalDate) = DayNextEvent(
     at = at.format(NEXT_EVENT_FORMAT),
     clinic = title,
 )
+
+/**
+ * 서버의 할 일을 화면 줄로.
+ *
+ * 서버가 id를 매기지 않아 차례로 만든다. 같은 글이 두 줄 있을 수 있어 글을 key로 쓸 수 없다.
+ */
+private fun List<AppointmentTodo>?.toDayTodos(): List<DayTodo> =
+    orEmpty().mapIndexed { index, todo -> DayTodo(id = "todo-${index + 1}", label = todo.text, done = todo.done) }
 
 /**
  * 확정 전 재방문.

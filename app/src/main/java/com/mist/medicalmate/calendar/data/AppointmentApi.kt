@@ -58,7 +58,12 @@ internal data class AppointmentResponse(
     val status: String? = null,
     val cardId: Long? = null,
     val cardTitle: String? = null,
+    val todos: List<TodoResponse> = emptyList(),
 )
+
+/** 진료 전 할 일 한 줄. 일정에 매달린다. */
+@Serializable
+internal data class TodoResponse(val text: String, val done: Boolean = false)
 
 @Serializable
 internal data class CreateAppointmentRequest(
@@ -67,6 +72,7 @@ internal data class CreateAppointmentRequest(
     val purpose: String? = null,
     val scheduledAt: String,
     val cardId: Long? = null,
+    val todos: List<TodoResponse> = emptyList(),
 )
 
 /**
@@ -84,4 +90,6 @@ internal data class UpdateAppointmentRequest(
     val status: String? = null,
     val cardId: Long? = null,
     val clearCard: Boolean? = null,
+    /** 통째로 갈아끼운다. 지운 줄이 남지 않으려면 화면에 있는 것을 전부 보내야 한다. */
+    val todos: List<TodoResponse>? = null,
 )

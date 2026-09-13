@@ -1,7 +1,10 @@
 package com.mist.medicalmate.calendar.ui
 import com.mist.medicalmate.calendar.data.Appointment
+import com.mist.medicalmate.calendar.data.AppointmentEdit
 import com.mist.medicalmate.calendar.data.AppointmentRepository
 import com.mist.medicalmate.calendar.data.AppointmentStatus
+import com.mist.medicalmate.calendar.data.AppointmentTodo
+import com.mist.medicalmate.calendar.data.NewAppointment
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.visit.data.FakeVisitRepository
 import com.mist.medicalmate.visit.data.VisitListItem
@@ -57,7 +60,7 @@ class CalendarDayViewModelTest {
     fun `편집으로 들어가면 사본이 본값과 같다`() {
         val viewModel = loaded()
 
-        viewModel.onEditStart()
+        viewModel.todo.onEditStart()
 
         assertTrue(viewModel.state().editing)
         assertEquals(viewModel.state().todos, viewModel.state().todoDraft)
@@ -67,9 +70,9 @@ class CalendarDayViewModelTest {
     @Test
     fun `할 일을 지우면 바뀐 것이 있다`() {
         val viewModel = loaded()
-        viewModel.onEditStart()
+        viewModel.todo.onEditStart()
 
-        viewModel.onTodoDelete("todo-2")
+        viewModel.todo.onDelete("todo-2")
 
         assertTrue(viewModel.state().changed)
         assertEquals(2, viewModel.state().shownTodos.size)
@@ -80,10 +83,10 @@ class CalendarDayViewModelTest {
     @Test
     fun `취소하면 지운 것이 돌아온다`() {
         val viewModel = loaded()
-        viewModel.onEditStart()
-        viewModel.onTodoDelete("todo-2")
+        viewModel.todo.onEditStart()
+        viewModel.todo.onDelete("todo-2")
 
-        viewModel.onEditCancel()
+        viewModel.todo.onEditCancel()
 
         assertFalse(viewModel.state().editing)
         assertEquals(3, viewModel.state().shownTodos.size)
@@ -92,10 +95,10 @@ class CalendarDayViewModelTest {
     @Test
     fun `확인하면 지운 것이 본값이 된다`() {
         val viewModel = loaded()
-        viewModel.onEditStart()
-        viewModel.onTodoDelete("todo-2")
+        viewModel.todo.onEditStart()
+        viewModel.todo.onDelete("todo-2")
 
-        viewModel.onEditDone()
+        viewModel.todo.onEditDone()
 
         assertFalse(viewModel.state().editing)
         assertEquals(listOf("todo-1", "todo-3"), viewModel.state().todos.map { it.id })
@@ -104,9 +107,9 @@ class CalendarDayViewModelTest {
     @Test
     fun `체크는 바뀐 것으로 세지 않는다`() {
         val viewModel = loaded()
-        viewModel.onEditStart()
+        viewModel.todo.onEditStart()
 
-        viewModel.onTodoToggle("todo-2", true)
+        viewModel.todo.onToggle("todo-2", true)
 
         // 체크는 편집 밖에서도 누를 수 있는 조작이라 편집으로 바꾼 것이 아니다.
         assertFalse(viewModel.state().changed)
@@ -116,15 +119,68 @@ class CalendarDayViewModelTest {
     fun `편집이 아닐 때도 체크는 켜고 끈다`() {
         val viewModel = loaded()
 
-        viewModel.onTodoToggle("todo-2", true)
+        viewModel.todo.onToggle("todo-2", true)
 
         assertTrue(viewModel.state().todos.first { it.id == "todo-2" }.done)
     }
 
     @Test
+    fun `할 일은 그 날 일정에서 온다`() {
+        // 픽스처가 아니다(#187). 서버가 일정에 매달아 준다.
+        val todos = loaded().state().todos
+
+        assertEquals(
+            listOf("달라진 증상 있으면 카드 수정", "복용 중인 약 챙기기", "지난 검사 결과 사진 준비"),
+            todos.map { it.label },
+        )
+        assertTrue(todos.first().done)
+    }
+
+    @Test
+    fun `체크하면 서버로 나간다`() {
+        val repository = FakeAppointmentRepository(listOf(testAppointment))
+        val viewModel = dayViewModel(repository = repository).apply { load(VisitDate) }
+
+        viewModel.todo.onToggle("todo-2", true)
+
+        assertEquals(
+            listOf(true, true, false),
+            repository.savedTodos?.map { it.done },
+        )
+    }
+
+    @Test
+    fun `편집 중 체크는 서버로 나가지 않는다`() {
+        // 취소가 실행 취소를 대신하는데 이미 보냈으면 되돌릴 것이 없다.
+        val repository = FakeAppointmentRepository(listOf(testAppointment))
+        val viewModel = dayViewModel(repository = repository).apply { load(VisitDate) }
+        viewModel.todo.onEditStart()
+
+        viewModel.todo.onToggle("todo-2", true)
+
+        assertNull(repository.savedTodos)
+    }
+
+    @Test
+    fun `편집을 마치면 남은 줄을 통째로 보낸다`() {
+        // 지운 줄이 남지 않으려면 화면에 있는 것을 전부 보내야 한다.
+        val repository = FakeAppointmentRepository(listOf(testAppointment))
+        val viewModel = dayViewModel(repository = repository).apply { load(VisitDate) }
+        viewModel.todo.onEditStart()
+        viewModel.todo.onDelete("todo-2")
+
+        viewModel.todo.onEditDone()
+
+        assertEquals(
+            listOf("달라진 증상 있으면 카드 수정", "지난 검사 결과 사진 준비"),
+            repository.savedTodos?.map { it.text },
+        )
+    }
+
+    @Test
     fun `일정 삭제는 확인을 묻는다`() {
         val viewModel = loaded()
-        viewModel.onEditStart()
+        viewModel.todo.onEditStart()
 
         viewModel.onScheduleDeleteClick()
         assertTrue(viewModel.state().deleteRequested)
@@ -136,10 +192,10 @@ class CalendarDayViewModelTest {
     @Test
     fun `취소하면 삭제 확인도 닫힌다`() {
         val viewModel = loaded()
-        viewModel.onEditStart()
+        viewModel.todo.onEditStart()
         viewModel.onScheduleDeleteClick()
 
-        viewModel.onEditCancel()
+        viewModel.todo.onEditCancel()
 
         assertFalse(viewModel.state().deleteRequested)
         assertFalse(viewModel.state().editing)
@@ -149,7 +205,7 @@ class CalendarDayViewModelTest {
     fun `다녀온 날은 할 일이 없어 편집해도 지울 줄이 없다`() {
         val viewModel = dayViewModel().apply { load(PastVisitDate) }
 
-        viewModel.onEditStart()
+        viewModel.todo.onEditStart()
 
         assertTrue(viewModel.state().editing)
         assertEquals(emptyList<DayTodo>(), viewModel.state().shownTodos)
@@ -296,8 +352,9 @@ class CalendarDayViewModelTest {
 private fun dayViewModel(
     appointments: List<Appointment> = listOf(testAppointment),
     visits: List<VisitListItem> = emptyList(),
+    repository: FakeAppointmentRepository = FakeAppointmentRepository(appointments),
 ) = CalendarDayViewModel(
-    FakeAppointmentRepository(appointments),
+    repository,
     FakeVisitRepository(list = ApiResult.Success(visits)),
     fixedClock,
 )
@@ -333,6 +390,13 @@ private val testAppointment =
         status = AppointmentStatus.SCHEDULED,
         cardId = 1,
         cardTitle = "복부 통증 · 3주",
+        // 진료 전 할 일은 일정에 매달린다(#187). 전에는 픽스처 세 줄이었다.
+        todos =
+        listOf(
+            AppointmentTodo(text = "달라진 증상 있으면 카드 수정", done = true),
+            AppointmentTodo(text = "복용 중인 약 챙기기"),
+            AppointmentTodo(text = "지난 검사 결과 사진 준비"),
+        ),
     )
 
 private class FakeAppointmentRepository(private val appointments: List<Appointment>) : AppointmentRepository {
@@ -345,16 +409,15 @@ private class FakeAppointmentRepository(private val appointments: List<Appointme
 
     override suspend fun upcoming() = ApiResult.Success(appointments)
 
-    override suspend fun create(
-        clinicName: String?,
-        department: String?,
-        purpose: String?,
-        at: LocalDateTime,
-        cardId: Long?,
-    ) = ApiResult.Success(appointments.first())
+    override suspend fun create(appointment: NewAppointment) = ApiResult.Success(appointments.first())
 
-    override suspend fun update(id: Long, at: LocalDateTime?, purpose: String?, cardId: Long?, clearCard: Boolean) =
-        ApiResult.Success(appointments.first())
+    /** 저장하라고 받은 할 일. 체크가 서버로 나가는지가 관심사다. */
+    var savedTodos: List<AppointmentTodo>? = null
+
+    override suspend fun update(id: Long, edit: AppointmentEdit): ApiResult<Appointment> {
+        edit.todos?.let { savedTodos = it }
+        return ApiResult.Success(appointments.first())
+    }
 
     override suspend fun delete(id: Long): ApiResult<Unit> {
         deletedId = id

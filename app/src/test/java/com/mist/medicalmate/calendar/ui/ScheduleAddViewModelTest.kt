@@ -1,7 +1,10 @@
 package com.mist.medicalmate.calendar.ui
 import com.mist.medicalmate.calendar.data.Appointment
+import com.mist.medicalmate.calendar.data.AppointmentEdit
 import com.mist.medicalmate.calendar.data.AppointmentRepository
 import com.mist.medicalmate.calendar.data.AppointmentStatus
+import com.mist.medicalmate.calendar.data.AppointmentTodo
+import com.mist.medicalmate.calendar.data.NewAppointment
 import com.mist.medicalmate.card.data.CardListItem
 import com.mist.medicalmate.card.ui.FakeCardRepository
 import com.mist.medicalmate.core.network.ApiResult
@@ -219,6 +222,31 @@ class ScheduleAddViewModelTest {
     }
 
     @Test
+    fun `적어 둔 할 일도 함께 보낸다`() {
+        // 전에는 화면 안에서만 살고 저장되지 않았다(#187).
+        val repository = RecordingAppointmentRepository()
+        val viewModel = filled(repository)
+        viewModel.todo.onAddClick()
+        viewModel.todo.onLabelChange(viewModel.uiState.value.todos.last().id, "보험 서류 챙기기")
+
+        viewModel.onSaveClick {}
+
+        assertEquals(listOf("보험 서류 챙기기"), repository.createdTodos.map { it.text })
+    }
+
+    @Test
+    fun `비운 할 일 줄은 보내지 않는다`() {
+        // 적지 않은 것과 빈 줄은 다르다.
+        val repository = RecordingAppointmentRepository()
+        val viewModel = filled(repository)
+        viewModel.todo.onAddClick()
+
+        viewModel.onSaveClick {}
+
+        assertEquals(emptyList<String>(), repository.createdTodos.map { it.text })
+    }
+
+    @Test
     fun `필수 칸이 비면 보내지 않는다`() {
         val repository = RecordingAppointmentRepository()
 
@@ -330,31 +358,36 @@ internal class RecordingAppointmentRepository : AppointmentRepository {
 
     override suspend fun upcoming() = ApiResult.Success(emptyList<Appointment>())
 
-    override suspend fun create(
-        clinicName: String?,
-        department: String?,
-        purpose: String?,
-        at: LocalDateTime,
-        cardId: Long?,
-    ): ApiResult<Appointment> {
+    /** 저장하라고 받은 할 일. 적어 둔 줄이 함께 나가는지가 관심사다. */
+    var createdTodos: List<AppointmentTodo> = emptyList()
+
+    override suspend fun create(appointment: NewAppointment): ApiResult<Appointment> {
         createCount += 1
-        createdAt = at
-        createdClinic = clinicName
-        createdCardId = cardId
+        createdAt = appointment.at
+        createdClinic = appointment.clinicName
+        createdCardId = appointment.cardId
+        createdTodos = appointment.todos
         return ApiResult.Success(
             Appointment(
                 id = 1,
-                title = clinicName.orEmpty(),
-                at = at,
+                title = appointment.clinicName.orEmpty(),
+                at = appointment.at,
                 status = AppointmentStatus.SCHEDULED,
-                cardId = cardId,
+                cardId = appointment.cardId,
                 cardTitle = null,
             ),
         )
     }
 
-    override suspend fun update(id: Long, at: LocalDateTime?, purpose: String?, cardId: Long?, clearCard: Boolean) =
-        create(null, null, purpose, at ?: LocalDateTime.now(), cardId)
+    override suspend fun update(id: Long, edit: AppointmentEdit) = create(
+        NewAppointment(
+            clinicName = null,
+            at = edit.at ?: LocalDateTime.now(),
+            purpose = edit.purpose,
+            cardId = edit.cardId,
+            todos = edit.todos.orEmpty(),
+        ),
+    )
 
     override suspend fun delete(id: Long) = ApiResult.Success(Unit)
 }

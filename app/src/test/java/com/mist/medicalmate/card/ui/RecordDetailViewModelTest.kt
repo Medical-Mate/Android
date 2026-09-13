@@ -1,7 +1,9 @@
 package com.mist.medicalmate.card.ui
 
 import com.mist.medicalmate.calendar.data.Appointment
+import com.mist.medicalmate.calendar.data.AppointmentEdit
 import com.mist.medicalmate.calendar.data.AppointmentRepository
+import com.mist.medicalmate.calendar.data.NewAppointment
 import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.visit.data.FakeVisitRepository
@@ -288,21 +290,9 @@ private class FakeUpcomingRepository(private val list: List<Appointment>) : Appo
 
     override suspend fun upcoming() = ApiResult.Success(list)
 
-    override suspend fun create(
-        clinicName: String?,
-        department: String?,
-        purpose: String?,
-        at: java.time.LocalDateTime,
-        cardId: Long?,
-    ) = ApiResult.Success(list.first())
+    override suspend fun create(appointment: NewAppointment) = ApiResult.Success(list.first())
 
-    override suspend fun update(
-        id: Long,
-        at: java.time.LocalDateTime?,
-        purpose: String?,
-        cardId: Long?,
-        clearCard: Boolean,
-    ) = ApiResult.Success(list.first())
+    override suspend fun update(id: Long, edit: AppointmentEdit) = ApiResult.Success(list.first())
 
     override suspend fun delete(id: Long): ApiResult<Unit> = ApiResult.Success(Unit)
 }
