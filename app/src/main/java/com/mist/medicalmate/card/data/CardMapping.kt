@@ -32,25 +32,6 @@ internal fun CardResponse.toBriefCard(): BriefCard = BriefCard(
     hospital = null,
 )
 
-/**
- * 전달 화면의 응답.
- *
- * id가 응답에 없어서 부른 쪽이 넘긴다. 상태는 확정이다. 확정한 카드만 열리는 경로다.
- */
-internal fun HandoffResponse.toBriefCard(cardId: Long): BriefCard = CardResponse(
-    cardId = cardId,
-    status = STATUS_CONFIRMED,
-    patient = patient,
-    title = title,
-    chiefComplaint = chiefComplaint,
-    axes = axes,
-    redFlags = redFlags,
-    patientNotes = patientNotes,
-    questions = questions,
-    departmentGuidance = departmentGuidance,
-    createdAt = confirmedAt,
-).toBriefCard()
-
 /** 시안의 "김OO · 32세 여 · 2026.09.04 작성". */
 private fun CardResponse.patientLine(): String = listOfNotNull(
     patient?.name,

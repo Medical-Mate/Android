@@ -2,7 +2,6 @@ package com.mist.medicalmate.home.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,7 +14,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
@@ -24,8 +22,6 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateEmptyStateTyp
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTabBar
-import com.mist.medicalmate.core.designsystem.component.MedicalMateToast
-import com.mist.medicalmate.core.designsystem.component.MedicalMateToastTone
 import java.time.LocalDate
 
 /**
@@ -51,7 +47,6 @@ fun HomeScreen(
     today: LocalDate,
     callbacks: HomeCallbacks,
     modifier: Modifier = Modifier,
-    registeredToastVisible: Boolean = false,
     onTabSelect: (MedicalMateTab) -> Unit = {},
 ) {
     Column(modifier = modifier) {
@@ -59,7 +54,6 @@ fun HomeScreen(
             state = state,
             today = today,
             callbacks = callbacks,
-            registeredToastVisible = registeredToastVisible,
             modifier = Modifier.weight(1f),
         )
         MedicalMateTabBar(selected = MedicalMateTab.HOME, onSelect = onTabSelect)
@@ -68,13 +62,7 @@ fun HomeScreen(
 
 /** 탭바를 뺀 본문. 상태에 따라 내용이 갈리고 토스트가 그 위에 얹힌다. */
 @Composable
-private fun HomeBody(
-    state: HomeUiState,
-    today: LocalDate,
-    callbacks: HomeCallbacks,
-    registeredToastVisible: Boolean,
-    modifier: Modifier = Modifier,
-) {
+private fun HomeBody(state: HomeUiState, today: LocalDate, callbacks: HomeCallbacks, modifier: Modifier = Modifier) {
     Box(modifier = modifier) {
         when (state) {
             HomeUiState.Loading -> LoadingContent()
@@ -86,36 +74,8 @@ private fun HomeBody(
                     callbacks = callbacks,
                 )
         }
-        if (registeredToastVisible) {
-            RegisteredToast()
-        }
     }
 }
-
-/**
- * 신상정보를 등록하고 홈에 도착했을 때의 토스트. Figma `1b-4 · 홈 · 등록 완료 토스트`
- * (`681:3700`)의 `681:3768`이다.
- *
- * 헤더 아래 68에 얹는다. 헤더를 가리지 않고 첫 카드 위에 뜬다.
- *
- * **문서의 컴포넌트 규격은 Toast를 화면 아래에 두라고 한다.** Figma의 이 인스턴스는 위에 있다. 값의
- * 정본이 Figma라서 그대로 뒀고 디자인 트랙에 넘길 항목으로 남겼다(#67).
- */
-@Composable
-private fun BoxScope.RegisteredToast() {
-    MedicalMateToast(
-        message = stringResource(R.string.home_registered_toast),
-        tone = MedicalMateToastTone.POSITIVE,
-        modifier =
-        Modifier
-            .align(Alignment.TopCenter)
-            .padding(horizontal = MedicalMateSize.gutter)
-            .padding(top = ToastTop),
-    )
-}
-
-/** Figma가 토스트를 헤더 아래 68에 놓았다. */
-private val ToastTop = 68.dp
 
 /**
  * 홈에서 나가는 길들.

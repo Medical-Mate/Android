@@ -77,16 +77,21 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
     /**
      * 병원 `변경`에서 골라 돌아왔다.
      *
-     * 주소는 함께 오지 않는다. 이름만으로 그 자리를 채우고, 주소는 서버가 카드에 병원을
-     * 싣기 시작하면 응답에서 온다(#139).
+     * 주소가 함께 온다. 같은 이름의 다른 지점을 가르는 값이라 이름만 남기면 어느 곳을
+     * 골랐는지 알 수 없다. 심평원에 주소가 없는 곳은 비어 있고, 그때는 블록이 이름만
+     * 그린다.
      */
-    fun onHospitalPicked(name: String?) {
+    fun onHospitalPicked(name: String?, address: String?) {
         if (name.isNullOrBlank()) return
         mutableUiState.update { state ->
             if (state !is BriefCardUiState.Content) {
                 state
             } else {
-                state.copy(card = state.card.copy(hospital = BriefCardHospital(name = name)))
+                state.copy(
+                    card = state.card.copy(
+                        hospital = BriefCardHospital(name = name, address = address?.takeIf { it.isNotBlank() }),
+                    ),
+                )
             }
         }
     }
@@ -123,37 +128,6 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
                         BriefCardUiState.Content(
                             card = result.value.copy(items = draft.items, hospital = state.card.hospital),
                         )
-
-                is ApiResult.Rejected, is ApiResult.NetworkUnavailable ->
-                    mutableUiState.value = state.copy(saveFailed = true)
-            }
-        }
-    }
-
-    /**
-     * 하단 `진료실에서 보여주기`. 전달 화면으로 가기 전에 카드를 확정한다.
-     *
-     * 전달 경로는 확정한 카드만 연다. 초안이면 400이다. 이미 확정한 카드를 다시 확정해도
-     * 400이므로 그때는 그냥 넘어간다. 확정 상태를 화면이 들고 있어서 다시 부를 일이 없다.
-     *
-     * [onConfirmed]는 화면 이동이다. 확정에 실패하면 부르지 않는다. 전달 화면이 열리자마자
-     * 400으로 비어 버리는 것보다 여기서 멈추는 편이 낫다.
-     */
-    fun onHandoffClick(onConfirmed: (String) -> Unit) {
-        val state = mutableUiState.value as? BriefCardUiState.Content ?: return
-        val cardId = state.card.id.toLongOrNull()
-        if (cardId == null || state.card.status == BriefCard.Status.CONFIRMED) {
-            // 이미 확정했으면 그대로 간다. 다시 확정하면 400이다.
-            if (cardId != null) onConfirmed(state.card.id)
-            return
-        }
-
-        viewModelScope.launch {
-            when (val result = repository.confirm(cardId)) {
-                is ApiResult.Success -> {
-                    mutableUiState.value = state.copy(card = result.value.copy(hospital = state.card.hospital))
-                    onConfirmed(result.value.id)
-                }
 
                 is ApiResult.Rejected, is ApiResult.NetworkUnavailable ->
                     mutableUiState.value = state.copy(saveFailed = true)

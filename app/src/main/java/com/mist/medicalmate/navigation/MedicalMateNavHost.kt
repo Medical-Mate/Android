@@ -15,10 +15,8 @@ import com.mist.medicalmate.auth.ui.SessionUiState
 import com.mist.medicalmate.calendar.ui.CalendarDestination
 import com.mist.medicalmate.card.ui.BriefCardDestination
 import com.mist.medicalmate.card.ui.BriefCardListDestination
-import com.mist.medicalmate.card.ui.HandoffDestination
 import com.mist.medicalmate.card.ui.RecordDestination
 import com.mist.medicalmate.card.ui.briefCardDestination
-import com.mist.medicalmate.card.ui.handoffDestination
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
 import com.mist.medicalmate.home.ui.HomeDestination
 import com.mist.medicalmate.home.ui.homeDestination
@@ -73,19 +71,23 @@ internal fun MedicalMateNavHost(
         )
         intakeDestinations(navController)
         briefCardDestination(
-            onSaved = { navController.resetTo(HomeDestination()) },
+            onSaved = { navController.resetTo(HomeDestination) },
             // 카드의 `변경`. 어느 카드로 돌아갈지 들고 간다.
             onHospitalChange = { cardId ->
                 navController.navigate(
                     HospitalPickDestination(purpose = HospitalPickPurpose.BEFORE_VISIT, cardId = cardId),
                 )
             },
-            // 지운 카드의 화면에 남을 수 없다. 저장과 같은 자리로 나간다.
-            onDeleted = { navController.resetTo(HomeDestination()) },
-            onHandoff = { cardId -> navController.navigate(HandoffDestination(cardId)) },
+            // 지운 카드의 화면에 남을 수 없다. 시안이 카드 목록으로 보낸다(1e-1-DC). 홈까지만
+            // 걷어내고 목록을 얹어서, 뒤로 가면 홈이 나오고 목록이 두 장 쌓이지 않게 한다.
+            onDeleted = {
+                navController.navigate(BriefCardListDestination) {
+                    popUpTo<HomeDestination> { inclusive = false }
+                    launchSingleTop = true
+                }
+            },
             onExit = { navController.popBackStack() },
         )
-        handoffDestination(onDone = { navController.popBackStack() })
         homeDestination(
             // 이어서 하기는 서버가 들고 있는 문답 id를 함께 넘긴다. 새로 시작하면 null이다.
             onIntakeClick = { sessionId ->
@@ -128,7 +130,7 @@ private fun SessionUiState.destination(onboardingCompleted: Boolean): Any = when
         if (onboardingRequired && !onboardingCompleted) {
             OnboardingIntroDestination
         } else {
-            HomeDestination()
+            HomeDestination
         }
 }
 
@@ -177,7 +179,7 @@ internal fun NavHostController.selectTab(tab: MedicalMateTab) {
     val destination =
         when (tab) {
             MedicalMateTab.RECORD -> RecordDestination
-            MedicalMateTab.HOME -> HomeDestination()
+            MedicalMateTab.HOME -> HomeDestination
             MedicalMateTab.CALENDAR -> CalendarDestination
         }
     navigate(destination) {

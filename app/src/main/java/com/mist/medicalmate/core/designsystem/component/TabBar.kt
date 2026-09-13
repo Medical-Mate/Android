@@ -32,13 +32,18 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 /**
  * DESIGN.md의 `Tab Bar`의 목적지.
  *
- * 세 개다. Figma 마스터의 variant가 셋이고, 와이어프레임에서 Tab Bar가 붙은 화면도
- * 홈(1n), 기록(1j), 캘린더(1r) 셋뿐이다. 문서의 컴포넌트 규격이 `내 정보`를 넣어 넷으로 적은 것은
- * 문서 오류다. `user`·`user-filled` 아이콘은 아이콘 세트에 있지만 탭에 쓰이지 않는다.
+ * 세 개다. 와이어프레임에서 Tab Bar가 붙은 화면도 홈(1n), 기록(1j), 캘린더(1r) 셋뿐이다.
+ * 문서의 컴포넌트 규격이 `내 정보`를 넣어 넷으로 적은 것은 문서 오류다.
+ * `user`·`user-filled` 아이콘은 아이콘 세트에 있지만 탭에 쓰이지 않는다.
  *
- * **선언 순서가 화면 순서다.** `캘린더 · 홈 · 기록`이고 홈이 가운데다. Figma 마스터
- * `319:1026`의 variant 셋과 Tab Bar가 붙은 화면 다섯(1n-1 · 1n-2 · 1j-1 · 1j-2 · 1r-1)이
- * 모두 이 순서라 순서를 바꾸려면 양쪽을 함께 봐야 한다.
+ * **선언 순서가 화면 순서다.** `캘린더 · 홈 · 기록`이고 홈이 가운데다. 마스터
+ * `319:1026`과 Tab Bar가 붙은 화면들이 모두 이 순서라 순서를 바꾸려면 양쪽을 함께 봐야 한다.
+ *
+ * **마스터에 네 번째 variant가 있지만 쓰지 않는다.** `Active=Active4`(`1223:14193`)는 네
+ * 번째 탭이 아니라 아무 탭도 활성이 아닌 상태다. 그런 화면이 없다 — 와이어프레임의 Tab Bar
+ * 인스턴스 열넷이 모두 셋 중 하나이고, 유일하게 다를 수 있던 브리핑 카드 전체(1j-4)의
+ * 인스턴스는 숨겨져 있다. 그래서 [selected]를 선택 가능한 값으로 두지 않는다. 쓰는 화면이
+ * 생기면 그때 연다.
  */
 enum class MedicalMateTab(@StringRes val labelRes: Int, @DrawableRes val icon: Int, @DrawableRes val activeIcon: Int) {
     CALENDAR(R.string.tab_calendar, MedicalMateIcons.Calendar, MedicalMateIcons.CalendarFilled),

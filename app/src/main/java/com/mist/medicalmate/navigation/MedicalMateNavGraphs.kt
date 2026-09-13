@@ -74,7 +74,7 @@ internal fun NavGraphBuilder.entryDestinations(
     profileCompleteDestination(
         onFinished = {
             onOnboardingCompleted()
-            navController.resetTo(HomeDestination(justRegistered = true))
+            navController.resetTo(HomeDestination)
         },
     )
 }
@@ -193,10 +193,17 @@ internal fun NavGraphBuilder.visitDestinations(navController: NavHostController)
         onCardRequested = { cardId, sessionId, hospital ->
             if (cardId == null) {
                 navController.navigate(
-                    BriefCardDestination(sessionId = sessionId, hospitalName = hospital?.name),
+                    BriefCardDestination(
+                        sessionId = sessionId,
+                        hospitalName = hospital?.name,
+                        hospitalAddress = hospital?.address,
+                    ),
                 )
             } else {
-                navController.popWithResult(NavResult.HOSPITAL_NAME to hospital?.name)
+                navController.popWithResult(
+                    NavResult.HOSPITAL_NAME to hospital?.name,
+                    NavResult.HOSPITAL_ADDRESS to hospital?.address,
+                )
             }
         },
         // 일정 추가(1r-4)의 병원 필드에서 온 것. 고른 이름만 남기고 뒤로 간다. 엔트리를

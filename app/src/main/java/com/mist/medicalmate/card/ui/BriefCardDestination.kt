@@ -39,17 +39,13 @@ internal data class BriefCardDestination(
      */
     val sessionId: Long? = null,
     val hospitalName: String? = null,
+    val hospitalAddress: String? = null,
 )
-
-/** 와이어프레임 1f-1. 폰을 의사에게 건네는 화면. */
-@Serializable
-internal data class HandoffDestination(val cardId: String)
 
 internal fun NavGraphBuilder.briefCardDestination(
     onSaved: () -> Unit,
     onDeleted: () -> Unit,
     onHospitalChange: (String) -> Unit,
-    onHandoff: (String) -> Unit,
     onExit: () -> Unit,
 ) {
     composable<BriefCardDestination> { entry ->
@@ -63,16 +59,8 @@ internal fun NavGraphBuilder.briefCardDestination(
             onSaved = onSaved,
             onDeleted = onDeleted,
             onHospitalChange = onHospitalChange,
-            onHandoff = onHandoff,
             onExit = onExit,
         )
-    }
-}
-
-internal fun NavGraphBuilder.handoffDestination(onDone: () -> Unit) {
-    composable<HandoffDestination> { entry ->
-        val cardId = entry.toRoute<HandoffDestination>().cardId.toLongOrNull() ?: return@composable
-        HandoffRoute(cardId = cardId, onDone = onDone)
     }
 }
 
@@ -94,7 +82,6 @@ private fun BriefCardRoute(
     onSaved: () -> Unit,
     onDeleted: () -> Unit,
     onHospitalChange: (String) -> Unit,
-    onHandoff: (String) -> Unit,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: BriefCardViewModel = hiltViewModel(),
@@ -104,7 +91,7 @@ private fun BriefCardRoute(
     LaunchedEffect(cardId, sessionId, hospital) { viewModel.open(cardId, sessionId, hospital) }
 
     // 병원 `변경`에서 골라 돌아온 값. 엔트리가 살아 있어서 편집 중이던 값이 남는다.
-    entry.ConsumeResult(NavResult.HOSPITAL_NAME, viewModel::onHospitalPicked)
+    entry.ConsumeResult(NavResult.HOSPITAL_NAME, NavResult.HOSPITAL_ADDRESS, viewModel::onHospitalPicked)
 
     val content = state as? BriefCardUiState.Content
 
@@ -122,7 +109,6 @@ private fun BriefCardRoute(
             onDeleteDismiss = viewModel::onDeleteDismiss,
             onDeleteConfirm = { viewModel.onDeleteConfirm(onDeleted) },
             onHospitalChangeClick = { content?.card?.id?.let(onHospitalChange) },
-            onHandoffClick = { viewModel.onHandoffClick(onHandoff) },
             onRetryClick = { viewModel.open(cardId, sessionId, hospital) },
         ),
         modifier = modifier,
@@ -137,27 +123,5 @@ private fun BriefCardRoute(
  */
 private fun briefCardHospital(route: BriefCardDestination): BriefCardHospital? {
     val name = route.hospitalName ?: return null
-    return BriefCardHospital(name = name)
-}
-
-/**
- * 진료실 화면의 진입점.
- *
- * 카드 조회가 아니라 전달 경로를 부른다. 여는 순간이 서버에 전달 시각으로 기록되기
- * 때문이다. 그래서 브리핑 카드 화면과 ViewModel도 다르다.
- */
-@Composable
-private fun HandoffRoute(
-    cardId: Long,
-    onDone: () -> Unit,
-    modifier: Modifier = Modifier,
-    viewModel: HandoffViewModel = hiltViewModel(),
-) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
-
-    LaunchedEffect(cardId) { viewModel.load(cardId) }
-
-    val card = (state as? BriefCardUiState.Content)?.card ?: return
-
-    HandoffScreen(card = card, onCloseClick = onDone, onDoneClick = onDone, modifier = modifier)
+    return BriefCardHospital(name = name, address = route.hospitalAddress)
 }

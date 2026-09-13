@@ -50,14 +50,6 @@ internal interface CardApi {
     /** 이미 확정한 카드를 다시 확정하면 400이다. */
     @POST("api/cards/{cardId}/confirm")
     suspend fun confirm(@Path("cardId") cardId: Long): CardResponse
-
-    /**
-     * 진료실에서 의사에게 보여주는 화면.
-     *
-     * 확정한 카드만 열린다. 초안이면 400이다. 여는 순간이 전달 시각으로 기록된다.
-     */
-    @GET("api/cards/{cardId}/handoff")
-    suspend fun handoff(@Path("cardId") cardId: Long): HandoffResponse
 }
 
 @Serializable
@@ -130,20 +122,6 @@ internal data class AxisResponse(
  */
 @Serializable
 internal data class DepartmentGuidanceResponse(val departments: List<String> = emptyList(), val source: String? = null)
-
-/** 전달 화면. 카드 조회와 본문이 같고 내부 추적값만 빠져 있다. */
-@Serializable
-internal data class HandoffResponse(
-    val patient: PatientResponse? = null,
-    val title: String? = null,
-    val chiefComplaint: String? = null,
-    val axes: Map<String, AxisResponse> = emptyMap(),
-    val redFlags: List<String> = emptyList(),
-    val patientNotes: List<String> = emptyList(),
-    val questions: List<String> = emptyList(),
-    val departmentGuidance: DepartmentGuidanceResponse? = null,
-    val confirmedAt: String? = null,
-)
 
 /**
  * 카드 머리의 환자.

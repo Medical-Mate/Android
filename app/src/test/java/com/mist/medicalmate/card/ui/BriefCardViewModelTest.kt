@@ -200,6 +200,33 @@ class BriefCardViewModelTest {
 
         val content = viewModel.uiState.value as BriefCardUiState.Content
         assertEquals("서울OO병원 내과", content.card.hospital?.name)
+        assertEquals("서울 관악구", content.card.hospital?.address)
+    }
+
+    @Test
+    fun `변경에서 고른 병원은 주소까지 얹힌다`() {
+        // 같은 이름의 다른 지점을 가르는 값이라 이름만 남기면 어느 곳인지 알 수 없다.
+        val viewModel = BriefCardViewModel(FakeCardRepository())
+        viewModel.open(1)
+
+        viewModel.onHospitalPicked("서울OO병원 내과", "서울 관악구 남부순환로 1820, 3층")
+
+        val content = viewModel.uiState.value as BriefCardUiState.Content
+        assertEquals("서울OO병원 내과", content.card.hospital?.name)
+        assertEquals("서울 관악구 남부순환로 1820, 3층", content.card.hospital?.address)
+    }
+
+    @Test
+    fun `주소가 비어 있으면 병원 이름만 남는다`() {
+        // 심평원에 주소가 없는 곳이 있다. 빈 문자열을 그대로 두면 빈 줄이 그려진다.
+        val viewModel = BriefCardViewModel(FakeCardRepository())
+        viewModel.open(1)
+
+        viewModel.onHospitalPicked("서울OO병원 내과", "")
+
+        val content = viewModel.uiState.value as BriefCardUiState.Content
+        assertEquals("서울OO병원 내과", content.card.hospital?.name)
+        assertNull(content.card.hospital?.address)
     }
 
     private fun editing(): BriefCardViewModel {
@@ -385,8 +412,6 @@ internal class FakeCardRepository(
         confirmedId = cardId
         return result ?: ApiResult.Success(card.copy(status = BriefCard.Status.CONFIRMED))
     }
-
-    override suspend fun handoff(cardId: Long) = result ?: ApiResult.Success(card)
 
     override suspend fun delete(cardId: Long): ApiResult<Unit> {
         deleted += cardId
