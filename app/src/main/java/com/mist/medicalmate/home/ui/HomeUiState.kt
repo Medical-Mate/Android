@@ -78,4 +78,5 @@ data class SavedCardSummary(
  * D-day를 문자열로 받지 않고 [date]에서 계산한다. 화면이 열린 날에 따라 값이 달라지므로
  * 미리 만들어 두면 날짜가 바뀐 뒤에도 옛 값이 남는다.
  */
-data class HomeSchedule(val id: String, val title: String, val date: LocalDate, val time: String)
+/** [time]이 없으면 시간 미정이다. 화면이 그 자리에 "시간 미정"을 적는다(#202). */
+data class HomeSchedule(val id: String, val title: String, val date: LocalDate, val time: String?)

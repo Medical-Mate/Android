@@ -92,7 +92,7 @@ internal constructor(
         val today = LocalDate.now(clock)
         val booked = (repository.upcoming() as? ApiResult.Success)
             ?.value
-            ?.firstOrNull { it.status != AppointmentStatus.CANCELED && it.at.toLocalDate() > date }
+            ?.firstOrNull { it.status != AppointmentStatus.CANCELED && it.on > date }
         if (booked != null) return booked.toNextEvent(today)
         return record.followUpDate?.takeIf { it > date }?.toRevisit(record.clinic)
     }
@@ -155,8 +155,9 @@ internal constructor(
  * 들어가는 길이라 그 값들이 없어도 제 일을 한다.
  */
 private fun Appointment.toDayCard(): DayCard? {
-    val id = cardId ?: return null
-    return DayCard(id = id.toString(), title = cardTitle.orEmpty())
+    // 서버가 카드를 목록으로 준다(#202). 이 줄은 한 장을 그리므로 첫 장만 쓴다.
+    val card = cards.firstOrNull() ?: return null
+    return DayCard(id = card.id.toString(), title = card.title.orEmpty())
 }
 
 /**
@@ -174,13 +175,14 @@ private fun VisitListItem.toDayRecord() = DayRecord(
 /**
  * 다음 일정 카드.
  *
- * 시간이 없는 상태(1r-2-A)는 서버에서 오지 않는다. 일정에 시각이 필수라 늘 정해진 쪽(1r-2-A2)
- * 이다. 그 상태는 Preview에만 남아 있다.
+ * **시각이 없을 수 있다**(#202). 서버가 시간 미정을 담을 자리를 열면서 1r-2-A가 실제로
+ * 온다. 그때 [DayNextEvent.at]이 없고 화면이 "시간 정하고 확정하기"를 둔다. 전에는 일정에
+ * 시각이 필수라 늘 정해진 쪽(1r-2-A2)이었고 그 상태는 Preview에만 있었다.
  */
 private fun Appointment.toNextEvent(today: LocalDate) = DayNextEvent(
-    chip = "D-${at.toLocalDate().toEpochDay() - today.toEpochDay()}",
+    chip = "D-${on.toEpochDay() - today.toEpochDay()}",
     title = title,
-    at = at.format(NEXT_EVENT_FORMAT),
+    at = time?.let { on.atTime(it).format(NEXT_EVENT_FORMAT) },
     clinic = title,
 )
 
@@ -207,9 +209,9 @@ private fun LocalDate.toRevisit(clinic: String?) = DayNextEvent(
 private fun Appointment.toDaySchedule(today: LocalDate) = CalendarSchedule(
     id = id.toString(),
     title = title,
-    time = at.toLocalTime().format(DAY_TIME_FORMAT),
-    detail = cardTitle.orEmpty(),
-    dday = at.toLocalDate().toEpochDay() - today.toEpochDay(),
+    time = time?.format(DAY_TIME_FORMAT),
+    detail = cards.firstOrNull()?.title.orEmpty(),
+    dday = on.toEpochDay() - today.toEpochDay(),
 )
 
 /** 시안 1r-2-A의 "9월 26일 (토)". */

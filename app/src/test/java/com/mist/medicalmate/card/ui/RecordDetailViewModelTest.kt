@@ -128,7 +128,8 @@ class RecordDetailViewModelTest {
 
     @Test
     fun `다른 카드의 일정은 끌어오지 않는다`() {
-        val steps = content(FULL, appointments = listOf(NEXT.copy(cardId = 99))).detail.steps
+        val other = listOf(com.mist.medicalmate.calendar.data.AppointmentCard(id = 99, title = null))
+        val steps = content(FULL, appointments = listOf(NEXT.copy(cards = other))).detail.steps
 
         assertTrue(steps.none { it is RecordStep.Pending })
     }
@@ -257,10 +258,13 @@ class RecordDetailViewModelTest {
             Appointment(
                 id = 9,
                 title = "서울OO병원 내과",
-                at = java.time.LocalDateTime.of(2026, 9, 26, 10, 30),
+                on = java.time.LocalDate.of(2026, 9, 26),
+                time = java.time.LocalTime.of(10, 30),
                 status = com.mist.medicalmate.calendar.data.AppointmentStatus.SCHEDULED,
-                cardId = 3,
-                cardTitle = "복부 통증 · 3주",
+                cards =
+                listOf(
+                    com.mist.medicalmate.calendar.data.AppointmentCard(id = 3, title = "복부 통증 · 3주"),
+                ),
             )
 
         val FULL =

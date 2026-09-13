@@ -385,7 +385,11 @@ private fun ColumnScope.SelectedDay(state: CalendarUiState, onScheduleClick: (St
                         }
                     }
                     Text(
-                        text = "${schedule.time} · ${schedule.detail}",
+                        text =
+                        listOfNotNull(
+                            schedule.time ?: stringResource(R.string.calendar_time_unset),
+                            schedule.detail.takeIf { it.isNotBlank() },
+                        ).joinToString(" · "),
                         style = MedicalMateTheme.typography.bodyS,
                         color = MedicalMateTheme.colors.fgSubtle,
                     )

@@ -1,5 +1,6 @@
 package com.mist.medicalmate.calendar.ui
 import com.mist.medicalmate.calendar.data.Appointment
+import com.mist.medicalmate.calendar.data.AppointmentCard
 import com.mist.medicalmate.calendar.data.AppointmentEdit
 import com.mist.medicalmate.calendar.data.AppointmentRepository
 import com.mist.medicalmate.calendar.data.AppointmentStatus
@@ -23,7 +24,7 @@ import org.junit.Test
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
-import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.ZoneId
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -374,10 +375,9 @@ private val nextAppointment =
     Appointment(
         id = 2,
         title = "서울OO병원 내과 재방문",
-        at = LocalDateTime.of(2026, 9, 26, 10, 30),
+        on = LocalDate.of(2026, 9, 26),
+        time = LocalTime.of(10, 30),
         status = AppointmentStatus.SCHEDULED,
-        cardId = null,
-        cardTitle = null,
     )
 
 private val fixedClock: Clock = Clock.fixed(Instant.parse("2026-09-11T00:00:00Z"), ZoneId.of("Asia/Seoul"))
@@ -386,10 +386,10 @@ private val testAppointment =
     Appointment(
         id = 1,
         title = "서울OO병원 내과 재진",
-        at = LocalDateTime.of(2026, 9, 12, 10, 30),
+        on = LocalDate.of(2026, 9, 12),
+        time = LocalTime.of(10, 30),
         status = AppointmentStatus.SCHEDULED,
-        cardId = 1,
-        cardTitle = "복부 통증 · 3주",
+        cards = listOf(AppointmentCard(id = 1, title = "복부 통증 · 3주")),
         // 진료 전 할 일은 일정에 매달린다(#187). 전에는 픽스처 세 줄이었다.
         todos =
         listOf(
@@ -404,8 +404,7 @@ private class FakeAppointmentRepository(private val appointments: List<Appointme
 
     override suspend fun month(month: java.time.YearMonth) = ApiResult.Success(appointments)
 
-    override suspend fun day(date: java.time.LocalDate) =
-        ApiResult.Success(appointments.filter { it.at.toLocalDate() == date })
+    override suspend fun day(date: java.time.LocalDate) = ApiResult.Success(appointments.filter { it.on == date })
 
     override suspend fun upcoming() = ApiResult.Success(appointments)
 

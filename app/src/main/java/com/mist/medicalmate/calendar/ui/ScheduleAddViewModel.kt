@@ -133,8 +133,6 @@ internal constructor(
             return
         }
         val date = state.date
-        // 시간을 안 골랐으면 기본 시각이다. 서버가 시각 없는 일정을 받지 못한다.
-        val time = state.time ?: DEFAULT_TIME
         if (date == null || saving) return
 
         saving = true
@@ -143,8 +141,10 @@ internal constructor(
                 repository.create(
                     NewAppointment(
                         clinicName = state.hospital,
-                        at = date.atTime(time),
-                        cardId = state.cards.firstOrNull { it.picked }?.id?.toLongOrNull(),
+                        on = date,
+                        // 안 골랐으면 시각 없이 보낸다. 서버가 "시간 미정"으로 만든다(#202).
+                        time = state.time,
+                        cardIds = state.cards.filter { it.picked }.mapNotNull { it.id.toLongOrNull() },
                         // 적어 둔 할 일도 함께 보낸다. 비운 줄은 빼고 보낸다 — 적지 않은 것과
                         // 빈 줄은 다르다.
                         todos =

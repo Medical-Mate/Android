@@ -13,6 +13,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.Json
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -68,13 +69,13 @@ data class HomeSnapshot(
 )
 
 private fun HomeResponse.toSnapshot(name: String?, today: LocalDate): HomeSnapshot {
-    val appointmentAt = nextAppointment?.let { OffsetDateTime.parse(it.scheduledAt) }
+    val nextOn = nextAppointment?.let { LocalDate.parse(it.scheduledOn) }
     return HomeSnapshot(
         userInitial = name?.take(1).orEmpty(),
-        todayLine = todayLine(today, appointmentAt?.toLocalDate()),
+        todayLine = todayLine(today, nextOn),
         resume = inProgressSession?.toResume(),
         savedCards = recentCards.map { it.toSummary() },
-        upcoming = upcoming(appointmentAt),
+        upcoming = upcoming(nextOn),
     )
 }
 
@@ -108,19 +109,27 @@ private fun InProgressSessionResponse.toResume() = HomeResume(
     step = if (progressCurrent > 0) IntakeStep.SYMPTOM_CHAT else IntakeStep.BODY_PART,
 )
 
-/** 서버는 다음 일정 하나만 준다. 화면은 목록으로 받으므로 0개나 1개가 된다. */
-private fun HomeResponse.upcoming(at: OffsetDateTime?): List<HomeSchedule> = listOfNotNull(
+/**
+ * 서버는 다음 일정 하나만 준다. 화면은 목록으로 받으므로 0개나 1개가 된다.
+ *
+ * 시각이 없으면 시간 미정이다(#202). 그때 [HomeSchedule.time]이 없고 화면이 그 자리에
+ * "시간 미정"을 적는다.
+ */
+private fun HomeResponse.upcoming(on: LocalDate?): List<HomeSchedule> = listOfNotNull(
     nextAppointment?.let { appointment ->
-        at?.let { scheduledAt ->
+        on?.let { date ->
             HomeSchedule(
                 id = appointment.appointmentId.toString(),
-                title = appointment.cardTitle ?: appointment.clinicName.orEmpty(),
-                date = scheduledAt.toLocalDate(),
-                time = scheduledAt.toLocalTime().format(TIME_FORMAT),
+                title = appointment.cards.firstOrNull()?.title ?: appointment.clinicName.orEmpty(),
+                date = date,
+                time = appointment.scheduledTime?.let(::parseTime)?.format(TIME_FORMAT),
             )
         }
     },
 )
+
+/** 못 읽으면 시간 미정으로 본다. 일정 하나 때문에 홈 전체가 죽는 것보다 낫다. */
+private fun parseTime(value: String): LocalTime? = runCatching { LocalTime.parse(value) }.getOrNull()
 
 /**
  * 병원 이름은 진료를 마쳤어도 비어 있을 수 있다. 선택 입력이라서다.
