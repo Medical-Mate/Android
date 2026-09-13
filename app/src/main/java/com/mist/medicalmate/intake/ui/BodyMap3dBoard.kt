@@ -7,10 +7,13 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.TwoWayConverter
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -51,6 +54,7 @@ import kotlin.math.PI
  * **스크린 리더로는 쓸 수 없는 판이다.** 2D 인체도와 같다. 좌표를 짚는 조작이라 읽어 줄
  * 것이 없고, 대신 목록에서 고르는 길이 그대로 남아 있다.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun BodyMap3dBoard(
     camera: BodyMap3dCameraState,
@@ -61,6 +65,7 @@ internal fun BodyMap3dBoard(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val visible = remember { BringIntoViewRequester() }
     val renderer = remember { BodyMap3dRenderer(context) }
     var mesh by remember { mutableStateOf<BodyMap3dMesh?>(null) }
     var ready by remember { mutableStateOf(false) }
@@ -78,7 +83,11 @@ internal fun BodyMap3dBoard(
     }
     SideEffect { renderer.camera = camera.value }
 
-    Box(modifier = modifier.clearAndSetSemantics { }) {
+    // 판이 505dp라 본문이 스크롤되고, 그 상태로는 판의 아래쪽이 화면 밖에 남는다. 열 때와
+    // 부위를 바꿀 때, 그리고 손을 댈 때 판 전체를 화면 안으로 끌어온다.
+    LaunchedEffect(focus) { visible.bringIntoView() }
+
+    Box(modifier = modifier.bringIntoViewRequester(visible).clearAndSetSemantics { }) {
         // 다 읽기 전에는 표면을 붙이지 않는다. 붙여 두면 첫 프레임이 나갈 때까지 검은 판이
         // 판 자리를 덮는다.
         if (ready) {
@@ -87,7 +96,16 @@ internal fun BodyMap3dBoard(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .bodyMap3dGestures(camera, mesh, candidates, scope, onPick),
+                .bodyMap3dGestures(
+                    BodyMap3dGestures(
+                        camera = camera,
+                        mesh = mesh,
+                        candidates = candidates,
+                        scope = scope,
+                        onTouch = { scope.launch { visible.bringIntoView() } },
+                        onPick = onPick,
+                    ),
+                ),
         ) {
             BodyMap3dDots(
                 camera = camera.value,
@@ -115,38 +133,53 @@ private suspend fun loadBodyMap3d(context: Context, renderer: BodyMap3dRenderer)
 }
 
 /**
+ * 판을 조작하는 데 필요한 것들.
+ *
+ * 수식어 함수의 인자를 하나로 묶은 것이다. 여섯을 나열하면 부르는 쪽에서 어느 자리가
+ * 무엇인지 알아보기 어렵다.
+ *
+ * [onTouch]는 손이 닿은 순간 부른다. 눌러서 고르든 끌어서 돌리든 먼저 지나는 자리다.
+ */
+private class BodyMap3dGestures(
+    val camera: BodyMap3dCameraState,
+    val mesh: BodyMap3dMesh?,
+    val candidates: List<BodyMap3dPoint>,
+    val scope: CoroutineScope,
+    val onTouch: () -> Unit,
+    val onPick: (BodyMap3dPick?) -> Unit,
+)
+
+/**
  * 끌어서 돌리고 오므려 확대하고 짚어서 고른다.
  *
  * 짚는 판정은 다른 갈래에서 한다. 삼각형 4만 6천을 도는 일이라 손가락을 떼는 프레임에서
  * 하면 그 프레임이 밀린다.
  */
-private fun Modifier.bodyMap3dGestures(
-    camera: BodyMap3dCameraState,
-    mesh: BodyMap3dMesh?,
-    candidates: List<BodyMap3dPoint>,
-    scope: CoroutineScope,
-    onPick: (BodyMap3dPick?) -> Unit,
-): Modifier = this
+private fun Modifier.bodyMap3dGestures(gestures: BodyMap3dGestures): Modifier = this
     .pointerInput(Unit) {
         detectTransformGestures { _, pan, zoom, _ ->
             val turn = (-pan.x / size.width * PI * 2f).toFloat()
             val tilt = (pan.y / size.height * PI).toFloat()
-            scope.launch { camera.snapTo(camera.value.turned(turn, tilt).zoomed(zoom)) }
+            val camera = gestures.camera
+            gestures.scope.launch { camera.snapTo(camera.value.turned(turn, tilt).zoomed(zoom)) }
         }
     }
-    .pointerInput(mesh, candidates) {
-        detectTapGestures { offset ->
-            val target = mesh ?: return@detectTapGestures
-            val ray = camera.value.ray(
-                ndcX = offset.x / size.width * 2f - 1f,
-                ndcY = -(offset.y / size.height * 2f - 1f),
-                aspect = size.width.toFloat() / size.height.toFloat(),
-            )
-            scope.launch {
-                val hit = withContext(Dispatchers.Default) { target.hit(ray) }
-                onPick(hit?.let { bodyMap3dNearest(it, candidates) })
-            }
-        }
+    .pointerInput(gestures.mesh, gestures.candidates) {
+        detectTapGestures(
+            onPress = { gestures.onTouch() },
+            onTap = { offset ->
+                val target = gestures.mesh ?: return@detectTapGestures
+                val ray = gestures.camera.value.ray(
+                    ndcX = offset.x / size.width * 2f - 1f,
+                    ndcY = -(offset.y / size.height * 2f - 1f),
+                    aspect = size.width.toFloat() / size.height.toFloat(),
+                )
+                gestures.scope.launch {
+                    val hit = withContext(Dispatchers.Default) { target.hit(ray) }
+                    gestures.onPick(hit?.let { bodyMap3dNearest(it, gestures.candidates) })
+                }
+            },
+        )
     }
 
 /**
