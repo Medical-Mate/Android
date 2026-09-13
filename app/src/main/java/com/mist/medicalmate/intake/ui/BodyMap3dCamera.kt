@@ -9,8 +9,8 @@ import kotlin.math.tan
 /**
  * 3D 인체도를 보는 자리.
  *
- * 몸을 축으로 도는 궤도 카메라다. [yaw] 0이 앞면(+Z)이고 π가 뒷면이다. 자유 회전이라
- * 보는 지점은 늘 몸의 중심이고, 그래서 상태가 각도 둘과 거리 하나뿐이다.
+ * 몸을 축으로 도는 궤도 카메라다. [yaw] 0이 앞면(+Z)이고 π가 뒷면이다. [target]은 보는
+ * 지점이고 전신에서는 몸의 중심, 부위를 확대하면 그 부위다.
  *
  * 화면에 그리는 것과 짚은 자리를 판정하는 것이 **같은 값**을 써야 한다. 렌더러에게
  * 넘기는 시야각과 [ray]가 쓰는 시야각이 갈리면 보이는 자리와 짚히는 자리가 어긋난다.
@@ -21,24 +21,31 @@ internal data class BodyMap3dCamera(
     val yaw: Float = 0f,
     val pitch: Float = 0f,
     val distance: Float = BODY_3D_HOME_DISTANCE,
+    val target: BodyMap3dVector = BODY_3D_HOME_TARGET,
 ) {
     /** 카메라가 놓인 자리. */
     val eye: BodyMap3dVector
-        get() = BodyMap3dVector(
+        get() = target + BodyMap3dVector(
             distance * sin(yaw) * cos(pitch),
-            BODY_3D_TARGET.y + distance * sin(pitch),
+            distance * sin(pitch),
             distance * cos(yaw) * cos(pitch),
         )
 }
 
-/** 보는 지점. 몸의 중심보다 조금 위다 — 머리와 발이 같은 여백으로 남는다. */
-internal val BODY_3D_TARGET = BodyMap3dVector(0f, 0.02f, 0f)
+/** 전신을 볼 때 보는 지점. 몸의 중심보다 조금 위다 — 머리와 발이 같은 여백으로 남는다. */
+internal val BODY_3D_HOME_TARGET = BodyMap3dVector(0f, 0.02f, 0f)
 
 /** 세로 시야각. 기본 거리에서 신장 1.0이 화면 높이에 꼭 맞는 값이다. */
 internal const val BODY_3D_FOV_DEGREES: Float = 28f
 
-/** 전신이 들어오는 거리. */
-internal const val BODY_3D_HOME_DISTANCE: Float = 2.05f
+/**
+ * 전신이 들어오는 거리.
+ *
+ * 시야각만 보면 2.05에서 신장 1.0이 화면 높이에 꼭 맞지만, 그러면 발이 판 아래로 잘린다.
+ * 발끝이 원점에서 0.5보다 조금 더 내려가 있고 발등이 앞으로 나와 있어서다. 기기에서 보고
+ * 정한 값이다.
+ */
+internal const val BODY_3D_HOME_DISTANCE: Float = 2.3f
 
 private const val MIN_DISTANCE = 0.45f
 private const val MAX_DISTANCE = 2.6f
@@ -63,7 +70,7 @@ internal class BodyMap3dBasis(val forward: BodyMap3dVector, val right: BodyMap3d
 private val WORLD_UP = BodyMap3dVector(0f, 1f, 0f)
 
 internal fun BodyMap3dCamera.basis(): BodyMap3dBasis {
-    val forward = (BODY_3D_TARGET - eye).normalized()
+    val forward = (target - eye).normalized()
     val right = (forward cross WORLD_UP).normalized()
     return BodyMap3dBasis(forward = forward, right = right, up = right cross forward)
 }
@@ -115,16 +122,23 @@ internal fun BodyMap3dCamera.turned(deltaYaw: Float, deltaPitch: Float): BodyMap
 internal fun BodyMap3dCamera.zoomed(scale: Float): BodyMap3dCamera =
     copy(distance = (distance / scale).coerceIn(MIN_DISTANCE, MAX_DISTANCE))
 
+/** 그 면을 정면으로 보는, 전신이 다 들어오는 자리. */
+internal fun BodyMap3dCamera.facing(view: BodyMapView): BodyMap3dCamera = BodyMap3dCamera(
+    yaw = yawNear(if (view == BodyMapView.BACK) PI.toFloat() else 0f),
+    pitch = 0f,
+    distance = BODY_3D_HOME_DISTANCE,
+    target = BODY_3D_HOME_TARGET,
+)
+
 /**
- * 그 면을 정면으로 보는 자리.
+ * 지금 각도에서 가장 가까운, [angle]과 같은 방향의 각.
  *
- * [yaw]를 0이나 π로 바로 쓰지 않고 지금 각도에서 가장 가까운 같은 각을 고른다. 한 바퀴
- * 넘게 돌려 둔 상태에서 면을 바꾸면 카메라가 왔던 길을 되감는다.
+ * 각도를 0..2π로 접지 않고 그대로 쌓아 두기 때문에 필요하다. 몇 바퀴 돌려 둔 상태에서
+ * 면을 바꾸면 카메라가 왔던 길을 되감는다.
  */
-internal fun BodyMap3dCamera.facing(view: BodyMapView): BodyMap3dCamera {
-    val target = if (view == BodyMapView.BACK) PI.toFloat() else 0f
-    val turns = Math.round((yaw - target) / (2f * PI.toFloat()))
-    return BodyMap3dCamera(yaw = target + turns * 2f * PI.toFloat(), pitch = 0f, distance = BODY_3D_HOME_DISTANCE)
+internal fun BodyMap3dCamera.yawNear(angle: Float): Float {
+    val turns = Math.round((yaw - angle) / (2f * PI.toFloat()))
+    return angle + turns * 2f * PI.toFloat()
 }
 
 /** 지금 보고 있는 면. 앞뒤 토글의 선택 상태가 회전을 따라오게 한다. */

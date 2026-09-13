@@ -3,7 +3,7 @@ package com.mist.medicalmate.intake.ui
 import android.content.Context
 import android.view.Choreographer
 import android.view.Surface
-import android.view.SurfaceView
+import android.view.TextureView
 import com.google.android.filament.Camera
 import com.google.android.filament.Engine
 import com.google.android.filament.EntityManager
@@ -28,19 +28,28 @@ import kotlin.math.pow
  * 덮어쓴다. 짚은 자리를 판정하는 [ray]와 그리는 카메라가 같은 값에서 나와야 보이는 자리와
  * 짚히는 자리가 맞는다.
  *
- * 빛은 카메라를 따라 돈다. 한자리에 박아 두면 몸을 돌렸을 때 뒤가 어둠에 잠긴다.
+ * 빛은 카메라를 따라 돈다. 한자리에 박아 두면 몸을 돌렸을 때 뒤가 어둠에 잠긴다. 정면에
+ * 두지 않고 왼쪽 위로 비껴 두는 이유는, 보는 방향과 같으면 그림자가 지지 않아 몸이 흰
+ * 실루엣으로 납작해지기 때문이다.
  *
- * 엔진을 건드리는 곳에 자물쇠를 건다. 모델을 읽는 것은 Draco 압축을 푸는 일이라 짧지
- * 않아서 다른 갈래에서 하는데, 그 사이에 표면이 만들어지면 스왑체인을 만드는 쪽과
- * 겹친다.
+ * **엔진을 건드리는 것은 전부 메인 갈래에서 한다.** 모델을 읽는 것은 Draco 압축을 푸는
+ * 일이라 짧지 않아서 처음에는 다른 갈래로 보냈는데, `ResourceLoader`가 Filament의 작업
+ * 큐를 쓰면서 "This thread has not been adopted"로 죽었다. 큐에 갈래를 들이는 API가 Java
+ * 쪽에 없다. 파일을 읽는 것만 다른 갈래에서 하고 엔진에 넘기는 것은 여기로 가져온다.
  */
 internal class BodyMap3dRenderer(context: Context) : Choreographer.FrameCallback {
-    val surfaceView: SurfaceView = SurfaceView(context)
+    /**
+     * 그림이 나가는 곳.
+     *
+     * `SurfaceView`가 아니라 `TextureView`다. `SurfaceView`의 표면은 창 **뒤에** 놓이고
+     * 그 자리의 창이 비어 있어야 보이는데, 판의 배경을 Compose가 그 위에 칠한다. 창 위로
+     * 올리는 방법(`setZOrderOnTop`)도 있지만 그러면 이번에는 구역 점이 3D 뒤로 들어간다.
+     * `TextureView`는 뷰 계층 안에서 합성돼 배경 위·점 아래에 그대로 놓인다.
+     */
+    val textureView: TextureView = TextureView(context)
 
     /** Compose가 매 프레임 읽어 가는 자리. 그리는 쪽도 판정하는 쪽도 이 값을 본다. */
     var camera: BodyMap3dCamera = BodyMap3dCamera()
-
-    private val lock = Any()
 
     init {
         // Filament 네이티브 라이브러리를 올린다. 이 블록이 `engine`보다 **위에** 있어야 한다 —
@@ -79,7 +88,7 @@ internal class BodyMap3dRenderer(context: Context) : Choreographer.FrameCallback
             .intensity(AMBIENT_LUX)
             .build(engine)
         uiHelper.renderCallback = SurfaceCallback()
-        uiHelper.attachTo(surfaceView)
+        uiHelper.attachTo(textureView)
     }
 
     /** 판이 지운 자리에 남는 색. 화면의 판 배경과 같아야 경계가 보이지 않는다. */
@@ -90,18 +99,16 @@ internal class BodyMap3dRenderer(context: Context) : Choreographer.FrameCallback
         }
     }
 
-    /** 모델을 읽어 장면에 올린다. 압축을 푸는 동안 막히므로 다른 갈래에서 부른다. */
+    /** 모델을 읽어 장면에 올린다. **메인 갈래에서** 부른다. 압축을 푸는 동안 화면이 멎는다. */
     fun load(bytes: ByteArray) {
         val buffer = ByteBuffer.allocateDirect(bytes.size)
         buffer.put(bytes)
         buffer.rewind()
-        synchronized(lock) {
-            val loaded = assetLoader.createAsset(buffer) ?: error("3D 인체도를 읽지 못했습니다.")
-            resourceLoader.loadResources(loaded)
-            scene.addEntities(loaded.entities)
-            loaded.releaseSourceData()
-            asset = loaded
-        }
+        val loaded = assetLoader.createAsset(buffer) ?: error("3D 인체도를 읽지 못했습니다.")
+        resourceLoader.loadResources(loaded)
+        scene.addEntities(loaded.entities)
+        loaded.releaseSourceData()
+        asset = loaded
     }
 
     fun start() {
@@ -115,24 +122,22 @@ internal class BodyMap3dRenderer(context: Context) : Choreographer.FrameCallback
     fun destroy() {
         stop()
         uiHelper.detach()
-        synchronized(lock) {
-            asset?.let { assetLoader.destroyAsset(it) }
-            resourceLoader.destroy()
-            materials.destroyMaterials()
-            assetLoader.destroy()
-            engine.destroyCameraComponent(cameraEntity)
-            engine.destroyEntity(cameraEntity)
-            engine.destroyEntity(sunEntity)
-            engine.destroyRenderer(renderer)
-            engine.destroyView(view)
-            engine.destroyScene(scene)
-            engine.destroy()
-        }
+        asset?.let { assetLoader.destroyAsset(it) }
+        resourceLoader.destroy()
+        materials.destroyMaterials()
+        assetLoader.destroy()
+        engine.destroyCameraComponent(cameraEntity)
+        engine.destroyEntity(cameraEntity)
+        engine.destroyEntity(sunEntity)
+        engine.destroyRenderer(renderer)
+        engine.destroyView(view)
+        engine.destroyScene(scene)
+        engine.destroy()
     }
 
     override fun doFrame(frameTimeNanos: Long) {
         choreographer.postFrameCallback(this)
-        synchronized(lock) { renderFrame(frameTimeNanos) }
+        renderFrame(frameTimeNanos)
     }
 
     private fun renderFrame(frameTimeNanos: Long) {
@@ -150,43 +155,38 @@ internal class BodyMap3dRenderer(context: Context) : Choreographer.FrameCallback
         val eye = state.eye
         filamentCamera.lookAt(
             eye.x.toDouble(), eye.y.toDouble(), eye.z.toDouble(),
-            BODY_3D_TARGET.x.toDouble(), BODY_3D_TARGET.y.toDouble(), BODY_3D_TARGET.z.toDouble(),
+            state.target.x.toDouble(), state.target.y.toDouble(), state.target.z.toDouble(),
             0.0, 1.0, 0.0,
         )
-        val forward = state.basis().forward
+        val basis = state.basis()
+        val key = (basis.forward + basis.right * KEY_SIDE + basis.up * KEY_HEIGHT).normalized()
         val lights = engine.lightManager
-        lights.setDirection(lights.getInstance(sunEntity), forward.x, forward.y, forward.z)
+        lights.setDirection(lights.getInstance(sunEntity), key.x, key.y, key.z)
     }
 
     private inner class SurfaceCallback : UiHelper.RendererCallback {
         override fun onNativeWindowChanged(surface: Surface) {
-            synchronized(lock) {
-                swapChain?.let { engine.destroySwapChain(it) }
-                swapChain = engine.createSwapChain(surface)
-            }
+            swapChain?.let { engine.destroySwapChain(it) }
+            swapChain = engine.createSwapChain(surface)
         }
 
         override fun onDetachedFromSurface() {
-            synchronized(lock) {
-                swapChain?.let {
-                    engine.destroySwapChain(it)
-                    engine.flushAndWait()
-                    swapChain = null
-                }
+            swapChain?.let {
+                engine.destroySwapChain(it)
+                engine.flushAndWait()
+                swapChain = null
             }
         }
 
         override fun onResized(width: Int, height: Int) {
-            synchronized(lock) {
-                view.viewport = Viewport(0, 0, width, height)
-                filamentCamera.setProjection(
-                    BODY_3D_FOV_DEGREES.toDouble(),
-                    width.toDouble() / height.toDouble(),
-                    NEAR_PLANE,
-                    FAR_PLANE,
-                    Camera.Fov.VERTICAL,
-                )
-            }
+            view.viewport = Viewport(0, 0, width, height)
+            filamentCamera.setProjection(
+                BODY_3D_FOV_DEGREES.toDouble(),
+                width.toDouble() / height.toDouble(),
+                NEAR_PLANE,
+                FAR_PLANE,
+                Camera.Fov.VERTICAL,
+            )
         }
     }
 
@@ -195,9 +195,15 @@ internal class BodyMap3dRenderer(context: Context) : Choreographer.FrameCallback
         const val APERTURE = 16f
         const val SHUTTER_SPEED = 1f / 125f
         const val SENSITIVITY = 100f
-        const val SUN_LUX = 70_000f
-        const val AMBIENT = 0.6f
-        const val AMBIENT_LUX = 30_000f
+        const val SUN_LUX = 60_000f
+
+        /** 채움광. 세게 주면 그림자가 사라지고 몸이 납작해진다. */
+        const val AMBIENT = 0.5f
+        const val AMBIENT_LUX = 12_000f
+
+        /** 빛을 카메라에서 비껴 두는 정도. 화면 왼쪽 위에서 오는 것으로 읽힌다. */
+        const val KEY_SIDE = 0.35f
+        const val KEY_HEIGHT = -0.45f
         const val NEAR_PLANE = 0.05
         const val FAR_PLANE = 20.0
 

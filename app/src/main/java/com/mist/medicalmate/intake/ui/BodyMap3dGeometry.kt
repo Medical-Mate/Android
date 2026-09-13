@@ -1,17 +1,17 @@
 package com.mist.medicalmate.intake.ui
 
 /**
- * 3D 인체도의 구역 점 좌표. AI 트랙의 `anchors3d.json`(스키마 humanmap-3d-anchors/2.0)에서 생성한 파일이다.
+ * 3D 인체도의 좌표. AI 트랙의 `anchors3d.json`(스키마 humanmap-3d-anchors/2.0)에서 생성한 파일이다.
  *
  * **손으로 고치지 않는다.** 2D 좌표표와 같은 규칙이고, 좌표가 바뀌면 새 파일로 다시 생성한다.
  * 이름은 담지 않는다 — 표시 문구의 출처는 온톨로지 하나로 둔다. 좌표를 담는 타입은
- * 생성 대상이 아니라 [BodyMap3dPoint]에 손으로 적혀 있다.
+ * 생성 대상이 아니라 [BodyMap3dPoint]와 [BodyMap3dFrame]에 손으로 적혀 있다.
  *
  * 좌표계는 Y 업 · 신장 1.0 · 원점이 발바닥과 정수리의 가운데(y는 −0.5~+0.5) · 앞면이 +Z다.
  * 거리가 신장 기준이라 [BODY_3D_PICK_MAX_DISTANCE]와 그대로 견줄 수 있다.
  *
- * 구역 점 46개 · 구역 25종이다. 좌표가 없는 전신·피부(ANC:010·ANC:011)는 3D 판정과
- * 무관해서 빠져 있다.
+ * 구역 점 46개(구역 25종) · 앵커 점 9개 · 앵커 카메라 7개다. 좌표가 없는 전신·피부
+ * (ANC:010·ANC:011)는 3D 판정과 무관해서 빠져 있다.
  */
 
 /**
@@ -207,5 +207,107 @@ internal val bodyMap3dRegions: List<BodyMap3dPoint> =
         BodyMap3dPoint(
             "SUR:081", "ANC:012", BodyMapSide.LEFT,
             0.075f, -0.02f, -0.06091f, 0.5867f, -0.4097f, -0.6985f,
+        ),
+    )
+
+/** 전신에서 짚는 앵커 점. 팔·다리는 좌우 두 점이다. */
+internal val bodyMap3dAnchors: List<BodyMap3dPoint> =
+    listOf(
+        BodyMap3dPoint(
+            "ANC:001", "ANC:001", BodyMapSide.CENTER,
+            0.0f, 0.455f, 0.06152f, 0.0073f, 0.3518f, 0.936f,
+        ),
+        BodyMap3dPoint(
+            "ANC:002", "ANC:002", BodyMapSide.CENTER,
+            0.0f, 0.345f, 0.02455f, 0.0055f, -0.2161f, 0.9764f,
+        ),
+        BodyMap3dPoint(
+            "ANC:003", "ANC:003", BodyMapSide.CENTER,
+            0.0f, 0.25f, 0.05649f, -0.0265f, 0.2772f, 0.9604f,
+        ),
+        BodyMap3dPoint(
+            "ANC:004", "ANC:004", BodyMapSide.CENTER,
+            0.0f, 0.08f, 0.06919f, 0.0022f, -0.0185f, 0.9998f,
+        ),
+        BodyMap3dPoint(
+            "ANC:013", "ANC:013", BodyMapSide.RIGHT,
+            -0.154f, 0.12f, 0.00479f, 0.6099f, 0.1497f, 0.7782f,
+        ),
+        BodyMap3dPoint(
+            "ANC:013", "ANC:013", BodyMapSide.LEFT,
+            0.154f, 0.12f, 0.00537f, -0.5757f, 0.0731f, 0.8144f,
+        ),
+        BodyMap3dPoint(
+            "ANC:014", "ANC:014", BodyMapSide.RIGHT,
+            -0.065f, -0.25f, 0.01083f, 0.0184f, -0.2494f, 0.9682f,
+        ),
+        BodyMap3dPoint(
+            "ANC:014", "ANC:014", BodyMapSide.LEFT,
+            0.065f, -0.25f, 0.01151f, -0.0754f, -0.2341f, 0.9693f,
+        ),
+        BodyMap3dPoint(
+            "ANC:012", "ANC:012", BodyMapSide.CENTER,
+            0.0f, 0.07f, -0.0549f, -0.0649f, 0.3252f, -0.9434f,
+        ),
+    )
+
+/** 앵커를 확대해 볼 때의 카메라 프레임. 한 앵커에 면마다 하나씩 있다. */
+internal val bodyMap3dFrames: List<BodyMap3dFrame> =
+    listOf(
+        BodyMap3dFrame(
+            anchorId = "ANC:001",
+            back = false,
+            oneSide = false,
+            zoneCount = 5,
+            target = BodyMap3dVector(0.0f, 0.4279f, 0.0387f),
+            span = 0.094f,
+        ),
+        BodyMap3dFrame(
+            anchorId = "ANC:002",
+            back = false,
+            oneSide = false,
+            zoneCount = 2,
+            target = BodyMap3dVector(0.0f, 0.3575f, 0.0187f),
+            span = 0.052f,
+        ),
+        BodyMap3dFrame(
+            anchorId = "ANC:003",
+            back = false,
+            oneSide = false,
+            zoneCount = 2,
+            target = BodyMap3dVector(0.0f, 0.2375f, 0.0453f),
+            span = 0.144f,
+        ),
+        BodyMap3dFrame(
+            anchorId = "ANC:004",
+            back = false,
+            oneSide = false,
+            zoneCount = 2,
+            target = BodyMap3dVector(0.0f, 0.11f, 0.0618f),
+            span = 0.1f,
+        ),
+        BodyMap3dFrame(
+            anchorId = "ANC:013",
+            back = false,
+            oneSide = true,
+            zoneCount = 6,
+            target = BodyMap3dVector(-0.1515f, 0.115f, 0.0165f),
+            span = 0.37f,
+        ),
+        BodyMap3dFrame(
+            anchorId = "ANC:014",
+            back = false,
+            oneSide = true,
+            zoneCount = 5,
+            target = BodyMap3dVector(-0.067f, -0.315f, 0.0289f),
+            span = 0.33f,
+        ),
+        BodyMap3dFrame(
+            anchorId = "ANC:012",
+            back = true,
+            oneSide = false,
+            zoneCount = 3,
+            target = BodyMap3dVector(0.0f, 0.05f, -0.0517f),
+            span = 0.15f,
         ),
     )

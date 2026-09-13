@@ -43,7 +43,7 @@ class BodyMap3dCameraTest {
         val camera = BodyMap3dCamera()
         val ray = camera.ray(ndcX = 0f, ndcY = 0f, aspect = ASPECT)
 
-        val toTarget = (BODY_3D_TARGET - ray.origin).normalized()
+        val toTarget = (BODY_3D_HOME_TARGET - ray.origin).normalized()
         assertEquals(toTarget.x.toDouble(), ray.direction.x.toDouble(), DELTA)
         assertEquals(toTarget.y.toDouble(), ray.direction.y.toDouble(), DELTA)
         assertEquals(toTarget.z.toDouble(), ray.direction.z.toDouble(), DELTA)

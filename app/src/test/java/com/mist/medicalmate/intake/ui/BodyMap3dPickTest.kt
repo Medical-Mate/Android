@@ -105,6 +105,45 @@ class BodyMap3dPickTest {
         assertEquals(flat, bodyMap3dRegions.map { it.zoneId }.toSet())
     }
 
+    @Test
+    fun `전신에서는 짚은 구역이 아니라 그 부위로 들어간다`() {
+        // 발끝은 다리 앵커 점에서 신장의 23%나 떨어져 있다. 앵커 점으로 직접 판정하면
+        // 발을 짚은 것이 아무 데도 닿지 않은 것이 된다.
+        val toe = bodyMap3dRegions.first { it.zoneId == "SUR:102" && it.side == BodyMapSide.RIGHT }
+
+        assertEquals(BodyMapSelection("ANC:014", side = BodyMapSide.RIGHT), toe.toFocus())
+    }
+
+    @Test
+    fun `좌우가 함께 보이는 부위로는 좌우 없이 들어간다`() {
+        // 왼쪽 눈을 짚었다고 제목이 "왼쪽 머리 어디가 아프세요?"가 되면 안 된다.
+        val eye = bodyMap3dRegions.first { it.zoneId == "SUR:002" && it.side == BodyMapSide.LEFT }
+
+        assertEquals(BodyMapSelection("ANC:001", side = BodyMapSide.CENTER), eye.toFocus())
+    }
+
+    @Test
+    fun `부위를 확대하면 그 부위의 구역만 후보다`() {
+        val candidates = bodyMap3dCandidates(BodyMapSelection("ANC:001"))
+
+        assertTrue(candidates.isNotEmpty())
+        assertTrue(candidates.all { it.anchorId == "ANC:001" })
+    }
+
+    @Test
+    fun `한쪽만 보이는 부위에서는 보고 있는 쪽만 후보다`() {
+        // 반대쪽은 화면 밖이라 짚을 수 없는데 후보로 남으면 그쪽이 골라진다.
+        val candidates = bodyMap3dCandidates(BodyMapSelection("ANC:013", side = BodyMapSide.RIGHT))
+
+        assertTrue(candidates.isNotEmpty())
+        assertTrue(candidates.all { it.side == BodyMapSide.RIGHT })
+    }
+
+    @Test
+    fun `전신에서는 모든 구역이 후보다`() {
+        assertEquals(bodyMap3dRegions, bodyMap3dCandidates(focus = null))
+    }
+
     /** 그 구역 점을 화면에서 겨냥해 짚었을 때 같은 구역이 나오는지. */
     private fun assertPicks(yaw: Float, zoneId: String, side: BodyMapSide) {
         val camera = BodyMap3dCamera(yaw = yaw)

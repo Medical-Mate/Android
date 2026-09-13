@@ -39,11 +39,17 @@ internal data class BodyMap3dPick(val point: BodyMap3dPoint, val distance: Float
  *
  * 거리만 본다. 노멀은 보지 않는다 — 뒷면에 점이 있는 것은 허리·엉덩이뿐이라 노멀로
  * 후보를 거르면 뒤를 향한 탭이 전부 그쪽으로 몰린다.
+ *
+ * [candidates]를 좁히면 그 안에서만 고른다. 부위를 확대한 화면에서 쓴다 — 화면에 그 부위만
+ * 차 있는데 가장자리를 짚었다고 옆 부위가 골라지면 확대한 것이 무의미해진다.
  */
-internal fun bodyMap3dNearest(hit: BodyMap3dVector): BodyMap3dPick {
-    var nearest = bodyMap3dRegions.first()
+internal fun bodyMap3dNearest(
+    hit: BodyMap3dVector,
+    candidates: List<BodyMap3dPoint> = bodyMap3dRegions,
+): BodyMap3dPick {
+    var nearest = candidates.first()
     var best = Float.MAX_VALUE
-    for (region in bodyMap3dRegions) {
+    for (region in candidates) {
         val distance = hit.distanceTo(BodyMap3dVector(region.x, region.y, region.z))
         if (distance < best) {
             best = distance
@@ -51,6 +57,35 @@ internal fun bodyMap3dNearest(hit: BodyMap3dVector): BodyMap3dPick {
         }
     }
     return BodyMap3dPick(nearest, best)
+}
+
+/**
+ * 지금 고를 수 있는 구역들.
+ *
+ * 전신을 보는 중이면 전부다. 그때 고르는 것은 구역이 아니라 그 구역이 딸린 앵커인데,
+ * 앵커 점으로 직접 판정하지 않는 이유는 점이 아홉뿐이라 발끝처럼 앵커에서 먼 자리가
+ * 채택 문턱을 넘기 때문이다. 구역으로 찾고 그 앵커를 쓰면 발을 짚어도 다리로 들어간다.
+ *
+ * 부위를 확대했으면 그 앵커의 구역만 남긴다. 좌우 중 한쪽만 담는 앵커(팔·다리)에서는
+ * 보고 있는 쪽만 남긴다 — 반대쪽은 화면 밖이라 짚을 수 없는데 후보로 남으면 그쪽이 골라진다.
+ */
+internal fun bodyMap3dCandidates(focus: BodyMapSelection?): List<BodyMap3dPoint> {
+    if (focus == null) return bodyMap3dRegions
+    val oneSide = bodyMap3dFrameOf(focus.anchorId)?.oneSide == true
+    return bodyMap3dRegions.filter { point ->
+        point.anchorId == focus.anchorId && (!oneSide || point.side == focus.side)
+    }
+}
+
+/**
+ * 확대해 들어갈 앵커.
+ *
+ * 좌우는 한쪽만 담는 앵커에서만 물고 간다. 나머지는 가운데로 둔다 — 눈을 짚었다고 제목이
+ * "왼쪽 머리 어디가 아프세요?"가 되면 안 된다. 머리는 한 화면에 좌우가 함께 있다.
+ */
+internal fun BodyMap3dPoint.toFocus(): BodyMapSelection {
+    val oneSide = bodyMap3dFrameOf(anchorId)?.oneSide == true
+    return BodyMapSelection(anchorId, side = if (oneSide) side else BodyMapSide.CENTER)
 }
 
 /**
