@@ -156,17 +156,20 @@ private fun Modifier.bodyMap3dGestures(
  * 알 수 없다. 가려지는 점(팔 뒤의 가슴 같은)까지 가려 내지는 않는다 — 그러려면 점마다
  * 반직선을 한 번씩 더 쏴야 한다.
  *
- * 고른 점만 2D 인체도와 같은 모양이다. 나머지는 더 작고 흐리게 찍는다. 짚는 것은 점이
- * 아니라 몸이라, 점은 어디를 고를 수 있는지 알려주기만 하면 된다.
+ * 점마다 흰 테를 두른다. 2D 인체도는 흰 판 위라 흐린 회색 점으로도 보이는데, 여기는 점이
+ * 살갗 위에 얹히고 그 살갗이 빛에 따라 밝기가 변해서 회색만으로는 묻힌다.
+ *
+ * 고른 점은 2D와 같은 크기에 브랜드색이고 나머지는 한 치수 작다. 짚는 것은 점이 아니라
+ * 몸이라, 점은 어디를 고를 수 있는지 알려주기만 하면 된다.
  */
 @Composable
 private fun BodyMap3dDots(camera: BodyMap3dCamera, points: List<BodyMap3dPoint>, selection: BodyMapSelection?) {
     val colors = MedicalMateTheme.colors
-    val plain = colors.fgDefault.copy(alpha = PLAIN_ALPHA)
     val density = LocalDensity.current
     val haloRadius = with(density) { DotHaloSize.toPx() } / 2f
     val coreRadius = with(density) { DotCoreSize.toPx() } / 2f
-    val plainRadius = with(density) { DotPlainSize.toPx() } / 2f
+    val plainHaloRadius = with(density) { PlainHaloSize.toPx() } / 2f
+    val plainCoreRadius = with(density) { PlainCoreSize.toPx() } / 2f
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         val aspect = size.width / size.height
@@ -181,7 +184,8 @@ private fun BodyMap3dDots(camera: BodyMap3dCamera, points: List<BodyMap3dPoint>,
                 drawCircle(colors.bgSurface, haloRadius, center)
                 drawCircle(colors.bgPrimary, coreRadius, center)
             } else {
-                drawCircle(plain, plainRadius, center)
+                drawCircle(colors.bgSurface, plainHaloRadius, center)
+                drawCircle(colors.fgDefault, plainCoreRadius, center)
             }
         }
     }
@@ -236,6 +240,6 @@ private const val GLIDE_MILLIS = 460
 private val DotHaloSize = 22.dp
 private val DotCoreSize = 14.dp
 
-/** 고르지 않은 점. 구역 점이 한꺼번에 여럿 보여서 작게 둔다. */
-private val DotPlainSize = 8.dp
-private const val PLAIN_ALPHA = 0.22f
+/** 고르지 않은 점. 한 치수 작지만 흰 테는 같이 두른다. */
+private val PlainHaloSize = 16.dp
+private val PlainCoreSize = 9.dp

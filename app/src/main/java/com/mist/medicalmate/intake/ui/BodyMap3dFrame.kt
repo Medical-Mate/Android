@@ -44,7 +44,7 @@ internal fun bodyMap3dFrameOf(anchorId: String): BodyMap3dFrame? = bodyMap3dFram
 internal fun BodyMap3dFrame.camera(side: BodyMapSide, from: BodyMap3dCamera): BodyMap3dCamera = BodyMap3dCamera(
     yaw = from.yawNear(if (back) PI.toFloat() else 0f),
     pitch = 0f,
-    distance = span * SPAN_TO_DISTANCE + DISTANCE_MARGIN,
+    distance = (span * SPAN_TO_DISTANCE + DISTANCE_MARGIN).coerceAtLeast(MIN_DISTANCE),
     target = BodyMap3dVector(
         x = if (oneSide && side == BodyMapSide.LEFT) -target.x else target.x,
         y = target.y,
@@ -52,7 +52,20 @@ internal fun BodyMap3dFrame.camera(side: BodyMapSide, from: BodyMap3dCamera): Bo
     ),
 )
 
-/** 자료가 적어 둔 값이다. 구역들이 차지하는 크기에서 카메라 거리를 만든다. */
-private const val SPAN_TO_DISTANCE = 2.5f
-private const val DISTANCE_MARGIN = 0.07f
+/**
+ * 구역들이 차지하는 크기에서 카메라 거리를 만드는 값.
+ *
+ * **자료가 적어 둔 `span × 2.5 + 0.07`보다 멀리 잡는다.** 그 값은 가로로 넓은 뷰어에서 맞춘
+ * 것이고, 우리 판은 320x505라 세로 시야각이 좁아 같은 거리면 몸에 코가 닿는다. 기기에서
+ * 보니 가슴·배·목·허리가 전부 살갗만 차서 어디인지 알 수 없었다.
+ *
+ * [MIN_DISTANCE]는 그 아래로 더 다가가지 않는 바닥이다. 목(span 0.052)처럼 작은 부위는
+ * 계산값이 0.3도 안 되는데, 그 거리면 부위만 보이고 그것이 몸 어디인지가 사라진다. 지금
+ * 값에서는 어느 부위든 화면 높이의 절반쯤을 차지하고 나머지가 둘레로 남는다.
+ */
+private const val SPAN_TO_DISTANCE = 3.4f
+private const val DISTANCE_MARGIN = 0.12f
+private const val MIN_DISTANCE = 0.55f
+
+/** 보는 깊이를 절반만 쓴다. */
 private const val TARGET_DEPTH = 0.5f

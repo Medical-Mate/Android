@@ -23,12 +23,22 @@ class BodyMap3dFrameTest {
 
     @Test
     fun `거리는 부위 크기에서 나온다`() {
-        // 머리와 팔은 크기가 네 배 가까이 다르다. 같은 거리로 보면 한쪽이 화면을 넘친다.
-        val head = frame("ANC:001").camera(BodyMapSide.CENTER, BodyMap3dCamera())
+        // 팔과 다리는 길이가 다르다. 같은 거리로 보면 한쪽이 화면을 넘친다.
         val arm = frame("ANC:013").camera(BodyMapSide.RIGHT, BodyMap3dCamera())
+        val leg = frame("ANC:014").camera(BodyMapSide.RIGHT, BodyMap3dCamera())
 
-        assertEquals(0.094 * 2.5 + 0.07, head.distance.toDouble(), DELTA)
-        assertTrue(arm.distance > head.distance)
+        assertEquals(0.37 * 3.4 + 0.12, arm.distance.toDouble(), DELTA)
+        assertTrue(arm.distance > leg.distance)
+    }
+
+    @Test
+    fun `작은 부위에서도 살갗에 코가 닿도록 다가가지 않는다`() {
+        // 목은 계산값이 0.3도 안 된다. 그 거리면 부위만 보이고 그것이 몸 어디인지가 사라진다.
+        bodyMap3dFrames.forEach { frame ->
+            val camera = frame.camera(BodyMapSide.CENTER, BodyMap3dCamera())
+
+            assertTrue("너무 가깝다: ${frame.anchorId}", camera.distance >= MIN_ZOOM_DISTANCE)
+        }
     }
 
     @Test
@@ -80,5 +90,8 @@ class BodyMap3dFrameTest {
 
     private companion object {
         const val DELTA = 1e-4
+
+        /** 어느 부위든 이보다 가까이 가지 않는다. */
+        const val MIN_ZOOM_DISTANCE = 0.55f
     }
 }
