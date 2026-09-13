@@ -94,10 +94,10 @@ class VisitNoteViewModelTest {
     }
 
     @Test
-    fun `우하단 마이크는 패널을 열기만 한다`() {
-        // 여는 것과 듣기 시작하는 것을 한 번에 하면 패널이 무엇을 하는 자리인지 보기 전에
-        // 녹음이 시작된다. 권한도 그 자리에서 묻게 돼 왜 묻는지가 흐려진다.
-        val viewModel = viewModel()
+    fun `우하단 마이크를 누르면 패널이 뜨고 바로 듣는다`() {
+        // 누른 사람은 패널이 뜨자마자 말한다. 아직 아무것도 못 들었을 뿐이라 문구는
+        // "말씀해 주세요"다.
+        val viewModel = viewModel(FakeSpeechToText(keepOpen = true))
 
         viewModel.onVoiceClick()
 
@@ -105,22 +105,22 @@ class VisitNoteViewModelTest {
     }
 
     @Test
-    fun `패널의 마이크를 누르면 듣는 중이 된다`() {
-        val viewModel = viewModel(FakeSpeechToText(keepOpen = true))
-        viewModel.onVoiceClick()
+    fun `말소리가 들어오면 듣고 있어요가 된다`() {
+        val speech = FakeSpeechToText(chunks = listOf(SpeechChunk.Partial("위염")), keepOpen = true)
+        val viewModel = viewModel(speech)
 
-        viewModel.onMicClick()
+        viewModel.onVoiceClick()
 
         assertEquals(MedicalMateVoiceState.LISTENING, viewModel.uiState.value.voice)
     }
 
     @Test
-    fun `듣는 중에 다시 누르면 멈춘다`() {
+    fun `듣는 중에 패널 마이크를 누르면 멈춘다`() {
         // 다 말했을 때 누르는 자리다. 패널은 남고 상태만 돌아온다.
-        val viewModel = viewModel(FakeSpeechToText(keepOpen = true))
+        val speech = FakeSpeechToText(chunks = listOf(SpeechChunk.Partial("위염")), keepOpen = true)
+        val viewModel = viewModel(speech)
         viewModel.onVoiceClick()
 
-        viewModel.onMicClick()
         viewModel.onMicClick()
 
         assertEquals(MedicalMateVoiceState.IDLE, viewModel.uiState.value.voice)
@@ -132,7 +132,7 @@ class VisitNoteViewModelTest {
         val viewModel = viewModel(speech)
         viewModel.onNoteChange("위염이래요. ")
 
-        viewModel.onMicClick()
+        viewModel.onVoiceClick()
 
         assertEquals("위염이래요. 2주 뒤에 오래요", viewModel.uiState.value.note)
     }
@@ -143,7 +143,7 @@ class VisitNoteViewModelTest {
         val speech = FakeSpeechToText(chunks = listOf(SpeechChunk.Preparing), keepOpen = true)
         val viewModel = viewModel(speech)
 
-        viewModel.onMicClick()
+        viewModel.onVoiceClick()
 
         assertEquals(MedicalMateVoiceState.PROCESSING, viewModel.uiState.value.voice)
     }

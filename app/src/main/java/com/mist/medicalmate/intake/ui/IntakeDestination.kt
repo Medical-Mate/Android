@@ -105,6 +105,7 @@ private fun IntakeRoute(
 
     // 권한은 마이크를 누를 때 묻는다. 화면을 열자마자 묻지 않는다.
     val askMic = rememberMicPermission(onGranted = viewModel::onMicClick, onDenied = viewModel::onMicDenied)
+    val askVoiceMode = rememberMicPermission(onGranted = viewModel::onVoiceMode, onDenied = viewModel::onMicDenied)
 
     IntakeScreen(
         state = state,
@@ -122,7 +123,7 @@ private fun IntakeRoute(
             onBodySearchChange = viewModel.bodyMap::onSearchChange,
             onDraftChange = viewModel::onDraftChange,
             onSendClick = viewModel::onSend,
-            onVoiceClick = { viewModel.onInputModeChange(IntakeInputMode.VOICE) },
+            onVoiceClick = askVoiceMode,
             onMicClick = askMic,
             onTypeInsteadClick = { viewModel.onInputModeChange(IntakeInputMode.TEXT) },
             onSeverityChange = viewModel::onSeverityChange,

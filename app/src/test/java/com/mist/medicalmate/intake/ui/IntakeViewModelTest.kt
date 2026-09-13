@@ -337,13 +337,36 @@ class IntakeViewModelTest {
     }
 
     @Test
-    fun `마이크는 대기와 듣는 중을 오간다`() {
+    fun `음성으로 바꾸면 바로 듣기 시작한다`() {
+        // 누른 사람은 패널이 뜨자마자 말한다. 한 번 더 눌러야 듣기 시작하면 그 사이에 한 말이
+        // 사라진다. 아직 아무것도 못 들었을 뿐이라 문구는 "말씀해 주세요"다.
         val viewModel = intakeViewModel(speech = FakeSpeechToText(keepOpen = true))
 
-        viewModel.onMicClick()
+        viewModel.onVoiceMode()
+
+        assertEquals(IntakeInputMode.VOICE, viewModel.uiState.value.inputMode)
+        assertEquals(MedicalMateVoiceState.IDLE, viewModel.uiState.value.voice)
+    }
+
+    @Test
+    fun `말소리가 들어오면 듣고 있어요가 된다`() {
+        val speech = FakeSpeechToText(chunks = listOf(SpeechChunk.Partial("배가")), keepOpen = true)
+        val viewModel = intakeViewModel(speech = speech)
+
+        viewModel.onVoiceMode()
+
         assertEquals(MedicalMateVoiceState.LISTENING, viewModel.uiState.value.voice)
+    }
+
+    @Test
+    fun `패널의 마이크를 누르면 멈춘다`() {
+        // 다 말했을 때 누르는 자리다.
+        val speech = FakeSpeechToText(chunks = listOf(SpeechChunk.Partial("배가")), keepOpen = true)
+        val viewModel = intakeViewModel(speech = speech)
+        viewModel.onVoiceMode()
 
         viewModel.onMicClick()
+
         assertEquals(MedicalMateVoiceState.IDLE, viewModel.uiState.value.voice)
     }
 
@@ -353,7 +376,7 @@ class IntakeViewModelTest {
         val speech = FakeSpeechToText(chunks = listOf(SpeechChunk.Final("배가 아파요")), keepOpen = true)
         val viewModel = intakeViewModel(speech = speech)
 
-        viewModel.onMicClick()
+        viewModel.onVoiceMode()
 
         assertEquals("배가 아파요", viewModel.uiState.value.draft)
     }
@@ -368,7 +391,7 @@ class IntakeViewModelTest {
             )
         val viewModel = intakeViewModel(speech = speech)
 
-        viewModel.onMicClick()
+        viewModel.onVoiceMode()
 
         assertEquals("배가 아파요", viewModel.uiState.value.draft)
     }
@@ -379,7 +402,7 @@ class IntakeViewModelTest {
         val viewModel = intakeViewModel(speech = speech)
         viewModel.onDraftChange("배가 ")
 
-        viewModel.onMicClick()
+        viewModel.onVoiceMode()
 
         assertEquals("배가 아파요", viewModel.uiState.value.draft)
     }
@@ -390,7 +413,7 @@ class IntakeViewModelTest {
         val viewModel = intakeViewModel(speech = speech)
         viewModel.onDraftChange("배가 아파요")
 
-        viewModel.onMicClick()
+        viewModel.onVoiceMode()
 
         assertEquals("배가 아파요", viewModel.uiState.value.draft)
         assertEquals(MedicalMateVoiceState.IDLE, viewModel.uiState.value.voice)

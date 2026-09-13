@@ -210,15 +210,16 @@ private fun VisitNoteRoute(
 
     // 권한은 마이크를 누를 때 묻는다. 화면을 열자마자 묻지 않는다.
     val askMic = rememberMicPermission(onGranted = viewModel::onMicClick, onDenied = viewModel::onMicDenied)
+    val askVoice = rememberMicPermission(onGranted = viewModel::onVoiceClick, onDenied = viewModel::onMicDenied)
 
     VisitNoteScreen(
         state = state,
         callbacks =
         VisitNoteCallbacks(
             onMicClick = askMic,
+            onVoiceClick = askVoice,
             onBackClick = onExit,
             onNoteChange = viewModel::onNoteChange,
-            onVoiceClick = viewModel::onVoiceClick,
             onTypeInsteadClick = viewModel::onTypeInsteadClick,
             // 적은 원문이 그대로 다음 화면으로 간다. 1q-1이 그 글을 보여주고 저장한다.
             onSaveClick = { onSaved(state.note) },

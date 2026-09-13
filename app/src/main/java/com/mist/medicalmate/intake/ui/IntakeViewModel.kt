@@ -40,7 +40,7 @@ internal constructor(
     val uiState: StateFlow<IntakeUiState> = mutableUiState.asStateFlow()
 
     /** 4단계 질문 목록 조작. 왜 나눴는지는 [IntakeQuestionActions]에 있다. */
-    val question = IntakeQuestionActions { change -> mutableUiState.update { it.change() } }
+    val question = IntakeQuestionActions { transform -> mutableUiState.update(transform) }
 
     /** 인체도 단계의 조작. 왜 나눴는지는 [BodyMapActions]에 있다. */
     val bodyMap = BodyMapActions { transform ->
@@ -119,10 +119,20 @@ internal constructor(
             onDictated = { draft -> mutableUiState.update { it.copy(draft = draft) } },
         )
 
-    /** 마이크를 눌렀다. 권한이 확인된 뒤에 불린다. */
+    /**
+     * 입력칸의 마이크. 권한이 확인된 뒤에 불린다.
+     *
+     * 음성으로 바꾸면서 **바로 듣기 시작한다.** 누른 사람은 패널이 뜨자마자 말한다. 한 번 더
+     * 눌러야 듣기 시작하면 그 사이에 한 말이 사라진다.
+     */
+    fun onVoiceMode() {
+        mutableUiState.update { it.copy(inputMode = IntakeInputMode.VOICE, voice = MedicalMateVoiceState.IDLE) }
+        dictation.start(mutableUiState.value.draft)
+    }
+
+    /** 패널 안의 마이크. 듣는 중이면 멈추고 아니면 다시 듣는다. */
     fun onMicClick() {
-        val state = mutableUiState.value
-        dictation.onMicClick(listening = state.voice == MedicalMateVoiceState.LISTENING, base = state.draft)
+        dictation.toggle(mutableUiState.value.draft)
     }
 
     /** 마이크 권한을 거부했다. */

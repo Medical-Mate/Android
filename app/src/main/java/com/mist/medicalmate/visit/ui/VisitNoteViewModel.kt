@@ -83,22 +83,19 @@ constructor(private val clock: Clock, private val speech: SpeechToText) : ViewMo
         )
 
     /**
-     * 우하단 마이크. 음성 패널을 열고 닫는다.
+     * 우하단 마이크. 권한이 확인된 뒤에 불린다.
      *
-     * 패널이 닫혀 있으면 열기만 한다. 여는 것과 듣기 시작하는 것을 한 번에 하면 패널이 무엇을
-     * 하는 자리인지 보기 전에 녹음이 시작된다.
+     * 패널을 열면서 **바로 듣기 시작한다.** 누른 사람은 패널이 뜨자마자 말한다. 한 번 더
+     * 눌러야 듣기 시작하면 그 사이에 한 말이 사라진다.
      */
     fun onVoiceClick() {
-        mutableUiState.update { state ->
-            if (state.voice == null) state.copy(voice = MedicalMateVoiceState.IDLE) else state
-        }
-        if (mutableUiState.value.voice != MedicalMateVoiceState.IDLE) dictation.stop()
+        mutableUiState.update { it.copy(voice = MedicalMateVoiceState.IDLE) }
+        dictation.start(mutableUiState.value.note)
     }
 
-    /** 패널 안의 마이크. 권한이 확인된 뒤에 불린다. */
+    /** 패널 안의 마이크. 듣는 중이면 멈추고 아니면 다시 듣는다. */
     fun onMicClick() {
-        val state = mutableUiState.value
-        dictation.onMicClick(listening = state.voice == MedicalMateVoiceState.LISTENING, base = state.note)
+        dictation.toggle(mutableUiState.value.note)
     }
 
     /** 마이크 권한을 거부했다. */
