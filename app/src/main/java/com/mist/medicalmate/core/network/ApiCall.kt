@@ -33,5 +33,6 @@ private fun HttpException.toRejected(json: Json): ApiResult.Rejected {
         message = envelope?.error?.message,
         requestId = envelope?.meta?.requestId,
         retryable = envelope?.error?.retryable ?: false,
+        details = envelope?.error?.details,
     )
 }

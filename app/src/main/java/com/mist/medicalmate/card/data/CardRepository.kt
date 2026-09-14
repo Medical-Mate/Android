@@ -2,11 +2,14 @@ package com.mist.medicalmate.card.data
 
 import com.mist.medicalmate.card.ui.BriefCard
 import com.mist.medicalmate.card.ui.BriefCardHospital
+import com.mist.medicalmate.core.network.ApiErrorCode
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.core.network.apiCall
 import com.mist.medicalmate.core.network.map
 import jakarta.inject.Inject
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.longOrNull
 import java.time.LocalDate
 import java.time.OffsetDateTime
 
@@ -149,3 +152,15 @@ private fun BriefCardHospital?.toRequest(): ClinicRequest? =
 private fun String.shorten(): String = if (length <= TITLE_MAX) this else take(TITLE_MAX).trimEnd() + "…"
 
 private const val TITLE_MAX = 24
+
+/**
+ * 서버가 "이미 고친 카드"라며 알려준 최신 카드 id. 그 오류가 아니면 null이다.
+ *
+ * 확정된 카드를 고치면 새 버전이 생기고 옛 id는 자식을 갖는다. 그 옛 id로 또 고치면 버전이
+ * 가지를 치는데, 가지에 넣은 편집은 목록이 최신 한 장만 내면서 어느 화면에도 나오지
+ * 않는다. 그래서 서버가 409로 막고 갈아탈 id를 함께 준다(Backend#117).
+ */
+internal fun ApiResult.Rejected.latestCardId(): Long? {
+    if (code != ApiErrorCode.CARD_ALREADY_EDITED) return null
+    return (details?.get("latestCardId") as? JsonPrimitive)?.longOrNull
+}

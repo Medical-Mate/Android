@@ -2,7 +2,9 @@ package com.mist.medicalmate.card.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mist.medicalmate.card.data.AxisEdit
 import com.mist.medicalmate.card.data.CardRepository
+import com.mist.medicalmate.card.data.latestCardId
 import com.mist.medicalmate.core.network.ApiResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
@@ -103,7 +105,7 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
 
         viewModelScope.launch {
             when (
-                val result = repository.update(
+                val result = patch(
                     cardId,
                     axes = emptyList(),
                     questions = state.card.questions,
@@ -117,6 +119,27 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
                     mutableUiState.value = state.copy(saveFailed = true)
             }
         }
+    }
+
+    /**
+     * 카드를 고친다. 서버가 "이미 고친 카드"라고 막으면 최신 카드로 갈아타고 한 번만 다시
+     * 보낸다(Backend#117).
+     *
+     * 옛 id를 들고 있을 길은 #219에서 막았다. 그래도 못 찾은 경로가 남아 있으면 여기서
+     * 드러나고, 조용히 버전이 가지를 치는 대신 고친 값이 최신 카드에 얹힌다.
+     *
+     * 한 번만 따라간다. 두 번째도 막히면 그대로 실패로 알린다 — 계속 따라가면 어디서 멈출지
+     * 알 수 없고, 그 사이에 다른 사람이 고치고 있는 것이라면 덮어쓰기를 반복하게 된다.
+     */
+    private suspend fun patch(
+        cardId: Long,
+        axes: List<AxisEdit>,
+        questions: List<String>,
+        clinic: BriefCardHospital? = null,
+    ): ApiResult<BriefCard> {
+        val first = repository.update(cardId, axes, questions, clinic)
+        val latest = (first as? ApiResult.Rejected)?.latestCardId() ?: return first
+        return repository.update(latest, axes, questions, clinic)
     }
 
     /** Nav 우측 `편집`. 카드 안의 모든 값을 한 번에 연다. */
@@ -145,7 +168,7 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
         if (draft == null || cardId == null) return
 
         viewModelScope.launch {
-            when (val result = repository.update(cardId, state.changedAxes(), draft.questions)) {
+            when (val result = patch(cardId, state.changedAxes(), draft.questions)) {
                 is ApiResult.Success ->
                     mutableUiState.value =
                         BriefCardUiState.Content(
