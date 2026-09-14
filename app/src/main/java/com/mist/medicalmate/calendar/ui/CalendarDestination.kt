@@ -12,6 +12,7 @@ import androidx.navigation.toRoute
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
 import kotlinx.serialization.Serializable
 import java.time.LocalDate
+import java.time.YearMonth
 
 /** 와이어프레임 1r-1. 하단 탭의 캘린더다. */
 @Serializable
@@ -33,7 +34,7 @@ internal data class CalendarDayDestination(val date: String, val appointmentId: 
 internal fun NavGraphBuilder.calendarDestination(
     onDayOpen: (date: LocalDate, appointmentId: Long?) -> Unit,
     onCardOpen: (String) -> Unit,
-    onAddClick: () -> Unit,
+    onAddClick: (date: LocalDate?) -> Unit,
     onTabSelect: (MedicalMateTab) -> Unit,
 ) {
     composable<CalendarDestination> {
@@ -50,7 +51,7 @@ internal fun NavGraphBuilder.calendarDayDestination(
     onCardOpen: (String) -> Unit,
     onRecordAdd: (cardId: String, cardTitle: String, visitedOn: LocalDate) -> Unit,
     onRecordOpen: (String) -> Unit,
-    onScheduleConfirm: (String?) -> Unit,
+    onScheduleConfirm: (clinic: String?, date: LocalDate, appointmentId: Long?) -> Unit,
     onExit: () -> Unit,
 ) {
     composable<CalendarDayDestination> { entry ->
@@ -61,6 +62,7 @@ internal fun NavGraphBuilder.calendarDayDestination(
             appointmentId = route.appointmentId,
             onCardOpen = onCardOpen,
             onScheduleConfirm = onScheduleConfirm,
+            onScheduleEdit = { id -> onScheduleConfirm(null, date, id) },
             onRecordAdd = { cardId, cardTitle -> onRecordAdd(cardId, cardTitle, date) },
             onRecordOpen = onRecordOpen,
             onExit = onExit,
@@ -81,7 +83,7 @@ internal fun NavGraphBuilder.calendarDayDestination(
 private fun CalendarMonthRoute(
     onDayOpen: (date: LocalDate, appointmentId: Long?) -> Unit,
     onCardOpen: (String) -> Unit,
-    onAddClick: () -> Unit,
+    onAddClick: (date: LocalDate?) -> Unit,
     onTabSelect: (MedicalMateTab) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: CalendarViewModel = hiltViewModel(),
@@ -99,7 +101,9 @@ private fun CalendarMonthRoute(
         onScheduleClick = { id -> onDayOpen(state.selected, id.toLongOrNull()) },
         onCardOpenClick = onCardOpen,
         onCardSheetDismiss = viewModel::onCardSheetDismiss,
-        onAddClick = onAddClick,
+        // 보고 있는 달의 날을 고른 상태에서만 그 날을 들고 간다. 다른 달로 넘기면 고른 날이
+        // 격자 밖이라 화면에 표시가 없고, 그 날로 열리면 어디서 온 값인지 알 수 없다.
+        onAddClick = { onAddClick(state.selected.takeIf { YearMonth.from(it) == state.month }) },
         onTabSelect = onTabSelect,
         modifier = modifier,
     )
@@ -118,7 +122,8 @@ private fun CalendarDayRoute(
     date: LocalDate,
     appointmentId: Long?,
     onCardOpen: (String) -> Unit,
-    onScheduleConfirm: (String?) -> Unit,
+    onScheduleConfirm: (clinic: String?, date: LocalDate, appointmentId: Long?) -> Unit,
+    onScheduleEdit: (Long) -> Unit,
     onRecordAdd: (cardId: String, cardTitle: String) -> Unit,
     onRecordOpen: (String) -> Unit,
     onExit: () -> Unit,
@@ -146,7 +151,14 @@ private fun CalendarDayRoute(
             onScheduleDeleteConfirm = { viewModel.onScheduleDeleteConfirm(onExit) },
             onScheduleDeleteDismiss = viewModel::onScheduleDeleteDismiss,
             // 1r-2-A의 "시간 정하고 확정하기". 병원이 채워진 일정 추가(1r-4-B)로 간다.
-            onNextEventConfirmClick = { onScheduleConfirm(state?.nextEvent?.clinic) },
+            // **그 일정의 날짜를 들고 간다.** 다음 진료는 이 화면의 날이 아니라 다른 날이다.
+            // 이미 만들어진 일정이면 그것을 고치러 간다 — 새로 만들면 같은 재방문이 둘이 된다.
+            onNextEventConfirmClick = {
+                state?.nextEvent?.let { next ->
+                    onScheduleConfirm(next.clinic, next.on, next.appointmentId)
+                }
+            },
+            onScheduleEditClick = onScheduleEdit,
         ),
         modifier = modifier,
     )

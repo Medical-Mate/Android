@@ -1,6 +1,7 @@
 package com.mist.medicalmate.calendar.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -14,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
 import com.mist.medicalmate.core.designsystem.MedicalMateRadius
@@ -21,7 +23,6 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateBadgeTone
-import com.mist.medicalmate.core.designsystem.component.MedicalMateBottomCtaBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonSize
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonType
@@ -70,20 +71,13 @@ fun CalendarDayScreen(state: CalendarDayUiState, callbacks: CalendarDayCallbacks
                 .padding(horizontal = MedicalMateSize.gutter, vertical = MedicalMateSpace.s12),
             verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8),
         ) {
-            ScheduleSection(state = state)
+            ScheduleSection(state = state, callbacks = callbacks)
             CardSection(state = state, callbacks = callbacks)
             TodoSection(state = state, callbacks = callbacks)
             RecordSection(state = state, callbacks = callbacks)
             NextEventSection(state = state, callbacks = callbacks)
-        }
-        if (state.editing) {
-            MedicalMateBottomCtaBar {
-                MedicalMateButton(
-                    label = stringResource(R.string.calendar_day_schedule_delete),
-                    onClick = callbacks.onScheduleDeleteClick,
-                    type = MedicalMateButtonType.DANGER,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+            if (state.editing) {
+                DeleteAction(onClick = callbacks.onScheduleDeleteClick)
             }
         }
     }
@@ -138,9 +132,32 @@ data class CalendarDayCallbacks(
     val onEditDoneClick: () -> Unit = {},
     val onTodoDeleteClick: (String) -> Unit = {},
     val onScheduleDeleteClick: () -> Unit = {},
+    val onScheduleEditClick: (Long) -> Unit = {},
     val onScheduleDeleteConfirm: () -> Unit = {},
     val onScheduleDeleteDismiss: () -> Unit = {},
 )
+
+/**
+ * 일정 삭제.
+ *
+ * **하단에 고정하지 않고 본문 끝에 둔다.** 고정하면 편집을 누르는 순간 본문 위로 들어서면서
+ * 마지막 요소를 자른다. 다녀온 날에서는 그 자리가 다음 일정 카드라 카드가 잘린 채로 보인다.
+ * 끝까지 내려야 나오게 두면 그 일이 없고, 지우는 동작을 실수로 누를 일도 줄어든다.
+ *
+ * 문서의 삭제 규칙이 정한 것은 하단 Danger CTA와 확인 대화상자이고, 그 버튼이 늘 떠 있어야
+ * 한다는 뜻은 아니다.
+ *
+ * 앞 섹션과 한 칸 더 띄운다. 본문의 마지막 줄이 아니라 따로 선 동작이다.
+ */
+@Composable
+private fun ColumnScope.DeleteAction(onClick: () -> Unit) {
+    MedicalMateButton(
+        label = stringResource(R.string.calendar_day_schedule_delete),
+        onClick = onClick,
+        type = MedicalMateButtonType.DANGER,
+        modifier = Modifier.fillMaxWidth().padding(top = MedicalMateSpace.s12),
+    )
+}
 
 /**
  * 이 날 일정. 옅은 브랜드 면에 머리말과 제목, 시간과 가져갈 것을 담는다.
@@ -152,8 +169,12 @@ data class CalendarDayCallbacks(
  * 글꼴에서 어디까지가 시간인지 흐려진다.
  */
 @Composable
-private fun ColumnScope.ScheduleSection(state: CalendarDayUiState) {
+private fun ColumnScope.ScheduleSection(state: CalendarDayUiState, callbacks: CalendarDayCallbacks) {
     val schedule = state.schedule ?: return
+
+    // 시각이 없는 일정만 눌러서 고치러 간다(#230). 시간 미정으로 저장하고 나면 그 값을 채울
+    // 자리가 어디에도 없었다. 시각이 정해진 일정을 여기서 열면 고칠 것이 없는 화면이 뜬다.
+    val edit = schedule.id.toLongOrNull()?.takeIf { schedule.time == null }
 
     MedicalMateSectionHeader(title = stringResource(R.string.calendar_day_schedule))
     Column(
@@ -161,6 +182,17 @@ private fun ColumnScope.ScheduleSection(state: CalendarDayUiState) {
         Modifier
             .fillMaxWidth()
             .background(color = MedicalMateTheme.colors.bgPrimaryFaint, shape = MedicalMateRadius.lg)
+            .let { base ->
+                if (edit == null) {
+                    base
+                } else {
+                    base.clickable(
+                        role = Role.Button,
+                        onClickLabel = stringResource(R.string.calendar_day_schedule_edit),
+                        onClick = { callbacks.onScheduleEditClick(edit) },
+                    )
+                }
+            }
             .padding(MedicalMateSpace.s16),
         verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4),
     ) {

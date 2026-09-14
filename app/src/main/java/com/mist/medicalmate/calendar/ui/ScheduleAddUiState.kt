@@ -17,6 +17,13 @@ import java.time.LocalTime
  * 고르지 않은 시각이 일자 화면에 그대로 떴다.
  */
 data class ScheduleAddUiState(
+    /**
+     * 고치고 있는 일정.
+     *
+     * 있으면 새로 만드는 것이 아니라 그 일정을 고친다. 시간 미정으로 저장한 일정에 시각을
+     * 채우러 들어오는 길이 이 상태다(1r-2 · 1r-2-A). 없으면 새 일정이다.
+     */
+    val appointmentId: Long? = null,
     val cards: List<ScheduleAddCard> = emptyList(),
     val todos: List<ScheduleAddTodo> = emptyList(),
     val hospital: String? = null,
@@ -42,8 +49,19 @@ data class ScheduleAddUiState(
     val dateMissing: Boolean get() = showErrors && date == null
 }
 
-/** 가져갈 카드 후보 한 장. */
-data class ScheduleAddCard(val id: String, val title: String, val meta: String, val picked: Boolean = false)
+/**
+ * 가져갈 카드 후보 한 장.
+ *
+ * [clinic]은 그 카드로 가기로 한 병원이다. [meta]에 이미 글로 들어 있지만 거기서 다시
+ * 떼어낼 수 없어 따로 든다. 카드를 고르면 병원 칸을 이 값으로 채운다(1r-4-B).
+ */
+data class ScheduleAddCard(
+    val id: String,
+    val title: String,
+    val meta: String,
+    val clinic: String? = null,
+    val picked: Boolean = false,
+)
 
 /**
  * 이 일정에 딸린 할 일 한 줄.

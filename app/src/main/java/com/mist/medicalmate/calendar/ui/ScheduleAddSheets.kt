@@ -1,6 +1,7 @@
 package com.mist.medicalmate.calendar.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,12 +23,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
@@ -39,6 +47,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateDateCell
 import com.mist.medicalmate.core.designsystem.component.MedicalMateDateCellSizeCompact
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButtonSize
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
@@ -227,7 +236,10 @@ private fun TimeWheel(
     val hours = (0 until NOON).map { if (it == 0) NOON else it }
     val minutes = listOf(0, HALF_HOUR)
 
-    Box(modifier = Modifier.fillMaxWidth().height(WheelHeight), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier.fillMaxWidth().height(WheelHeight).nestedScroll(WheelScrollSink),
+        contentAlignment = Alignment.Center,
+    ) {
         Box(
             modifier =
             Modifier
@@ -264,10 +276,16 @@ private fun TimeWheel(
  * 위아래로 한 칸씩 여백을 둬서 첫 항목과 마지막 항목도 가운데 밴드에 올 수 있다.
  * 멈춘 자리의 항목을 고른 값으로 올린다. 스크롤 중에는 올리지 않는다. 지나가는 값마다
  * 상태가 바뀌면 목록이 스스로 되감긴다.
+ *
+ * **밴드 밖의 값은 눌러서도 고른다.** 굴리는 것만으로 두면 값이 둘뿐인 열(오전·오후, 00·30)
+ * 에서 손가락을 얼마나 움직여야 하는지가 보이지 않고, 보이는 글자를 눌렀는데 아무 일도
+ * 일어나지 않는다. 누르면 그 자리로 굴러가고 멈춘 자리가 고른 값이 되므로 두 길이 같은
+ * 곳으로 모인다. 스크린 리더도 이 자리를 지나갈 수 있게 된다.
  */
 @Composable
 private fun WheelColumn(labels: List<String>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = selected)
+    val scope = rememberCoroutineScope()
     ReportSettledItem(listState = listState, onSettle = onSelect)
 
     LazyColumn(
@@ -276,27 +294,52 @@ private fun WheelColumn(labels: List<String>, selected: Int, onSelect: (Int) -> 
         contentPadding = PaddingValues(vertical = WheelItemHeight),
         modifier = modifier,
     ) {
-        items(items = labels) { label ->
-            val index = labels.indexOf(label)
-            Box(
-                modifier = Modifier.fillMaxWidth().height(WheelItemHeight),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = label,
-                    style =
-                    if (index == selected) {
-                        MedicalMateTheme.typography.bodyLStrong
-                    } else {
-                        MedicalMateTheme.typography.bodyL
-                    },
-                    color =
-                    if (index == selected) MedicalMateTheme.colors.fgDefault else MedicalMateTheme.colors.fgSubtle,
-                )
-            }
+        items(count = labels.size) { index ->
+            WheelItem(
+                label = labels[index],
+                selected = index == selected,
+                onClick = { scope.launch { listState.animateScrollToItem(index) } },
+            )
         }
     }
 }
+
+/** 휠의 한 칸. 고른 칸만 굵고 진하다. */
+@Composable
+private fun WheelItem(label: String, selected: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier =
+        Modifier
+            .fillMaxWidth()
+            .height(WheelItemHeight)
+            .clickable(role = Role.Button, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            style = if (selected) MedicalMateTheme.typography.bodyLStrong else MedicalMateTheme.typography.bodyL,
+            color = if (selected) MedicalMateTheme.colors.fgDefault else MedicalMateTheme.colors.fgSubtle,
+        )
+    }
+}
+
+/**
+ * 휠이 시트에게 스크롤을 빼앗기지 않게 막는다.
+ *
+ * `ModalBottomSheet`는 안쪽 스크롤이 더 갈 데가 없으면 남은 양을 받아 시트를 내린다. 휠은
+ * 처음에 맨 위 값에 서 있어서, 아래로 끌어 앞 값을 고르려 하면 목록이 아니라 시트가 내려가
+ * 닫힌다. 고르려던 동작이 취소로 읽히는 것이다.
+ *
+ * 남은 양을 여기서 삼켜 시트까지 올려보내지 않는다. 시트는 손잡이와 스크림으로 닫으면 된다.
+ */
+private val WheelScrollSink =
+    object : NestedScrollConnection {
+        override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset =
+            Offset(x = 0f, y = available.y)
+
+        override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity =
+            Velocity(x = 0f, y = available.y)
+    }
 
 /** 스크롤이 멈춘 뒤 가운데 항목을 한 번만 올린다. */
 @Composable

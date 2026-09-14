@@ -97,12 +97,87 @@ class ScheduleAddViewModelTest {
     }
 
     @Test
+    fun `정해진 날을 들고 열리면 그 날로 선다`() {
+        // 캘린더에서 고른 날이나 일자 화면의 그 날이다. 들고 들어온 값이 화면에 서야
+        // 사용자가 방금 고른 날을 한 번 더 고르지 않는다.
+        val viewModel = addViewModel()
+
+        viewModel.onDatePrefilled(LocalDate.of(2026, 9, 26))
+
+        assertEquals(LocalDate.of(2026, 9, 26), viewModel.uiState.value.date)
+    }
+
+    @Test
+    fun `날 없이 열리면 비어 있다`() {
+        // 다른 달로 넘겨 아무 날도 고르지 않고 들어오는 길이다. 이 화면에서 고른다(1r-4-D).
+        val viewModel = addViewModel()
+
+        viewModel.onDatePrefilled(null)
+
+        assertNull(viewModel.uiState.value.date)
+    }
+
+    @Test
+    fun `고쳐 둔 날을 처음 값으로 되돌리지 않는다`() {
+        // 병원을 고르러 나갔다 돌아오면 이 화면이 다시 조합된다. 그때 덮으면 시트에서
+        // 고친 날이 조용히 사라진다.
+        val viewModel = addViewModel()
+        viewModel.onDatePrefilled(LocalDate.of(2026, 9, 26))
+        viewModel.onDateConfirm(LocalDate.of(2026, 10, 2))
+
+        viewModel.onDatePrefilled(LocalDate.of(2026, 9, 26))
+
+        assertEquals(LocalDate.of(2026, 10, 2), viewModel.uiState.value.date)
+    }
+
+    @Test
     fun `빈 이름으로 돌아오면 병원을 지우지 않는다`() {
         val viewModel = addViewModel()
         viewModel.onHospitalPicked("서울OO병원 내과")
 
         viewModel.onHospitalPicked(null)
         viewModel.onHospitalPicked("")
+
+        assertEquals("서울OO병원 내과", viewModel.uiState.value.hospital)
+    }
+
+    @Test
+    fun `카드를 고르면 그 카드의 병원이 채워진다`() {
+        // 그 카드로 갈 병원이 이미 정해져 있는데 같은 값을 다시 찾게 하지 않는다(1r-4-B).
+        val viewModel = addViewModel()
+
+        viewModel.onCardPickChange("1", true)
+
+        assertEquals("서울OO병원 내과", viewModel.uiState.value.hospital)
+    }
+
+    @Test
+    fun `병원이 없는 카드는 병원 칸을 건드리지 않는다`() {
+        val viewModel = addViewModel()
+
+        viewModel.onCardPickChange("2", true)
+
+        assertNull(viewModel.uiState.value.hospital)
+    }
+
+    @Test
+    fun `이미 고른 병원은 카드가 덮지 않는다`() {
+        // 손으로 고른 것이 카드에 적힌 것보다 나중의 뜻이다.
+        val viewModel = addViewModel()
+        viewModel.onHospitalPicked("분당서울대학교병원")
+
+        viewModel.onCardPickChange("1", true)
+
+        assertEquals("분당서울대학교병원", viewModel.uiState.value.hospital)
+    }
+
+    @Test
+    fun `카드를 풀어도 병원은 남는다`() {
+        // 잘못 눌렀다 되돌린 사람의 병원까지 사라지면 안 된다.
+        val viewModel = addViewModel()
+        viewModel.onCardPickChange("1", true)
+
+        viewModel.onCardPickChange("1", false)
 
         assertEquals("서울OO병원 내과", viewModel.uiState.value.hospital)
     }
@@ -315,6 +390,84 @@ class ScheduleAddViewModelTest {
         assertTrue(saved)
     }
 
+    @Test
+    fun `고치러 들어오면 그 일정의 값이 채워진다`() {
+        // 시간 미정으로 저장한 일정에 시각을 채우러 들어오는 길이다(1r-2).
+        val repository = RecordingAppointmentRepository()
+        repository.dayAppointments = listOf(timeless)
+        val viewModel = editViewModel(repository)
+
+        val state = viewModel.uiState.value
+        assertEquals(7L, state.appointmentId)
+        assertEquals("마디정형외과병원", state.hospital)
+        assertEquals(LocalDate.of(2026, 9, 26), state.date)
+        assertNull(state.time)
+        assertEquals(listOf("1"), state.cards.filter { it.picked }.map { it.id })
+        assertEquals(listOf("엑스레이 결과 물어보기"), state.todos.map { it.label })
+    }
+
+    @Test
+    fun `고치러 들어와 저장하면 새로 만들지 않는다`() {
+        // 새로 만들면 같은 일정이 둘이 된다.
+        val repository = RecordingAppointmentRepository()
+        repository.dayAppointments = listOf(timeless)
+        val viewModel = editViewModel(repository)
+        viewModel.onTimeConfirm(LocalTime.of(18, 0))
+
+        viewModel.onSaveClick {}
+
+        assertEquals(0, repository.createCount)
+        assertEquals(1, repository.updateCount)
+        assertEquals(7L, repository.updatedId)
+        assertEquals(LocalTime.of(18, 0), repository.updatedEdit?.time)
+        assertEquals(LocalDate.of(2026, 9, 26), repository.updatedEdit?.on)
+    }
+
+    @Test
+    fun `시각을 비운 채 저장하면 시간 미정으로 되돌린다`() {
+        // 시각을 싣지 않는 것과 지우라고 말하는 것은 다르다. 서버가 둘을 갈라 받는다.
+        val repository = RecordingAppointmentRepository()
+        repository.dayAppointments = listOf(timeless)
+        val viewModel = editViewModel(repository)
+
+        viewModel.onSaveClick {}
+
+        assertTrue(repository.updatedEdit?.clearTime == true)
+        assertNull(repository.updatedEdit?.time)
+    }
+
+    @Test
+    fun `없는 일정을 가리키면 새로 만드는 화면이다`() {
+        // 그 사이 지워졌을 수 있다. 빈 화면으로 열리고 저장은 새로 만든다.
+        val repository = RecordingAppointmentRepository()
+        val viewModel = editViewModel(repository)
+        viewModel.onHospitalPicked("마디정형외과병원")
+        viewModel.onDateConfirm(LocalDate.of(2026, 9, 26))
+
+        viewModel.onSaveClick {}
+
+        assertNull(viewModel.uiState.value.appointmentId)
+        assertEquals(1, repository.createCount)
+        assertEquals(0, repository.updateCount)
+    }
+
+    /** 고치러 들어온 화면. */
+    private fun editViewModel(repository: RecordingAppointmentRepository) =
+        ScheduleAddViewModel(repository, FakeCardRepository(list = ApiResult.Success(pickableCards)))
+            .apply { load(appointmentId = 7, date = LocalDate.of(2026, 9, 26)) }
+
+    /** 시간 미정으로 저장된 일정. */
+    private val timeless =
+        Appointment(
+            id = 7,
+            title = "마디정형외과병원",
+            on = LocalDate.of(2026, 9, 26),
+            time = null,
+            status = AppointmentStatus.SCHEDULED,
+            cards = listOf(AppointmentCard(id = 1, title = "복부 통증 · 3주")),
+            todos = listOf(AppointmentTodo(text = "엑스레이 결과 물어보기")),
+        )
+
     /** 필수 셋을 채운 상태. */
     private fun filled(repository: RecordingAppointmentRepository = RecordingAppointmentRepository()) =
         addViewModel(repository).apply {
@@ -359,7 +512,10 @@ internal class RecordingAppointmentRepository : AppointmentRepository {
 
     override suspend fun month(month: YearMonth) = ApiResult.Success(emptyList<Appointment>())
 
-    override suspend fun day(date: java.time.LocalDate) = ApiResult.Success(emptyList<Appointment>())
+    /** 그 날 서버에 있는 일정. 고치러 들어오는 경로가 여기서 찾는다. */
+    var dayAppointments: List<Appointment> = emptyList()
+
+    override suspend fun day(date: java.time.LocalDate) = ApiResult.Success(dayAppointments)
 
     override suspend fun upcoming() = ApiResult.Success(emptyList<Appointment>())
 
@@ -385,16 +541,27 @@ internal class RecordingAppointmentRepository : AppointmentRepository {
         )
     }
 
-    override suspend fun update(id: Long, edit: AppointmentEdit) = create(
-        NewAppointment(
-            clinicName = null,
-            on = edit.on ?: LocalDate.now(),
-            time = edit.time,
-            purpose = edit.purpose,
-            cardIds = edit.cardIds.orEmpty(),
-            todos = edit.todos.orEmpty(),
-        ),
-    )
+    /** 고치라고 받은 것. 새로 만드는 것과 갈라 센다. */
+    var updatedId: Long? = null
+    var updatedEdit: AppointmentEdit? = null
+    var updateCount = 0
+
+    override suspend fun update(id: Long, edit: AppointmentEdit): ApiResult<Appointment> {
+        updateCount += 1
+        updatedId = id
+        updatedEdit = edit
+        return ApiResult.Success(
+            Appointment(
+                id = id,
+                title = "",
+                on = edit.on ?: LocalDate.now(),
+                time = edit.time,
+                status = AppointmentStatus.SCHEDULED,
+                cards = edit.cardIds.orEmpty().map { AppointmentCard(id = it, title = null) },
+                todos = edit.todos.orEmpty(),
+            ),
+        )
+    }
 
     override suspend fun delete(id: Long) = ApiResult.Success(Unit)
 }

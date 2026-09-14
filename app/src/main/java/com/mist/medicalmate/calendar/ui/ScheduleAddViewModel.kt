@@ -2,6 +2,8 @@ package com.mist.medicalmate.calendar.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mist.medicalmate.calendar.data.Appointment
+import com.mist.medicalmate.calendar.data.AppointmentEdit
 import com.mist.medicalmate.calendar.data.AppointmentRepository
 import com.mist.medicalmate.calendar.data.AppointmentTodo
 import com.mist.medicalmate.calendar.data.NewAppointment
@@ -48,14 +50,36 @@ internal constructor(
      * 통째로 갈아끼우면 골라 둔 카드가 조용히 풀린다. 그대로 저장하면 카드가 안 걸린 일정이
      * 되고, 나중에 그 일정으로는 진료 후 기록을 남길 수 없다.
      */
-    fun load() {
+    fun load(appointmentId: Long? = null, date: LocalDate? = null) {
         viewModelScope.launch {
+            // 이미 한 번 담아 왔으면 다시 읽지 않는다. 고치는 중에 들어온 값을 덮어쓴다.
+            val editing = if (mutableUiState.value.appointmentId == null) appointment(appointmentId, date) else null
             val cards = (cardRepository.cards() as? ApiResult.Success)?.value.orEmpty()
             mutableUiState.update { state ->
-                val picked = state.cards.filter { it.picked }.map { it.id }.toSet()
-                state.copy(cards = cards.map { card -> card.toPick().copy(picked = card.id in picked) })
+                val picked =
+                    editing?.cards?.map { it.id.toString() }?.toSet()
+                        ?: state.cards.filter { it.picked }.map { it.id }.toSet()
+                state.copy(
+                    appointmentId = editing?.id ?: state.appointmentId,
+                    hospital = state.hospital ?: editing?.title,
+                    date = state.date ?: editing?.on,
+                    time = state.time ?: editing?.time,
+                    cards = cards.map { card -> card.toPick().copy(picked = card.id in picked) },
+                    todos = editing?.todos?.toDrafts() ?: state.todos,
+                )
             }
         }
+    }
+
+    /**
+     * 고치러 들어온 일정.
+     *
+     * 서버에 일정 하나를 id로 읽는 경로가 없어서 그 날의 목록에서 찾는다. 날짜는 라우트가
+     * 함께 실어 온다 — 그 일정이 선 날에서만 들어오는 길이라 늘 있다.
+     */
+    private suspend fun appointment(appointmentId: Long?, date: LocalDate?): Appointment? {
+        if (appointmentId == null || date == null) return null
+        return (repository.day(date) as? ApiResult.Success)?.value?.firstOrNull { it.id == appointmentId }
     }
 
     private var nextTodo = 1
@@ -70,6 +94,17 @@ internal constructor(
     fun onHospitalPicked(name: String?) {
         if (name.isNullOrBlank()) return
         mutableUiState.update { it.copy(hospital = name) }
+    }
+
+    /**
+     * 열릴 때 이미 정해져 있던 날. 캘린더에서 고른 날이거나 일자 화면의 그 날이다.
+     *
+     * 이미 날이 들어 있으면 덮지 않는다. 병원을 고르러 나갔다 돌아오는 길에 이 화면이 다시
+     * 조합되는데, 그때 덮으면 시트에서 고쳐 둔 날이 처음 값으로 되돌아간다.
+     */
+    fun onDatePrefilled(date: LocalDate?) {
+        if (date == null) return
+        mutableUiState.update { if (it.date == null) it.copy(date = date) else it }
     }
 
     /** 날짜와 시간 필드가 같은 자리에 시트를 띄운다. 어느 쪽인지만 다르다. */
@@ -89,9 +124,21 @@ internal constructor(
         mutableUiState.update { it.copy(time = time, sheet = ScheduleAddSheet.NONE) }
     }
 
+    /**
+     * 가져갈 카드를 고르거나 풀었다.
+     *
+     * **고른 카드의 병원으로 병원 칸을 채운다**(1r-4-B). 그 카드로 갈 병원이 이미 정해져
+     * 있는데 같은 값을 다시 찾게 하지 않는다.
+     *
+     * 이미 적힌 병원은 덮지 않는다. 손으로 고른 것이 카드에 적힌 것보다 나중의 뜻이다.
+     * 카드를 풀어도 지우지 않는다 — 지우면 카드를 잘못 눌렀다 되돌린 사람의 병원까지
+     * 사라진다.
+     */
     fun onCardPickChange(id: String, picked: Boolean) {
         mutableUiState.update { state ->
-            state.copy(cards = state.cards.map { if (it.id == id) it.copy(picked = picked) else it })
+            val cards = state.cards.map { if (it.id == id) it.copy(picked = picked) else it }
+            val clinic = cards.firstOrNull { it.id == id && it.picked }?.clinic?.takeIf { it.isNotBlank() }
+            state.copy(cards = cards, hospital = state.hospital ?: clinic)
         }
     }
 
@@ -137,21 +184,35 @@ internal constructor(
 
         saving = true
         viewModelScope.launch {
+            val cardIds = state.cards.filter { it.picked }.mapNotNull { it.id.toLongOrNull() }
+            // 적어 둔 할 일도 함께 보낸다. 비운 줄은 빼고 보낸다 — 적지 않은 것과 빈 줄은 다르다.
+            val todos =
+                state.todos.mapNotNull { todo ->
+                    todo.label.takeIf { it.isNotBlank() }?.let { AppointmentTodo(text = it, done = todo.done) }
+                }
             val result =
-                repository.create(
+                state.appointmentId?.let { id ->
+                    // **병원은 보내지 않는다.** 서버의 수정 요청에 병원 자리가 없다. 고치러
+                    // 들어온 화면에서 병원을 바꿔도 그 값은 나가지 않는다.
+                    repository.update(
+                        id,
+                        AppointmentEdit(
+                            on = date,
+                            time = state.time,
+                            // 시각을 지운 채 저장하면 "시간 미정"으로 되돌린다.
+                            clearTime = state.time == null,
+                            cardIds = cardIds,
+                            todos = todos,
+                        ),
+                    )
+                } ?: repository.create(
                     NewAppointment(
                         clinicName = state.hospital,
                         on = date,
                         // 안 골랐으면 시각 없이 보낸다. 서버가 "시간 미정"으로 만든다(#202).
                         time = state.time,
-                        cardIds = state.cards.filter { it.picked }.mapNotNull { it.id.toLongOrNull() },
-                        // 적어 둔 할 일도 함께 보낸다. 비운 줄은 빼고 보낸다 — 적지 않은 것과
-                        // 빈 줄은 다르다.
-                        todos =
-                        state.todos.mapNotNull { todo ->
-                            todo.label.takeIf { it.isNotBlank() }
-                                ?.let { AppointmentTodo(text = it, done = todo.done) }
-                        },
+                        cardIds = cardIds,
+                        todos = todos,
                     ),
                 )
             saving = false
@@ -165,10 +226,15 @@ internal constructor(
  *
  * 보조 문구는 작성일과 병원이다. 병원은 확정 전 카드에 없어서 그때는 작성일만 적는다.
  */
+/** 서버의 할 일을 화면 줄로. 서버가 id를 매기지 않아 차례로 만든다. */
+private fun List<AppointmentTodo>.toDrafts(): List<ScheduleAddTodo> =
+    mapIndexed { index, todo -> ScheduleAddTodo(id = "todo-${index + 1}", label = todo.text, done = todo.done) }
+
 private fun CardListItem.toPick() = ScheduleAddCard(
     id = id,
     title = title,
     meta = listOfNotNull(writtenOn.format(CARD_DATE) + " 작성", clinic).joinToString(" · "),
+    clinic = clinic,
 )
 
 private val CARD_DATE: java.time.format.DateTimeFormatter =

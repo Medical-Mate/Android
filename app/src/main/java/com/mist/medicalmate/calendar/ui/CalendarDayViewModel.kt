@@ -192,7 +192,9 @@ private fun VisitListItem.toDayRecord() = DayRecord(
 private fun Appointment.toNextEvent(today: LocalDate) = DayNextEvent(
     chip = "D-${on.toEpochDay() - today.toEpochDay()}",
     title = title,
+    on = on,
     at = time?.let { on.atTime(it).format(NEXT_EVENT_FORMAT) },
+    appointmentId = id,
     clinic = title,
 )
 
@@ -216,6 +218,7 @@ private fun List<AppointmentTodo>?.toDayTodos(): List<DayTodo> =
 private fun VisitFollowUp.toRevisit(clinic: String?) = DayNextEvent(
     chip = date.format(REVISIT_CHIP) + if (approximate) " 전후" else "",
     title = clinic?.let { "$it 재방문" } ?: "재방문 예정",
+    on = date,
     clinic = clinic,
 )
 

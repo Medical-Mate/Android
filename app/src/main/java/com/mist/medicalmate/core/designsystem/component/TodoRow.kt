@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -171,14 +173,21 @@ private fun UnderlinedField(
     val colors = MedicalMateTheme.colors
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
+    val bringIntoView = remember { BringIntoViewRequester() }
     var everFocused by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    // 초점만 주면 키보드는 올라오는데 화면은 그대로다. 목록 끝에 생긴 줄은 그 키보드 뒤에
+    // 있어서 무엇을 적고 있는지 보이지 않는다. 줄을 보이는 자리로 끌어올린 뒤 초점을 준다.
+    LaunchedEffect(Unit) {
+        bringIntoView.bringIntoView()
+        focusRequester.requestFocus()
+    }
 
     Box(
         modifier =
         Modifier
             .fillMaxWidth()
+            .bringIntoViewRequester(bringIntoView)
             .drawBehind {
                 val y = size.height - UnderlineWidth.toPx() / 2
                 drawLine(
