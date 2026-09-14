@@ -1,27 +1,33 @@
 package com.mist.medicalmate.core.designsystem.component
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateGlass
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
+import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
+import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
 /** DESIGN.md의 `Nav Bar`의 `Leading` variant. */
@@ -34,12 +40,17 @@ enum class MedicalMateNavLeading {
 /**
  * DESIGN.md의 `Nav Bar`.
  *
- * 390x56이고 좌우 slot이 각각 48이다. 제목은 가운데에 고정한다. slot 폭을 좌우 같게
- * 잡아야 제목이 화면 가운데에 온다. 오른쪽 액션 유무에 따라 제목이 움직이면 화면을
- * 넘길 때마다 눈이 따라가야 한다.
+ * 높이 56이고 좌우 slot이 각각 48이다. 바깥에 8을 두고 slot 사이는 4다 — 그래서 아이콘의
+ * 왼쪽 끝이 화면에서 20에 온다(8 + 슬롯 48 안의 12).
+ *
+ * **제목은 바의 가운데다**(#226). 남은 폭의 가운데가 아니다. 전에는 좌우 슬롯 사이에 제목을
+ * 끼워 넣어서, 오른쪽에 텍스트 액션이 붙으면 그 폭만큼 제목이 왼쪽으로 밀렸다. 마스터는
+ * 좌우에 같은 값을 비우고 그 안에서 가운데에 둔다 — 액션이 없으면 60, 텍스트 액션이 있으면
+ * 88이다. 화면을 넘길 때마다 제목이 자리를 지켜야 눈이 따라가지 않는다.
  *
  * 우측 주요 액션은 아이콘이 아니라 텍스트 라벨을 쓴다(문서의 컴포넌트 규격). 저장이나 완료 같은
- * 동작은 아이콘만으로 뜻이 전달되지 않는다.
+ * 동작은 아이콘만으로 뜻이 전달되지 않는다. 그 라벨은 `Body/L Strong` 17이다 — 버튼 컴포넌트의
+ * S 라벨(13)로 두면 같은 자리의 글자가 화면마다 다른 크기로 선다.
  *
  * [MedicalMateNavLeading.BACK]과 [MedicalMateNavLeading.CLOSE]는 뜻이 다르다. 뒤로는
  * 흐름을 한 단계 되돌리고, 닫기는 흐름 전체를 벗어난다. 문답 중간에서 닫기를 누르면
@@ -63,17 +74,39 @@ fun MedicalMateNavBar(
             MedicalMateSurfaceStyle.GLASS -> colors.bgSurface.copy(alpha = MedicalMateGlass.NAV_BAR_ALPHA)
         }
 
-    Row(
+    val hasAction = actionLabel != null && onActionClick != null
+
+    Box(
         modifier =
         modifier
             .fillMaxWidth()
             .heightIn(min = MedicalMateSize.navBarHeight)
             .background(background)
             .bottomBorder(colors.borderSubtle),
-        verticalAlignment = Alignment.CenterVertically,
+        contentAlignment = Alignment.Center,
     ) {
-        Box(modifier = Modifier.width(MedicalMateSize.touchMin), contentAlignment = Alignment.Center) {
-            LeadingSlot(leading = leading, onClick = onLeadingClick)
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = MedicalMateSpace.s8),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(modifier = Modifier.size(MedicalMateSize.touchMin), contentAlignment = Alignment.Center) {
+                LeadingSlot(leading = leading, onClick = onLeadingClick)
+            }
+            // 슬롯이 비어 있어도 자리를 지킨다. 마스터가 그렇게 두는 이유가 제목의 가운데를
+            // 흔들지 않기 위해서인데, 제목을 따로 가운데에 두는 지금도 좌우 균형에 쓰인다.
+            Box(
+                modifier = Modifier.heightIn(min = MedicalMateSize.touchMin),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (hasAction) {
+                    ActionSlot(
+                        label = actionLabel,
+                        onClick = onActionClick,
+                        enabled = actionEnabled,
+                    )
+                }
+            }
         }
         Text(
             text = title,
@@ -82,25 +115,40 @@ fun MedicalMateNavBar(
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
+            modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = if (hasAction) TitleInsetWithAction else TitleInset),
         )
-        // 액션 자리는 폭을 고정하지 않고 하한만 준다. 48로 묶으면 `편집`처럼 두 글자짜리
-        // 텍스트 액션이 두 줄로 감긴다. 아이콘 액션은 이미 48보다 작아서 하한이 자리를
-        // 지킨다. 제목은 남은 폭의 가운데라 텍스트 액션이 길면 살짝 왼쪽으로 밀린다.
-        Box(
-            modifier = Modifier.widthIn(min = MedicalMateSize.touchMin),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (actionLabel != null && onActionClick != null) {
-                MedicalMateButton(
-                    onClick = onActionClick,
-                    label = actionLabel,
-                    type = MedicalMateButtonType.GHOST,
-                    size = MedicalMateButtonSize.S,
-                    enabled = actionEnabled,
-                )
-            }
-        }
+    }
+}
+
+/**
+ * 우측 텍스트 액션.
+ *
+ * `Button`이 아니다. 마스터가 이 자리에 `Body/L Strong` 17을 쓰는데 Ghost 버튼의 라벨은
+ * 15·13이다. 대신 높이 48과 버튼 역할을 얹는다 — 글자 높이가 26뿐이라 그냥 두면 터치 하한에
+ * 못 미친다. 온보딩의 건너뛰기도 같은 이유로 같은 모양이다.
+ */
+@Composable
+private fun ActionSlot(label: String, onClick: () -> Unit, enabled: Boolean) {
+    val colors = MedicalMateTheme.colors
+
+    Box(
+        modifier =
+        Modifier
+            .heightIn(min = MedicalMateSize.touchMin)
+            .clip(MedicalMateRadius.full)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .padding(start = MedicalMateSpace.s8, end = MedicalMateSpace.s12),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            style = MedicalMateTheme.typography.bodyLStrong,
+            color = if (enabled) colors.fgPrimary else colors.fgMuted,
+            maxLines = 1,
+        )
     }
 }
 
@@ -120,11 +168,13 @@ private fun LeadingSlot(leading: MedicalMateNavLeading, onClick: (() -> Unit)?) 
         }
 
     if (icon != null && descriptionRes != null && onClick != null) {
+        // 마스터의 슬롯이 48이고 그 안의 아이콘이 24다. M(40/20)으로 두면 아이콘이 작고
+        // 왼쪽 끝이 화면에서 22에 와서 20과 어긋난다.
         MedicalMateIconButton(
             onClick = onClick,
             icon = icon,
             contentDescription = stringResource(descriptionRes),
-            size = MedicalMateIconButtonSize.M,
+            size = MedicalMateIconButtonSize.L,
         )
     }
 }
@@ -144,3 +194,9 @@ private fun Modifier.bottomBorder(color: Color): Modifier = this.drawBehind {
 }
 
 private val BottomBorderWidth = 1.dp
+
+/** 제목 좌우로 비워 두는 폭. 바깥 8 + 슬롯 48 + 간격 4다. */
+private val TitleInset = 60.dp
+
+/** 텍스트 액션이 있을 때. 마스터가 88로 더 비운다. */
+private val TitleInsetWithAction = 88.dp
