@@ -221,6 +221,38 @@ class BriefCardViewModelTest {
     }
 
     @Test
+    fun `고친 뒤 화면이 다시 열려도 옛 버전으로 돌아가지 않는다`() {
+        // 고치면 서버가 새 버전을 만들어 id가 달라지는데 라우트는 누를 때의 옛 id를 그대로
+        // 들고 있다. 그 둘을 견줘서 다시 읽으면 옛 버전으로 되돌아간다(Backend#114).
+        val repository = FakeCardRepository(nextVersion = testCard.copy(id = "20"))
+        val viewModel = BriefCardViewModel(repository)
+        viewModel.open(1)
+        viewModel.onEditClick()
+        viewModel.onEditDoneClick()
+
+        viewModel.open(1)
+
+        val content = viewModel.uiState.value as BriefCardUiState.Content
+        assertEquals("20", content.card.id)
+    }
+
+    @Test
+    fun `고친 뒤의 수정은 새 버전으로 간다`() {
+        // 옛 id로 다시 보내면 서버가 같은 부모에서 가지를 친다. 가지에 들어간 편집은
+        // 목록이 최신 한 장만 내면서 영영 보이지 않는다.
+        val repository = FakeCardRepository(nextVersion = testCard.copy(id = "20"))
+        val viewModel = BriefCardViewModel(repository)
+        viewModel.open(1)
+        viewModel.onEditClick()
+        viewModel.onEditDoneClick()
+        viewModel.open(1)
+
+        viewModel.onHospitalPicked("서울OO병원 내과", null)
+
+        assertEquals(20L, repository.updatedId)
+    }
+
+    @Test
     fun `변경에서 고른 병원을 서버에 보낸다`() {
         // 화면에만 얹으면 다시 열었을 때 되돌아가 있다. 카드가 병원을 들게 됐다(Backend#101).
         val repository = FakeCardRepository()
@@ -485,6 +517,8 @@ class BriefCardDeleteTest {
 internal class FakeCardRepository(
     private val card: BriefCard = testCard,
     private val result: ApiResult<BriefCard>? = null,
+    /** 고치면 서버가 내주는 새 버전. 확정한 카드를 고칠 때의 모양이다. */
+    private val nextVersion: BriefCard? = null,
     private val list: ApiResult<List<CardListItem>> = ApiResult.Success(emptyList()),
     /** 지우기가 실패해야 하는 시험이 있다. 다른 호출의 [result]와 따로 둔다. */
     var deleteFails: Set<String> = emptySet(),
@@ -514,17 +548,22 @@ internal class FakeCardRepository(
     /** `변경`으로 보낸 병원. 화면에만 남지 않고 서버로 가는지가 관심사다. */
     var updatedClinic: BriefCardHospital? = null
 
+    /** 어느 id로 보냈는지. 옛 버전으로 가면 서버에서 가지가 난다. */
+    var updatedId: Long? = null
+
     override suspend fun update(
         cardId: Long,
         axes: List<AxisEdit>,
         questions: List<String>,
         clinic: BriefCardHospital?,
     ): ApiResult<BriefCard> {
+        updatedId = cardId
         updatedAxes = axes
         updatedQuestions = questions
         updatedClinic = clinic
         return when {
             updateFails -> OFFLINE
+            nextVersion != null -> ApiResult.Success(nextVersion.copy(hospital = clinic ?: nextVersion.hospital))
             else -> result ?: ApiResult.Success(card.copy(hospital = clinic ?: card.hospital))
         }
     }

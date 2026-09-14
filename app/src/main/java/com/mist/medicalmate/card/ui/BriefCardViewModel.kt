@@ -54,13 +54,18 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
      * 응답에 병원이 없어 라우트로 날라 화면에만 얹었고, 캘린더에서 연 카드는 비어 있었다.
      */
     fun open(cardId: Long?, sessionId: Long? = null, hospital: BriefCardHospital? = null) {
-        // **들고 있는 카드는 다시 읽지 않는다.** 병원을 고르러 갔다 오면 이 화면의 조합이 다시
-        // 시작되면서 이 호출이 한 번 더 온다. 그때 다시 읽으면 두 가지가 깨진다 — 편집 중이던
-        // 사본이 날아가고, 돌아온 병원이 `Loading` 상태에 도착해 조용히 버려진다.
-        val loaded = (mutableUiState.value as? BriefCardUiState.Content)?.card?.id?.toLongOrNull()
-        if (cardId != null && cardId == loaded) return
-        // 이미 만든 카드를 다시 만들지 않는다. 같은 이유로 한 번 더 오는 호출이다.
-        if (cardId == null && mutableUiState.value is BriefCardUiState.Content) return
+        // **한 번 연 카드는 다시 읽지 않는다.** 병원을 고르러 갔다 오면 이 화면의 조합이 다시
+        // 시작되면서 이 호출이 한 번 더 온다. 이미 만든 카드를 다시 만들지 않는 것도 같은
+        // 이유다.
+        //
+        // 들고 있는 것과 같은 id일 때만 막으면 모자란다(#219). 카드를 고치면 서버가 새 버전을
+        // 만들어 id가 달라지는데 라우트는 누를 때의 옛 id를 그대로 들고 있다. 그 둘을 견주면
+        // 다르니 옛 버전을 다시 읽어 오고, 거기서 또 고치면 같은 부모에서 버전이 가지를 친다.
+        // 가지에 들어간 편집은 목록이 최신 한 장만 내면서 영영 보이지 않는다(Backend#114).
+        //
+        // ViewModel이 목적지 엔트리에 묶여 있어 한 화면이 사는 동안 라우트의 id는 바뀌지
+        // 않는다. 화면이 든 카드가 그 id에서 나온 최신본이라 다시 읽을 이유가 없다.
+        if (mutableUiState.value is BriefCardUiState.Content) return
         mutableUiState.value = BriefCardUiState.Loading
         viewModelScope.launch {
             val result =
