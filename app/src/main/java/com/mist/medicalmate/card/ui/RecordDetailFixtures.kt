@@ -67,7 +67,7 @@ internal val previewRecordDetail =
                 ),
             ),
             RecordStep.Block(
-                at = "09.04 작성 · 09.12 진료실에서 보여줌",
+                at = "09.04 작성",
                 title = "브리핑 카드",
                 items = abdomenCardItems,
                 card = abdomenCard,
@@ -175,7 +175,7 @@ private val revisitedRecordDetail =
                 ),
             ),
             RecordStep.Block(
-                at = "09.04 작성 · 09.12 진료실에서 보여줌",
+                at = "09.04 작성",
                 title = "브리핑 카드",
                 items = abdomenCardItems,
                 card = abdomenCard,
@@ -203,7 +203,7 @@ private val closedRecordDetail =
                 ),
             ),
             RecordStep.Block(
-                at = "07.17 작성 · 07.18 진료실에서 보여줌",
+                at = "07.17 작성",
                 title = "브리핑 카드",
                 items =
                 listOf(

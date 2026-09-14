@@ -92,8 +92,8 @@ class RecordDetailViewModelTest {
 
         assertEquals(2, steps.size)
         val card = steps.last() as RecordStep.Block
-        // 시안의 시점 줄. 언제 썼고 언제 들고 갔는지가 함께 온다.
-        assertEquals("09.04 작성 · 09.12 진료실에서 보여줌", card.at)
+        // 시점 줄은 작성일만이다. 들고 간 날은 바로 위 진료 후 기록 단계가 적는다.
+        assertEquals("09.04 작성", card.at)
         assertEquals("브리핑 카드", card.title)
         assertEquals(listOf("부위", "기간", "양상"), card.items.map { it.key })
     }

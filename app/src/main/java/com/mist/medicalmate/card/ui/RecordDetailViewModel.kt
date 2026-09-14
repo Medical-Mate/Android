@@ -16,7 +16,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -162,8 +161,7 @@ private fun recordDetail(visits: List<Visit>, card: BriefCard?, next: Appointmen
         // 몇 번 다녀왔는지는 상태가 아니라 세어 봐야 아는 값이다. 한 번이면 뱃지가 상태를 그린다.
         badge = if (visits.size > 1) "진료 ${visits.size}회" else null,
         clinicLine = clinicLine(visits),
-        // 카드 단계의 시점 줄에 "진료실에서 보여줌"이 붙는다. 처음 간 진료가 그 날이다.
-        steps = listOfNotNull(next?.toPending()) + records + listOfNotNull(card?.toStep(visits.last().visitedOn)),
+        steps = listOfNotNull(next?.toPending()) + records + listOfNotNull(card?.toStep()),
     )
 }
 
@@ -240,14 +238,11 @@ private fun Appointment.toPending() = RecordStep.Pending(
  * 화면이 프로필에서 읽어 얹고 있었는데, 여기는 지난 진료를 다시 읽는 자리라 오늘의 프로필을
  * 얹으면 그때 먹던 약이 아니게 된다. 이제 서버가 카드에 박아 준다.
  */
-private fun BriefCard.toStep(shownOn: LocalDate?) = RecordStep.Block(
-    // 시안의 시점 줄은 `09.04 작성 · 09.12 진료실에서 보여줌`이다. 언제 썼고 언제 들고 갔는지
-    // 둘이고, 둘 다 없을 때만 이름을 적는다.
-    at =
-    listOfNotNull(
-        writtenOn?.format(VISITED_ON)?.let { "$it 작성" },
-        shownOn?.format(VISITED_ON)?.let { "$it 진료실에서 보여줌" },
-    ).joinToString(" · ").ifEmpty { "브리핑 카드" },
+private fun BriefCard.toStep() = RecordStep.Block(
+    // 시점 줄은 `09.04 작성`이다. 시안은 뒤에 `09.12 진료실에서 보여줌`을 잇지만 그 날짜는
+    // 바로 위 진료 후 기록 단계가 이미 적고 있어서 같은 날이 두 줄에 서게 돼 뺐다(#243).
+    // 작성일이 없을 때만 이름을 적는다.
+    at = writtenOn?.format(VISITED_ON)?.let { "$it 작성" } ?: "브리핑 카드",
     title = "브리핑 카드",
     items = (items + health).map { RecordDetailItem(key = it.key, value = it.value) },
     card =
