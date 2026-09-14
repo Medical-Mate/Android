@@ -1,5 +1,6 @@
 package com.mist.medicalmate.visit.ui
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -151,9 +152,9 @@ private fun Footer(state: VisitRecordUiState.Content, callbacks: VisitRecordCall
             // **재방문 일정 등록 체크가 없다.** 시안에서 빠졌다(#170). 저장 요청에 재방문
             // 날짜를 실을 자리가 없어서 눌러도 아무 일이 없던 자리이기도 하다. 재방문이
             // 캘린더로 이어지는 길은 일자 화면의 "다음 일정"(1r-2-A)이 맡는다.
-            if (state.saveFailed) {
+            state.saveFailure?.let { failure ->
                 Text(
-                    text = stringResource(R.string.visit_record_save_failed),
+                    text = stringResource(saveFailureMessage(failure)),
                     style = MedicalMateTheme.typography.bodyS,
                     color = MedicalMateTheme.colors.fgDanger,
                 )
@@ -165,6 +166,18 @@ private fun Footer(state: VisitRecordUiState.Content, callbacks: VisitRecordCall
             )
         }
     }
+}
+
+/**
+ * 저장 실패를 알리는 말.
+ *
+ * 다시 눌러 풀리는 것과 아닌 것을 가른다. 뒤엣것은 지금 이 자리에서 카드에 이미 기록이
+ * 있는 경우라(Backend#119) 확인할 곳을 함께 가리킨다.
+ */
+@StringRes
+private fun saveFailureMessage(failure: VisitSaveFailure): Int = when (failure) {
+    VisitSaveFailure.RETRYABLE -> R.string.visit_record_save_failed
+    VisitSaveFailure.REJECTED -> R.string.visit_record_save_rejected
 }
 
 @Composable
