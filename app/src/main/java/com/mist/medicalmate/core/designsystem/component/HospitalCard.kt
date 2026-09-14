@@ -119,7 +119,9 @@ private fun Info(name: String, address: String?) {
             )
         }
         Column(verticalArrangement = Arrangement.spacedBy(TitleGap)) {
-            Text(text = name, style = MedicalMateTheme.typography.headingS, color = colors.fgDefault)
+            // 마스터가 `Body/L Strong`이다. `Heading/S`는 같은 17이지만 자간이 -1이라
+            // 병원 이름이 좁아 보인다.
+            Text(text = name, style = MedicalMateTheme.typography.bodyLStrong, color = colors.fgDefault)
             if (!address.isNullOrBlank()) {
                 Text(text = address, style = MedicalMateTheme.typography.bodyS, color = colors.fgSubtle)
             }

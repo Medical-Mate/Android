@@ -77,9 +77,11 @@ private fun LevelChip(severity: MedicalMateSeverity) {
         modifier = Modifier.size(LevelChipSize),
     ) {
         Box(contentAlignment = Alignment.Center) {
+            // 마스터의 단계 칩이 `Body/M Strong` 15다. `Label/M` 13으로 두면 32 원 안에서
+            // 숫자가 작아 낱말보다 뒤로 물러난다.
             Text(
                 text = severity.level.toString(),
-                style = MedicalMateTheme.typography.labelM,
+                style = MedicalMateTheme.typography.bodyMStrong,
             )
         }
     }

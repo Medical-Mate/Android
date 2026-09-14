@@ -150,7 +150,7 @@ private fun ProfileCard(profile: MyProfile) {
                 }
                 Text(
                     text = stringResource(R.string.my_profile_login_kakao),
-                    style = MedicalMateTheme.typography.bodyS,
+                    style = MedicalMateTheme.typography.labelS,
                     color = MedicalMateTheme.colors.fgSubtle,
                 )
             }

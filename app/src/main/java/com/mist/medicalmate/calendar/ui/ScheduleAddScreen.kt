@@ -119,7 +119,7 @@ private fun ColumnScope.FormContent(state: ScheduleAddUiState, callbacks: Schedu
 private fun FieldLabel(text: String) {
     Text(
         text = text,
-        style = MedicalMateTheme.typography.labelM,
+        style = MedicalMateTheme.typography.bodyS,
         color = MedicalMateTheme.colors.fgSubtle,
         modifier = Modifier.padding(top = MedicalMateSpace.s16, bottom = MedicalMateSpace.s6),
     )

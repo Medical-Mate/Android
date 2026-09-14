@@ -237,7 +237,7 @@ private fun ResultRow(hospital: Hospital, selected: Boolean, onClick: () -> Unit
         ) {
             Text(
                 text = hospital.name,
-                style = MedicalMateTheme.typography.bodyLStrong,
+                style = MedicalMateTheme.typography.headingS,
                 color = if (selected) colors.fgPrimary else colors.fgDefault,
             )
             hospital.address?.takeIf { it.isNotBlank() }?.let { address ->

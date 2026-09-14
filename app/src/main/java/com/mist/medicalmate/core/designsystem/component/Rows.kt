@@ -227,7 +227,9 @@ fun MedicalMateListRow(
                     horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s6),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(text = title, style = typography.bodyL, color = colors.fgDefault)
+                    // 마스터가 `Heading/S`다. `Body/L`은 같은 17이지만 Regular라 제목이 메타와
+                    // 같은 무게로 읽힌다.
+                    Text(text = title, style = typography.headingS, color = colors.fgDefault)
                     if (type == MedicalMateListRowType.BADGE && badge != null) {
                         MedicalMateBadge(label = badge, tone = badgeTone)
                     }

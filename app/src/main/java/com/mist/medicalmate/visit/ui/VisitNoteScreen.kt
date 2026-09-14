@@ -212,7 +212,7 @@ private fun VisitCard(visit: VisitHeadline) {
                 )
             }
             Column(verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s2)) {
-                Text(text = clinic, style = MedicalMateTheme.typography.headingS, color = colors.fgDefault)
+                Text(text = clinic, style = MedicalMateTheme.typography.bodyLStrong, color = colors.fgDefault)
                 visit.cardTitle?.let { title ->
                     Text(
                         text = stringResource(R.string.visit_note_headline_card, title),
@@ -233,7 +233,7 @@ private fun VisitCard(visit: VisitHeadline) {
                         R.string.visit_note_headline_label_past
                     },
                 ),
-                style = MedicalMateTheme.typography.labelM,
+                style = MedicalMateTheme.typography.bodySStrong,
                 color = colors.fgPrimary,
             )
             Text(
