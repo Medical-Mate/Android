@@ -145,7 +145,7 @@ private fun StepExpandRow(expanded: Boolean, onClick: () -> Unit) {
     ) {
         Text(
             text = stringResource(if (expanded) R.string.record_detail_collapse else R.string.record_detail_expand),
-            style = MedicalMateTheme.typography.bodyM,
+            style = MedicalMateTheme.typography.bodyMStrong,
             color = MedicalMateTheme.colors.fgPrimary,
             modifier = Modifier.weight(1f),
         )

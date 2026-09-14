@@ -113,7 +113,7 @@ internal fun TodayLineCard(todayLine: HomeTodayLine) {
     MedicalMateCard(emphasis = MedicalMateCardEmphasis.BRAND) {
         Text(
             text = stringResource(todayLine.labelRes()),
-            style = MedicalMateTheme.typography.bodyS,
+            style = MedicalMateTheme.typography.labelS,
             color = MedicalMateTheme.colors.fgSubtle,
         )
         Text(text = todayLine.title(), style = MedicalMateTheme.typography.headingS)
@@ -154,7 +154,7 @@ internal fun ResumeCard(resume: HomeResume, onClick: () -> Unit) {
     MedicalMateCard(onClick = onClick) {
         Text(
             text = stringResource(R.string.home_resume_label),
-            style = MedicalMateTheme.typography.bodyS,
+            style = MedicalMateTheme.typography.labelS,
             color = MedicalMateTheme.colors.fgSubtle,
         )
         Text(

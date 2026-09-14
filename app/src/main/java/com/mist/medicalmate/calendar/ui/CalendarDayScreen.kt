@@ -213,7 +213,7 @@ private fun ColumnScope.ScheduleSection(state: CalendarDayUiState, callbacks: Ca
         }
         Text(
             text = schedule.title,
-            style = MedicalMateTheme.typography.bodyLStrong,
+            style = MedicalMateTheme.typography.headingS,
             color = MedicalMateTheme.colors.fgDefault,
         )
         Text(
@@ -353,7 +353,7 @@ private fun ColumnScope.NextEventSection(state: CalendarDayUiState, callbacks: C
         )
         Text(
             text = next.title,
-            style = MedicalMateTheme.typography.bodyLStrong,
+            style = MedicalMateTheme.typography.headingS,
             color = MedicalMateTheme.colors.fgOnPrimary,
         )
         if (next.at == null) {

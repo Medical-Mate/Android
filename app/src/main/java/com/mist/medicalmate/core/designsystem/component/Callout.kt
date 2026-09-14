@@ -80,9 +80,11 @@ fun MedicalMateCallout(
                     tint = MedicalMateTheme.colors.fgPrimary,
                     modifier = Modifier.size(MedicalMateSize.iconSm),
                 )
+                // 마스터가 "헤더 라벨은 Label/S + fg/primary로 가라앉히고 질문 본문을
+                // fg/default로 세운다"고 적는다. 주인공은 질문이다.
                 Text(
                     text = title,
-                    style = MedicalMateTheme.typography.labelM,
+                    style = MedicalMateTheme.typography.labelS,
                     color = MedicalMateTheme.colors.fgPrimary,
                 )
             }
@@ -117,7 +119,7 @@ private fun QuestionPill(number: Int, question: String, index: Int, edit: Medica
                 modifier = Modifier.size(NumberSize),
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(text = number.toString(), style = MedicalMateTheme.typography.labelM)
+                    Text(text = number.toString(), style = MedicalMateTheme.typography.labelS)
                 }
             }
             if (edit == null) {
