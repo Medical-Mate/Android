@@ -52,10 +52,10 @@ internal constructor(private val repository: HospitalRepository) : ViewModel() {
      * 그것이 픽스처였다. 서버 검색은 질의가 있어야 답이 오므로 1m도 1m-B와 같은 입력 전
      * 상태로 열린다. 시안과 어긋나는 지점이라 디자인 트랙에 올렸다(#155).
      */
-    fun load(purpose: HospitalPickPurpose = HospitalPickPurpose.AFTER_VISIT) {
+    fun load(purpose: HospitalPickPurpose = HospitalPickPurpose.AFTER_VISIT, forExistingCard: Boolean = false) {
         searchJob?.cancel()
         cache.clear()
-        mutableUiState.value = HospitalPickUiState(purpose = purpose)
+        mutableUiState.value = HospitalPickUiState(purpose = purpose, forExistingCard = forExistingCard)
     }
 
     /**

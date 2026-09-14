@@ -1,8 +1,11 @@
 package com.mist.medicalmate.card.ui
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -16,16 +19,19 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.mist.medicalmate.core.designsystem.MedicalMateElevation
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
 import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
+import com.mist.medicalmate.core.designsystem.ShadowTint
 import com.mist.medicalmate.core.designsystem.component.MedicalMateBadge
-import com.mist.medicalmate.core.designsystem.component.MedicalMateCard
 import com.mist.medicalmate.core.designsystem.component.MedicalMateCheckbox
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 
@@ -122,8 +128,14 @@ private fun GroupHeader(
 /**
  * 기록 한 줄.
  *
- * `List Row`를 쓰지 않고 카드로 짠다. 그 컴포넌트는 제목과 메타 한 줄까지인데 이 화면은
- * 메타가 두 줄이고 작성 중일 때 이어서 하라는 줄이 하나 더 붙는다.
+ * `MedicalMateListRow`를 쓰지 않는다. 그 컴포넌트는 제목과 메타 한 줄까지인데 이 화면은
+ * 메타가 두 줄이고 작성 중일 때 이어서 하라는 줄이 하나 더 붙는다. 대신 마스터
+ * `List Row`(`335:1114`)의 겉모양을 여기서 그린다 — 면 · 반경 16 · 좌 18 우 14 · 위아래
+ * 16 · `Elevation/Card`다.
+ *
+ * **`MedicalMateCard`로 짜지 않는다**(#229). 그 컴포넌트는 최소 높이 116과 안쪽 여백 20을
+ * 강제한다. 시안의 줄은 104이고 편집에서는 80이라, 카드로 두면 글이 끝난 아래에 빈 자리가
+ * 남아 한 줄이 빠진 것처럼 보인다.
  *
  * [selected]가 null이 아니면 편집 중이다. 왼쪽에 체크가 붙고 아래 줄이 하나로 줄어든다.
  * 시안이 편집에서 줄 높이를 104에서 80으로 낮췄다. 고르는 동안에는 어느 기록인지만
@@ -134,18 +146,36 @@ private fun GroupHeader(
 @Composable
 private fun RecordRow(item: RecordItem, selected: Boolean?, onClick: () -> Unit) {
     val editing = selected != null
-    MedicalMateCard(
-        onClick = onClick,
+    Box(
         modifier =
-        if (selected == true) {
-            Modifier.border(
-                width = SelectedBorderWidth,
-                color = MedicalMateTheme.colors.borderFocus,
-                shape = MedicalMateRadius.lg,
+        Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = MedicalMateElevation.card,
+                shape = MedicalMateRadius.md,
+                ambientColor = ShadowTint,
+                spotColor = ShadowTint,
             )
-        } else {
-            Modifier
-        },
+            .background(color = MedicalMateTheme.colors.bgSurface, shape = MedicalMateRadius.md)
+            .let { base ->
+                if (selected == true) {
+                    base.border(
+                        width = SelectedBorderWidth,
+                        color = MedicalMateTheme.colors.borderFocus,
+                        shape = MedicalMateRadius.md,
+                    )
+                } else {
+                    base
+                }
+            }
+            .clip(MedicalMateRadius.md)
+            .clickable(onClick = onClick)
+            .padding(
+                start = RowStartPadding,
+                end = RowEndPadding,
+                top = MedicalMateSpace.s16,
+                bottom = MedicalMateSpace.s16,
+            ),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -222,3 +252,8 @@ private fun RowText(item: RecordItem, editing: Boolean, modifier: Modifier = Mod
 
 /** 고른 줄의 테두리. 브리핑 카드 편집(1e-1-E)이 카드를 두르는 것과 같은 굵기다. */
 private val SelectedBorderWidth = 1.5.dp
+
+/** 마스터 `List Row`의 좌우 여백. 오른쪽은 chevron과 체크가 48 영역을 갖고 있어 더 좁다. */
+private val RowStartPadding = 18.dp
+
+private val RowEndPadding = 14.dp

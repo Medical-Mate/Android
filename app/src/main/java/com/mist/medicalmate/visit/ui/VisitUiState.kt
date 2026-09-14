@@ -44,6 +44,14 @@ data class HospitalPickUiState(
     val results: List<Hospital> = emptyList(),
     val selected: Hospital? = null,
     val purpose: HospitalPickPurpose = HospitalPickPurpose.AFTER_VISIT,
+    /**
+     * 이미 있는 카드의 `변경`에서 왔는지.
+     *
+     * 진료 전(1m-B)이 두 자리에서 열린다. 문답을 마치고 오면 카드를 만들러 가는 길이라
+     * CTA가 "브리핑 카드 만들기"이고, 카드 안에서 병원만 바꾸러 오면 만들 것이 없으니
+     * "완료"다(#229).
+     */
+    val forExistingCard: Boolean = false,
     val searching: Boolean = false,
     /**
      * 조건에 맞는 전체 건수. [results]보다 클 수 있다.

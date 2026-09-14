@@ -1,5 +1,11 @@
 package com.mist.medicalmate.intake.ui
 
+import android.provider.Settings
+import androidx.compose.animation.core.StartOffset
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -8,6 +14,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,8 +24,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -133,30 +144,61 @@ private fun MessageRow(message: IntakeMessage) {
 /**
  * 응답을 기다리는 표시. Figma 1c-4의 점 세 개다.
  *
- * 점만으로는 스크린 리더에 아무것도 전달되지 않아 접근성 이름을 붙인다. 점이 움직이지
- * 않는 것은 지금 애니메이션을 넣지 않았기 때문이다.
+ * **점이 차례로 떠오른다**(#228). 멈춰 있는 점 셋은 답을 기다리는 중인지 거기서 끝난 것인지
+ * 구별되지 않는다. 세 점이 같은 주기를 나눠 갖고 어긋나게 오르내린다.
+ *
+ * **AI의 말이 설 자리에 선다.** 왼쪽이고 말풍선 면이 없다. 오른쪽은 환자가 보낸 말의
+ * 자리다 — 거기에 두면 방금 보낸 것이 아직 안 갔다는 뜻으로 읽힌다. AI의 말도 면 없이
+ * 글만 서므로 점도 면을 두르지 않는다.
+ *
+ * 기기에서 애니메이션을 껐으면 움직이지 않는다. 개발자 옵션의 배율이 0이면 전환 효과를 끈
+ * 것이고, 그 설정을 무시하는 애니메이션은 두지 않는다.
+ *
+ * 점만으로는 스크린 리더에 아무것도 전달되지 않아 접근성 이름을 붙인다.
  */
 @Composable
 private fun TypingRow() {
     val typingLabel = stringResource(R.string.intake_chat_waiting)
+    val context = LocalContext.current
+    val animated =
+        remember(context) {
+            Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f
+        }
+    val cycle = rememberInfiniteTransition(label = "typing")
 
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
         Row(
             modifier =
             Modifier
-                .background(
-                    color = MedicalMateTheme.colors.bgPrimarySubtle,
-                    shape = RoundedCornerShape(TypingRadius),
-                )
-                .padding(horizontal = MedicalMateSpace.s16, vertical = MedicalMateSpace.s14)
+                .padding(vertical = MedicalMateSpace.s14)
                 .semantics { contentDescription = typingLabel },
             horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4),
         ) {
-            repeat(TYPING_DOTS) {
+            repeat(TYPING_DOTS) { index ->
+                // 한 주기를 셋이 나눠 갖는다. 점마다 시작을 늦춰 물결처럼 이어진다.
+                val lift by cycle.animateFloat(
+                    initialValue = 0f,
+                    targetValue = 0f,
+                    animationSpec =
+                    infiniteRepeatable(
+                        animation =
+                        keyframes {
+                            durationMillis = TYPING_CYCLE_MILLIS
+                            0f at 0
+                            1f at TYPING_CYCLE_MILLIS / 6
+                            0f at TYPING_CYCLE_MILLIS / 3
+                        },
+                        initialStartOffset = StartOffset(TYPING_CYCLE_MILLIS / TYPING_DOTS * index),
+                    ),
+                    label = "dot",
+                )
+                val moving = if (animated) lift else 0f
                 Box(
                     modifier =
                     Modifier
+                        .offset(y = TypingDotLift * -moving)
                         .size(TypingDotSize)
+                        .alpha(TYPING_DOT_REST + (1f - TYPING_DOT_REST) * moving)
                         .background(
                             color = MedicalMateTheme.colors.fgPrimary,
                             shape = RoundedCornerShape(TypingDotSize / 2),
@@ -237,5 +279,12 @@ private const val TYPING_DOTS = 3
 
 private val TypingDotSize = 8.dp
 
+/** 점이 떠오르는 높이와 쉬고 있을 때의 흐릿함. */
+private val TypingDotLift = 4.dp
+
+private const val TYPING_DOT_REST = 0.4f
+
+/** 세 점이 한 바퀴 도는 시간. */
+private const val TYPING_CYCLE_MILLIS = 900
+
 /** Figma 환자 버블의 반경과 같다. */
-private val TypingRadius = 18.dp

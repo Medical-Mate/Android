@@ -40,6 +40,10 @@ enum class MedicalMateEmptyStateType {
  * 사과보다 다음 행동을 제시한다. "죄송합니다"로 시작하면 사용자는 무엇을 해야 할지
  * 모른 채 화면을 떠난다.
  *
+ * **[icon]으로 그림을 갈아 끼울 수 있다.** 기본은 변이가 정한다 — 같은 뜻의 빈 화면이
+ * 화면마다 다른 그림을 쓰면 시각 언어가 흩어진다. 시안의 인스턴스가 실제로 갈아 끼운 자리만
+ * 넘긴다(1m-B의 병원 아이콘).
+ *
  * [note]는 제목 위에 먼저 나온다. [MedicalMateEmptyStateType.OFFLINE]에서는 작성 내용이
  * 남아 있다는 사실을 가장 먼저 알려야 한다(문서의 컴포넌트 규격). 연결이 끊겼다는 말만 보이면
  * 환자는 방금 적은 증상이 날아갔다고 생각한다.
@@ -66,11 +70,12 @@ fun MedicalMateEmptyState(
     note: String? = null,
     actionLabel: String? = null,
     onActionClick: (() -> Unit)? = null,
+    @DrawableRes icon: Int? = null,
 ) {
     val colors = MedicalMateTheme.colors
 
-    @DrawableRes val icon =
-        when (type) {
+    @DrawableRes val shown =
+        icon ?: when (type) {
             MedicalMateEmptyStateType.NO_RECORD -> MedicalMateIcons.EmptyBox
             MedicalMateEmptyStateType.NO_RESULT -> MedicalMateIcons.SearchOff
             MedicalMateEmptyStateType.OFFLINE -> MedicalMateIcons.WifiOff
@@ -85,7 +90,7 @@ fun MedicalMateEmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12, Alignment.CenterVertically),
     ) {
-        IconCircle(icon)
+        IconCircle(shown)
         // 글 묶음은 마스터에서 한 칸이다. 원과의 간격이 12 + 4이고 제목과 설명 사이는 6이라,
         // 바깥 간격 하나로 셋을 벌리면 제목과 설명이 한 덩어리로 읽히지 않는다.
         Column(

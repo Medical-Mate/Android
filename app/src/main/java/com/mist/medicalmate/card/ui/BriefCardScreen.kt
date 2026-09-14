@@ -171,7 +171,7 @@ private fun ColumnScope.CardContent(state: BriefCardUiState.Content, callbacks: 
             onChangeClick = callbacks.onHospitalChangeClick,
         )
     }
-    Footer(editing = state.editing, saveFailed = state.saveFailed, callbacks = callbacks)
+    Footer(state = state, callbacks = callbacks)
 
     if (state.deleteRequested) {
         MedicalMateDialog(
@@ -229,12 +229,22 @@ private fun HospitalSection(hospital: BriefCardHospital?, onChangeClick: () -> U
 /**
  * 하단.
  *
+ * **이미 저장한 카드에는 하단이 없다**(#229). 홈이나 기록에서 여는 카드는 다시 보는
+ * 자리인데 저장하기가 서 있으면 아직 저장이 안 된 것으로 읽힌다.
+ *
+ * 아직 저장하지 않은 카드에는 남긴다. 저장이 곧 확정이고, 확정하지 않은 카드에는 진료 후
+ * 기록을 붙일 수 없다(#220). 저장 자리를 통째로 없애면 그 카드를 되살릴 길이 사라진다.
+ *
  * [saveFailed]면 버튼 위에 왜 안 됐는지를 적는다. 아무 말도 하지 않으면 버튼이 안 먹는
  * 것으로 읽고 계속 누르게 된다 — 기기에서 실제로 그랬다(#196·#198). 버튼은 살려 둔다.
  * 다시 눌러야 하는 자리다.
  */
 @Composable
-private fun Footer(editing: Boolean, saveFailed: Boolean, callbacks: BriefCardCallbacks) {
+private fun Footer(state: BriefCardUiState.Content, callbacks: BriefCardCallbacks) {
+    val editing = state.editing
+    val saveFailed = state.saveFailed
+    if (!editing && state.card.status == BriefCard.Status.CONFIRMED) return
+
     Column(
         modifier =
         Modifier

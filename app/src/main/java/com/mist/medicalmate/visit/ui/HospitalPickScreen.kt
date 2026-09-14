@@ -43,10 +43,11 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
  * 하나만 고른다. 진료 한 건에 병원이 둘일 수 없다.
  *
  * **한 화면이 두 자리에서 쓰인다.** 진료 후(1m)와 진료 전(1m-B)이다. 검색과 목록과 선택이
- * 같고 문구·CTA·건너뛰기만 [HospitalPickUiState.purpose]에 따라 갈린다. 화면을 둘로 만들면
- * 검색 규칙이 두 곳에 생긴다.
+ * 같고 문구와 CTA만 [HospitalPickUiState.purpose]에 따라 갈린다. 화면을 둘로 만들면 검색
+ * 규칙이 두 곳에 생긴다.
  *
- * [onSkipClick]은 진료 전에만 있다. 없으면 Nav 우측이 비고, 그러면 1m이 된다.
+ * **상단 바에는 뒤로가기만 둔다**(#228). 진료 전에 병원 없이 카드로 넘어가는 건너뛰기가
+ * 있었는데 시안의 1m-B에 그 자리가 없다. 나가는 길은 뒤로가기다.
  */
 @Composable
 fun HospitalPickScreen(
@@ -56,13 +57,14 @@ fun HospitalPickScreen(
     onSubmitClick: () -> Unit,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
-    onSkipClick: (() -> Unit)? = null,
 ) {
     // CTA만 목적마다 다르다. 1m-B는 카드로 이어지고, 일정 추가는 필드를 채우고 돌아간다.
     val submitLabel =
-        when (state.purpose) {
-            HospitalPickPurpose.AFTER_VISIT, HospitalPickPurpose.SCHEDULE -> R.string.hospital_pick_submit
-            HospitalPickPurpose.BEFORE_VISIT -> R.string.hospital_pick_submit_before
+        when {
+            state.purpose != HospitalPickPurpose.BEFORE_VISIT -> R.string.hospital_pick_submit
+            // 카드 안에서 병원만 바꾸러 온 것이면 만들 카드가 없다.
+            state.forExistingCard -> R.string.hospital_pick_submit
+            else -> R.string.hospital_pick_submit_before
         }
     Column(
         modifier =
@@ -74,8 +76,6 @@ fun HospitalPickScreen(
             title = stringResource(R.string.hospital_pick_title),
             onLeadingClick = onBackClick,
             surface = MedicalMateSurfaceStyle.GLASS,
-            actionLabel = onSkipClick?.let { stringResource(R.string.hospital_pick_skip) },
-            onActionClick = onSkipClick,
         )
         PickContent(
             state = state,
@@ -102,12 +102,15 @@ private fun ColumnScope.PickContent(
     onHospitalClick: (String) -> Unit,
 ) {
     val before = state.purpose.beforeVisit
+    val empty = state.results.isEmpty()
     Column(
         modifier =
         Modifier
             .fillMaxWidth()
             .weight(1f)
-            .verticalScroll(rememberScrollState())
+            // 찾은 것이 없으면 스크롤하지 않는다. 빈 상태가 남은 높이를 받으려면 높이가
+            // 정해져 있어야 하고, 그 화면에는 넘칠 것도 없다.
+            .let { if (empty) it else it.verticalScroll(rememberScrollState()) }
             .padding(horizontal = MedicalMateSize.gutter, vertical = MedicalMateSpace.s12),
         verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s20),
     ) {
@@ -139,17 +142,15 @@ private fun ColumnScope.PickContent(
             placeholder = stringResource(R.string.hospital_pick_search_placeholder),
             clearContentDescription = stringResource(R.string.hospital_pick_search_clear),
         )
-        Column(verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12)) {
-            Text(
-                text = resultLabel(state),
-                style = MedicalMateTheme.typography.labelM,
-                color = MedicalMateTheme.colors.fgSubtle,
-            )
-            if (state.results.isEmpty()) {
-                EmptyResults()
-            } else {
-                Results(state = state, onHospitalClick = onHospitalClick)
-            }
+        Text(
+            text = resultLabel(state),
+            style = MedicalMateTheme.typography.labelM,
+            color = MedicalMateTheme.colors.fgSubtle,
+        )
+        if (empty) {
+            EmptyResults()
+        } else {
+            Results(state = state, onHospitalClick = onHospitalClick)
         }
     }
 }
@@ -175,17 +176,21 @@ private fun resultLabel(state: HospitalPickUiState): String = when {
 /**
  * 찾은 것이 없을 때. 1m-B의 입력 전 상태이고, 검색해서 안 나온 경우도 같은 자리다.
  *
- * 아이콘이 시안과 다르다. 시안은 병원 아이콘을 쓰는데 `Empty State`의 아이콘은 변이가
- * 정한다(문서가 "제목·아이콘·액션은 변이가 정하고 본문만 갈아 끼운다"고 적었다). 한 화면을
- * 위해 아이콘을 열면 어느 화면이든 변이의 시각 언어를 벗어날 수 있게 된다. 그래서
- * `NoResult`의 `search-off`를 그대로 쓰고 디자인 트랙에 확인을 넘겼다.
+ * **병원 아이콘이다**(#228). 시안의 인스턴스가 `Empty State`의 `search-off`를 `hospital`로
+ * 갈아 끼워 뒀다. 전에는 변이가 정한 그림을 그대로 쓰고 디자인 트랙에 넘겨 뒀던 자리다.
+ *
+ * **남은 높이를 받아 그 안에서 가운데에 선다.** 시안(`1092:3919`)의 높이가 496인데 그것은
+ * 검색창 아래 남은 자리 전부다. 목록이 없는 화면은 목록의 첫 줄 자리에 글이 뜬 것이 아니라
+ * 한 화면이다.
  */
 @Composable
-private fun EmptyResults() {
+private fun ColumnScope.EmptyResults() {
     MedicalMateEmptyState(
         type = MedicalMateEmptyStateType.NO_RESULT,
         title = stringResource(R.string.hospital_pick_empty_title),
         description = stringResource(R.string.hospital_pick_empty_description),
+        icon = MedicalMateIcons.Hospital,
+        modifier = Modifier.weight(1f),
     )
 }
 

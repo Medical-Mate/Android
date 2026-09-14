@@ -8,11 +8,18 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -110,9 +117,26 @@ internal fun SeverityStep(
  *
  * 적은 질문이 브리핑 카드 맨 아래에 함께 담긴다. 진료실에서 잊고 못 꺼내는 것을 막는
  * 자리다.
+ *
+ * **더한 질문이 보이는 자리로 온다**(#228). 입력칸은 위에 있고 적은 질문은 그 아래로 쌓이는데,
+ * 키보드가 올라와 있으면 방금 더한 줄이 그 뒤에 선다. 무엇이 들어갔는지 보이지 않으면 같은
+ * 질문을 한 번 더 적게 된다.
+ *
+ * 목록이 늘어난 것만으로는 판단하지 않는다. 화면이 열릴 때 AI 후보가 그 자리에 채워지는데,
+ * 그것까지 따라가면 입력칸이 화면 밖으로 밀린다. 누른 뒤의 한 번만 따라간다.
  */
 @Composable
 internal fun QuestionsStep(state: IntakeUiState, callbacks: IntakeCallbacks, modifier: Modifier = Modifier) {
+    val lastQuestion = remember { BringIntoViewRequester() }
+    var added by remember { mutableStateOf(false) }
+
+    LaunchedEffect(state.questions.size) {
+        if (added) {
+            lastQuestion.bringIntoView()
+            added = false
+        }
+    }
+
     StepContent(step = state.step, modifier = modifier) {
         Text(
             text = stringResource(R.string.intake_questions_question),
@@ -130,31 +154,41 @@ internal fun QuestionsStep(state: IntakeUiState, callbacks: IntakeCallbacks, mod
             placeholder = stringResource(R.string.intake_questions_placeholder),
             trailing = {
                 MedicalMateIconButton(
-                    onClick = callbacks.onAddQuestionClick,
+                    onClick = {
+                        added = true
+                        callbacks.onAddQuestionClick()
+                    },
                     icon = MedicalMateIcons.Plus,
                     contentDescription = stringResource(R.string.intake_questions_add),
                     enabled = state.canAddQuestion,
                 )
             },
         )
-        if (state.questions.isNotEmpty()) {
-            MedicalMateSectionHeader(
-                title = stringResource(R.string.intake_questions_saved),
-                caption = stringResource(R.string.intake_questions_count, state.questions.size),
-            )
-            Text(
-                text = stringResource(R.string.intake_questions_ai_hint),
-                style = MedicalMateTheme.typography.bodyS,
-                color = MedicalMateTheme.colors.fgSubtle,
-            )
-            state.questions.forEachIndexed { index, question ->
-                QuestionRow(
-                    number = index + 1,
-                    question = question,
-                    onRemoveClick = { callbacks.onRemoveQuestionClick(index) },
-                )
-            }
-        }
+        SavedQuestions(state = state, callbacks = callbacks, last = lastQuestion)
+    }
+}
+
+/** 적어 둔 질문 목록. AI 후보도 여기 채워진다. */
+@Composable
+private fun SavedQuestions(state: IntakeUiState, callbacks: IntakeCallbacks, last: BringIntoViewRequester) {
+    if (state.questions.isEmpty()) return
+
+    MedicalMateSectionHeader(
+        title = stringResource(R.string.intake_questions_saved),
+        caption = stringResource(R.string.intake_questions_count, state.questions.size),
+    )
+    Text(
+        text = stringResource(R.string.intake_questions_ai_hint),
+        style = MedicalMateTheme.typography.bodyS,
+        color = MedicalMateTheme.colors.fgSubtle,
+    )
+    state.questions.forEachIndexed { index, question ->
+        QuestionRow(
+            number = index + 1,
+            question = question,
+            onRemoveClick = { callbacks.onRemoveQuestionClick(index) },
+            modifier = if (index == state.questions.lastIndex) Modifier.bringIntoViewRequester(last) else Modifier,
+        )
     }
 }
 
@@ -165,10 +199,10 @@ internal fun QuestionsStep(state: IntakeUiState, callbacks: IntakeCallbacks, mod
  * 지우기는 아이콘만 두고 접근성 이름에 몇 번째 질문인지 담는다.
  */
 @Composable
-private fun QuestionRow(number: Int, question: String, onRemoveClick: () -> Unit) {
+private fun QuestionRow(number: Int, question: String, onRemoveClick: () -> Unit, modifier: Modifier = Modifier) {
     Row(
         modifier =
-        Modifier
+        modifier
             .fillMaxWidth()
             .background(color = MedicalMateTheme.colors.bgPrimaryFaint, shape = MedicalMateRadius.sm)
             .padding(
