@@ -7,12 +7,15 @@ import com.mist.medicalmate.calendar.data.AppointmentEdit
 import com.mist.medicalmate.calendar.data.AppointmentRepository
 import com.mist.medicalmate.calendar.data.AppointmentStatus
 import com.mist.medicalmate.calendar.data.AppointmentTodo
+import com.mist.medicalmate.card.data.CardRepository
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.visit.data.VisitFollowUp
 import com.mist.medicalmate.visit.data.VisitListItem
 import com.mist.medicalmate.visit.data.VisitRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,6 +41,7 @@ class CalendarDayViewModel
 internal constructor(
     private val repository: AppointmentRepository,
     private val visitRepository: VisitRepository,
+    private val cardRepository: CardRepository,
     private val clock: Clock,
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow<CalendarDayUiState?>(null)
@@ -75,7 +79,7 @@ internal constructor(
             mutableUiState.value =
                 dayState(date).copy(
                     schedule = appointment?.toDaySchedule(LocalDate.now(clock)),
-                    card = appointment?.toDayCard(),
+                    card = appointment?.toDayCard()?.filled(),
                     records = records.map { it.toDayRecord() },
                     // 진료가 끝난 날에는 진료 전 할 일을 두지 않는다. 시안 1r-2-A도 그렇다.
                     todos = if (records.isEmpty()) appointment?.todos.toDayTodos() else emptyList(),
@@ -84,6 +88,27 @@ internal constructor(
                     nextEvent = records.firstOrNull()?.let { nextEvent(date, it) },
                 )
         }
+    }
+
+    /**
+     * 카드 줄의 작성일·항목 수·상태를 채운다.
+     *
+     * 일정 응답의 카드는 id와 제목뿐이라(`LinkedCard`) 나머지를 두 곳에서 가져온다. 작성일과
+     * 진료 완료 여부는 목록에, 항목 수는 상세에만 있다. 둘을 나란히 보낸다.
+     *
+     * 못 읽은 값은 비운 채 그린다. 이 줄은 카드로 들어가는 길이라 보조 문구가 덜 차도 제
+     * 일을 한다.
+     */
+    private suspend fun DayCard.filled(): DayCard = coroutineScope {
+        val cardId = id.toLongOrNull() ?: return@coroutineScope this@filled
+        val listCall = async { cardRepository.cards() }
+        val detailCall = async { cardRepository.card(cardId) }
+        val listed = (listCall.await() as? ApiResult.Success)?.value?.firstOrNull { it.id == id }
+        copy(
+            writtenOn = listed?.writtenOn,
+            visited = listed?.visited == true,
+            itemCount = detailCall.await().itemCount(),
+        )
     }
 
     /**

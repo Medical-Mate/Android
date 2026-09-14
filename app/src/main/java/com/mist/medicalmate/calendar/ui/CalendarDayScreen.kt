@@ -245,10 +245,10 @@ private fun ColumnScope.CardSection(state: CalendarDayUiState, callbacks: Calend
     )
     MedicalMateListRow(
         title = card.title,
-        meta = card.meta,
-        badge = card.status,
+        meta = dayCardMeta(card),
+        badge = dayCardStatus(card),
         badgeTone = MedicalMateBadgeTone.NEUTRAL,
-        type = if (card.status == null) MedicalMateListRowType.DEFAULT else MedicalMateListRowType.BADGE,
+        type = MedicalMateListRowType.BADGE,
         onClick = { callbacks.onCardOpenClick(card.id) },
     )
 }

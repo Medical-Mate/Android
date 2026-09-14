@@ -15,12 +15,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -31,7 +29,6 @@ import com.mist.medicalmate.core.designsystem.MedicalMateScreenPreviews
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
-import com.mist.medicalmate.core.designsystem.component.MedicalMateBadge
 import com.mist.medicalmate.core.designsystem.component.MedicalMateBadgeTone
 import com.mist.medicalmate.core.designsystem.component.MedicalMateBottomSheet
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
@@ -160,8 +157,8 @@ private fun CardSheet(
             MedicalMateSectionHeader(title = stringResource(R.string.calendar_card_sheet_section))
             MedicalMateListRow(
                 title = card.title,
-                meta = card.meta,
-                badge = card.status,
+                meta = dayCardMeta(card),
+                badge = dayCardStatus(card),
                 type = MedicalMateListRowType.BADGE,
                 onClick = { onCardOpenClick(card.id) },
             )
@@ -357,69 +354,37 @@ private fun LegendItem(marker: MedicalMateDateMarker, @StringRes labelRes: Int) 
 private val LegendDotSize = 5.dp
 private val LegendRingWidth = 1.dp
 
-/** 고른 날과 그 날의 일정. 일정이 없으면 없다고 적는다. */
 /**
  * 고른 날의 일정.
  *
- * 시안(`406:2310`)은 이 자리에 `List Row`를 쓰는데 그 컴포넌트는 제목과 메타 한 줄까지다.
- * 이 줄은 제목 옆에 D-day 배지가 붙고 메타가 따로 있어서 1j-1의 기록 줄과 같은 이유로
- * 카드로 짠다. 오른쪽 이동 표시는 `List Row`와 같게 둔다.
+ * 시안(`406:2310`)이 구역 머리와 `List Row`를 쓴다. 전에는 `MedicalMateCard`로 짜면서
+ * "제목 옆 배지와 메타를 함께 둘 수 없어서"라고 적어 두었는데, `MedicalMateListRow`에
+ * `BADGE` 변이가 들어오면서(#227) 그 이유가 사라졌다. 카드는 최소 높이 116과 여백 20을
+ * 강제해서 시안의 줄보다 훨씬 높았다. 홈의 다가오는 일정도 같은 컴포넌트로 그린다.
  */
 @Composable
 private fun ColumnScope.SelectedDay(state: CalendarUiState, onScheduleClick: (String) -> Unit) {
-    Text(
-        text = state.selected.format(dayFormat),
-        style = MedicalMateTheme.typography.headingS,
-        color = MedicalMateTheme.colors.fgDefault,
-        modifier = Modifier.padding(top = MedicalMateSpace.s10),
-    )
+    MedicalMateSectionHeader(title = state.selected.format(dayFormat))
     // 시안 `1185:13797`이 일정 없는 날에 제목만 두고 아래를 비운다. 그 날 무엇을 할지는
     // 아래 + 버튼이 이미 말하고 있어서 "일정이 없어요"를 한 줄 더 적을 자리가 아니다.
     if (state.schedules.isEmpty()) return
     state.schedules.forEach { schedule ->
-        MedicalMateCard(onClick = { onScheduleClick(schedule.id) }) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4),
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = schedule.title,
-                            style = MedicalMateTheme.typography.bodyLStrong,
-                            color = MedicalMateTheme.colors.fgDefault,
-                        )
-                        if (schedule.dday >= 0) {
-                            MedicalMateBadge(
-                                label = stringResource(R.string.calendar_day_dday, schedule.dday),
-                                tone = MedicalMateBadgeTone.BRAND,
-                            )
-                        }
-                    }
-                    Text(
-                        text =
-                        listOfNotNull(
-                            schedule.time ?: stringResource(R.string.calendar_time_unset),
-                            schedule.detail.takeIf { it.isNotBlank() },
-                        ).joinToString(" · "),
-                        style = MedicalMateTheme.typography.bodyS,
-                        color = MedicalMateTheme.colors.fgSubtle,
-                    )
-                }
-                Icon(
-                    painter = painterResource(MedicalMateIcons.ChevronRight),
-                    contentDescription = null,
-                    tint = MedicalMateTheme.colors.fgMuted,
-                )
-            }
-        }
+        MedicalMateListRow(
+            title = schedule.title,
+            meta =
+            listOfNotNull(
+                schedule.time ?: stringResource(R.string.calendar_time_unset),
+                schedule.detail.takeIf { it.isNotBlank() },
+            ).joinToString(" · "),
+            badge =
+            schedule.dday
+                .takeIf { it >= 0 }
+                ?.let { stringResource(R.string.calendar_day_dday, it) },
+            badgeTone = MedicalMateBadgeTone.BRAND,
+            type =
+            if (schedule.dday >= 0) MedicalMateListRowType.BADGE else MedicalMateListRowType.DEFAULT,
+            onClick = { onScheduleClick(schedule.id) },
+        )
     }
 }
 

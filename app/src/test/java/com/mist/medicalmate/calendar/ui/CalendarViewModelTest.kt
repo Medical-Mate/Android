@@ -180,9 +180,11 @@ class CalendarViewModelTest {
     }
 
     @Test
-    fun `다녀온 날의 카드에는 배지가 없다`() {
-        assertNull(previewCalendarDayVisitedState.card?.status)
-        assertEquals("진료 전", previewCalendarDayState.card?.status)
+    fun `카드 줄의 배지는 진료를 다녀왔는지로 갈린다`() {
+        // 시안 `1r-2`가 카드 줄에 늘 배지를 두고, 다녀온 카드만 "진료 완료"로 바꾼다.
+        // 확정 여부가 아니라 `visited`다 — 확정만 하고 안 간 카드에 완료가 붙으면 안 된다.
+        assertTrue(previewCalendarDayVisitedState.card?.visited == true)
+        assertTrue(previewCalendarDayState.card?.visited == false)
     }
 
     @Test

@@ -35,17 +35,12 @@ internal val fixtureCard =
     DayCard(
         id = "card-1",
         title = "복부 통증 · 3주",
-        meta = "2026.09.04 작성 · 5항목",
-        status = "진료 전",
+        writtenOn = LocalDate.of(2026, 9, 4),
+        itemCount = 5,
     )
 
-/** 다녀온 뒤의 같은 카드. 가져갈 일이 끝나 배지가 없고 언제 보여줬는지가 온다. */
-internal val fixtureVisitedCard =
-    DayCard(
-        id = "card-1",
-        title = "복부 통증 · 3주",
-        meta = "브리핑 카드 · 진료실에서 보여줌",
-    )
+/** 다녀온 뒤의 같은 카드. 같은 줄인데 배지만 "진료 완료"로 바뀐다. */
+internal val fixtureVisitedCard = fixtureCard.copy(visited = true)
 
 internal val fixtureRecord =
     DayRecord(

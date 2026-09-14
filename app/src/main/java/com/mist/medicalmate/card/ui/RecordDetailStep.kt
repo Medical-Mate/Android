@@ -1,5 +1,8 @@
 package com.mist.medicalmate.card.ui
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -8,9 +11,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -37,13 +47,33 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateSeverityReado
  * `Card` 컴포넌트를 쓰지 않는다. 그쪽은 반경 20에 여백 20이고 최소 높이가 116인데, 이
  * 블록은 반경 16에 여백 16이고 재방문 예정처럼 두 줄로 끝나는 것도 있다. 층은 같은
  * `Elevation/Card`로 준다.
+ *
+ * **카드를 펼치고 접을 때 높이가 이어진다**(#243). 줄이 몇 개 더 붙고 통증 눈금·알러지·질문
+ * 블록까지 들어오는데 한 프레임에 튀면 무엇이 늘어난 것인지 눈이 따라가지 못한다. 기기에서
+ * 애니메이션을 껐으면 즉시 바뀐다.
+ *
+ * **펼친 뒤에는 그 블록으로 화면을 옮긴다.** 브리핑 카드는 타임라인의 마지막 단계라 화면
+ * 아래쪽에 있고, 펼치면 새로 나온 내용이 화면 밖으로 나간다. 높이가 자라는 동안이 아니라
+ * 자리를 잡은 뒤에 옮긴다 — 자라는 중에 부르면 옛 높이를 기준으로 서서 아래가 다시 잘린다.
  */
 @Composable
 internal fun RecordStepBlock(step: RecordStep.Block, expanded: Boolean, onExpandToggle: () -> Unit) {
+    val block = remember { BringIntoViewRequester() }
+    var settled by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(settled) {
+        if (settled > 0 && expanded) block.bringIntoView()
+    }
+
     Column(
         modifier =
         Modifier
             .fillMaxWidth()
+            .animateContentSize(
+                animationSpec = tween(EXPAND_DURATION, easing = FastOutSlowInEasing),
+                finishedListener = { _, _ -> settled += 1 },
+            )
+            .bringIntoViewRequester(block)
             .shadow(
                 elevation = MedicalMateElevation.card,
                 shape = MedicalMateRadius.md,
@@ -69,6 +99,9 @@ internal fun RecordStepBlock(step: RecordStep.Block, expanded: Boolean, onExpand
         }
     }
 }
+
+/** 펼침·접힘이 도는 시간. 화면 전환과 같은 Material 표준 값이다. */
+private const val EXPAND_DURATION = 320
 
 /**
  * 펼쳤을 때 줄 아래 붙는 것들.

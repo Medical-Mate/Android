@@ -76,6 +76,27 @@ internal constructor(
                 cardSheet = if (schedules.isEmpty()) state.cards.cardOn(date, state.appointments) else null,
             )
         }
+        fillCardItemCount()
+    }
+
+    /**
+     * 시트에 선 카드의 항목 수를 채운다.
+     *
+     * 목록 응답에 항목 수가 없어 상세를 한 번 더 읽는다. 달의 카드를 모두 읽지 않고 시트가
+     * 열린 한 장만 읽는다 — 목록에 없는 값 하나 때문에 달마다 왕복을 카드 수만큼 늘릴 수는
+     * 없다. 못 읽으면 날짜만 적는다.
+     */
+    private fun fillCardItemCount() {
+        val cardId = mutableUiState.value.cardSheet?.takeIf { it.itemCount == null }?.id ?: return
+        viewModelScope.launch {
+            val count = cardId.toLongOrNull()?.let { cardRepository.card(it) }.itemCount() ?: return@launch
+            mutableUiState.update { state ->
+                state.copy(
+                    cardSheet = state.cardSheet?.takeIf { it.id == cardId }?.copy(itemCount = count)
+                        ?: state.cardSheet,
+                )
+            }
+        }
     }
 
     /** 시트를 닫았다. */
@@ -144,7 +165,8 @@ private fun List<CardListItem>.cardOn(date: LocalDate, appointments: List<Appoin
         DayCard(
             id = card.id,
             title = card.title,
-            meta = card.clinic.orEmpty(),
+            writtenOn = card.writtenOn,
+            visited = card.visited,
             // 이 카드로 이미 만든 일정. 있으면 시트가 그리로 보낸다.
             scheduledOn =
             card.id.toLongOrNull()?.let { cardId ->

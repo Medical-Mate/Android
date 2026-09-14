@@ -8,10 +8,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.mist.medicalmate.R
@@ -190,9 +197,23 @@ private fun ColumnScope.CardSection(state: ScheduleAddUiState, callbacks: Schedu
  *
  * 추가를 누르면 목록 끝에 빈 줄이 하나 생기고 그 자리에서 받는다. 입력 필드를 따로 띄우지
  * 않는 것이 문서의 추가 방식이다.
+ *
+ * **줄이 붙으면 "할 일 추가"까지 화면에 들여놓는다**(#243). 이 구역이 폼의 맨 아래라 줄
+ * 하나가 늘어나는 것만으로 다음에 누를 자리가 접힌 화면 밖으로 나간다. 여러 개를 잇달아
+ * 적는 자리인데 한 줄마다 손으로 스크롤하게 된다.
  */
 @Composable
 private fun ColumnScope.TodoSection(state: ScheduleAddUiState, todo: ScheduleAddTodoActions) {
+    val addRow = remember { BringIntoViewRequester() }
+    var shown by remember { mutableIntStateOf(state.todos.size) }
+
+    LaunchedEffect(state.todos.size) {
+        val added = state.todos.size > shown
+        shown = state.todos.size
+        // 처음 불러온 것과 지운 것에는 움직이지 않는다. 늘어난 때만 따라간다.
+        if (added) addRow.bringIntoView()
+    }
+
     MedicalMateSectionHeader(title = stringResource(R.string.schedule_add_todo))
     state.todos.forEach { item ->
         val label = item.label.ifBlank { stringResource(R.string.schedule_add_todo_placeholder) }
@@ -213,6 +234,7 @@ private fun ColumnScope.TodoSection(state: ScheduleAddUiState, todo: ScheduleAdd
     MedicalMateAddRow(
         label = stringResource(R.string.schedule_add_todo_add),
         onClick = todo::onAddClick,
+        modifier = Modifier.bringIntoViewRequester(addRow),
     )
 }
 
