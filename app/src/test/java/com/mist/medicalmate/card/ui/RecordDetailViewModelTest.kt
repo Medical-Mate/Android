@@ -66,12 +66,13 @@ class RecordDetailViewModelTest {
         val detail = content(FULL).detail
 
         assertEquals("서울OO병원 내과", detail.title)
-        assertEquals("2026.09.12 · 서울OO병원 내과", detail.clinicLine)
+        // 시안 `1j-3`이 병원을 앞에, 날짜를 뒤에 둔다. 재방문이 쌓인 `1j-3-R`과 같은 차례다.
+        assertEquals("서울OO병원 내과 · 09.12 진료", detail.clinicLine)
         assertEquals(RecordItem.Status.CONFIRMED, detail.status)
 
         val step = detail.steps.single() as RecordStep.Block
         assertEquals("09.12 · 진료 후 기록", step.at)
-        assertEquals("진료에서 들은 것", step.title)
+        assertEquals("진료 후 기록", step.title)
         assertEquals(listOf("소견", "검사", "약"), step.items.map { it.key })
         assertEquals(listOf("위염 초기", "혈액검사", "2주분"), step.items.map { it.value })
     }
@@ -91,7 +92,9 @@ class RecordDetailViewModelTest {
 
         assertEquals(2, steps.size)
         val card = steps.last() as RecordStep.Block
-        assertEquals("브리핑 카드", card.at)
+        // 시안의 시점 줄. 언제 썼고 언제 들고 갔는지가 함께 온다.
+        assertEquals("09.04 작성 · 09.12 진료실에서 보여줌", card.at)
+        assertEquals("브리핑 카드", card.title)
         assertEquals(listOf("부위", "기간", "양상"), card.items.map { it.key })
     }
 
@@ -113,7 +116,7 @@ class RecordDetailViewModelTest {
         val steps = content(FULL).detail.steps
 
         assertEquals(1, steps.size)
-        assertEquals("진료에서 들은 것", (steps.single() as RecordStep.Block).title)
+        assertEquals("진료 후 기록", (steps.single() as RecordStep.Block).title)
     }
 
     @Test
@@ -123,8 +126,8 @@ class RecordDetailViewModelTest {
         assertEquals(3, steps.size)
         val pending = steps.first() as RecordStep.Pending
         assertEquals("09.26 예정", pending.at)
-        assertEquals("재방문 예약됨", pending.message)
-        assertEquals("서울OO병원 내과 · 오전 10:30", pending.detail)
+        assertEquals("다음 진료가 예약돼 있어요", pending.message)
+        assertEquals("9월 26일 (토) 오전 10:30", pending.detail)
     }
 
     @Test
@@ -325,6 +328,7 @@ class RecordDetailViewModelTest {
                 severity = MedicalMateSeverity.LEVEL_3,
                 allergies = listOf("페니실린"),
                 questions = listOf("검사를 받아야 하나요?"),
+                writtenOn = LocalDate.of(2026, 9, 4),
             )
 
         /** 그 카드로 잡힌 재방문. */

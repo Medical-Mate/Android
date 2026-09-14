@@ -8,6 +8,7 @@ import com.mist.medicalmate.calendar.data.AppointmentStatus
 import com.mist.medicalmate.card.data.CardRepository
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.visit.data.Visit
+import com.mist.medicalmate.visit.data.VisitListItem
 import com.mist.medicalmate.visit.data.VisitRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -76,9 +78,19 @@ internal constructor(
             }
             val cardId = visit.cardId
             val card = cardId?.let { id -> (cardRepository.card(id) as? ApiResult.Success)?.value }
-            val visits = if (cardId == null) listOf(visit) else history(cardId, visit)
+            val summaries = cardId?.let { (repository.cardVisits(it) as? ApiResult.Success)?.value }.orEmpty()
+            val visits = if (summaries.size <= 1) listOf(visit) else history(summaries, visit)
             mutableUiState.value =
-                RecordDetailUiState.Content(recordDetail(visits, card = card, next = nextVisit(cardId)))
+                RecordDetailUiState.Content(
+                    recordDetail(
+                        visits = visits,
+                        card = card,
+                        next = nextVisit(cardId),
+                        // 카드 응답의 제목이 비어 있을 수 있다. 목록이 카드를 만들 때 박아 둔
+                        // 제목을 들고 있어서(1j-1의 줄과 같은 값) 그것으로 받친다.
+                        cardTitle = summaries.firstNotNullOfOrNull { it.cardTitle.takeIf(String::isNotBlank) },
+                    ),
+                )
         }
     }
 
@@ -95,17 +107,14 @@ internal constructor(
      *
      * 모으지 못하면 열어 본 기록 하나만 그린다. 지금까지 하던 것과 같다.
      */
-    private suspend fun history(cardId: Long, opened: Visit): List<Visit> {
-        val summaries = (repository.cardVisits(cardId) as? ApiResult.Success)?.value.orEmpty()
-        if (summaries.size <= 1) return listOf(opened)
-        return summaries.mapNotNull { summary ->
+    private suspend fun history(summaries: List<VisitListItem>, opened: Visit): List<Visit> =
+        summaries.mapNotNull { summary ->
             if (summary.id == opened.id) {
                 opened
             } else {
                 summary.id.toLongOrNull()?.let { (repository.visit(it) as? ApiResult.Success)?.value }
             }
         }
-    }
 
     /**
      * 그 카드로 잡힌 다음 일정.
@@ -140,38 +149,43 @@ internal constructor(
  * 값이 없는 줄은 만들지 않는다. 환자가 적지 않은 것을 빈 줄로 남기면 무엇을 안 적었는지가
  * 아니라 무엇이 비었는지로 읽힌다.
  */
-private fun recordDetail(visits: List<Visit>, card: BriefCard?, next: Appointment?): RecordDetail {
+private fun recordDetail(visits: List<Visit>, card: BriefCard?, next: Appointment?, cardTitle: String?): RecordDetail {
     val newest = visits.first()
     val records = visits.mapIndexed { index, visit -> visit.toRecordStep(visitKind(visits.size, index)) }
     return RecordDetail(
         id = newest.id,
-        title = card?.title?.takeIf { it.isNotBlank() } ?: newest.clinic.orEmpty(),
+        // 머리 제목은 시안(`1j-3`)대로 브리핑 카드의 제목이다. 카드 응답의 제목이 비면 목록이
+        // 든 제목으로, 그것도 없으면 병원으로 받친다 — 병원은 둘째 줄이 적는 값이라 제목에
+        // 서면 같은 말이 두 줄에 이어 나온다.
+        title = card?.title?.takeIf { it.isNotBlank() } ?: cardTitle ?: newest.clinic.orEmpty(),
         status = RecordItem.Status.CONFIRMED,
         // 몇 번 다녀왔는지는 상태가 아니라 세어 봐야 아는 값이다. 한 번이면 뱃지가 상태를 그린다.
         badge = if (visits.size > 1) "진료 ${visits.size}회" else null,
         clinicLine = clinicLine(visits),
-        steps = listOfNotNull(next?.toPending()) + records + listOfNotNull(card?.toStep()),
+        // 카드 단계의 시점 줄에 "진료실에서 보여줌"이 붙는다. 처음 간 진료가 그 날이다.
+        steps = listOfNotNull(next?.toPending()) + records + listOfNotNull(card?.toStep(visits.last().visitedOn)),
     )
 }
 
 /**
  * 머리글 둘째 줄.
  *
- * **다녀온 횟수에 따라 모양이 다르다.** 한 번이면 `2026.09.12 · 서울OO병원 내과`로 시안
- * `1j-3` 그대로이고, 여러 번이면 `서울OO병원 내과 · 09.12 초진 · 09.26 재방문`으로 `1j-3-R`을
- * 따른다. 병원이 앞으로 가는 것은 뒤에 날짜가 여럿 붙기 때문이다.
+ * **병원이 앞이고 날짜가 뒤다.** 한 번이면 `서울OO병원 내과 · 09.12 진료`로 시안 `1j-3`
+ * 그대로이고, 여러 번이면 `서울OO병원 내과 · 09.12 초진 · 09.26 재방문`으로 `1j-3-R`을
+ * 따른다. 두 시안이 같은 차례라 한 번일 때만 날짜를 앞에 두던 것을 걷어냈다(#243).
  *
  * 여러 번인 쪽은 오래된 차례다. 타임라인은 최신이 위인데 이 줄만 반대인 이유는, 여기가
  * 흘러온 순서를 한 줄로 읽는 자리이기 때문이다.
  */
 private fun clinicLine(visits: List<Visit>): String {
     val clinic = visits.firstNotNullOfOrNull { visit -> visit.clinic?.takeIf { it.isNotBlank() } }
-    if (visits.size == 1) {
-        return listOfNotNull(visits.first().visitedOn?.format(CLINIC_LINE), clinic).joinToString(" · ")
-    }
     val days =
-        visits.reversed().mapIndexedNotNull { index, visit ->
-            visit.visitedOn?.format(VISITED_ON)?.let { "$it ${if (index == 0) "초진" else "재방문"}" }
+        if (visits.size == 1) {
+            listOfNotNull(visits.first().visitedOn?.format(VISITED_ON)?.let { "$it 진료" })
+        } else {
+            visits.reversed().mapIndexedNotNull { index, visit ->
+                visit.visitedOn?.format(VISITED_ON)?.let { "$it ${if (index == 0) "초진" else "재방문"}" }
+            }
         }
     return (listOfNotNull(clinic) + days).joinToString(" · ")
 }
@@ -196,20 +210,24 @@ private fun visitKind(count: Int, index: Int): String? = when {
 private fun Visit.toRecordStep(kind: String?) = RecordStep.Block(
     // 항목이 가변이다(#178). 이름과 차례는 저장소가 정하고 여기는 그대로 편다.
     at = listOfNotNull(visitedOn?.format(VISITED_ON), "진료 후 기록", kind).joinToString(" · "),
-    title = "진료에서 들은 것",
+    // 블록 제목은 시점 줄과 같은 말이다. 시안이 그렇고, 다른 이름을 붙이면 같은 것을 두 이름으로
+    // 부르게 된다.
+    title = "진료 후 기록",
     items = items.map { RecordDetailItem(key = it.label, value = it.value) },
 )
 
 /**
  * 다음 일정을 예정 단계로.
  *
- * 시안의 점선 블록이다. 날짜는 칩 자리에, 병원과 시각은 둘째 줄에 온다.
+ * 시안(`1j-3`)의 알림 블록이다. 시점 줄이 `09.26 예정`이고, 알림은 "다음 진료가 예약돼
+ * 있어요" 아래에 `9월 26일 (토) 오전 10:30`을 적는다. 병원은 적지 않는다 — 머리글 둘째 줄이
+ * 이미 말하고 있고, 같은 카드의 재방문이라 다른 곳일 리가 없다.
  */
 private fun Appointment.toPending() = RecordStep.Pending(
     at = on.format(PENDING_AT),
-    message = "재방문 예약됨",
-    // 시각이 없으면 병원만 적는다. 시간 미정인 일정이다(#202).
-    detail = listOfNotNull(title, time?.format(PENDING_TIME)).joinToString(" · "),
+    message = "다음 진료가 예약돼 있어요",
+    // 시각이 없으면 날짜만 적는다. 시간 미정인 일정이다(#202).
+    detail = listOfNotNull(on.format(PENDING_DATE), time?.format(PENDING_TIME)).joinToString(" "),
 )
 
 /**
@@ -222,9 +240,15 @@ private fun Appointment.toPending() = RecordStep.Pending(
  * 화면이 프로필에서 읽어 얹고 있었는데, 여기는 지난 진료를 다시 읽는 자리라 오늘의 프로필을
  * 얹으면 그때 먹던 약이 아니게 된다. 이제 서버가 카드에 박아 준다.
  */
-private fun BriefCard.toStep() = RecordStep.Block(
-    at = "브리핑 카드",
-    title = "진료 전에 정리한 것",
+private fun BriefCard.toStep(shownOn: LocalDate?) = RecordStep.Block(
+    // 시안의 시점 줄은 `09.04 작성 · 09.12 진료실에서 보여줌`이다. 언제 썼고 언제 들고 갔는지
+    // 둘이고, 둘 다 없을 때만 이름을 적는다.
+    at =
+    listOfNotNull(
+        writtenOn?.format(VISITED_ON)?.let { "$it 작성" },
+        shownOn?.format(VISITED_ON)?.let { "$it 진료실에서 보여줌" },
+    ).joinToString(" · ").ifEmpty { "브리핑 카드" },
+    title = "브리핑 카드",
     items = (items + health).map { RecordDetailItem(key = it.key, value = it.value) },
     card =
     RecordStepCard(
@@ -242,6 +266,7 @@ private val PENDING_AT: DateTimeFormatter = DateTimeFormatter.ofPattern("MM.dd �
 
 private val PENDING_TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)
 
-private val CLINIC_LINE: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy.MM.dd", Locale.KOREAN)
+/** 예정 알림 본문의 날짜. `9월 26일 (토)`. */
+private val PENDING_DATE: DateTimeFormatter = DateTimeFormatter.ofPattern("M월 d일 (E)", Locale.KOREAN)
 
 private val VISITED_ON: DateTimeFormatter = DateTimeFormatter.ofPattern("MM.dd", Locale.KOREAN)

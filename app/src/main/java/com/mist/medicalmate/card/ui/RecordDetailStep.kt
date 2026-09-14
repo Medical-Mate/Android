@@ -69,17 +69,20 @@ internal fun RecordStepBlock(step: RecordStep.Block, expanded: Boolean, onExpand
         modifier =
         Modifier
             .fillMaxWidth()
-            .animateContentSize(
-                animationSpec = tween(EXPAND_DURATION, easing = FastOutSlowInEasing),
-                finishedListener = { _, _ -> settled += 1 },
-            )
-            .bringIntoViewRequester(block)
+            // 그림자가 크기 애니메이션보다 바깥이어야 한다. `animateContentSize`는 내용을
+            // 자기 크기로 잘라서, 안쪽에 두면 옆으로 퍼지는 그림자가 잘려 카드 좌우가 칼로
+            // 벤 것처럼 보인다.
             .shadow(
                 elevation = MedicalMateElevation.card,
                 shape = MedicalMateRadius.md,
                 ambientColor = ShadowTint,
                 spotColor = ShadowTint,
             )
+            .animateContentSize(
+                animationSpec = tween(EXPAND_DURATION, easing = FastOutSlowInEasing),
+                finishedListener = { _, _ -> settled += 1 },
+            )
+            .bringIntoViewRequester(block)
             .background(MedicalMateTheme.colors.bgSurface, MedicalMateRadius.md)
             .padding(MedicalMateSpace.s16),
         verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8),
