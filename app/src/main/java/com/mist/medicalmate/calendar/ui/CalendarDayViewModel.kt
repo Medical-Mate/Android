@@ -115,6 +115,7 @@ internal constructor(
             writtenOn = detail?.writtenOn ?: listed?.writtenOn,
             visited = listed?.visited == true,
             itemCount = detail?.items?.size,
+            clinicAddress = detail?.hospital?.address,
         )
     }
 

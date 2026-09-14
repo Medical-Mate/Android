@@ -93,6 +93,40 @@ internal data class VisitRecordDestination(
  * @param onCardRequested 진료 전(1m-B)에서 카드로 넘어갈 때. 고른 병원이 없으면 null이
  *   넘어간다. 건너뛰기와 CTA가 같은 곳으로 가고, 다른 것은 병원을 들고 가는지뿐이다.
  */
+/**
+ * 와이어프레임 1m-12. 일정 상세의 "진료 후 기록하기"가 먼저 닿는 곳이다(#246).
+ *
+ * 일정에 등록한 병원을 들고 들어와 그 병원이 맞는지 묻는다. 맞으면 [clinic]을 그대로 1p로
+ * 나르고, 다른 곳이면 1m으로 가서 다시 고른다. [address]는 일정 응답에 없어 카드에 남은
+ * 것을 받는다 — 없으면 이름만 적는다.
+ */
+@Serializable
+internal data class ClinicConfirmDestination(
+    val clinic: String,
+    val address: String? = null,
+    val cardId: String,
+    val cardTitle: String,
+    val visitedOn: String,
+)
+
+internal fun NavGraphBuilder.clinicConfirmDestination(
+    onConfirmed: (clinic: String, cardId: String, cardTitle: String, visitedOn: String) -> Unit,
+    onOther: (cardId: String, cardTitle: String, visitedOn: String) -> Unit,
+    onExit: () -> Unit,
+) {
+    composable<ClinicConfirmDestination> { entry ->
+        val route = entry.toRoute<ClinicConfirmDestination>()
+        ClinicConfirmScreen(
+            clinic = route.clinic,
+            address = route.address,
+            scheduledOn = LocalDate.parse(route.visitedOn),
+            onConfirmClick = { onConfirmed(route.clinic, route.cardId, route.cardTitle, route.visitedOn) },
+            onOtherClick = { onOther(route.cardId, route.cardTitle, route.visitedOn) },
+            onBackClick = onExit,
+        )
+    }
+}
+
 internal fun NavGraphBuilder.hospitalPickDestination(
     onPicked: (cardId: String?, cardTitle: String?, visitedOn: String?, hospital: Hospital) -> Unit,
     onCardRequested: (cardId: String?, sessionId: Long?, hospital: Hospital?) -> Unit,
