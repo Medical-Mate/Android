@@ -160,7 +160,6 @@ private fun HospitalPickRoute(
 
     LaunchedEffect(purpose) { viewModel.load(purpose) }
 
-    val beforeCard = purpose == HospitalPickPurpose.BEFORE_VISIT
     val selected = state.selected
 
     HospitalPickScreen(
@@ -179,13 +178,6 @@ private fun HospitalPickRoute(
         },
         onBackClick = onExit,
         modifier = modifier,
-        // 건너뛰기는 병원 없이 카드로 간다. 1m-B에만 있다. 일정 추가에서는 뒤로 가는 것이
-        // 그대로 "정하지 않음"이라 따로 두지 않는다.
-        onSkipClick = if (beforeCard) {
-            { onCardRequested(cardId, sessionId, null) }
-        } else {
-            null
-        },
     )
 }
 
