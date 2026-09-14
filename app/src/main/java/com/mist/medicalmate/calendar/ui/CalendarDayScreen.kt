@@ -21,7 +21,6 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateBadgeTone
-import com.mist.medicalmate.core.designsystem.component.MedicalMateBottomCtaBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonSize
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonType
@@ -75,15 +74,8 @@ fun CalendarDayScreen(state: CalendarDayUiState, callbacks: CalendarDayCallbacks
             TodoSection(state = state, callbacks = callbacks)
             RecordSection(state = state, callbacks = callbacks)
             NextEventSection(state = state, callbacks = callbacks)
-        }
-        if (state.editing) {
-            MedicalMateBottomCtaBar {
-                MedicalMateButton(
-                    label = stringResource(R.string.calendar_day_schedule_delete),
-                    onClick = callbacks.onScheduleDeleteClick,
-                    type = MedicalMateButtonType.DANGER,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+            if (state.editing) {
+                DeleteAction(onClick = callbacks.onScheduleDeleteClick)
             }
         }
     }
@@ -141,6 +133,28 @@ data class CalendarDayCallbacks(
     val onScheduleDeleteConfirm: () -> Unit = {},
     val onScheduleDeleteDismiss: () -> Unit = {},
 )
+
+/**
+ * 일정 삭제.
+ *
+ * **하단에 고정하지 않고 본문 끝에 둔다.** 고정하면 편집을 누르는 순간 본문 위로 들어서면서
+ * 마지막 요소를 자른다. 다녀온 날에서는 그 자리가 다음 일정 카드라 카드가 잘린 채로 보인다.
+ * 끝까지 내려야 나오게 두면 그 일이 없고, 지우는 동작을 실수로 누를 일도 줄어든다.
+ *
+ * 문서의 삭제 규칙이 정한 것은 하단 Danger CTA와 확인 대화상자이고, 그 버튼이 늘 떠 있어야
+ * 한다는 뜻은 아니다.
+ *
+ * 앞 섹션과 한 칸 더 띄운다. 본문의 마지막 줄이 아니라 따로 선 동작이다.
+ */
+@Composable
+private fun ColumnScope.DeleteAction(onClick: () -> Unit) {
+    MedicalMateButton(
+        label = stringResource(R.string.calendar_day_schedule_delete),
+        onClick = onClick,
+        type = MedicalMateButtonType.DANGER,
+        modifier = Modifier.fillMaxWidth().padding(top = MedicalMateSpace.s12),
+    )
+}
 
 /**
  * 이 날 일정. 옅은 브랜드 면에 머리말과 제목, 시간과 가져갈 것을 담는다.
