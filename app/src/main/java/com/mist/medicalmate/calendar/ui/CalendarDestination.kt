@@ -34,7 +34,7 @@ internal data class CalendarDayDestination(val date: String, val appointmentId: 
 internal fun NavGraphBuilder.calendarDestination(
     onDayOpen: (date: LocalDate, appointmentId: Long?) -> Unit,
     onCardOpen: (String) -> Unit,
-    onAddClick: (date: LocalDate?) -> Unit,
+    onAddClick: (date: LocalDate?, cardId: String?) -> Unit,
     onTabSelect: (MedicalMateTab) -> Unit,
 ) {
     composable<CalendarDestination> {
@@ -83,7 +83,7 @@ internal fun NavGraphBuilder.calendarDayDestination(
 private fun CalendarMonthRoute(
     onDayOpen: (date: LocalDate, appointmentId: Long?) -> Unit,
     onCardOpen: (String) -> Unit,
-    onAddClick: (date: LocalDate?) -> Unit,
+    onAddClick: (date: LocalDate?, cardId: String?) -> Unit,
     onTabSelect: (MedicalMateTab) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: CalendarViewModel = hiltViewModel(),
@@ -101,10 +101,11 @@ private fun CalendarMonthRoute(
         onScheduleClick = { id -> onDayOpen(state.selected, id.toLongOrNull()) },
         onCardOpenClick = onCardOpen,
         onCardScheduleOpen = { date -> onDayOpen(date, null) },
+        onCardScheduleAdd = { cardId -> onAddClick(state.selected, cardId) },
         onCardSheetDismiss = viewModel::onCardSheetDismiss,
         // 보고 있는 달의 날을 고른 상태에서만 그 날을 들고 간다. 다른 달로 넘기면 고른 날이
         // 격자 밖이라 화면에 표시가 없고, 그 날로 열리면 어디서 온 값인지 알 수 없다.
-        onAddClick = { onAddClick(state.selected.takeIf { YearMonth.from(it) == state.month }) },
+        onAddClick = { onAddClick(state.selected.takeIf { YearMonth.from(it) == state.month }, null) },
         onTabSelect = onTabSelect,
         modifier = modifier,
     )

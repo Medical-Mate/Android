@@ -143,7 +143,9 @@ internal fun NavGraphBuilder.calendarDestinations(navController: NavHostControll
             navController.navigate(CalendarDayDestination(date.toString(), appointmentId))
         },
         onCardOpen = { cardId -> navController.navigate(BriefCardDestination(cardId)) },
-        onAddClick = { date -> navController.navigate(ScheduleAddDestination(date = date?.toString())) },
+        onAddClick = { date, cardId ->
+            navController.navigate(ScheduleAddDestination(date = date?.toString(), cardId = cardId))
+        },
         onTabSelect = navController::selectTab,
     )
     calendarDayDestination(

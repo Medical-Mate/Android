@@ -12,12 +12,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import com.mist.medicalmate.auth.ui.LoginDestination
 import com.mist.medicalmate.auth.ui.SessionUiState
+import com.mist.medicalmate.calendar.ui.CalendarDayDestination
 import com.mist.medicalmate.calendar.ui.CalendarDestination
 import com.mist.medicalmate.card.ui.BriefCardDestination
 import com.mist.medicalmate.card.ui.BriefCardListDestination
 import com.mist.medicalmate.card.ui.RecordDestination
 import com.mist.medicalmate.card.ui.briefCardDestination
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
+import com.mist.medicalmate.home.ui.HomeCallbacks
 import com.mist.medicalmate.home.ui.HomeDestination
 import com.mist.medicalmate.home.ui.homeDestination
 import com.mist.medicalmate.intake.ui.IntakeDestination
@@ -95,13 +97,7 @@ internal fun MedicalMateNavHost(
             onExit = { navController.popBackStack() },
         )
         homeDestination(
-            // 이어서 하기는 서버가 들고 있는 문답 id를 함께 넘긴다. 새로 시작하면 null이다.
-            onIntakeClick = { sessionId ->
-                navController.navigate(IntakeDestination(sessionId?.toLongOrNull()))
-            },
-            onCardClick = { cardId -> navController.navigate(BriefCardDestination(cardId = cardId)) },
-            onAllCardsClick = { navController.navigate(BriefCardListDestination) },
-            onProfileClick = { navController.navigate(MyProfileDestination) },
+            callbacks = navController.homeCallbacks(),
             onTabSelect = navController::selectTab,
         )
         recordDestinations(navController)
@@ -168,6 +164,28 @@ private fun SessionBoundarySync(
             }
     }
 }
+
+/**
+ * 홈에서 나가는 길들.
+ *
+ * 목적지가 일곱이라 `homeDestination`에 하나씩 넘기면 서명이 그만큼 길어진다. 묶음으로
+ * 만들어 그대로 건넨다.
+ */
+private fun NavHostController.homeCallbacks(): HomeCallbacks = HomeCallbacks(
+    // 이어서 하기는 서버가 들고 있는 문답 id를 함께 넘긴다. 새로 시작하면 null이다.
+    onStartIntakeClick = { navigate(IntakeDestination(null)) },
+    onResumeClick = { sessionId -> navigate(IntakeDestination(sessionId?.toLongOrNull())) },
+    onSavedCardClick = { cardId -> navigate(BriefCardDestination(cardId = cardId)) },
+    onAllCardsClick = { navigate(BriefCardListDestination) },
+    // 일정 줄과 구역의 "캘린더"가 가는 곳. 줄은 그 일정의 일자 화면으로 바로 가고,
+    // "캘린더"는 탭을 옮긴다 — 캘린더는 형제 탭이라 백스택에 쌓으면 뒤로 가기가 탭
+    // 방문 이력을 되짚는다.
+    onScheduleClick = { date, appointmentId ->
+        navigate(CalendarDayDestination(date.toString(), appointmentId.toLongOrNull()))
+    },
+    onCalendarClick = { selectTab(MedicalMateTab.CALENDAR) },
+    onProfileClick = { navigate(MyProfileDestination) },
+)
 
 /**
  * 하단 탭 이동.

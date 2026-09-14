@@ -189,7 +189,8 @@ private fun DateGrid(month: YearMonth, picked: LocalDate, today: LocalDate, onDa
 /**
  * 시간 선택 시트.
  *
- * 분은 00과 30만 둔다. 시안이 그 둘만 그렸고, 진료 예약이 분 단위로 잡히지 않는다.
+ * 분은 10분 단위다. 시안(`1r-4-T`)의 휠에는 00과 30만 그려져 있는데 그건 세 줄만 보이는
+ * 상태를 그린 것이고, 예약이 10분 단위로 잡히는 병원이 있어 그 눈금으로 연다.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -197,7 +198,7 @@ private fun TimeSheet(initial: LocalTime?, onConfirm: (LocalTime) -> Unit, onDis
     val start = initial ?: DefaultTime
     var afternoon by remember { mutableStateOf(start.hour >= NOON) }
     var hour by remember { mutableIntStateOf(start.hour % NOON) }
-    var minute by remember { mutableIntStateOf(if (start.minute < HALF_HOUR) 0 else HALF_HOUR) }
+    var minute by remember { mutableIntStateOf(start.minute / MINUTE_STEP * MINUTE_STEP) }
 
     MedicalMateBottomSheet(onDismissRequest = onDismissRequest) {
         SheetTitle(stringResource(R.string.schedule_add_time_sheet))
@@ -234,7 +235,7 @@ private fun TimeWheel(
 ) {
     val meridiem = listOf(stringResource(R.string.schedule_add_time_am), stringResource(R.string.schedule_add_time_pm))
     val hours = (0 until NOON).map { if (it == 0) NOON else it }
-    val minutes = listOf(0, HALF_HOUR)
+    val minutes = (0 until MINUTES_IN_HOUR step MINUTE_STEP).toList()
 
     Box(
         modifier = Modifier.fillMaxWidth().height(WheelHeight).nestedScroll(WheelScrollSink),
@@ -374,6 +375,9 @@ private const val SHEET_DAYS_IN_WEEK = 7
 
 private const val NOON = 12
 
-private const val HALF_HOUR = 30
+/** 분 눈금. 00 · 10 · 20 · 30 · 40 · 50. */
+private const val MINUTE_STEP = 10
+
+private const val MINUTES_IN_HOUR = 60
 
 private val DefaultTime: LocalTime = LocalTime.of(10, 0)

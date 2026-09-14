@@ -107,4 +107,16 @@ data class SavedCardSummary(
  * 미리 만들어 두면 날짜가 바뀐 뒤에도 옛 값이 남는다.
  */
 /** [time]이 없으면 시간 미정이다. 화면이 그 자리에 "시간 미정"을 적는다(#202). */
-data class HomeSchedule(val id: String, val title: String, val date: LocalDate, val time: String?)
+/**
+ * 다가오는 일정 한 줄.
+ *
+ * @param followUp 진료 후 기록에서 잡힌 재방문인지. 시안 1n-1이 병원 이름 뒤에 `재진`·`초진`을
+ *   붙이는데 그 둘을 가르는 값이 서버의 `origin`이다.
+ */
+data class HomeSchedule(
+    val id: String,
+    val title: String,
+    val date: LocalDate,
+    val time: String?,
+    val followUp: Boolean = false,
+)

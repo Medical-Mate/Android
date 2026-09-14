@@ -69,10 +69,14 @@ fun MedicalMateCardPick(
             )
             .clip(MedicalMateRadius.lg)
             .background(colors.bgSurface)
-            .border(
-                width = BorderWidth,
-                color = if (selected) colors.bgPrimary else colors.borderSubtle,
-                shape = MedicalMateRadius.lg,
+            // 고르지 않은 카드에는 테두리가 없다. 마스터가 흰 면에 그림자만 두고, 고른
+            // 것에만 1.5 브랜드 선을 두른다 — 테두리를 늘 두르면 고른 것이 덜 도드라진다.
+            .then(
+                if (selected) {
+                    Modifier.border(width = BorderWidth, color = colors.bgPrimary, shape = MedicalMateRadius.lg)
+                } else {
+                    Modifier
+                },
             )
             .toggleable(
                 value = selected,

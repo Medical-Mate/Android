@@ -50,7 +50,7 @@ internal constructor(
      * 통째로 갈아끼우면 골라 둔 카드가 조용히 풀린다. 그대로 저장하면 카드가 안 걸린 일정이
      * 되고, 나중에 그 일정으로는 진료 후 기록을 남길 수 없다.
      */
-    fun load(appointmentId: Long? = null, date: LocalDate? = null) {
+    fun load(appointmentId: Long? = null, date: LocalDate? = null, cardId: String? = null) {
         viewModelScope.launch {
             // 이미 한 번 담아 왔으면 다시 읽지 않는다. 고치는 중에 들어온 값을 덮어쓴다.
             val editing = if (mutableUiState.value.appointmentId == null) appointment(appointmentId, date) else null
@@ -59,12 +59,15 @@ internal constructor(
                 val picked =
                     editing?.cards?.map { it.id.toString() }?.toSet()
                         ?: state.cards.filter { it.picked }.map { it.id }.toSet()
+                            .plus(listOfNotNull(cardId))
+                val picks = cards.map { card -> card.toPick().copy(picked = card.id in picked) }
                 state.copy(
                     appointmentId = editing?.id ?: state.appointmentId,
-                    hospital = state.hospital ?: editing?.title,
+                    // 골라 둔 카드의 병원을 채운다. 손으로 고를 때와 같은 규칙이다(1r-4-B).
+                    hospital = state.hospital ?: editing?.title ?: picks.pickedClinic(),
                     date = state.date ?: editing?.on,
                     time = state.time ?: editing?.time,
-                    cards = cards.map { card -> card.toPick().copy(picked = card.id in picked) },
+                    cards = picks,
                     todos = editing?.todos?.toDrafts() ?: state.todos,
                 )
             }
@@ -221,21 +224,29 @@ internal constructor(
     }
 }
 
-/**
- * 고를 수 있는 카드 한 줄.
- *
- * 보조 문구는 작성일과 병원이다. 병원은 확정 전 카드에 없어서 그때는 작성일만 적는다.
- */
+/** 골라 둔 카드의 병원. 일정 추가가 병원 칸을 채울 때 쓴다. */
+private fun List<ScheduleAddCard>.pickedClinic(): String? =
+    firstOrNull { it.picked }?.clinic?.takeIf { it.isNotBlank() }
+
 /** 서버의 할 일을 화면 줄로. 서버가 id를 매기지 않아 차례로 만든다. */
 private fun List<AppointmentTodo>.toDrafts(): List<ScheduleAddTodo> =
     mapIndexed { index, todo -> ScheduleAddTodo(id = "todo-${index + 1}", label = todo.text, done = todo.done) }
 
+/**
+ * 고를 수 있는 카드 한 줄.
+ *
+ * 보조 문구는 작성일과 병원이다. 병원이 없으면 자리를 비우지 않고 "병원 미정"을 적는다 —
+ * 시안 `1r-4-T`의 둘째 줄이 그렇다. 비워 두면 병원이 없는 것인지 아직 안 읽은 것인지가
+ * 구별되지 않는다.
+ */
 private fun CardListItem.toPick() = ScheduleAddCard(
     id = id,
     title = title,
-    meta = listOfNotNull(writtenOn.format(CARD_DATE) + " 작성", clinic).joinToString(" · "),
+    meta = "${writtenOn.format(CARD_DATE)} 작성 · ${clinic?.takeIf { it.isNotBlank() } ?: CLINIC_UNSET}",
     clinic = clinic,
 )
+
+private const val CLINIC_UNSET = "병원 미정"
 
 private val CARD_DATE: java.time.format.DateTimeFormatter =
     java.time.format.DateTimeFormatter.ofPattern("MM.dd", java.util.Locale.KOREAN)

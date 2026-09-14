@@ -40,6 +40,13 @@ internal data class ScheduleAddDestination(
      * 들어오는 길이다. 없으면 새 일정이다.
      */
     val appointmentId: Long? = null,
+    /**
+     * 미리 골라 둘 카드.
+     *
+     * 캘린더의 "이 카드로 일정 만들기"로 들어오면 그 카드가 이미 골라져 있어야 한다(#239).
+     * 그 문구가 카드를 정해 놓고 들어가는 길이라 화면에서 다시 고르게 하면 두 번 고른다.
+     */
+    val cardId: String? = null,
 )
 
 internal fun NavGraphBuilder.scheduleAddDestination(
@@ -55,6 +62,7 @@ internal fun NavGraphBuilder.scheduleAddDestination(
             hospitalName = route.hospitalName,
             date = route.date?.let(LocalDate::parse),
             appointmentId = route.appointmentId,
+            cardId = route.cardId,
             onHospitalPick = onHospitalPick,
             onCardNew = onCardNew,
             onSaved = onSaved,
@@ -75,6 +83,7 @@ private fun ScheduleAddRoute(
     hospitalName: String?,
     date: LocalDate?,
     appointmentId: Long?,
+    cardId: String?,
     onHospitalPick: () -> Unit,
     onCardNew: () -> Unit,
     onSaved: () -> Unit,
@@ -84,7 +93,7 @@ private fun ScheduleAddRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(Unit) { viewModel.load(appointmentId, date) }
+    LaunchedEffect(Unit) { viewModel.load(appointmentId, date, cardId) }
 
     // 병원 찾기에서 골라 돌아온 값. 엔트리가 그대로 살아 있어서 적어 둔 날짜·시간·할 일이
     // 남는다. 라우트 인자는 처음부터 병원이 정해진 채로 열리는 경우(1r-4-B)에 쓴다.

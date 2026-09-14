@@ -91,9 +91,17 @@ class BodyMapActions(private val update: ((BodyMapUiState) -> BodyMapUiState) ->
         update { it.copy(focus = null) }
     }
 
-    /** 인체도와 목록을 오간다. 고른 부위는 양쪽이 같은 값이라 그대로 둔다. */
+    /**
+     * 인체도와 목록을 오간다. 고른 부위는 양쪽이 같은 값이라 그대로 둔다.
+     *
+     * **목록을 닫으면 3D로 돌아간다**(#239). 인체도가 3D로 확정됐는데(#235) 여기서
+     * `byMap3d`를 끄기만 하면 2D 앵커 화면이 나온다. 들어온 곳으로 되돌려 놓는다.
+     */
     fun onListModeToggle() {
-        update { it.copy(byList = !it.byList, byMap3d = false, search = "", searchResults = emptyList()) }
+        update {
+            val toList = !it.byList
+            it.copy(byList = toList, byMap3d = !toList, search = "", searchResults = emptyList())
+        }
     }
 
     /**

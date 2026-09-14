@@ -76,6 +76,7 @@ fun CalendarMonthScreen(
     onCardOpenClick: (String) -> Unit,
     /** 카드로 이미 만든 일정이 선 날. 시트의 "일정 보러가기"가 그 날로 간다. */
     onCardScheduleOpen: (LocalDate) -> Unit,
+    onCardScheduleAdd: (cardId: String) -> Unit,
     onCardSheetDismiss: () -> Unit,
     onAddClick: () -> Unit,
     onTabSelect: (MedicalMateTab) -> Unit,
@@ -117,8 +118,9 @@ fun CalendarMonthScreen(
             date = state.selected,
             card = card,
             onCardOpenClick = onCardOpenClick,
-            // 이미 만든 일정이 있으면 그 날로 간다. 없을 때만 만들러 간다.
-            onScheduleClick = { card.scheduledOn?.let(onCardScheduleOpen) ?: onAddClick() },
+            // 이미 만든 일정이 있으면 그 날로 간다. 없을 때만 만들러 간다. 만들러 갈 때는
+            // 이 카드를 들고 가서 가져갈 카드로 이미 골라 둔다(#239).
+            onScheduleClick = { card.scheduledOn?.let(onCardScheduleOpen) ?: onCardScheduleAdd(card.id) },
             onDismissRequest = onCardSheetDismiss,
         )
     }
@@ -450,6 +452,7 @@ private fun CalendarMonthScreenPreview() {
             onScheduleClick = {},
             onCardOpenClick = {},
             onCardScheduleOpen = {},
+            onCardScheduleAdd = {},
             onCardSheetDismiss = {},
             onAddClick = {},
             onTabSelect = {},

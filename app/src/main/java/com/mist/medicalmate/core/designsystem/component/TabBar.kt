@@ -6,9 +6,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
@@ -94,9 +94,8 @@ fun MedicalMateTabBar(
             modifier =
             Modifier
                 .fillMaxWidth()
-                .heightIn(min = TabRowHeight)
+                .height(TabRowHeight)
                 .padding(top = MedicalMateSpace.s8),
-            horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             MedicalMateTab.entries.forEach { tab ->
@@ -104,6 +103,7 @@ fun MedicalMateTabBar(
                     tab = tab,
                     selected = tab == selected,
                     onClick = { onSelect(tab) },
+                    modifier = Modifier.weight(1f),
                 )
             }
         }
@@ -112,22 +112,24 @@ fun MedicalMateTabBar(
 }
 
 @Composable
-private fun TabItem(tab: MedicalMateTab, selected: Boolean, onClick: () -> Unit) {
+private fun TabItem(tab: MedicalMateTab, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val colors = MedicalMateTheme.colors
-    val tint = if (selected) colors.fgPrimary else colors.fgMuted
+    // 마스터의 비활성 라벨이 `fg/subtle`이다. `fg/muted`로 두면 탭이 꺼져 있는 것처럼
+    // 옅어진다 — 셋 다 갈 수 있는 자리다.
+    val tint = if (selected) colors.fgPrimary else colors.fgSubtle
     val label = stringResource(tab.labelRes)
 
     Column(
         modifier =
-        Modifier
+        modifier
+            .fillMaxHeight()
             .selectable(
                 selected = selected,
                 onClick = onClick,
                 role = Role.Tab,
-            )
-            .padding(horizontal = MedicalMateSpace.s12),
+            ),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s2),
+        verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4, Alignment.CenterVertically),
     ) {
         Icon(
             painter = painterResource(if (selected) tab.activeIcon else tab.icon),
