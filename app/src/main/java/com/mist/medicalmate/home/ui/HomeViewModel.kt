@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.Clock
 import java.time.LocalDate
+import java.time.LocalTime
 
 /**
  * 홈 화면 상태 보유자.
@@ -38,7 +39,7 @@ constructor(private val repository: HomeRepository, private val clock: Clock) :
         mutableUiState.value = HomeUiState.Loading
         viewModelScope.launch {
             mutableUiState.value =
-                when (val result = repository.load(LocalDate.now(clock))) {
+                when (val result = repository.load(LocalDate.now(clock), LocalTime.now(clock))) {
                     is ApiResult.Success -> result.value.toContent()
                     is ApiResult.Rejected, is ApiResult.NetworkUnavailable -> HomeUiState.Failed
                 }

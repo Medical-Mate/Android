@@ -34,7 +34,7 @@ interface HomeRepository {
      * @param today "며칠 지났어요"를 세는 기준일. 화면이 열린 날을 넘긴다. 기본값으로 두면
      *   자정을 넘겨 다시 그릴 때 옛 날짜가 남는다.
      */
-    suspend fun load(today: LocalDate): ApiResult<HomeSnapshot>
+    suspend fun load(today: LocalDate, now: LocalTime): ApiResult<HomeSnapshot>
 }
 
 internal class DefaultHomeRepository
@@ -44,19 +44,44 @@ constructor(
     private val currentUser: CurrentUserProvider,
     private val json: Json,
 ) : HomeRepository {
-    override suspend fun load(today: LocalDate): ApiResult<HomeSnapshot> = coroutineScope {
+    override suspend fun load(today: LocalDate, now: LocalTime): ApiResult<HomeSnapshot> = coroutineScope {
         val nameCall = async { currentUser.displayName() }
+        val monthCall = async { apiCall(json) { api.appointments(today.year, today.monthValue) } }
 
         when (val home = apiCall(json) { api.home() }) {
             is ApiResult.Success -> {
                 val name = (nameCall.await() as? ApiResult.Success)?.value
-                ApiResult.Success(home.value.toSnapshot(name, today))
+                val month = (monthCall.await() as? ApiResult.Success)?.value.orEmpty()
+                ApiResult.Success(
+                    home.value.toSnapshot(
+                        name = name,
+                        today = today,
+                        now = now,
+                        pastWithoutRecord = month.pastWithoutRecord(today, home.value.lastVisitedOn),
+                    ),
+                )
             }
 
             is ApiResult.Rejected -> home
             is ApiResult.NetworkUnavailable -> home
         }
     }
+}
+
+/**
+ * 기록이 빠진 지난 일정 가운데 가장 최근 날.
+ *
+ * 마지막으로 남긴 기록보다 뒤에 있는 지난 일정이 그것이다. 기록은 진료일로 남으므로 그
+ * 날짜보다 뒤의 일정에는 아직 적은 것이 없다.
+ *
+ * **이 달만 본다.** 달을 넘어가는 일정은 놓친다 — 한 달을 더 부르면 홈이 그만큼 늦어지고,
+ * 지난달 진료를 이번 달에 알리는 것은 때를 놓친 알림이다. 못 읽으면 이 갈래를 건너뛴다.
+ */
+private fun List<AppointmentResponse>.pastWithoutRecord(today: LocalDate, lastVisitedOn: String?): LocalDate? {
+    val last = lastVisitedOn?.let(LocalDate::parse)
+    return mapNotNull { runCatching { LocalDate.parse(it.scheduledOn) }.getOrNull() }
+        .filter { it.isBefore(today) && (last == null || it.isAfter(last)) }
+        .maxOrNull()
 }
 
 /** 홈 화면이 그릴 것. */
@@ -68,11 +93,16 @@ data class HomeSnapshot(
     val upcoming: List<HomeSchedule>,
 )
 
-private fun HomeResponse.toSnapshot(name: String?, today: LocalDate): HomeSnapshot {
+private fun HomeResponse.toSnapshot(
+    name: String?,
+    today: LocalDate,
+    now: LocalTime,
+    pastWithoutRecord: LocalDate?,
+): HomeSnapshot {
     val nextOn = nextAppointment?.let { LocalDate.parse(it.scheduledOn) }
     return HomeSnapshot(
         userInitial = name?.take(1).orEmpty(),
-        todayLine = todayLine(today, nextOn),
+        todayLine = todayLine(today = today, now = now, pastWithoutRecord = pastWithoutRecord),
         resume = inProgressSession?.toResume(),
         savedCards = recentCards.map { it.toSummary() },
         upcoming = upcoming(nextOn),
@@ -80,15 +110,69 @@ private fun HomeResponse.toSnapshot(name: String?, today: LocalDate): HomeSnapsh
 }
 
 /**
- * 마지막 진료일이 없으면 아직 진료 기록이 없는 사람이다. 문서가 "신규 사용자는 전부
- * null이고 404가 아닙니다"라고 적었고 그것이 1n-2 화면이다.
+ * 오늘의 한 줄을 고른다. 규칙은 디자인 트랙이 확정했다(#235).
+ *
+ * **차례가 곧 우선순위다.** 오늘 일정이 가장 세고, 그다음이 기록이 빠진 지난 일정, 다음 진료,
+ * 지난 진료, 카드만 있는 상태다. 지난 진료와 다음 진료가 둘 다 있으면 다음 진료가 이긴다 —
+ * 앞으로 할 일이 지나간 일보다 급하다.
+ *
+ * **경과일과 남은 날은 이틀 이상일 때만 숫자로 적는다.** 하루는 "어제"·"내일"이고 0일은 오늘
+ * 갈래다. 앞날 진료에 경과일을 적어 "-2일이 지났어요"가 나오던 것이 이 규칙으로 사라진다
+ * (#224).
+ *
+ * 마지막 진료일이 없고 카드도 일정도 없으면 아직 아무것도 안 한 사람이다. 문서가 "신규
+ * 사용자는 전부 null이고 404가 아닙니다"라고 적었고 그것이 1n-2 화면이다.
  */
-private fun HomeResponse.todayLine(today: LocalDate, nextVisit: LocalDate?): HomeTodayLine {
-    val last = lastVisitedOn?.let(LocalDate::parse) ?: return HomeTodayLine.FirstVisit
-    return HomeTodayLine.SinceLastVisit(
-        daysSinceLastVisit = (today.toEpochDay() - last.toEpochDay()).toInt(),
-        nextVisit = nextVisit,
-    )
+private fun HomeResponse.todayLine(today: LocalDate, now: LocalTime, pastWithoutRecord: LocalDate?): HomeTodayLine {
+    val last = lastVisitedOn?.let(LocalDate::parse)
+    val appointment = nextAppointment
+    val visit =
+        NextVisit(
+            on = appointment?.let { LocalDate.parse(it.scheduledOn) },
+            at = appointment?.scheduledTime?.let(::parseTime),
+            clinic = appointment?.clinicName?.takeIf { it.isNotBlank() },
+        )
+
+    return todayVisit(today, last, now, visit)
+        ?: pastWithoutRecord?.let(HomeTodayLine::RecordMissing)
+        ?: nextVisit(today, visit)
+        ?: lastVisit(today, last)
+        ?: if (recentCards.isNotEmpty()) HomeTodayLine.CardReady else HomeTodayLine.FirstVisit
+}
+
+/**
+ * ① 오늘.
+ *
+ * 기록이 있으면 끝난 것이고, 없으면 시각이 지났는지로 갈린다. 시각이 없는 일정은 아직 앞둔
+ * 것으로 본다 — 시간 미정이라 지났다고 말할 근거가 없다.
+ */
+private fun todayVisit(today: LocalDate, last: LocalDate?, now: LocalTime, visit: NextVisit): HomeTodayLine? = when {
+    last == today -> HomeTodayLine.TodayRecorded
+    visit.on != today -> null
+    visit.at == null || !visit.at.isBefore(now) -> HomeTodayLine.TodayAhead(visit.clinic, visit.at)
+    else -> HomeTodayLine.TodayDone
+}
+
+/** 홈 응답이 준 다음 일정. 날짜·시각·병원을 함께 나른다. */
+private data class NextVisit(val on: LocalDate?, val at: LocalTime?, val clinic: String?)
+
+/** ③ 다음 진료. 지난 진료와 둘 다 있으면 이쪽이 이긴다 — 앞으로 할 일이 급하다. */
+private fun nextVisit(today: LocalDate, visit: NextVisit): HomeTodayLine? {
+    val on = visit.on
+    if (on == null || !on.isAfter(today)) return null
+    val days = (on.toEpochDay() - today.toEpochDay()).toInt()
+    return if (days == 1) {
+        HomeTodayLine.NextTomorrow(visit.clinic, visit.at)
+    } else {
+        HomeTodayLine.NextInDays(days, on, visit.clinic)
+    }
+}
+
+/** ④ 지난 진료. 경과일은 기록이 저장된 진료에만 적는다. */
+private fun lastVisit(today: LocalDate, last: LocalDate?): HomeTodayLine? {
+    if (last == null || !last.isBefore(today)) return null
+    val days = (today.toEpochDay() - last.toEpochDay()).toInt()
+    return if (days == 1) HomeTodayLine.LastYesterday else HomeTodayLine.LastDaysAgo(days)
 }
 
 /**

@@ -152,6 +152,8 @@
     <!-- 1r-1-S 카드만 있는 날 시트. -->
     <string name="calendar_card_sheet_section">작성한 브리핑 카드</string>
     <string name="calendar_card_sheet_hint">이 카드를 가져갈 일정을 만들 수 있어요</string>
+    <string name="calendar_card_sheet_hint_scheduled">이 카드로 만들어진 일정이 있어요</string>
+    <string name="calendar_card_sheet_open">일정 보러가기</string>
     <string name="calendar_card_sheet_schedule">이 카드로 일정 만들기</string>
 
     <string name="calendar_day_schedule">이 날 일정</string>
@@ -266,7 +268,6 @@
     <string name="body_map_list_picked">고른 부위: %1$s</string>
     <string name="body_map_use_list">목록에서 고르기</string>
     <string name="body_map_use_image">인체도에서 고르기</string>
-    <string name="body_map_use_3d">3D</string>
     <string name="body_map_3d_description">아픈 곳을 짚으면 그 부위로 들어가요. 끌면 돌고 오므리면 커져요.</string>
     <string name="body_map_3d_flip_side">반대쪽 보기</string>
     <string name="body_map_3d_reset">고른 부위 지우기</string>
@@ -412,10 +413,56 @@
     <string name="home_today_first_label">처음 오셨네요</string>
     <string name="home_today_first_title">아픈 곳을 말로 편하게 알려주세요</string>
     <string name="home_today_first_body">언제부터, 얼마나 아픈지 하나씩 물어볼게요.\n답변은 진료실에서 보여줄 카드로 정리돼요.</string>
-    <string name="home_today_since_label">오늘의 한 줄</string>
+    <string name="home_today_label">오늘의 한 줄</string>
+
+    <!-- ①-a 오늘 일정 · 시간 전 -->
+    <string name="home_today_ahead_title">오늘 진료가 있어요</string>
+    <string name="home_today_ahead_body">브리핑 카드를 진료실에서 그대로 보여주세요.</string>
+
+    <!-- ①-b 오늘 일정 · 시간 지남 · 기록 없음 -->
+    <string name="home_today_done_title">오늘 진료는 어떠셨어요?</string>
+    <string name="home_today_done_lead">들은 말을 잊기 전에 남겨두세요.</string>
+    <string name="home_today_done_body">캘린더에서 오늘 일정을 누르면 기록할 수 있어요.</string>
+
+    <!-- ①-c 오늘 일정 · 기록 저장됨 -->
+    <string name="home_today_recorded_title">오늘 진료를 기록해두셨어요</string>
+    <string name="home_today_recorded_lead">다음 방문이 정해졌으면 캘린더에 등록해두세요.</string>
+    <string name="home_today_recorded_body">약이나 검사 일정도 함께 남기면 좋아요.</string>
+
+    <!-- ② 지난 일정 · 기록 없음 -->
+    <string name="home_today_missing_title">%1$s 진료, 기록이 아직 없어요</string>
+    <string name="home_today_missing_lead">기억나는 대로 몇 줄이면 충분해요.</string>
+    <string name="home_today_missing_body">캘린더에서 그 날을 누르면 적을 수 있어요.</string>
+
+    <!-- ③-a 다음 진료 = 내일 -->
+    <string name="home_today_tomorrow_title">내일 진료가 있어요</string>
+    <string name="home_today_tomorrow_body">달라진 점이 있으면 카드를 오늘 손봐두세요.</string>
+
+    <!-- ③-b 다음 진료 = N일 후 -->
+    <string name="home_today_next_title">다음 진료가 %1$d일 남았어요</string>
+    <string name="home_today_next_body">달라진 점이 있으면 카드를 미리 손봐두세요.</string>
+
+    <!-- ④-a 지난 진료 = 어제 -->
+    <string name="home_today_yesterday_title">어제 진료 다녀오셨네요</string>
+    <string name="home_today_yesterday_lead">처방받은 약은 시간 맞춰 챙기세요.</string>
+
+    <!-- ④-b 지난 진료 = N일 전 -->
     <string name="home_today_since_title">지난 진료 후 %1$d일이 지났어요</string>
-    <string name="home_today_since_body_next">다음 진료가 %1$s이에요.\n그동안 달라진 점이 있으면 미리 정리해두세요.</string>
-    <string name="home_today_since_body">그동안 달라진 점이 있으면 미리 정리해두세요.</string>
+    <string name="home_today_since_lead">달라진 점이 있으면 새 증상 정리를 시작해두세요.</string>
+
+    <!-- ④ 공통 -->
+    <string name="home_today_last_body">다음 방문이 정해지면 캘린더에 등록해두세요.</string>
+
+    <!-- ⑤ 카드만 있음 -->
+    <string name="home_today_card_title">브리핑 카드가 준비돼 있어요</string>
+    <string name="home_today_card_lead">진료 날짜가 정해지면 캘린더에 등록해두세요.</string>
+    <string name="home_today_card_body">진료실에서는 이 카드를 그대로 보여주면 돼요.</string>
+
+    <!-- 일정 한 줄. 시각과 병원이 있는 만큼만 적는다. -->
+    <string name="home_today_at_clinic">%1$s %2$s예요.</string>
+    <string name="home_today_at">%1$s예요.</string>
+    <string name="home_today_on_clinic">%1$s %2$s예요.</string>
+    <string name="home_today_on">%1$s 진료예요.</string>
 
     <string name="home_start_intake">증상 정리 시작하기</string>
 
