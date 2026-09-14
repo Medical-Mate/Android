@@ -74,6 +74,8 @@ fun CalendarMonthScreen(
     onDayClick: (LocalDate) -> Unit,
     onScheduleClick: (String) -> Unit,
     onCardOpenClick: (String) -> Unit,
+    /** 카드로 이미 만든 일정이 선 날. 시트의 "일정 보러가기"가 그 날로 간다. */
+    onCardScheduleOpen: (LocalDate) -> Unit,
     onCardSheetDismiss: () -> Unit,
     onAddClick: () -> Unit,
     onTabSelect: (MedicalMateTab) -> Unit,
@@ -115,7 +117,8 @@ fun CalendarMonthScreen(
             date = state.selected,
             card = card,
             onCardOpenClick = onCardOpenClick,
-            onScheduleClick = onAddClick,
+            // 이미 만든 일정이 있으면 그 날로 간다. 없을 때만 만들러 간다.
+            onScheduleClick = { card.scheduledOn?.let(onCardScheduleOpen) ?: onAddClick() },
             onDismissRequest = onCardSheetDismiss,
         )
     }
@@ -162,12 +165,26 @@ private fun CardSheet(
             )
         }
         Text(
-            text = stringResource(R.string.calendar_card_sheet_hint),
+            text =
+            stringResource(
+                if (card.scheduledOn == null) {
+                    R.string.calendar_card_sheet_hint
+                } else {
+                    R.string.calendar_card_sheet_hint_scheduled
+                },
+            ),
             style = MedicalMateTheme.typography.bodyS,
             color = MedicalMateTheme.colors.fgSubtle,
         )
         MedicalMateButton(
-            label = stringResource(R.string.calendar_card_sheet_schedule),
+            label =
+            stringResource(
+                if (card.scheduledOn == null) {
+                    R.string.calendar_card_sheet_schedule
+                } else {
+                    R.string.calendar_card_sheet_open
+                },
+            ),
             onClick = onScheduleClick,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -432,6 +449,7 @@ private fun CalendarMonthScreenPreview() {
             onDayClick = {},
             onScheduleClick = {},
             onCardOpenClick = {},
+            onCardScheduleOpen = {},
             onCardSheetDismiss = {},
             onAddClick = {},
             onTabSelect = {},

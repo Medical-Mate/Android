@@ -126,7 +126,7 @@ internal fun dayState(date: LocalDate): CalendarDayUiState {
                 date = date,
                 schedule = schedulesOn(date, today).firstOrNull(),
                 card = fixtureVisitedCard,
-                record = fixtureRecord,
+                records = listOf(fixtureRecord),
                 nextEvent = fixtureNextEvent,
             )
 

@@ -275,9 +275,9 @@ class CalendarDayViewModelTest {
 
         viewModel.load(VisitDate)
 
-        val record = viewModel.state().record
-        assertEquals("2", record?.id)
-        assertEquals("갈비뼈 · 일주일", record?.title)
+        val record = viewModel.state().records.single()
+        assertEquals("2", record.id)
+        assertEquals("갈비뼈 · 일주일", record.title)
         assertTrue(viewModel.state().visited)
     }
 
@@ -287,7 +287,7 @@ class CalendarDayViewModelTest {
 
         viewModel.load(VisitDate)
 
-        assertNull(viewModel.state().record)
+        assertEquals(emptyList<DayRecord>(), viewModel.state().records)
         assertFalse(viewModel.state().visited)
     }
 

@@ -117,33 +117,14 @@ internal fun TodayLineCard(todayLine: HomeTodayLine) {
             color = MedicalMateTheme.colors.fgSubtle,
         )
         Text(text = todayLine.title(), style = MedicalMateTheme.typography.headingS)
-        Text(
-            text = todayLine.body(),
-            style = MedicalMateTheme.typography.bodyM,
-            color = MedicalMateTheme.colors.fgSubtle,
-        )
+        todayLine.body().forEach { line ->
+            Text(
+                text = line,
+                style = MedicalMateTheme.typography.bodyM,
+                color = MedicalMateTheme.colors.fgSubtle,
+            )
+        }
     }
-}
-
-private fun HomeTodayLine.labelRes(): Int = when (this) {
-    HomeTodayLine.FirstVisit -> R.string.home_today_first_label
-    is HomeTodayLine.SinceLastVisit -> R.string.home_today_since_label
-}
-
-@Composable
-private fun HomeTodayLine.title(): String = when (this) {
-    HomeTodayLine.FirstVisit -> stringResource(R.string.home_today_first_title)
-    is HomeTodayLine.SinceLastVisit ->
-        stringResource(R.string.home_today_since_title, daysSinceLastVisit)
-}
-
-@Composable
-private fun HomeTodayLine.body(): String = when (this) {
-    HomeTodayLine.FirstVisit -> stringResource(R.string.home_today_first_body)
-    is HomeTodayLine.SinceLastVisit ->
-        nextVisit?.let {
-            stringResource(R.string.home_today_since_body_next, it.format(nextVisitDate))
-        } ?: stringResource(R.string.home_today_since_body)
 }
 
 /**
@@ -260,6 +241,3 @@ private val cardDate = DateTimeFormatter.ofPattern("yyyy.MM.dd")
 
 /** 일정용 "9월 12일 (금)" 형식. */
 private val scheduleDate = DateTimeFormatter.ofPattern("M월 d일 (E)")
-
-/** 오늘의 한 줄에 쓰는 "9월 12일" 형식. */
-private val nextVisitDate = DateTimeFormatter.ofPattern("M월 d일")

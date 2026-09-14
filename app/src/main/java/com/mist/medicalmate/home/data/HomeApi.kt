@@ -2,6 +2,7 @@ package com.mist.medicalmate.home.data
 
 import kotlinx.serialization.Serializable
 import retrofit2.http.GET
+import retrofit2.http.Query
 
 /**
  * 홈 API. `/v3/api-docs`의 `GET /api/me/home` 기준이다.
@@ -15,6 +16,18 @@ import retrofit2.http.GET
 internal interface HomeApi {
     @GET("api/me/home")
     suspend fun home(): HomeResponse
+
+    /**
+     * 그 달의 일정.
+     *
+     * 홈 응답에 지난 일정이 없어서 따로 부른다(#235). 기록이 빠진 지난 진료를 알리려면 이미
+     * 지나간 일정을 알아야 하는데 `nextAppointment`는 앞으로의 것 하나뿐이다.
+     *
+     * 캘린더의 같은 엔드포인트를 쓰지만 그쪽 Repository를 가져다 쓰지 않는다. 홈이 캘린더를
+     * 참조하면 두 도메인이 붙는다.
+     */
+    @GET("api/me/appointments")
+    suspend fun appointments(@Query("year") year: Int, @Query("month") month: Int): List<AppointmentResponse>
 }
 
 /**

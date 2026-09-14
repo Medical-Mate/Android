@@ -20,6 +20,7 @@ import java.io.IOException
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -118,7 +119,7 @@ class HomeViewModelTest {
         },
     ) = HomeViewModel(
         repository = object : HomeRepository {
-            override suspend fun load(today: LocalDate) = repository(today)
+            override suspend fun load(today: LocalDate, now: LocalTime) = repository(today)
         },
         clock = Clock.fixed(Instant.parse("2026-09-11T09:00:00Z"), ZoneId.of("Asia/Seoul")),
     )
@@ -127,10 +128,7 @@ class HomeViewModelTest {
         val snapshot =
             HomeSnapshot(
                 userInitial = "김",
-                todayLine = HomeTodayLine.SinceLastVisit(
-                    daysSinceLastVisit = 12,
-                    nextVisit = LocalDate.of(2026, 9, 12),
-                ),
+                todayLine = HomeTodayLine.LastDaysAgo(12),
                 resume = HomeResume(intakeId = "7", symptomTitle = "복부", step = IntakeStep.SYMPTOM_CHAT),
                 savedCards =
                 listOf(

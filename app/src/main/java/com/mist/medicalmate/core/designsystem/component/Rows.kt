@@ -308,11 +308,13 @@ fun MedicalMateSectionHeader(
             .fillMaxWidth()
             .padding(top = MedicalMateSpace.s24, bottom = MedicalMateSpace.s10),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Bottom,
+        // 마스터가 가운데 맞춤이다(#235). 아래 맞춤으로 두면 제목이 `Heading/M` 28이고
+        // 액션이 `Body/M Strong` 24라 액션이 위로 떠 보인다.
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = title,
-            style = MedicalMateTheme.typography.headingS,
+            style = MedicalMateTheme.typography.headingM,
             color = MedicalMateTheme.colors.fgDefault,
         )
         when {

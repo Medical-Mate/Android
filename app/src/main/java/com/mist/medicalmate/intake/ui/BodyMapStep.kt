@@ -85,14 +85,6 @@ private fun ImagePicker(state: BodyMapUiState, callbacks: IntakeCallbacks) {
             onSelect = { callbacks.onBodyViewChange(BodyMapView.entries[it]) },
         )
         SideAnchorRow(state = state, callbacks = callbacks) {
-            // 3D 인체도로 가는 테스트 입구(#211). 쓸지 말지가 정해지면 지우거나 제 자리를
-            // 받는다. 라벨이 두 글자인 것은 이 줄에 버튼이 둘 들어가기 때문이다.
-            MedicalMateButton(
-                onClick = callbacks.onBodyMap3dToggle,
-                label = stringResource(R.string.body_map_use_3d),
-                type = MedicalMateButtonType.GHOST,
-                size = MedicalMateButtonSize.S,
-            )
             MedicalMateButton(
                 onClick = callbacks.onBodyListModeToggle,
                 label = stringResource(R.string.body_map_use_list),

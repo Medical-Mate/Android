@@ -182,9 +182,11 @@ private fun AnchorActions(state: BodyMapUiState, camera: BodyMap3dCameraState, c
         onSelect = { index -> scope.launch { camera.glideTo(camera.value.facing(BodyMapView.entries[index])) } },
     )
     SideAnchorRow(state = state, callbacks = callbacks) {
+        // 인체도를 쓸 수 없는 사람의 길이다. 3D가 기본이 되면서(#235) 이 자리로 옮겼다 —
+        // 2D 화면에 있던 것을 그대로 두면 닿을 수가 없다.
         MedicalMateButton(
-            onClick = callbacks.onBodyMap3dToggle,
-            label = stringResource(R.string.body_map_use_image),
+            onClick = callbacks.onBodyListModeToggle,
+            label = stringResource(R.string.body_map_use_list),
             type = MedicalMateButtonType.GHOST,
             size = MedicalMateButtonSize.S,
         )

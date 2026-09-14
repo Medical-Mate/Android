@@ -31,9 +31,10 @@ private val previewContent =
         userInitial = "김",
         hasUnreadNotification = true,
         todayLine =
-        HomeTodayLine.SinceLastVisit(
-            daysSinceLastVisit = 12,
-            nextVisit = LocalDate.of(2026, 9, 12),
+        HomeTodayLine.NextInDays(
+            days = 2,
+            on = LocalDate.of(2026, 9, 16),
+            clinic = "서울OO병원 내과",
         ),
         resume =
         HomeResume(

@@ -124,7 +124,7 @@ class CalendarViewModelTest {
 
         viewModel.onDaySelect(LocalDate.of(2026, 9, 4))
 
-        assertEquals("card-1", viewModel.uiState.value.cardSheet?.id)
+        assertEquals("1", viewModel.uiState.value.cardSheet?.id)
     }
 
     @Test
@@ -174,7 +174,7 @@ class CalendarViewModelTest {
 
         assertTrue(day.visited)
         assertEquals(emptyList<DayTodo>(), day.todos)
-        assertEquals("진료 후 기록", day.record?.title)
+        assertEquals("진료 후 기록", day.records.single().title)
         assertEquals("9월 26일 (토)", day.nextEvent?.chip)
         assertNull(day.nextEvent?.at)
     }
@@ -200,7 +200,7 @@ class CalendarViewModelTest {
         assertNotNull(day.schedule)
         assertNotNull(day.card)
         assertEquals(3, day.todos.size)
-        assertNull(day.record)
+        assertEquals(emptyList<DayRecord>(), day.records)
     }
 
     @Test
@@ -210,6 +210,25 @@ class CalendarViewModelTest {
         assertNull(day.schedule)
         assertNull(day.card)
         assertEquals(emptyList<DayTodo>(), day.todos)
+    }
+
+    @Test
+    fun `카드로 이미 일정을 만들었으면 시트가 그 날을 들고 있다`() {
+        // 9월 4일 카드로 9월 12일 일정을 만든 상태다. 4일을 누르면 또 만들라고 하던 자리다.
+        val viewModel = monthViewModel()
+
+        viewModel.onDaySelect(LocalDate.of(2026, 9, 4))
+
+        assertEquals(LocalDate.of(2026, 9, 12), viewModel.uiState.value.cardSheet?.scheduledOn)
+    }
+
+    @Test
+    fun `일정이 걸리지 않은 카드의 시트에는 날이 없다`() {
+        val viewModel = monthViewModel(appointments = emptyList())
+
+        viewModel.onDaySelect(LocalDate.of(2026, 9, 4))
+
+        assertNull(viewModel.uiState.value.cardSheet?.scheduledOn)
     }
 
     @Test
@@ -237,7 +256,7 @@ private fun monthViewModel(
 private val monthCards =
     listOf(
         CardListItem(
-            id = "card-1",
+            id = "1",
             title = "복부 통증 · 3주",
             confirmed = true,
             visited = false,

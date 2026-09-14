@@ -73,7 +73,7 @@ internal constructor(
                 selected = date,
                 schedules = schedules.map { it.toSchedule(state.today) },
                 // 일정이 없고 카드만 쓴 날은 갈 화면이 없다. 그 자리에서 시트로 보여준다.
-                cardSheet = if (schedules.isEmpty()) state.cards.cardOn(date) else null,
+                cardSheet = if (schedules.isEmpty()) state.cards.cardOn(date, state.appointments) else null,
             )
         }
     }
@@ -112,7 +112,7 @@ private fun CalendarUiState.withMonth(
         recordDays = monthCards.map { it.writtenOn.dayOfMonth }.toSet(),
         plannedDays = plannedDays(live, visits, month, today),
         schedules = onSelected.map { it.toSchedule(today) },
-        cardSheet = if (onSelected.isEmpty()) monthCards.cardOn(selected) else null,
+        cardSheet = if (onSelected.isEmpty()) monthCards.cardOn(selected, live) else null,
     )
 }
 
@@ -139,8 +139,19 @@ private fun plannedDays(
 }
 
 /** 그 날 쓴 카드. 여럿이면 첫 장이다. 시안의 시트도 한 장을 보여준다. */
-private fun List<CardListItem>.cardOn(date: LocalDate): DayCard? =
-    firstOrNull { it.writtenOn == date }?.let { DayCard(id = it.id, title = it.title, meta = it.clinic.orEmpty()) }
+private fun List<CardListItem>.cardOn(date: LocalDate, appointments: List<Appointment>): DayCard? =
+    firstOrNull { it.writtenOn == date }?.let { card ->
+        DayCard(
+            id = card.id,
+            title = card.title,
+            meta = card.clinic.orEmpty(),
+            // 이 카드로 이미 만든 일정. 있으면 시트가 그리로 보낸다.
+            scheduledOn =
+            card.id.toLongOrNull()?.let { cardId ->
+                appointments.firstOrNull { appointment -> appointment.cards.any { it.id == cardId } }?.on
+            },
+        )
+    }
 
 private fun emptyState(today: LocalDate) = CalendarUiState(
     month = YearMonth.from(today),

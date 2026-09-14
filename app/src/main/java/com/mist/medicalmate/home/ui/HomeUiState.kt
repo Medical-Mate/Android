@@ -2,6 +2,7 @@ package com.mist.medicalmate.home.ui
 
 import com.mist.medicalmate.core.model.IntakeStep
 import java.time.LocalDate
+import java.time.LocalTime
 
 sealed interface HomeUiState {
     data object Loading : HomeUiState
@@ -27,20 +28,47 @@ sealed interface HomeUiState {
  * 홈 맨 위 "오늘의 한 줄" 카드의 내용.
  *
  * 문구를 담지 않고 상황만 갖는다. 카피는 `strings.xml`에 있고 화면이 조립한다. 첫 방문과
- * 재방문의 문구가 아예 다르므로 갈래로 나눴다. 하나의 문자열로 받으면 어느 상황인지
- * 알 수 없어 테스트할 것이 없어진다.
+ * 상황마다 문구가 아예 다르므로 갈래로 나눴다. 하나의 문자열로 받으면 어느 상황인지 알 수
+ * 없어 테스트할 것이 없어진다.
+ *
+ * **아홉 갈래다**(#235). 디자인 트랙이 여덟 상태와 고르는 규칙을 확정했다. 차례가 곧
+ * 우선순위다 — 오늘 일정이 가장 세고, 그다음이 기록이 빠진 지난 일정, 다음 진료, 지난 진료,
+ * 카드만 있는 상태 순이다.
+ *
+ * 규칙 둘이 경계를 정한다. "지났어요"는 기록이 저장된 진료에만 이틀 이상일 때 쓰고,
+ * "남았어요"는 내일 이후 일정에만 이틀 이상일 때 쓴다. 하루는 "어제"·"내일"이고 0일은
+ * 오늘 갈래다. 앞날 진료에 경과일을 적어 음수가 나오던 것이 이 규칙으로 사라진다(#224).
  */
 sealed interface HomeTodayLine {
-    /** 진료 기록이 아직 없는 사용자. Figma `1n-2`의 "처음 오셨네요". */
+    /** 진료도 카드도 일정도 없는 사용자. Figma `1n-2`의 "처음 오셨네요". */
     data object FirstVisit : HomeTodayLine
 
-    /**
-     * 지난 진료 이후 [daysSinceLastVisit]일이 지났다.
-     *
-     * [nextVisit]이 있으면 다음 진료 날짜를 함께 알린다. 없으면 그 문장을 빼야 하므로
-     * 화면이 문구를 갈라 쓴다.
-     */
-    data class SinceLastVisit(val daysSinceLastVisit: Int, val nextVisit: LocalDate?) : HomeTodayLine
+    /** ①-a 오늘 진료가 있고 아직 시각 전이다. */
+    data class TodayAhead(val clinic: String?, val time: LocalTime?) : HomeTodayLine
+
+    /** ①-b 오늘 진료 시각이 지났는데 기록이 없다. */
+    data object TodayDone : HomeTodayLine
+
+    /** ①-c 오늘 진료를 기록해 뒀다. */
+    data object TodayRecorded : HomeTodayLine
+
+    /** ② 지난 일정에 기록이 없다. */
+    data class RecordMissing(val on: LocalDate) : HomeTodayLine
+
+    /** ③-a 다음 진료가 내일이다. */
+    data class NextTomorrow(val clinic: String?, val time: LocalTime?) : HomeTodayLine
+
+    /** ③-b 다음 진료가 [days]일 남았다. 이틀 이상일 때만 쓴다. */
+    data class NextInDays(val days: Int, val on: LocalDate, val clinic: String?) : HomeTodayLine
+
+    /** ④-a 어제 진료를 다녀왔다. */
+    data object LastYesterday : HomeTodayLine
+
+    /** ④-b 지난 진료 이후 [days]일이 지났다. 이틀 이상일 때만 쓴다. */
+    data class LastDaysAgo(val days: Int) : HomeTodayLine
+
+    /** ⑤ 카드만 있고 일정도 기록도 없다. */
+    data object CardReady : HomeTodayLine
 }
 
 /**

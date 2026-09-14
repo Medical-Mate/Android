@@ -14,6 +14,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.IOException
 import java.time.LocalDate
+import java.time.LocalTime
 
 /**
  * 응답을 화면 값으로 옮기는 부분.
@@ -32,21 +33,129 @@ class HomeRepositoryTest {
     }
 
     @Test
-    fun `지난 진료 이후 지난 날수를 센다`() = runTest {
-        val snapshot = load(HomeResponse(lastVisitedOn = "2026-08-30"), today = LocalDate.of(2026, 9, 11))
+    fun `카드만 있으면 날짜를 잡으라고 한다`() = runTest {
+        val snapshot = load(HomeResponse(recentCards = listOf(confirmedCard)))
 
-        assertEquals(HomeTodayLine.SinceLastVisit(12, null), snapshot.todayLine)
+        assertEquals(HomeTodayLine.CardReady, snapshot.todayLine)
     }
 
     @Test
-    fun `다음 일정이 있으면 오늘의 한 줄에 그 날짜가 함께 온다`() = runTest {
+    fun `오늘 일정은 시각 전이면 앞두고 있는 것이다`() = runTest {
         val snapshot = load(
-            HomeResponse(lastVisitedOn = "2026-08-30", nextAppointment = appointment),
+            HomeResponse(nextAppointment = appointment.copy(scheduledOn = "2026-09-11")),
+            today = LocalDate.of(2026, 9, 11),
+            now = LocalTime.of(9, 0),
+        )
+
+        assertEquals(
+            HomeTodayLine.TodayAhead(clinic = "서울OO병원 내과", time = LocalTime.of(10, 30)),
+            snapshot.todayLine,
+        )
+    }
+
+    @Test
+    fun `오늘 일정의 시각이 지났는데 기록이 없으면 묻는다`() = runTest {
+        val snapshot = load(
+            HomeResponse(nextAppointment = appointment.copy(scheduledOn = "2026-09-11")),
+            today = LocalDate.of(2026, 9, 11),
+            now = LocalTime.of(14, 0),
+        )
+
+        assertEquals(HomeTodayLine.TodayDone, snapshot.todayLine)
+    }
+
+    @Test
+    fun `오늘 기록이 있으면 다른 것보다 앞선다`() = runTest {
+        // 시각이 지났는지도, 다음 일정도 보지 않는다. 오늘 남긴 것이 가장 최근의 일이다.
+        val snapshot = load(
+            HomeResponse(lastVisitedOn = "2026-09-11", nextAppointment = appointment),
             today = LocalDate.of(2026, 9, 11),
         )
 
-        val line = snapshot.todayLine as HomeTodayLine.SinceLastVisit
-        assertEquals(LocalDate.of(2026, 9, 12), line.nextVisit)
+        assertEquals(HomeTodayLine.TodayRecorded, snapshot.todayLine)
+    }
+
+    @Test
+    fun `다음 진료가 내일이면 날수를 적지 않는다`() = runTest {
+        val snapshot = load(
+            HomeResponse(nextAppointment = appointment.copy(scheduledOn = "2026-09-12")),
+            today = LocalDate.of(2026, 9, 11),
+        )
+
+        assertEquals(
+            HomeTodayLine.NextTomorrow(clinic = "서울OO병원 내과", time = LocalTime.of(10, 30)),
+            snapshot.todayLine,
+        )
+    }
+
+    @Test
+    fun `다음 진료가 이틀 이상 남으면 날수를 적는다`() = runTest {
+        val snapshot = load(
+            HomeResponse(nextAppointment = appointment.copy(scheduledOn = "2026-09-16")),
+            today = LocalDate.of(2026, 9, 11),
+        )
+
+        assertEquals(
+            HomeTodayLine.NextInDays(days = 5, on = LocalDate.of(2026, 9, 16), clinic = "서울OO병원 내과"),
+            snapshot.todayLine,
+        )
+    }
+
+    @Test
+    fun `다음 진료가 지난 진료를 이긴다`() = runTest {
+        // 앞으로 할 일이 지나간 일보다 급하다. 경과일은 다음 진료가 없을 때만 적는다.
+        val snapshot = load(
+            HomeResponse(lastVisitedOn = "2026-08-30", nextAppointment = appointment.copy(scheduledOn = "2026-09-16")),
+            today = LocalDate.of(2026, 9, 11),
+        )
+
+        assertTrue(snapshot.todayLine is HomeTodayLine.NextInDays)
+    }
+
+    @Test
+    fun `어제 다녀왔으면 날수를 적지 않는다`() = runTest {
+        val snapshot = load(HomeResponse(lastVisitedOn = "2026-09-10"), today = LocalDate.of(2026, 9, 11))
+
+        assertEquals(HomeTodayLine.LastYesterday, snapshot.todayLine)
+    }
+
+    @Test
+    fun `지난 진료가 이틀 이상 지나면 날수를 적는다`() = runTest {
+        val snapshot = load(HomeResponse(lastVisitedOn = "2026-08-30"), today = LocalDate.of(2026, 9, 11))
+
+        assertEquals(HomeTodayLine.LastDaysAgo(12), snapshot.todayLine)
+    }
+
+    @Test
+    fun `앞날 진료에 경과일을 적지 않는다`() = runTest {
+        // 진료 후 기록의 날짜가 앞날이면 뺄셈이 음수가 됐다(#224). 이제 그 값은 오늘 갈래나
+        // 다음 진료 갈래로 간다.
+        val snapshot = load(HomeResponse(lastVisitedOn = "2026-09-16"), today = LocalDate.of(2026, 9, 14))
+
+        assertTrue(snapshot.todayLine !is HomeTodayLine.LastDaysAgo)
+    }
+
+    @Test
+    fun `기록이 빠진 지난 일정이 있으면 그 날을 알린다`() = runTest {
+        val snapshot = load(
+            HomeResponse(lastVisitedOn = "2026-09-02"),
+            today = LocalDate.of(2026, 9, 11),
+            month = listOf(appointment.copy(scheduledOn = "2026-09-08")),
+        )
+
+        assertEquals(HomeTodayLine.RecordMissing(LocalDate.of(2026, 9, 8)), snapshot.todayLine)
+    }
+
+    @Test
+    fun `기록보다 앞선 지난 일정은 알리지 않는다`() = runTest {
+        // 그 날 것은 이미 적었다. 기록은 진료일로 남는다.
+        val snapshot = load(
+            HomeResponse(lastVisitedOn = "2026-09-08"),
+            today = LocalDate.of(2026, 9, 11),
+            month = listOf(appointment.copy(scheduledOn = "2026-09-02")),
+        )
+
+        assertEquals(HomeTodayLine.LastDaysAgo(3), snapshot.todayLine)
     }
 
     @Test
@@ -154,7 +263,7 @@ class HomeRepositoryTest {
         // 아바타 한 글자 때문에 화면 전체를 실패로 만들지 않는다.
         val repository = repository(HomeResponse(), nameResult = ApiResult.NetworkUnavailable(IOException()))
 
-        val result = repository.load(LocalDate.of(2026, 9, 11))
+        val result = repository.load(LocalDate.of(2026, 9, 11), LocalTime.of(9, 0))
 
         assertTrue(result is ApiResult.Success)
         assertEquals("", (result as ApiResult.Success).value.userInitial)
@@ -166,26 +275,36 @@ class HomeRepositoryTest {
             DefaultHomeRepository(
                 api = object : HomeApi {
                     override suspend fun home(): HomeResponse = throw IOException()
+
+                    override suspend fun appointments(year: Int, month: Int) = emptyList<AppointmentResponse>()
                 },
                 currentUser = { ApiResult.Success("김지훈") },
                 json = Json,
             )
 
-        assertTrue(repository.load(LocalDate.of(2026, 9, 11)) is ApiResult.NetworkUnavailable)
+        assertTrue(repository.load(LocalDate.of(2026, 9, 11), LocalTime.of(9, 0)) is ApiResult.NetworkUnavailable)
     }
 
     private suspend fun load(
         response: HomeResponse,
         today: LocalDate = LocalDate.of(2026, 9, 11),
         name: String? = "김지훈",
+        now: LocalTime = LocalTime.of(9, 0),
+        month: List<AppointmentResponse> = emptyList(),
     ): HomeSnapshot {
-        val result = repository(response, ApiResult.Success(name)).load(today)
+        val result = repository(response, ApiResult.Success(name), month).load(today, now)
         return (result as ApiResult.Success).value
     }
 
-    private fun repository(response: HomeResponse, nameResult: ApiResult<String?>) = DefaultHomeRepository(
+    private fun repository(
+        response: HomeResponse,
+        nameResult: ApiResult<String?>,
+        monthly: List<AppointmentResponse> = emptyList(),
+    ) = DefaultHomeRepository(
         api = object : HomeApi {
             override suspend fun home(): HomeResponse = response
+
+            override suspend fun appointments(year: Int, month: Int): List<AppointmentResponse> = monthly
         },
         currentUser = CurrentUserProvider { nameResult },
         json = Json,
