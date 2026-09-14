@@ -118,7 +118,7 @@ class RecordDetailFixturesTest {
             listOf(
                 "09.26 예정",
                 "09.12 · 진료 후 기록",
-                "09.04 작성 · 09.12 진료실에서 보여줌",
+                "09.04 작성",
             ),
             detail("card-1").steps.map { it.at },
         )

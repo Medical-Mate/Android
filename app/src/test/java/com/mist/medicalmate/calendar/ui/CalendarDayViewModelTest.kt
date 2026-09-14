@@ -6,6 +6,7 @@ import com.mist.medicalmate.calendar.data.AppointmentRepository
 import com.mist.medicalmate.calendar.data.AppointmentStatus
 import com.mist.medicalmate.calendar.data.AppointmentTodo
 import com.mist.medicalmate.calendar.data.NewAppointment
+import com.mist.medicalmate.card.ui.FakeCardRepository
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.visit.data.FakeVisitRepository
 import com.mist.medicalmate.visit.data.VisitFollowUp
@@ -259,7 +260,7 @@ class CalendarDayViewModelTest {
     @Test
     fun `삭제를 확정하면 그 일정을 서버에서 지운다`() {
         val repository = FakeAppointmentRepository(listOf(testAppointment))
-        val viewModel = CalendarDayViewModel(repository, FakeVisitRepository(), fixedClock)
+        val viewModel = CalendarDayViewModel(repository, FakeVisitRepository(), FakeCardRepository(), fixedClock)
         viewModel.load(LocalDate.of(2026, 9, 12))
         var left = false
 
@@ -379,6 +380,7 @@ private fun dayViewModel(
 ) = CalendarDayViewModel(
     repository,
     FakeVisitRepository(list = ApiResult.Success(visits)),
+    FakeCardRepository(),
     fixedClock,
 )
 

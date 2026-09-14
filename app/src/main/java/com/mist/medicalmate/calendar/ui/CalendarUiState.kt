@@ -1,10 +1,16 @@
 package com.mist.medicalmate.calendar.ui
 
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import com.mist.medicalmate.R
 import com.mist.medicalmate.calendar.data.Appointment
 import com.mist.medicalmate.card.data.CardListItem
+import com.mist.medicalmate.card.ui.BriefCard
 import com.mist.medicalmate.core.designsystem.component.MedicalMateDateMarker
+import com.mist.medicalmate.core.network.ApiResult
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.format.DateTimeFormatter
 
 /**
  * 캘린더 월 화면의 상태. Figma 1r-1 `406:2310`.
@@ -110,8 +116,17 @@ data class CalendarDayUiState(
 data class DayCard(
     val id: String,
     val title: String,
-    val meta: String? = null,
-    val status: String? = null,
+    /** 카드를 쓴 날. 줄의 보조 문구 앞쪽이다. */
+    val writtenOn: LocalDate? = null,
+    /** 카드에 담긴 항목 수. 상세를 읽어야 나오는 값이라 못 읽으면 `null`이다. */
+    val itemCount: Int? = null,
+    /**
+     * 이 카드로 진료를 마쳤는지. 줄의 배지가 읽는 값이다.
+     *
+     * 확정 여부(`status`)가 아니라 `visited`다. 서버 문서가 둘을 다른 축으로 두고 "진료 완료
+     * 배지는 `visited`로 판단하세요"라고 적는다.
+     */
+    val visited: Boolean = false,
     /**
      * 이 카드로 이미 만들어진 일정이 선 날.
      *
@@ -171,3 +186,32 @@ internal fun CalendarUiState.markerOn(day: Int): MedicalMateDateMarker = when (d
     in plannedDays -> MedicalMateDateMarker.PLANNED
     else -> MedicalMateDateMarker.NONE
 }
+
+/**
+ * 카드 상세에서 줄에 적을 값을 꺼낸다.
+ *
+ * 카드 줄의 "2026.09.04 · 5항목"이 이 둘이다. 목록에도 작성일이 있지만 고친 카드는 새 id를
+ * 받아서(Backend#114) 일정에 걸린 옛 id로는 목록에서 찾지 못한다. 상세는 그 id로 그대로
+ * 열리므로 여기서 받아야 어긋나지 않는다. 못 읽으면 비운 채 그린다.
+ */
+internal fun ApiResult<BriefCard>?.card(): BriefCard? = (this as? ApiResult.Success)?.value
+
+/**
+ * 카드 줄의 보조 문구. 시안 `1r-2`·`1r-1-S`의 "2026.09.04 · 5항목"이다.
+ *
+ * 항목 수는 상세를 읽어야 나온다. 아직 못 읽었으면 날짜만 적고, 날짜도 없으면 줄을 비운다.
+ */
+@Composable
+internal fun dayCardMeta(card: DayCard): String? {
+    val on = card.writtenOn?.format(DayCardDate) ?: return null
+    return card.itemCount?.let { stringResource(R.string.calendar_day_card_meta, on, it) } ?: on
+}
+
+/** 카드 줄의 배지. 확정이 아니라 진료를 다녀왔는지로 가른다. */
+@Composable
+internal fun dayCardStatus(card: DayCard): String = stringResource(
+    if (card.visited) R.string.brief_card_status_confirmed else R.string.brief_card_status_before_visit,
+)
+
+/** 카드 줄의 날짜. 홈의 카드 줄과 같은 형식이다. */
+private val DayCardDate: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy.MM.dd")

@@ -37,6 +37,11 @@ private fun NoticePreview() {
             body = "인터넷 연결을 확인해주세요",
             tone = MedicalMateNoticeTone.DANGER,
         )
+        MedicalMateNotice(
+            title = "다음 진료가 예약돼 있어요",
+            body = "9월 26일 (토) 오전 10:30",
+            tone = MedicalMateNoticeTone.BRAND,
+        )
     }
 }
 

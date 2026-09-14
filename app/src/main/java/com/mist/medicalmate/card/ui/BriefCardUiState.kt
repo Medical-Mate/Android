@@ -2,6 +2,7 @@ package com.mist.medicalmate.card.ui
 
 import com.mist.medicalmate.card.data.AxisEdit
 import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
+import java.time.LocalDate
 
 /**
  * 브리핑 카드 한 장.
@@ -50,6 +51,14 @@ data class BriefCard(
      * 1e-1의 뱃지는 지금 언제나 `진료 전`이고, 진료를 마쳤는지는 목록(1j-4)에서만 갈린다.
      */
     val visited: Boolean = false,
+    /**
+     * 카드를 쓴 날.
+     *
+     * 캘린더의 카드 줄이 "2026.09.04 · 5항목"으로 적는다. 목록에도 같은 값이 있지만 고친
+     * 카드는 새 id를 받아서(Backend#114) 일정에 걸린 옛 id로는 목록에서 찾지 못한다. 상세는
+     * 그 id로 그대로 열리므로 여기서 받는 것이 어긋나지 않는다.
+     */
+    val writtenOn: LocalDate? = null,
 ) {
     /**
      * 백엔드 카드 상태 `DRAFT` / `CONFIRMED`에 대응한다.

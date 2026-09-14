@@ -32,6 +32,7 @@ internal fun CardResponse.toBriefCard(): BriefCard = BriefCard(
     // 응답의 병원 셋 중 `clinic`이 "진료받을 병원"이다(Backend#101). `appointment`는 일정의
     // 병원이고 `visit`은 진료를 받은 병원이라 셋이 다 다를 수 있다.
     hospital = clinic?.toHospital(),
+    writtenOn = createdAt?.let { OffsetDateTime.parse(it).toLocalDate() },
 )
 
 /**
