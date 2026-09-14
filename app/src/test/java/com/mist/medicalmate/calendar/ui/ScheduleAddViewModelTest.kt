@@ -97,6 +97,40 @@ class ScheduleAddViewModelTest {
     }
 
     @Test
+    fun `정해진 날을 들고 열리면 그 날로 선다`() {
+        // 캘린더에서 고른 날이나 일자 화면의 그 날이다. 들고 들어온 값이 화면에 서야
+        // 사용자가 방금 고른 날을 한 번 더 고르지 않는다.
+        val viewModel = addViewModel()
+
+        viewModel.onDatePrefilled(LocalDate.of(2026, 9, 26))
+
+        assertEquals(LocalDate.of(2026, 9, 26), viewModel.uiState.value.date)
+    }
+
+    @Test
+    fun `날 없이 열리면 비어 있다`() {
+        // 다른 달로 넘겨 아무 날도 고르지 않고 들어오는 길이다. 이 화면에서 고른다(1r-4-D).
+        val viewModel = addViewModel()
+
+        viewModel.onDatePrefilled(null)
+
+        assertNull(viewModel.uiState.value.date)
+    }
+
+    @Test
+    fun `고쳐 둔 날을 처음 값으로 되돌리지 않는다`() {
+        // 병원을 고르러 나갔다 돌아오면 이 화면이 다시 조합된다. 그때 덮으면 시트에서
+        // 고친 날이 조용히 사라진다.
+        val viewModel = addViewModel()
+        viewModel.onDatePrefilled(LocalDate.of(2026, 9, 26))
+        viewModel.onDateConfirm(LocalDate.of(2026, 10, 2))
+
+        viewModel.onDatePrefilled(LocalDate.of(2026, 9, 26))
+
+        assertEquals(LocalDate.of(2026, 10, 2), viewModel.uiState.value.date)
+    }
+
+    @Test
     fun `빈 이름으로 돌아오면 병원을 지우지 않는다`() {
         val viewModel = addViewModel()
         viewModel.onHospitalPicked("서울OO병원 내과")

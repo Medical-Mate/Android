@@ -13,9 +13,14 @@ import androidx.navigation.toRoute
 import com.mist.medicalmate.navigation.ConsumeResult
 import com.mist.medicalmate.navigation.NavResult
 import kotlinx.serialization.Serializable
+import java.time.LocalDate
 
 /**
  * 와이어프레임 1r-4. 일정 하나를 새로 만든다.
+ *
+ * [date]는 열릴 때 이미 정해져 있는 날이다. 캘린더에서 그 달의 날을 고르고 들어왔거나,
+ * 일자 화면에서 시간을 정하러 온 경우다. 없으면 이 화면에서 고른다(1r-4-D) — 다른 달로
+ * 넘겨 아무 날도 고르지 않은 채 들어오는 길이 그것이다.
  *
  * 병원 찾기에서 골라 돌아오는 값은 라우트가 아니라 결과로 받는다. 이유는 `NavResult`에
  * 있다. 라우트의 [hospitalName]은 처음부터 병원이 정해진 채로 열리는 경우다. 시안
@@ -25,7 +30,7 @@ import kotlinx.serialization.Serializable
  * 방식과 같다.
  */
 @Serializable
-internal data class ScheduleAddDestination(val hospitalName: String? = null)
+internal data class ScheduleAddDestination(val hospitalName: String? = null, val date: String? = null)
 
 internal fun NavGraphBuilder.scheduleAddDestination(
     onHospitalPick: () -> Unit,
@@ -34,9 +39,11 @@ internal fun NavGraphBuilder.scheduleAddDestination(
     onExit: () -> Unit,
 ) {
     composable<ScheduleAddDestination> { entry ->
+        val route = entry.toRoute<ScheduleAddDestination>()
         ScheduleAddRoute(
             entry = entry,
-            hospitalName = entry.toRoute<ScheduleAddDestination>().hospitalName,
+            hospitalName = route.hospitalName,
+            date = route.date?.let(LocalDate::parse),
             onHospitalPick = onHospitalPick,
             onCardNew = onCardNew,
             onSaved = onSaved,
@@ -55,6 +62,7 @@ internal fun NavGraphBuilder.scheduleAddDestination(
 private fun ScheduleAddRoute(
     entry: NavBackStackEntry,
     hospitalName: String?,
+    date: LocalDate?,
     onHospitalPick: () -> Unit,
     onCardNew: () -> Unit,
     onSaved: () -> Unit,
@@ -71,6 +79,9 @@ private fun ScheduleAddRoute(
     entry.ConsumeResult(NavResult.HOSPITAL_NAME, viewModel::onHospitalPicked)
 
     LaunchedEffect(hospitalName) { viewModel.onHospitalPicked(hospitalName) }
+
+    // 캘린더에서 고른 날이나 일자 화면의 그 날. 없이 열리면 이 화면에서 고른다(1r-4-D).
+    LaunchedEffect(date) { viewModel.onDatePrefilled(date) }
 
     ScheduleAddScreen(
         state = state,

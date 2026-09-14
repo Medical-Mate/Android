@@ -72,6 +72,17 @@ internal constructor(
         mutableUiState.update { it.copy(hospital = name) }
     }
 
+    /**
+     * 열릴 때 이미 정해져 있던 날. 캘린더에서 고른 날이거나 일자 화면의 그 날이다.
+     *
+     * 이미 날이 들어 있으면 덮지 않는다. 병원을 고르러 나갔다 돌아오는 길에 이 화면이 다시
+     * 조합되는데, 그때 덮으면 시트에서 고쳐 둔 날이 처음 값으로 되돌아간다.
+     */
+    fun onDatePrefilled(date: LocalDate?) {
+        if (date == null) return
+        mutableUiState.update { if (it.date == null) it.copy(date = date) else it }
+    }
+
     /** 날짜와 시간 필드가 같은 자리에 시트를 띄운다. 어느 쪽인지만 다르다. */
     fun onSheetOpen(sheet: ScheduleAddSheet) {
         mutableUiState.update { it.copy(sheet = sheet) }
