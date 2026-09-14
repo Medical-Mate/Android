@@ -213,8 +213,10 @@ private fun RecordRow(item: RecordItem, selected: Boolean?, onClick: () -> Unit)
 @Composable
 private fun RowText(item: RecordItem, editing: Boolean, modifier: Modifier = Modifier) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4)) {
+        // 마스터의 `Title Row`가 제목과 배지를 6으로 묶는다. 목록마다 다르면 같은 칩이
+        // 화면마다 다른 거리에 선다.
         Row(
-            horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8),
+            horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s6),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(

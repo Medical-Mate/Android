@@ -18,16 +18,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import com.mist.medicalmate.core.designsystem.MedicalMateElevation
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
+import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
+import com.mist.medicalmate.core.designsystem.ShadowTint
 
 /**
  * DESIGN.md의 `KV Row`의 `Type` variant.
@@ -182,8 +186,12 @@ enum class MedicalMateListRowType {
  * 제목과 메타를 2단으로 둔다. chevron은 들어갈 상세가 있을 때만 붙인다. 눌러도 아무 일이
  * 없는데 chevron이 있으면 사용자가 눌러본다.
  *
- * [MedicalMateListRowType.BADGE]는 [badge]를 오른쪽에 놓고,
- * [MedicalMateListRowType.PLAIN]은 chevron을 두지 않는다.
+ * **[badge]는 제목 바로 옆에 붙는다**(#227). 마스터의 `Title Row`가 제목과 배지를 간격 6으로
+ * 한 줄에 묶는다. 오른쪽 끝에 두면 chevron과 나란히 서서 누르는 것으로 보이고, 제목이 길어질
+ * 때 제목과 배지 사이가 벌어져 어느 줄의 상태인지가 흐려진다.
+ *
+ * [MedicalMateListRowType.BADGE]는 그 배지를 켜고, [MedicalMateListRowType.PLAIN]은
+ * chevron을 두지 않는다.
  *
  * [badgeTone]은 배지가 무엇을 뜻하는지에 따라 고른다. 완료는 Success, 남은 일수처럼
  * 브랜드 정보는 Brand다. 기본은 중립이다.
@@ -207,7 +215,7 @@ fun MedicalMateListRow(
             Modifier
                 .fillMaxWidth()
                 .heightIn(min = RowHeightLg)
-                .padding(horizontal = MedicalMateSpace.s16),
+                .padding(start = RowStartPadding, end = RowEndPadding),
             horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -215,13 +223,18 @@ fun MedicalMateListRow(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4),
             ) {
-                Text(text = title, style = typography.bodyL, color = colors.fgDefault)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s6),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(text = title, style = typography.bodyL, color = colors.fgDefault)
+                    if (type == MedicalMateListRowType.BADGE && badge != null) {
+                        MedicalMateBadge(label = badge, tone = badgeTone)
+                    }
+                }
                 meta?.let {
                     Text(text = it, style = typography.bodyS, color = colors.fgSubtle)
                 }
-            }
-            if (type == MedicalMateListRowType.BADGE && badge != null) {
-                MedicalMateBadge(label = badge, tone = badgeTone)
             }
             if (type != MedicalMateListRowType.PLAIN && onClick != null) {
                 Icon(
@@ -234,15 +247,39 @@ fun MedicalMateListRow(
         }
     }
 
+    RowSurface(onClick = onClick, modifier = modifier, content = row)
+}
+
+/** 줄의 면. 마스터가 카드 모양으로 띄운다 — 반경 16에 `Elevation/Card`다. */
+@Composable
+private fun RowSurface(onClick: (() -> Unit)?, modifier: Modifier, content: @Composable () -> Unit) {
+    val colors = MedicalMateTheme.colors
+    val surface =
+        modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = MedicalMateElevation.card,
+                shape = MedicalMateRadius.md,
+                ambientColor = ShadowTint,
+                spotColor = ShadowTint,
+            )
+
     if (onClick == null) {
-        Box(modifier = modifier, content = { row() })
+        Surface(
+            color = colors.bgSurface,
+            contentColor = colors.fgDefault,
+            shape = MedicalMateRadius.md,
+            modifier = surface,
+            content = content,
+        )
     } else {
         Surface(
             onClick = onClick,
             color = colors.bgSurface,
             contentColor = colors.fgDefault,
-            modifier = modifier,
-            content = row,
+            shape = MedicalMateRadius.md,
+            modifier = surface,
+            content = content,
         )
     }
 }
@@ -371,6 +408,11 @@ private val RowHeightSm = 54.dp
 
 /** 문서의 List Row 높이. */
 private val RowHeightLg = 79.dp
+
+/** 마스터 `List Row`의 좌우 여백. 오른쪽 끝의 chevron·배지가 제 여백을 갖고 있다. */
+private val RowStartPadding = 18.dp
+
+private val RowEndPadding = 14.dp
 
 /** 문서의 컴포넌트 규격이 고정한 key 열 폭. 값 열이 세로로 정렬되게 만든다. */
 private val KeyColumnWidth = 72.dp

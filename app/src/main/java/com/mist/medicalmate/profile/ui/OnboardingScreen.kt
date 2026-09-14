@@ -1,5 +1,13 @@
 package com.mist.medicalmate.profile.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,6 +31,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateRadius
@@ -40,6 +49,14 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateOnboardingPro
  * 로그인 뒤 한 번 지나간다. 상단 바에 Nav Bar를 두지 않는다. 뒤로 갈 곳이 로그인이라
  * 돌아가면 로그아웃처럼 읽힌다. 앞으로 가는 길과 건너뛰는 길만 둔다. 시안도 그렇다.
  *
+ * **장이 밀려서 바뀐다**(#227). 전에는 글과 그림이 그 자리에서 즉시 갈렸다. 넘긴 것인지
+ * 화면이 바뀐 것인지 구별되지 않고, 되짚어 온 것인지도 알 수 없다. 앞으로 갈 때는 오른쪽에서
+ * 들어오고 되짚을 때는 왼쪽에서 들어온다 — 화면 전환(`MedicalMateNavTransitions`)과 같은
+ * 방향이다.
+ *
+ * 상단 바와 하단 버튼은 그대로 둔다. 진행 표시가 함께 밀리면 몇 번째 장인지가 눈에서
+ * 사라지고, 버튼은 자리가 고정이라 손가락이 따라다니지 않아도 된다.
+ *
  * 글이 그림보다 위다. v1은 그림을 먼저 놓았는데 시안이 순서를 바꿨다.
  */
 @Composable
@@ -48,6 +65,7 @@ fun OnboardingScreen(
     onNextClick: () -> Unit,
     onSkipClick: () -> Unit,
     modifier: Modifier = Modifier,
+    forward: Boolean = true,
 ) {
     Column(
         modifier =
@@ -56,7 +74,7 @@ fun OnboardingScreen(
             .background(MedicalMateTheme.colors.bgSurface),
     ) {
         TopBar(page = page, onSkipClick = onSkipClick)
-        PageContent(page = page)
+        PageContent(page = page, forward = forward)
         MedicalMateBottomCtaBar {
             MedicalMateButton(
                 label = stringResource(page.ctaLabel),
@@ -122,30 +140,52 @@ private fun TopBar(page: OnboardingPage, onSkipClick: () -> Unit) {
  * 잘리기 전에 160 넘게 흡수한다.
  */
 @Composable
-private fun ColumnScope.PageContent(page: OnboardingPage) {
-    Column(modifier = Modifier.fillMaxWidth().weight(1f)) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = MedicalMateSize.gutter, vertical = MedicalMateSpace.s16),
-        ) {
-            Text(
-                text = stringResource(page.title),
-                style = MedicalMateTheme.typography.headingL,
-                color = MedicalMateTheme.colors.fgDefault,
-            )
-            Text(
-                text = stringResource(page.description),
-                style = MedicalMateTheme.typography.bodyM,
-                color = MedicalMateTheme.colors.fgSubtle,
-                modifier = Modifier.padding(top = MedicalMateSpace.s24),
-            )
+private fun ColumnScope.PageContent(page: OnboardingPage, forward: Boolean) {
+    AnimatedContent(
+        targetState = page,
+        transitionSpec = {
+            val direction = if (forward) 1 else -1
+            val spec = tween<IntOffset>(PAGE_DURATION, easing = FastOutSlowInEasing)
+            val fade = tween<Float>(PAGE_DURATION, easing = FastOutSlowInEasing)
+            (
+                slideInHorizontally(spec) { width -> direction * width } + fadeIn(fade)
+                ) togetherWith (
+                slideOutHorizontally(spec) { width -> -direction * width / PAGE_PARALLAX } + fadeOut(fade)
+                )
+        },
+        modifier = Modifier.fillMaxWidth().weight(1f),
+        label = "onboarding",
+    ) { shown ->
+        Column(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = MedicalMateSize.gutter, vertical = MedicalMateSpace.s16),
+            ) {
+                Text(
+                    text = stringResource(shown.title),
+                    style = MedicalMateTheme.typography.headingL,
+                    color = MedicalMateTheme.colors.fgDefault,
+                )
+                Text(
+                    text = stringResource(shown.description),
+                    style = MedicalMateTheme.typography.bodyM,
+                    color = MedicalMateTheme.colors.fgSubtle,
+                    modifier = Modifier.padding(top = MedicalMateSpace.s24),
+                )
+            }
+            Spacer(Modifier.weight(1f))
+            Illustration(page = shown)
+            Spacer(Modifier.height(IllustrationBottom))
         }
-        Spacer(Modifier.weight(1f))
-        Illustration(page = page)
-        Spacer(Modifier.height(IllustrationBottom))
     }
 }
+
+/** 화면 전환과 같은 값이다. 한 장 넘기는 데 320이면 충분하다. */
+private const val PAGE_DURATION = 320
+
+/** 물러나는 장이 움직이는 몫. 들어오는 장이 네 배 더 움직인다. */
+private const val PAGE_PARALLAX = 4
 
 /**
  * 장마다 하나씩인 선화.
