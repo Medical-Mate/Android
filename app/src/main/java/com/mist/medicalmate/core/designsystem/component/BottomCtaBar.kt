@@ -8,10 +8,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import com.mist.medicalmate.core.designsystem.MedicalMateElevation
 import com.mist.medicalmate.core.designsystem.MedicalMateGlass
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
+import com.mist.medicalmate.core.designsystem.ShadowTint
 
 /**
  * DESIGN.md의 `Bottom CTA Bar`.
@@ -33,8 +36,12 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
  * 일이 그것을 막는 것이라서, 대안이 생기기 전까지 기본값을 불투명으로 둔다. [GLASS]는
  * 문서 값(`bg/surface` 78%)대로 남겨 뒀고 배경이 단순한 화면에서 쓸 수 있다.
  *
- * 문서는 Glass에 테두리를 추가하지 말라고 한다. 불투명 변형에도 테두리를 두지 않았다.
- * 층 구분은 `Elevation/Float`이 담당한다.
+ * **불투명 변형에는 `Elevation/Float`이 걸린다.** 마스터(`294:652`)의 `Surface=Opaque`가
+ * 그 그림자를 달고 있고 `Glass`는 블러만 있다. 블러가 없는 쪽은 그림자가 층을 만들어야
+ * 한다 — 없으면 스크롤되는 본문이 바 위에서 잘릴 때 위에 뜬 층이 아니라 본문이 잘린
+ * 것으로 읽힌다.
+ *
+ * 문서는 Glass에 테두리를 추가하지 말라고 한다. 불투명 변형에도 테두리를 두지 않는다.
  */
 @Composable
 fun MedicalMateBottomCtaBar(
@@ -49,9 +56,23 @@ fun MedicalMateBottomCtaBar(
                 MedicalMateTheme.colors.bgSurface.copy(alpha = MedicalMateGlass.BOTTOM_CTA_ALPHA)
         }
 
+    val layer =
+        when (surface) {
+            // 마스터의 그림자는 y+4라 아래로 떨어진다. 화면 맨 아래에 붙는 바에서는 그쪽이
+            // 잘리고 위쪽 ambient만 남는데, 본문과 바를 가르는 데는 그 한 겹이면 된다.
+            MedicalMateSurfaceStyle.OPAQUE ->
+                modifier.shadow(
+                    elevation = MedicalMateElevation.float,
+                    ambientColor = ShadowTint,
+                    spotColor = ShadowTint,
+                )
+
+            MedicalMateSurfaceStyle.GLASS -> modifier
+        }
+
     Column(
         modifier =
-        modifier
+        layer
             .fillMaxWidth()
             .background(background)
             .padding(
