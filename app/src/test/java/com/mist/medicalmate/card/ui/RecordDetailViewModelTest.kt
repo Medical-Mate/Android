@@ -9,6 +9,7 @@ import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.visit.data.FakeVisitRepository
 import com.mist.medicalmate.visit.data.Visit
 import com.mist.medicalmate.visit.data.VisitItem
+import com.mist.medicalmate.visit.data.VisitListItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -163,7 +164,68 @@ class RecordDetailViewModelTest {
         val detail = content(FULL.copy(visitedOn = null)).detail
 
         assertEquals("서울OO병원 내과", detail.clinicLine)
-        assertEquals(" · 진료 후 기록", (detail.steps.single() as RecordStep.Block).at)
+        // 날짜 자리가 통째로 빠진다. 전에는 빈 자리에 가운뎃점만 남아 " · 진료 후 기록"이었다.
+        assertEquals("진료 후 기록", (detail.steps.single() as RecordStep.Block).at)
+    }
+
+    @Test
+    fun `재방문이 쌓이면 한 화면에 모두 선다`() {
+        // 카드 하나에 기록 하나였던 것이 풀렸다(Backend#119). 다시 간 진료는 같은 문답에
+        // 이어 붙고 상세가 그 흐름을 한 줄로 보여준다(1j-3-R).
+        val detail = revisited().detail
+
+        assertEquals("진료 2회", detail.badge)
+        assertEquals("서울OO병원 내과 · 09.12 초진 · 09.26 재방문", detail.clinicLine)
+
+        val records = detail.steps.filterIsInstance<RecordStep.Block>()
+        assertEquals(listOf("09.26 · 진료 후 기록 · 재방문", "09.12 · 진료 후 기록 · 초진"), records.map { it.at })
+        assertEquals(listOf("약을 바꿨어요", "위염 초기"), records.map { it.items.first().value })
+    }
+
+    @Test
+    fun `기록을 카드 번호로 거르지 않는다`() {
+        // 재방문 전에 카드를 고치면 두 기록이 서로 다른 카드 행에 붙는다. 목록의 cardId는
+        // 최신 버전이라 묶을 열쇠가 못 된다(Backend#121).
+        val repository = revisitedRepository()
+
+        viewModel(repository = repository).load("78")
+
+        assertEquals(3L, repository.cardVisitsOf)
+    }
+
+    @Test
+    fun `한 번만 다녀왔으면 횟수를 적지 않는다`() {
+        val detail = content(FULL).detail
+
+        assertNull(detail.badge)
+        assertEquals("09.12 · 진료 후 기록", (detail.steps.single() as RecordStep.Block).at)
+    }
+
+    @Test
+    fun `모으지 못하면 열어 본 기록만 그린다`() {
+        // 지금까지 하던 것과 같다. 한 경로가 막혔다고 이미 읽은 기록까지 못 보게 할 이유가 없다.
+        val repository = revisitedRepository()
+        repository.cardVisits = FakeVisitRepository.OFFLINE
+        val viewModel = viewModel(repository = repository)
+
+        viewModel.load("77")
+
+        val detail = (viewModel.uiState.value as RecordDetailUiState.Content).detail
+        assertNull(detail.badge)
+        assertEquals(1, detail.steps.size)
+    }
+
+    @Test
+    fun `읽지 못한 재방문은 빼고 그린다`() {
+        // 한 건 때문에 화면 전체를 실패로 두면 이미 읽은 기록까지 못 보게 된다.
+        val repository = revisitedRepository(second = FakeVisitRepository.OFFLINE)
+        val viewModel = viewModel(repository = repository)
+
+        viewModel.load("77")
+
+        val detail = (viewModel.uiState.value as RecordDetailUiState.Content).detail
+        assertNull(detail.badge)
+        assertEquals("09.12 · 진료 후 기록", (detail.steps.single() as RecordStep.Block).at)
     }
 
     @Test
@@ -224,6 +286,18 @@ class RecordDetailViewModelTest {
         FakeUpcomingRepository(appointments),
     )
 
+    /** 두 번 다녀온 카드. 상세는 최신([SECOND])을 연 것으로 둔다. */
+    private fun revisited(): RecordDetailUiState.Content {
+        val viewModel = viewModel(repository = revisitedRepository())
+        viewModel.load("78")
+        return viewModel.uiState.value as RecordDetailUiState.Content
+    }
+
+    private fun revisitedRepository(second: ApiResult<Visit> = ApiResult.Success(SECOND)) =
+        FakeVisitRepository(detail = ApiResult.Success(FULL), details = mapOf(78L to second)).apply {
+            cardVisits = ApiResult.Success(listOf(SECOND.toSummary(), FULL.toSummary()))
+        }
+
     private fun content(
         visit: Visit,
         card: BriefCard? = null,
@@ -267,6 +341,19 @@ class RecordDetailViewModelTest {
                 ),
             )
 
+        /** 같은 카드로 두 주 뒤에 다시 간 진료. */
+        val SECOND =
+            Visit(
+                id = "78",
+                cardId = 3,
+                clinic = "서울OO병원 내과",
+                visitedOn = LocalDate.of(2026, 9, 26),
+                items = listOf(VisitItem(axis = "findings", label = "소견", value = "약을 바꿨어요")),
+                followUp = null,
+                patientNotes = emptyList(),
+                rawNote = null,
+            )
+
         val FULL =
             Visit(
                 id = "77",
@@ -285,6 +372,15 @@ class RecordDetailViewModelTest {
             )
     }
 }
+
+/** 상세를 모아 주는 목록의 줄로. 그 목록에는 축이 없어서 상세를 따로 읽는다. */
+private fun Visit.toSummary() = VisitListItem(
+    id = id,
+    cardId = cardId,
+    cardTitle = "복부 통증 · 3주",
+    clinic = clinic,
+    visitedOn = requireNotNull(visitedOn),
+)
 
 /** 앞으로의 일정만 돌려주는 대역. 예정 단계가 붙는지를 본다. */
 private class FakeUpcomingRepository(private val list: List<Appointment>) : AppointmentRepository {

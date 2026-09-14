@@ -14,6 +14,14 @@ interface VisitRepository {
     suspend fun visit(visitId: Long): ApiResult<Visit>
 
     /**
+     * 한 카드의 기록 전부. 최근 진료일 순이다.
+     *
+     * **[visits]를 `cardId`로 거르면 안 된다.** 재방문 전에 카드를 고치면 기록들이 서로 다른
+     * 카드 행에 붙고, 목록이 주는 `cardId`는 최신 버전이라 묶을 열쇠로 쓸 수 없다.
+     */
+    suspend fun cardVisits(cardId: Long): ApiResult<List<VisitListItem>>
+
+    /**
      * 진료 후 기록을 남긴다.
      *
      * @param cardId 확정한 카드여야 한다. 카드 하나에 기록 하나다.
@@ -73,6 +81,9 @@ constructor(private val api: VisitApi, private val json: Json) :
 
     override suspend fun visit(visitId: Long): ApiResult<Visit> =
         apiCall(json) { api.visit(visitId) }.map { it.toVisit() }
+
+    override suspend fun cardVisits(cardId: Long): ApiResult<List<VisitListItem>> =
+        apiCall(json) { api.cardVisits(cardId) }.map { list -> list.map { it.toListItem() } }
 
     override suspend fun create(cardId: Long, visit: NewVisit): ApiResult<Visit> = apiCall(json) {
         api.create(

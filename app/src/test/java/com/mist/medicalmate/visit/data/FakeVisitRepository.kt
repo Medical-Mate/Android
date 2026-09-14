@@ -40,6 +40,21 @@ internal class FakeVisitRepository(
 
     override suspend fun visits(): ApiResult<List<VisitListItem>> = list
 
+    /**
+     * 한 카드에 쌓인 기록. 기본은 빈 목록이라 열어 본 기록 하나만 그려진다.
+     *
+     * 재방문 누적을 보는 시험에서만 채운다.
+     */
+    var cardVisits: ApiResult<List<VisitListItem>> = ApiResult.Success(emptyList())
+
+    /** 모아 달라고 받은 카드 id. */
+    var cardVisitsOf: Long? = null
+
+    override suspend fun cardVisits(cardId: Long): ApiResult<List<VisitListItem>> {
+        cardVisitsOf = cardId
+        return cardVisits
+    }
+
     override suspend fun visit(visitId: Long): ApiResult<Visit> {
         requestedId = visitId
         requestedIds += visitId
