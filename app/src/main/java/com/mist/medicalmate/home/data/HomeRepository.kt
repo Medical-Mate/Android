@@ -21,7 +21,7 @@ import java.util.Locale
 /**
  * 홈이 쓰는 값을 모은다.
  *
- * 두 곳에서 온다. `GET /api/me/home`이 네 덩어리를 주지만 사람 이름이 없어서 헤더의 첫
+ * 두 곳에서 온다. `GET /api/me/home`이 홈에 필요한 것을 주지만 사람 이름이 없어서 헤더의 첫
  * 글자는 [CurrentUserProvider]가 채운다. 그 구현은 `profile` 도메인에 있고 Hilt가 연결한다.
  *
  * 둘을 나란히 보낸다. 이어 부르면 화면이 두 번 기다린다.
@@ -46,42 +46,17 @@ constructor(
 ) : HomeRepository {
     override suspend fun load(today: LocalDate, now: LocalTime): ApiResult<HomeSnapshot> = coroutineScope {
         val nameCall = async { currentUser.displayName() }
-        val monthCall = async { apiCall(json) { api.appointments(today.year, today.monthValue) } }
 
         when (val home = apiCall(json) { api.home() }) {
             is ApiResult.Success -> {
                 val name = (nameCall.await() as? ApiResult.Success)?.value
-                val month = (monthCall.await() as? ApiResult.Success)?.value.orEmpty()
-                ApiResult.Success(
-                    home.value.toSnapshot(
-                        name = name,
-                        today = today,
-                        now = now,
-                        pastWithoutRecord = month.pastWithoutRecord(today, home.value.lastVisitedOn),
-                    ),
-                )
+                ApiResult.Success(home.value.toSnapshot(name = name, today = today, now = now))
             }
 
             is ApiResult.Rejected -> home
             is ApiResult.NetworkUnavailable -> home
         }
     }
-}
-
-/**
- * 기록이 빠진 지난 일정 가운데 가장 최근 날.
- *
- * 마지막으로 남긴 기록보다 뒤에 있는 지난 일정이 그것이다. 기록은 진료일로 남으므로 그
- * 날짜보다 뒤의 일정에는 아직 적은 것이 없다.
- *
- * **이 달만 본다.** 달을 넘어가는 일정은 놓친다 — 한 달을 더 부르면 홈이 그만큼 늦어지고,
- * 지난달 진료를 이번 달에 알리는 것은 때를 놓친 알림이다. 못 읽으면 이 갈래를 건너뛴다.
- */
-private fun List<AppointmentResponse>.pastWithoutRecord(today: LocalDate, lastVisitedOn: String?): LocalDate? {
-    val last = lastVisitedOn?.let(LocalDate::parse)
-    return mapNotNull { runCatching { LocalDate.parse(it.scheduledOn) }.getOrNull() }
-        .filter { it.isBefore(today) && (last == null || it.isAfter(last)) }
-        .maxOrNull()
 }
 
 /** 홈 화면이 그릴 것. */
@@ -93,16 +68,11 @@ data class HomeSnapshot(
     val upcoming: List<HomeSchedule>,
 )
 
-private fun HomeResponse.toSnapshot(
-    name: String?,
-    today: LocalDate,
-    now: LocalTime,
-    pastWithoutRecord: LocalDate?,
-): HomeSnapshot {
+private fun HomeResponse.toSnapshot(name: String?, today: LocalDate, now: LocalTime): HomeSnapshot {
     val nextOn = nextAppointment?.let { LocalDate.parse(it.scheduledOn) }
     return HomeSnapshot(
         userInitial = name?.take(1).orEmpty(),
-        todayLine = todayLine(today = today, now = now, pastWithoutRecord = pastWithoutRecord),
+        todayLine = todayLine(today = today, now = now),
         resume = inProgressSession?.toResume(),
         savedCards = recentCards.map { it.toSummary() },
         upcoming = upcoming(nextOn),
@@ -123,7 +93,7 @@ private fun HomeResponse.toSnapshot(
  * 마지막 진료일이 없고 카드도 일정도 없으면 아직 아무것도 안 한 사람이다. 문서가 "신규
  * 사용자는 전부 null이고 404가 아닙니다"라고 적었고 그것이 1n-2 화면이다.
  */
-private fun HomeResponse.todayLine(today: LocalDate, now: LocalTime, pastWithoutRecord: LocalDate?): HomeTodayLine {
+private fun HomeResponse.todayLine(today: LocalDate, now: LocalTime): HomeTodayLine {
     val last = lastVisitedOn?.let(LocalDate::parse)
     val appointment = nextAppointment
     val visit =
@@ -134,7 +104,7 @@ private fun HomeResponse.todayLine(today: LocalDate, now: LocalTime, pastWithout
         )
 
     return todayVisit(today, last, now, visit)
-        ?: pastWithoutRecord?.let(HomeTodayLine::RecordMissing)
+        ?: pendingRecordOn?.let(LocalDate::parse)?.let(HomeTodayLine::RecordMissing)
         ?: nextVisit(today, visit)
         ?: lastVisit(today, last)
         ?: if (recentCards.isNotEmpty()) HomeTodayLine.CardReady else HomeTodayLine.FirstVisit
