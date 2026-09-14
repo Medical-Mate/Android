@@ -56,7 +56,12 @@ internal val fixtureRecord =
 
 /** 시간이 아직 정해지지 않은 재방문. 확정하면 칩이 D-day로 바뀐다(1r-2-A2). */
 internal val fixtureNextEvent =
-    DayNextEvent(chip = "9월 26일 (토)", title = "재방문 예정", clinic = "서울OO병원 내과")
+    DayNextEvent(
+        chip = "9월 26일 (토)",
+        title = "재방문 예정",
+        on = LocalDate.of(2026, 9, 26),
+        clinic = "서울OO병원 내과",
+    )
 
 /** Preview에서만 쓰는 진료 전 할 일. 서버에 붙은 뒤로 화면은 일정의 것을 그린다(#187). */
 internal val fixtureTodos =
@@ -150,6 +155,7 @@ internal val previewCalendarDayConfirmedState =
         DayNextEvent(
             chip = "D-14",
             title = "서울OO병원 내과 재방문",
+            on = LocalDate.of(2026, 9, 26),
             at = "9월 26일 (토) 오전 10:30",
         ),
     )

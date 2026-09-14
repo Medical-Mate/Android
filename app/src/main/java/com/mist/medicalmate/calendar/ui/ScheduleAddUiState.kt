@@ -17,6 +17,13 @@ import java.time.LocalTime
  * 고르지 않은 시각이 일자 화면에 그대로 떴다.
  */
 data class ScheduleAddUiState(
+    /**
+     * 고치고 있는 일정.
+     *
+     * 있으면 새로 만드는 것이 아니라 그 일정을 고친다. 시간 미정으로 저장한 일정에 시각을
+     * 채우러 들어오는 길이 이 상태다(1r-2 · 1r-2-A). 없으면 새 일정이다.
+     */
+    val appointmentId: Long? = null,
     val cards: List<ScheduleAddCard> = emptyList(),
     val todos: List<ScheduleAddTodo> = emptyList(),
     val hospital: String? = null,

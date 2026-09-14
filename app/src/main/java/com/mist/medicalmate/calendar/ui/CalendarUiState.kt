@@ -122,7 +122,18 @@ data class DayRecord(val id: String, val title: String, val meta: String)
 data class DayNextEvent(
     val chip: String,
     val title: String,
+    /** 그 일정이 선 날. 이 화면의 날짜가 아니다 — 다음 진료는 다른 날이다. */
+    val on: LocalDate,
     val at: String? = null,
+    /**
+     * 이미 잡혀 있는 일정의 id.
+     *
+     * 진료 후 기록의 재방문에서 서버가 만들어 준 일정이면 있다. 그 일정에 시각만 채우는
+     * 것이므로 확정하러 갈 때 고치는 경로로 간다 — 없으면 같은 재방문 일정이 둘이 된다.
+     *
+     * 기록의 재방문 날짜만 있고 일정이 아직 없으면 없다. 그때는 새로 만든다.
+     */
+    val appointmentId: Long? = null,
     /**
      * 재방문할 병원.
      *

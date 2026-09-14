@@ -1,6 +1,7 @@
 package com.mist.medicalmate.calendar.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -14,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
 import com.mist.medicalmate.core.designsystem.MedicalMateRadius
@@ -69,7 +71,7 @@ fun CalendarDayScreen(state: CalendarDayUiState, callbacks: CalendarDayCallbacks
                 .padding(horizontal = MedicalMateSize.gutter, vertical = MedicalMateSpace.s12),
             verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8),
         ) {
-            ScheduleSection(state = state)
+            ScheduleSection(state = state, callbacks = callbacks)
             CardSection(state = state, callbacks = callbacks)
             TodoSection(state = state, callbacks = callbacks)
             RecordSection(state = state, callbacks = callbacks)
@@ -130,6 +132,7 @@ data class CalendarDayCallbacks(
     val onEditDoneClick: () -> Unit = {},
     val onTodoDeleteClick: (String) -> Unit = {},
     val onScheduleDeleteClick: () -> Unit = {},
+    val onScheduleEditClick: (Long) -> Unit = {},
     val onScheduleDeleteConfirm: () -> Unit = {},
     val onScheduleDeleteDismiss: () -> Unit = {},
 )
@@ -166,8 +169,12 @@ private fun ColumnScope.DeleteAction(onClick: () -> Unit) {
  * 글꼴에서 어디까지가 시간인지 흐려진다.
  */
 @Composable
-private fun ColumnScope.ScheduleSection(state: CalendarDayUiState) {
+private fun ColumnScope.ScheduleSection(state: CalendarDayUiState, callbacks: CalendarDayCallbacks) {
     val schedule = state.schedule ?: return
+
+    // 시각이 없는 일정만 눌러서 고치러 간다(#230). 시간 미정으로 저장하고 나면 그 값을 채울
+    // 자리가 어디에도 없었다. 시각이 정해진 일정을 여기서 열면 고칠 것이 없는 화면이 뜬다.
+    val edit = schedule.id.toLongOrNull()?.takeIf { schedule.time == null }
 
     MedicalMateSectionHeader(title = stringResource(R.string.calendar_day_schedule))
     Column(
@@ -175,6 +182,17 @@ private fun ColumnScope.ScheduleSection(state: CalendarDayUiState) {
         Modifier
             .fillMaxWidth()
             .background(color = MedicalMateTheme.colors.bgPrimaryFaint, shape = MedicalMateRadius.lg)
+            .let { base ->
+                if (edit == null) {
+                    base
+                } else {
+                    base.clickable(
+                        role = Role.Button,
+                        onClickLabel = stringResource(R.string.calendar_day_schedule_edit),
+                        onClick = { callbacks.onScheduleEditClick(edit) },
+                    )
+                }
+            }
             .padding(MedicalMateSpace.s16),
         verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4),
     ) {
