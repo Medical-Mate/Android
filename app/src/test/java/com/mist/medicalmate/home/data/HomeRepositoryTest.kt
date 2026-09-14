@@ -138,21 +138,20 @@ class HomeRepositoryTest {
     @Test
     fun `기록이 빠진 지난 일정이 있으면 그 날을 알린다`() = runTest {
         val snapshot = load(
-            HomeResponse(lastVisitedOn = "2026-09-02"),
+            HomeResponse(lastVisitedOn = "2026-09-02", pendingRecordOn = "2026-09-08"),
             today = LocalDate.of(2026, 9, 11),
-            month = listOf(appointment.copy(scheduledOn = "2026-09-08")),
         )
 
         assertEquals(HomeTodayLine.RecordMissing(LocalDate.of(2026, 9, 8)), snapshot.todayLine)
     }
 
     @Test
-    fun `기록보다 앞선 지난 일정은 알리지 않는다`() = runTest {
-        // 그 날 것은 이미 적었다. 기록은 진료일로 남는다.
+    fun `기록이 빠진 지난 일정이 없으면 지난 진료를 적는다`() = runTest {
+        // 어느 일정에 기록이 남았는지는 서버가 가린다(Backend#123). 앱은 `pendingRecordOn`이
+        // 비어 있으면 이 갈래를 건너뛴다.
         val snapshot = load(
             HomeResponse(lastVisitedOn = "2026-09-08"),
             today = LocalDate.of(2026, 9, 11),
-            month = listOf(appointment.copy(scheduledOn = "2026-09-02")),
         )
 
         assertEquals(HomeTodayLine.LastDaysAgo(3), snapshot.todayLine)
@@ -275,8 +274,6 @@ class HomeRepositoryTest {
             DefaultHomeRepository(
                 api = object : HomeApi {
                     override suspend fun home(): HomeResponse = throw IOException()
-
-                    override suspend fun appointments(year: Int, month: Int) = emptyList<AppointmentResponse>()
                 },
                 currentUser = { ApiResult.Success("김지훈") },
                 json = Json,
@@ -290,21 +287,14 @@ class HomeRepositoryTest {
         today: LocalDate = LocalDate.of(2026, 9, 11),
         name: String? = "김지훈",
         now: LocalTime = LocalTime.of(9, 0),
-        month: List<AppointmentResponse> = emptyList(),
     ): HomeSnapshot {
-        val result = repository(response, ApiResult.Success(name), month).load(today, now)
+        val result = repository(response, ApiResult.Success(name)).load(today, now)
         return (result as ApiResult.Success).value
     }
 
-    private fun repository(
-        response: HomeResponse,
-        nameResult: ApiResult<String?>,
-        monthly: List<AppointmentResponse> = emptyList(),
-    ) = DefaultHomeRepository(
+    private fun repository(response: HomeResponse, nameResult: ApiResult<String?>) = DefaultHomeRepository(
         api = object : HomeApi {
             override suspend fun home(): HomeResponse = response
-
-            override suspend fun appointments(year: Int, month: Int): List<AppointmentResponse> = monthly
         },
         currentUser = CurrentUserProvider { nameResult },
         json = Json,

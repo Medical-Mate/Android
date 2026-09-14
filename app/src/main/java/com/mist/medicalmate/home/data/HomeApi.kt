@@ -2,7 +2,6 @@ package com.mist.medicalmate.home.data
 
 import kotlinx.serialization.Serializable
 import retrofit2.http.GET
-import retrofit2.http.Query
 
 /**
  * 홈 API. `/v3/api-docs`의 `GET /api/me/home` 기준이다.
@@ -16,28 +15,21 @@ import retrofit2.http.Query
 internal interface HomeApi {
     @GET("api/me/home")
     suspend fun home(): HomeResponse
-
-    /**
-     * 그 달의 일정.
-     *
-     * 홈 응답에 지난 일정이 없어서 따로 부른다(#235). 기록이 빠진 지난 진료를 알리려면 이미
-     * 지나간 일정을 알아야 하는데 `nextAppointment`는 앞으로의 것 하나뿐이다.
-     *
-     * 캘린더의 같은 엔드포인트를 쓰지만 그쪽 Repository를 가져다 쓰지 않는다. 홈이 캘린더를
-     * 참조하면 두 도메인이 붙는다.
-     */
-    @GET("api/me/appointments")
-    suspend fun appointments(@Query("year") year: Int, @Query("month") month: Int): List<AppointmentResponse>
 }
 
 /**
  * @param lastVisitedOn 마지막 진료일(`yyyy-MM-dd`). 없으면 아직 진료 기록이 없는 사람이다.
+ * @param pendingRecordOn 진료 후 기록이 아직 없는 지난 일정 가운데 가장 최근 날. 없으면
+ *   `null`이다(Backend#123). 서버가 일정 날짜로 남긴 기록이 있는지를 보고 14일까지만 거슬러
+ *   찾으며, 취소한 일정은 세지 않는다. 일정과 기록을 잇는 열쇠가 없어서 — 기록은 카드에
+ *   붙는데 일정은 카드 없이도 만들 수 있다 — 날짜로 견주는 것이 서버가 할 수 있는 전부다.
  * @param inProgressSession 작성 중이던 문답. 홈의 "이어서 하기"가 이것 하나로 그려진다.
  */
 @Serializable
 internal data class HomeResponse(
     val lastVisitedOn: String? = null,
     val nextAppointment: AppointmentResponse? = null,
+    val pendingRecordOn: String? = null,
     val inProgressSession: InProgressSessionResponse? = null,
     val recentCards: List<CardSummaryResponse> = emptyList(),
 )
