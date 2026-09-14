@@ -18,16 +18,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import com.mist.medicalmate.core.designsystem.MedicalMateElevation
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
+import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
+import com.mist.medicalmate.core.designsystem.ShadowTint
 
 /**
  * DESIGN.md의 `KV Row`의 `Type` variant.
@@ -207,7 +211,7 @@ fun MedicalMateListRow(
             Modifier
                 .fillMaxWidth()
                 .heightIn(min = RowHeightLg)
-                .padding(horizontal = MedicalMateSpace.s16),
+                .padding(start = RowStartPadding, end = RowEndPadding),
             horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -234,15 +238,39 @@ fun MedicalMateListRow(
         }
     }
 
+    RowSurface(onClick = onClick, modifier = modifier, content = row)
+}
+
+/** 줄의 면. 마스터가 카드 모양으로 띄운다 — 반경 16에 `Elevation/Card`다. */
+@Composable
+private fun RowSurface(onClick: (() -> Unit)?, modifier: Modifier, content: @Composable () -> Unit) {
+    val colors = MedicalMateTheme.colors
+    val surface =
+        modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = MedicalMateElevation.card,
+                shape = MedicalMateRadius.md,
+                ambientColor = ShadowTint,
+                spotColor = ShadowTint,
+            )
+
     if (onClick == null) {
-        Box(modifier = modifier, content = { row() })
+        Surface(
+            color = colors.bgSurface,
+            contentColor = colors.fgDefault,
+            shape = MedicalMateRadius.md,
+            modifier = surface,
+            content = content,
+        )
     } else {
         Surface(
             onClick = onClick,
             color = colors.bgSurface,
             contentColor = colors.fgDefault,
-            modifier = modifier,
-            content = row,
+            shape = MedicalMateRadius.md,
+            modifier = surface,
+            content = content,
         )
     }
 }
@@ -371,6 +399,11 @@ private val RowHeightSm = 54.dp
 
 /** 문서의 List Row 높이. */
 private val RowHeightLg = 79.dp
+
+/** 마스터 `List Row`의 좌우 여백. 오른쪽 끝의 chevron·배지가 제 여백을 갖고 있다. */
+private val RowStartPadding = 18.dp
+
+private val RowEndPadding = 14.dp
 
 /** 문서의 컴포넌트 규격이 고정한 key 열 폭. 값 열이 세로로 정렬되게 만든다. */
 private val KeyColumnWidth = 72.dp

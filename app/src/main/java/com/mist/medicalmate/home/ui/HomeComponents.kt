@@ -146,13 +146,19 @@ private fun HomeTodayLine.body(): String = when (this) {
         } ?: stringResource(R.string.home_today_since_body)
 }
 
-/** Figma의 시작 버튼(`399:1638`) 350x56. 마이크 아이콘이 붙는다. */
+/**
+ * Figma의 시작 버튼(`399:1741`) 320x56.
+ *
+ * **청진기 아이콘이다**(#227). 마이크를 달고 있었는데 시안이 `Icon/stethoscope`를 쓴다.
+ * 말로 답하는 것은 증상 정리의 한 가지 방법이고 글로도 적을 수 있어서, 마이크는 그 안의
+ * 수단을 앞세운 셈이었다.
+ */
 @Composable
 internal fun StartIntakeButton(onClick: () -> Unit) {
     MedicalMateButton(
         onClick = onClick,
         label = stringResource(R.string.home_start_intake),
-        leadingIcon = MedicalMateIcons.Mic,
+        leadingIcon = MedicalMateIcons.Stethoscope,
         modifier = Modifier.fillMaxWidth(),
     )
 }
