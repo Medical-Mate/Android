@@ -188,12 +188,13 @@ internal fun CalendarUiState.markerOn(day: Int): MedicalMateDateMarker = when (d
 }
 
 /**
- * 카드 상세에서 항목 수만 꺼낸다.
+ * 카드 상세에서 줄에 적을 값을 꺼낸다.
  *
- * 카드 줄의 "5항목"이 이 값이다. 목록 응답에 없어서 상세를 읽어야 하고, 못 읽으면 그 자리를
- * 비운 채 날짜만 적는다 — 항목 수 하나 때문에 줄을 못 그리게 할 이유가 없다.
+ * 카드 줄의 "2026.09.04 · 5항목"이 이 둘이다. 목록에도 작성일이 있지만 고친 카드는 새 id를
+ * 받아서(Backend#114) 일정에 걸린 옛 id로는 목록에서 찾지 못한다. 상세는 그 id로 그대로
+ * 열리므로 여기서 받아야 어긋나지 않는다. 못 읽으면 비운 채 그린다.
  */
-internal fun ApiResult<BriefCard>?.itemCount(): Int? = (this as? ApiResult.Success)?.value?.items?.size
+internal fun ApiResult<BriefCard>?.card(): BriefCard? = (this as? ApiResult.Success)?.value
 
 /**
  * 카드 줄의 보조 문구. 시안 `1r-2`·`1r-1-S`의 "2026.09.04 · 5항목"이다.

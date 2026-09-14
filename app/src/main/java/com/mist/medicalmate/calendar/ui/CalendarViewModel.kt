@@ -88,14 +88,17 @@ internal constructor(
      */
     private fun fillCardItemCount() {
         val cardId = mutableUiState.value.cardSheet?.takeIf { it.itemCount == null }?.id ?: return
-        viewModelScope.launch {
-            val count = cardId.toLongOrNull()?.let { cardRepository.card(it) }.itemCount() ?: return@launch
-            mutableUiState.update { state ->
-                state.copy(
-                    cardSheet = state.cardSheet?.takeIf { it.id == cardId }?.copy(itemCount = count)
-                        ?: state.cardSheet,
-                )
-            }
+        viewModelScope.launch { fillCardItemCount(cardId) }
+    }
+
+    private suspend fun fillCardItemCount(cardId: String) {
+        val detail = cardId.toLongOrNull()?.let { cardRepository.card(it) }.card() ?: return
+        mutableUiState.update { state ->
+            val sheet = state.cardSheet?.takeIf { it.id == cardId } ?: return@update state
+            state.copy(
+                cardSheet =
+                sheet.copy(itemCount = detail.items.size, writtenOn = sheet.writtenOn ?: detail.writtenOn),
+            )
         }
     }
 
@@ -113,6 +116,9 @@ internal constructor(
             // 확정하지 않은 재방문도 달력에 찍는다. 뽑아 두기만 한 날은 일정에 없다(#186).
             val revisits = (visitRepository.visits() as? ApiResult.Success)?.value.orEmpty()
             mutableUiState.update { it.withMonth(appointments, cards, revisits, month, today) }
+            // 달을 읽는 것만으로도 시트가 설 수 있다. 화면을 열자마자 오늘이 카드만 있는
+            // 날이면 누르지 않아도 시트가 뜨는데, 그 길에서도 항목 수를 채워야 한다.
+            fillCardItemCount()
         }
     }
 }

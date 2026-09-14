@@ -94,7 +94,11 @@ internal constructor(
      * 카드 줄의 작성일·항목 수·상태를 채운다.
      *
      * 일정 응답의 카드는 id와 제목뿐이라(`LinkedCard`) 나머지를 두 곳에서 가져온다. 작성일과
-     * 진료 완료 여부는 목록에, 항목 수는 상세에만 있다. 둘을 나란히 보낸다.
+     * 항목 수는 상세에서, 진료 완료 여부는 목록에서 온다. 둘을 나란히 보낸다.
+     *
+     * **작성일을 목록이 아니라 상세에서 받는다.** 카드를 고치면 서버가 새 버전을 만들면서
+     * id를 바꾸는데(Backend#114) 일정에 걸린 것은 고치기 전 id다. 목록은 최신 버전만 들고
+     * 있어서 그 id로는 찾지 못하고, 날짜와 항목 수가 함께 비어 줄이 제목만 남았다.
      *
      * 못 읽은 값은 비운 채 그린다. 이 줄은 카드로 들어가는 길이라 보조 문구가 덜 차도 제
      * 일을 한다.
@@ -103,11 +107,14 @@ internal constructor(
         val cardId = id.toLongOrNull() ?: return@coroutineScope this@filled
         val listCall = async { cardRepository.cards() }
         val detailCall = async { cardRepository.card(cardId) }
+        val detail = detailCall.await().card()
+        // 진료를 마쳤는지는 상세 응답에 없어 목록에서 본다(Backend#101). 고친 카드는 새 id를
+        // 받아서 옛 id로는 목록에 없을 수 있고, 그때는 "진료 전"으로 남는다.
         val listed = (listCall.await() as? ApiResult.Success)?.value?.firstOrNull { it.id == id }
         copy(
-            writtenOn = listed?.writtenOn,
+            writtenOn = detail?.writtenOn ?: listed?.writtenOn,
             visited = listed?.visited == true,
-            itemCount = detailCall.await().itemCount(),
+            itemCount = detail?.items?.size,
         )
     }
 
