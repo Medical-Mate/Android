@@ -38,6 +38,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.ShadowTint
 import com.mist.medicalmate.core.designsystem.component.MedicalMateDivider
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNotice
+import com.mist.medicalmate.core.designsystem.component.MedicalMateNoticeTone
 import com.mist.medicalmate.core.designsystem.component.MedicalMateQuoteBlock
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSeverityReadout
 
@@ -202,7 +203,9 @@ private fun StepExpandRow(expanded: Boolean, onClick: () -> Unit) {
  */
 @Composable
 internal fun RecordStepPending(step: RecordStep.Pending) {
-    MedicalMateNotice(title = step.message, body = step.detail)
+    // 시안(`1j-3`)의 예정 알림은 브랜드색으로 채운 면이다. 타임라인의 다른 블록이 흰 카드라
+    // 앞으로 갈 일 하나만 색으로 선다.
+    MedicalMateNotice(title = step.message, body = step.detail, tone = MedicalMateNoticeTone.BRAND)
 }
 
 /** 문서의 KV Row보다 좁은 키 열. 블록 안 요약이라 한 단계 작다. */
