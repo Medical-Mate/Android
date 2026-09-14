@@ -171,8 +171,8 @@ private fun Footer(state: VisitRecordUiState.Content, callbacks: VisitRecordCall
 /**
  * 저장 실패를 알리는 말.
  *
- * 다시 눌러 풀리는 것과 아닌 것을 가른다. 뒤엣것은 지금 이 자리에서 카드에 이미 기록이
- * 있는 경우라(Backend#119) 확인할 곳을 함께 가리킨다.
+ * 다시 눌러 풀리는 것과 아닌 것을 가른다. 뒤엣것은 확정하지 않은 카드라 무엇을 먼저
+ * 해야 하는지를 함께 적는다 — 서버가 확정한 카드에만 기록을 받는다.
  */
 @StringRes
 private fun saveFailureMessage(failure: VisitSaveFailure): Int = when (failure) {
