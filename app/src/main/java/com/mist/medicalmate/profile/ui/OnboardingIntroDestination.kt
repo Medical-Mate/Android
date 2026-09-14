@@ -1,5 +1,6 @@
 package com.mist.medicalmate.profile.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -17,8 +18,8 @@ internal data object OnboardingIntroDestination
 /**
  * 그래프 등록.
  *
- * 네 장이 한 목적지 안에서 넘어간다. 장마다 목적지를 두면 뒤로 가기로 장을 되짚을 수 있는데,
- * 시안에 뒤로 가는 길이 없고 마지막 장을 지나면 돌아올 자리도 없다.
+ * 네 장이 한 목적지 안에서 넘어간다. 장마다 목적지를 두면 백스택이 네 겹 쌓이고, 신상정보로
+ * 나간 뒤에도 그 네 장이 뒤에 남는다.
  *
  * [onDoneClick]은 신상정보(1b-1)로 간다. 건너뛰기도 같은 자리로 나간다 — 건너뛰는 것은
  * 소개 네 장이지 그다음 신상정보가 아니다.
@@ -38,12 +39,34 @@ internal fun NavGraphBuilder.onboardingIntroDestination(onDoneClick: () -> Unit)
 @Composable
 private fun OnboardingRoute(onDoneClick: () -> Unit) {
     var index by rememberSaveable { mutableStateOf(0) }
+    var forward by rememberSaveable { mutableStateOf(true) }
     val pages = remember { OnboardingPage.entries }
     val page = pages[index]
 
+    // 뒤로가기로 앞 장을 되짚는다(#227). 상단 바에 뒤로가기를 두지 않는 것은 시안대로이지만,
+    // 기기 뒤로가기까지 막으면 잘못 넘긴 장을 다시 볼 길이 없다.
+    //
+    // **첫 장에서는 아무 일도 하지 않는다.** 그냥 두면 로그인 화면으로 나가는데, 이미 로그인한
+    // 사람을 로그인 화면에 세우는 것이라 로그아웃된 것으로 읽힌다. 소개를 끝내거나 건너뛰어야
+    // 앞으로 간다.
+    BackHandler {
+        if (index > 0) {
+            forward = false
+            index -= 1
+        }
+    }
+
     OnboardingScreen(
         page = page,
-        onNextClick = { if (page.isLast) onDoneClick() else index += 1 },
+        onNextClick = {
+            if (page.isLast) {
+                onDoneClick()
+            } else {
+                forward = true
+                index += 1
+            }
+        },
         onSkipClick = onDoneClick,
+        forward = forward,
     )
 }
