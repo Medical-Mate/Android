@@ -142,6 +142,47 @@ class ScheduleAddViewModelTest {
     }
 
     @Test
+    fun `카드를 고르면 그 카드의 병원이 채워진다`() {
+        // 그 카드로 갈 병원이 이미 정해져 있는데 같은 값을 다시 찾게 하지 않는다(1r-4-B).
+        val viewModel = addViewModel()
+
+        viewModel.onCardPickChange("1", true)
+
+        assertEquals("서울OO병원 내과", viewModel.uiState.value.hospital)
+    }
+
+    @Test
+    fun `병원이 없는 카드는 병원 칸을 건드리지 않는다`() {
+        val viewModel = addViewModel()
+
+        viewModel.onCardPickChange("2", true)
+
+        assertNull(viewModel.uiState.value.hospital)
+    }
+
+    @Test
+    fun `이미 고른 병원은 카드가 덮지 않는다`() {
+        // 손으로 고른 것이 카드에 적힌 것보다 나중의 뜻이다.
+        val viewModel = addViewModel()
+        viewModel.onHospitalPicked("분당서울대학교병원")
+
+        viewModel.onCardPickChange("1", true)
+
+        assertEquals("분당서울대학교병원", viewModel.uiState.value.hospital)
+    }
+
+    @Test
+    fun `카드를 풀어도 병원은 남는다`() {
+        // 잘못 눌렀다 되돌린 사람의 병원까지 사라지면 안 된다.
+        val viewModel = addViewModel()
+        viewModel.onCardPickChange("1", true)
+
+        viewModel.onCardPickChange("1", false)
+
+        assertEquals("서울OO병원 내과", viewModel.uiState.value.hospital)
+    }
+
+    @Test
     fun `카드를 고르면 개수가 오른다`() {
         val viewModel = addViewModel()
 

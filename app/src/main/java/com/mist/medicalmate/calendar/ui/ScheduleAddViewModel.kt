@@ -100,9 +100,21 @@ internal constructor(
         mutableUiState.update { it.copy(time = time, sheet = ScheduleAddSheet.NONE) }
     }
 
+    /**
+     * 가져갈 카드를 고르거나 풀었다.
+     *
+     * **고른 카드의 병원으로 병원 칸을 채운다**(1r-4-B). 그 카드로 갈 병원이 이미 정해져
+     * 있는데 같은 값을 다시 찾게 하지 않는다.
+     *
+     * 이미 적힌 병원은 덮지 않는다. 손으로 고른 것이 카드에 적힌 것보다 나중의 뜻이다.
+     * 카드를 풀어도 지우지 않는다 — 지우면 카드를 잘못 눌렀다 되돌린 사람의 병원까지
+     * 사라진다.
+     */
     fun onCardPickChange(id: String, picked: Boolean) {
         mutableUiState.update { state ->
-            state.copy(cards = state.cards.map { if (it.id == id) it.copy(picked = picked) else it })
+            val cards = state.cards.map { if (it.id == id) it.copy(picked = picked) else it }
+            val clinic = cards.firstOrNull { it.id == id && it.picked }?.clinic?.takeIf { it.isNotBlank() }
+            state.copy(cards = cards, hospital = state.hospital ?: clinic)
         }
     }
 
@@ -180,6 +192,7 @@ private fun CardListItem.toPick() = ScheduleAddCard(
     id = id,
     title = title,
     meta = listOfNotNull(writtenOn.format(CARD_DATE) + " 작성", clinic).joinToString(" · "),
+    clinic = clinic,
 )
 
 private val CARD_DATE: java.time.format.DateTimeFormatter =
