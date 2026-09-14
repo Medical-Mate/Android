@@ -24,12 +24,15 @@ data class BodyMapUiState(
     val selection: BodyMapSelection? = null,
     val byList: Boolean = false,
     /**
-     * 3D 인체도로 짚는 중인지. 테스트용이다(#211).
+     * 3D 인체도로 짚는 중인지.
      *
-     * 2D와 같은 값을 고르고 같은 [selection]에 넣는다. 어느 쪽이 나은지 기기에서 견주려고
-     * 두 길을 함께 둔 것이라 저장되는 값이 갈리면 견줄 수가 없다.
+     * **3D로 확정됐다**(#235). 기본이 3D이고 화면에서 2D로 넘어가는 길을 두지 않는다. 2D
+     * 코드와 이미지는 지우지 않고 남겨 둔다 — 되돌릴 판단이 남아 있고, 좌표·온톨로지·검색이
+     * 그쪽에 묶여 있어 지우면 함께 흔들린다.
+     *
+     * 두 길은 같은 값을 고르고 같은 [selection]에 넣는다.
      */
-    val byMap3d: Boolean = false,
+    val byMap3d: Boolean = true,
     val search: String = "",
     /**
      * 마지막으로 결과가 있었던 검색.

@@ -57,9 +57,17 @@ class BodyMapActions(private val update: ((BodyMapUiState) -> BodyMapUiState) ->
         update { it.copy(selection = selection) }
     }
 
-    /** 구역이 없는 앵커를 골랐다. 전신·피부 둘이다. */
+    /**
+     * 구역이 없는 앵커를 골랐다. 전신·피부 둘이다.
+     *
+     * **고른 칩을 다시 누르면 풀린다**(#235). 한 곳만 고르는 화면이라 다른 데를 눌러 바꿀 수는
+     * 있어도 아무 데도 안 고른 상태로는 돌아갈 수 없었다. 잘못 눌렀을 때 되돌릴 길이 없다.
+     */
     fun onSideAnchorSelect(anchorId: String) {
-        update { it.copy(focus = null, selection = BodyMapSelection(anchorId)) }
+        update { state ->
+            val picked = BodyMapSelection(anchorId)
+            state.copy(focus = null, selection = if (state.selection == picked) null else picked)
+        }
     }
 
     /**
