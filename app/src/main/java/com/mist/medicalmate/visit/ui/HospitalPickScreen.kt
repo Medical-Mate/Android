@@ -60,9 +60,11 @@ fun HospitalPickScreen(
 ) {
     // CTA만 목적마다 다르다. 1m-B는 카드로 이어지고, 일정 추가는 필드를 채우고 돌아간다.
     val submitLabel =
-        when (state.purpose) {
-            HospitalPickPurpose.AFTER_VISIT, HospitalPickPurpose.SCHEDULE -> R.string.hospital_pick_submit
-            HospitalPickPurpose.BEFORE_VISIT -> R.string.hospital_pick_submit_before
+        when {
+            state.purpose != HospitalPickPurpose.BEFORE_VISIT -> R.string.hospital_pick_submit
+            // 카드 안에서 병원만 바꾸러 온 것이면 만들 카드가 없다.
+            state.forExistingCard -> R.string.hospital_pick_submit
+            else -> R.string.hospital_pick_submit_before
         }
     Column(
         modifier =

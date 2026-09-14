@@ -158,7 +158,7 @@ private fun HospitalPickRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(purpose) { viewModel.load(purpose) }
+    LaunchedEffect(purpose, cardId) { viewModel.load(purpose, forExistingCard = cardId != null) }
 
     val selected = state.selected
 
