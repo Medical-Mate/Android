@@ -91,7 +91,18 @@ constructor(private val api: VisitApi, private val json: Json) :
             CreateVisitRequest(
                 clinicName = visit.clinicName,
                 visitedOn = visit.visitedOn?.toString(),
-                axes = visit.items.map { VisitAxisRequest(axis = it.axis, value = it.value) },
+                axes =
+                visit.items.map { item ->
+                    // 재방문 줄은 화면이 붙인 날짜를 떼고 보낸다. 날짜는 아래 `followUp`이 나른다.
+                    val value = if (item.axis ==
+                        AXIS_FOLLOW_UP
+                    ) {
+                        item.value.withoutRevisitNote(visit.followUp)
+                    } else {
+                        item.value
+                    }
+                    VisitAxisRequest(axis = item.axis, value = value)
+                },
                 followUp =
                 visit.followUp?.let {
                     FollowUpRequest(

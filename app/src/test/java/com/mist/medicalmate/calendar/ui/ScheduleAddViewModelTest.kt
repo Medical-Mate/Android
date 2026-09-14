@@ -2,6 +2,7 @@ package com.mist.medicalmate.calendar.ui
 import com.mist.medicalmate.calendar.data.Appointment
 import com.mist.medicalmate.calendar.data.AppointmentCard
 import com.mist.medicalmate.calendar.data.AppointmentEdit
+import com.mist.medicalmate.calendar.data.AppointmentOrigin
 import com.mist.medicalmate.calendar.data.AppointmentRepository
 import com.mist.medicalmate.calendar.data.AppointmentStatus
 import com.mist.medicalmate.calendar.data.AppointmentTodo
@@ -298,6 +299,38 @@ class ScheduleAddViewModelTest {
     }
 
     @Test
+    fun `손으로 만든 일정은 출처가 없다`() {
+        val repository = RecordingAppointmentRepository()
+        val viewModel = filled(repository)
+
+        viewModel.onSaveClick {}
+
+        assertEquals(AppointmentOrigin.MANUAL, repository.createdOrigin)
+    }
+
+    @Test
+    fun `재방문을 확정하러 들어와 저장하면 출처와 카드를 함께 보낸다`() {
+        // 1r-2-A의 "시간 정하고 확정하기"로 들어온 길이다. 출처가 있어야 홈과 일자 화면이
+        // "재진"으로 적고, 카드가 걸려야 그 날 무엇을 들고 가는지가 남는다(#245).
+        val repository = RecordingAppointmentRepository()
+        val viewModel =
+            ScheduleAddViewModel(repository, FakeCardRepository(list = ApiResult.Success(pickableCards)))
+                .apply {
+                    load(date = LocalDate.of(2026, 9, 26), cardId = "1", followUp = true)
+                    // 날짜는 라우트가 따로 넣는다. 화면이 열릴 때 그 순서로 온다.
+                    onDatePrefilled(LocalDate.of(2026, 9, 26))
+                    onTimeConfirm(LocalTime.of(10, 30))
+                }
+
+        viewModel.onSaveClick {}
+
+        assertEquals(AppointmentOrigin.VISIT_FOLLOW_UP, repository.createdOrigin)
+        assertEquals(listOf(1L), repository.createdCardIds)
+        // 카드의 병원이 병원 칸을 채워서 병원을 다시 고르지 않아도 저장된다.
+        assertEquals("서울OO병원 내과", repository.createdClinic)
+    }
+
+    @Test
     fun `적어 둔 할 일도 함께 보낸다`() {
         // 전에는 화면 안에서만 살고 저장되지 않았다(#187).
         val repository = RecordingAppointmentRepository()
@@ -508,6 +541,7 @@ internal class RecordingAppointmentRepository : AppointmentRepository {
     var createdTime: LocalTime? = null
     var createdClinic: String? = null
     var createdCardIds: List<Long> = emptyList()
+    var createdOrigin: AppointmentOrigin? = null
     var createCount = 0
 
     override suspend fun month(month: YearMonth) = ApiResult.Success(emptyList<Appointment>())
@@ -528,6 +562,7 @@ internal class RecordingAppointmentRepository : AppointmentRepository {
         createdTime = appointment.time
         createdClinic = appointment.clinicName
         createdCardIds = appointment.cardIds
+        createdOrigin = appointment.origin
         createdTodos = appointment.todos
         return ApiResult.Success(
             Appointment(

@@ -51,7 +51,13 @@ internal fun NavGraphBuilder.calendarDayDestination(
     onCardOpen: (String) -> Unit,
     onRecordAdd: (cardId: String, cardTitle: String, visitedOn: LocalDate, clinic: String?, address: String?) -> Unit,
     onRecordOpen: (String) -> Unit,
-    onScheduleConfirm: (clinic: String?, date: LocalDate, appointmentId: Long?) -> Unit,
+    onScheduleConfirm: (
+        clinic: String?,
+        date: LocalDate,
+        appointmentId: Long?,
+        cardId: String?,
+        followUp: Boolean,
+    ) -> Unit,
     onExit: () -> Unit,
 ) {
     composable<CalendarDayDestination> { entry ->
@@ -62,7 +68,7 @@ internal fun NavGraphBuilder.calendarDayDestination(
             appointmentId = route.appointmentId,
             onCardOpen = onCardOpen,
             onScheduleConfirm = onScheduleConfirm,
-            onScheduleEdit = { id -> onScheduleConfirm(null, date, id) },
+            onScheduleEdit = { id -> onScheduleConfirm(null, date, id, null, false) },
             onRecordAdd = { cardId, cardTitle, clinic, address ->
                 onRecordAdd(cardId, cardTitle, date, clinic, address)
             },
@@ -126,7 +132,13 @@ private fun CalendarDayRoute(
     date: LocalDate,
     appointmentId: Long?,
     onCardOpen: (String) -> Unit,
-    onScheduleConfirm: (clinic: String?, date: LocalDate, appointmentId: Long?) -> Unit,
+    onScheduleConfirm: (
+        clinic: String?,
+        date: LocalDate,
+        appointmentId: Long?,
+        cardId: String?,
+        followUp: Boolean,
+    ) -> Unit,
     onScheduleEdit: (Long) -> Unit,
     onRecordAdd: (cardId: String, cardTitle: String, clinic: String?, address: String?) -> Unit,
     onRecordOpen: (String) -> Unit,
@@ -157,9 +169,11 @@ private fun CalendarDayRoute(
             // 1r-2-A의 "시간 정하고 확정하기". 병원이 채워진 일정 추가(1r-4-B)로 간다.
             // **그 일정의 날짜를 들고 간다.** 다음 진료는 이 화면의 날이 아니라 다른 날이다.
             // 이미 만들어진 일정이면 그것을 고치러 간다 — 새로 만들면 같은 재방문이 둘이 된다.
+            // 재방문에서 나온 것이면 카드와 출처까지 들고 가서 만들어진 일정이 무엇 하러 가는
+            // 날인지 남게 한다(#245).
             onNextEventConfirmClick = {
                 state?.nextEvent?.let { next ->
-                    onScheduleConfirm(next.clinic, next.on, next.appointmentId)
+                    onScheduleConfirm(next.clinic, next.on, next.appointmentId, next.cardId, next.followUp)
                 }
             },
             onScheduleEditClick = onScheduleEdit,

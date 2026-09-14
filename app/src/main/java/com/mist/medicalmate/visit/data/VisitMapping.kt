@@ -70,11 +70,28 @@ private fun Map<String, VisitAxisResponse>.toItems(): List<VisitItem> {
  * 곳에 있으면 갈린다.
  */
 private fun List<VisitItem>.withRevisitDate(followUp: VisitFollowUp?): List<VisitItem> {
-    val date = followUp?.date ?: return this
-    val note = date.format(REVISIT_DATE) + if (followUp.approximate) " 전후" else ""
+    val note = followUp?.revisitNote() ?: return this
     return map { item ->
-        if (item.axis != AXIS_FOLLOW_UP) item else item.copy(value = "${item.value} ($note)")
+        // 이미 붙어 있으면 다시 붙이지 않는다(#245). 붙인 값을 그대로 저장한 기록이 남아 있어서,
+        // 그것을 읽을 때 또 붙이면 "(9월 17일 전후) (9월 17일 전후)"가 된다.
+        if (item.axis != AXIS_FOLLOW_UP || item.value.endsWith(note)) item else item.copy(value = "${item.value} $note")
     }
+}
+
+/** 재방문 줄 뒤에 붙는 "(9월 27일 전후)". 괄호까지 포함한다. */
+internal fun VisitFollowUp.revisitNote(): String =
+    "(" + date.format(REVISIT_DATE) + (if (approximate) " 전후" else "") + ")"
+
+/**
+ * 저장할 값에서 붙인 날짜를 뗀다.
+ *
+ * 화면의 재방문 줄은 [withRevisitDate]가 붙인 날짜를 들고 있고, 환자가 그 줄을 그대로 저장한다.
+ * 서버에는 환자가 말한 값만 가야 한다 — 날짜는 `followUp`이 따로 나르고, 값에 박아 보내면
+ * 다시 읽을 때 붙이는 날짜와 겹친다(#245).
+ */
+internal fun String.withoutRevisitNote(followUp: VisitFollowUp?): String {
+    val note = followUp?.revisitNote() ?: return this
+    return removeSuffix(" $note").removeSuffix(note)
 }
 
 private fun FollowUpResponse.toFollowUp(): VisitFollowUp? {

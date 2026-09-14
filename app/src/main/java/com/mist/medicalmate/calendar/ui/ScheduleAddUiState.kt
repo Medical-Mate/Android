@@ -24,6 +24,8 @@ data class ScheduleAddUiState(
      * 채우러 들어오는 길이 이 상태다(1r-2 · 1r-2-A). 없으면 새 일정이다.
      */
     val appointmentId: Long? = null,
+    /** 진료 후 기록의 재방문을 확정하러 들어왔는지. 저장할 때 일정의 출처가 된다. */
+    val followUp: Boolean = false,
     val cards: List<ScheduleAddCard> = emptyList(),
     val todos: List<ScheduleAddTodo> = emptyList(),
     val hospital: String? = null,
