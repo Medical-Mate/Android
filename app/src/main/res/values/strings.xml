@@ -78,7 +78,6 @@
     <!-- 1m-B 진료 전 병원 찾기. 같은 화면이 목적에 따라 문구와 CTA가 갈린다. -->
     <string name="hospital_pick_question_before">진료받을 병원을 찾아주세요</string>
     <string name="hospital_pick_description_before">아직 정하지 않았다면 건너뛰어도 돼요.\n진료 후에 등록할 수 있어요.</string>
-    <string name="hospital_pick_skip">건너뛰기</string>
     <string name="hospital_pick_submit_before">브리핑 카드 만들기</string>
     <string name="hospital_pick_result_none">검색 결과 없음</string>
     <string name="hospital_pick_result_searching">찾는 중이에요</string>
@@ -292,7 +291,7 @@
 
     <string name="intake_questions_question">의사에게 물어볼 것을 적어두세요</string>
     <string name="intake_questions_description">진료실에서 잊지 않고 꺼낼 수 있게\n브리핑 카드 맨 아래에 함께 담아드려요.</string>
-    <string name="intake_questions_placeholder">예) 검사를 받아야 하나요?</string>
+    <string name="intake_questions_placeholder">정밀 검사를 받아야 하나요?</string>
     <string name="intake_questions_add">질문 추가</string>
     <string name="intake_questions_saved">적어둔 질문</string>
     <string name="intake_questions_ai_hint">AI가 추천하는 질문이에요</string>
