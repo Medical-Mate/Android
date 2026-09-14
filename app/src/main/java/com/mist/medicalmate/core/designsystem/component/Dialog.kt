@@ -88,20 +88,7 @@ fun MedicalMateDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 IconBadge(tone = tone)
-                Text(
-                    text = title,
-                    style = MedicalMateTheme.typography.headingM,
-                    color = colors.fgDefault,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Text(
-                    text = message,
-                    style = MedicalMateTheme.typography.bodyS,
-                    color = colors.fgSubtle,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                DialogCopy(title = title, message = message)
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(top = MedicalMateSpace.s4),
                     horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8),
@@ -160,4 +147,36 @@ private fun IconBadge(tone: MedicalMateDialogTone) {
 private val DialogWidth = 320.dp
 
 /** 마스터의 위 여백 28. 배지가 위에 있어 아래보다 넓다. */
+/**
+ * 제목과 본문.
+ *
+ * 마스터에서 한 칸이고 둘 사이가 4다. 바깥 간격 10으로 벌리면 두 줄이 한 덩어리로 읽히지
+ * 않고 대화상자가 그만큼 길어진다.
+ */
+@Composable
+private fun DialogCopy(title: String, message: String) {
+    val colors = MedicalMateTheme.colors
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = title,
+            style = MedicalMateTheme.typography.headingM,
+            color = colors.fgDefault,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text(
+            text = message,
+            style = MedicalMateTheme.typography.bodyS,
+            color = colors.fgSubtle,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
 private val TopPadding = 28.dp
