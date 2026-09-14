@@ -144,11 +144,21 @@ internal constructor(
         if (content == null || card == null || saving) return
 
         saving = true
-        update { it.copy(saveFailed = false) }
+        update { it.copy(saveFailure = null) }
         viewModelScope.launch {
             val result = repository.create(card, content.record.toNewVisit(visitedOn))
             saving = false
-            if (result is ApiResult.Success) onSaved() else update { it.copy(saveFailed = true) }
+            when (result) {
+                is ApiResult.Success -> onSaved()
+                is ApiResult.NetworkUnavailable -> update { it.copy(saveFailure = VisitSaveFailure.RETRYABLE) }
+                is ApiResult.Rejected ->
+                    update {
+                        it.copy(
+                            saveFailure =
+                            if (result.retryable) VisitSaveFailure.RETRYABLE else VisitSaveFailure.REJECTED,
+                        )
+                    }
+            }
         }
     }
 

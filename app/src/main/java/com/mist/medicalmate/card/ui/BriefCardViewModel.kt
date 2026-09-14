@@ -2,7 +2,9 @@ package com.mist.medicalmate.card.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mist.medicalmate.card.data.AxisEdit
 import com.mist.medicalmate.card.data.CardRepository
+import com.mist.medicalmate.card.data.latestCardId
 import com.mist.medicalmate.core.network.ApiResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
@@ -54,13 +56,18 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
      * 응답에 병원이 없어 라우트로 날라 화면에만 얹었고, 캘린더에서 연 카드는 비어 있었다.
      */
     fun open(cardId: Long?, sessionId: Long? = null, hospital: BriefCardHospital? = null) {
-        // **들고 있는 카드는 다시 읽지 않는다.** 병원을 고르러 갔다 오면 이 화면의 조합이 다시
-        // 시작되면서 이 호출이 한 번 더 온다. 그때 다시 읽으면 두 가지가 깨진다 — 편집 중이던
-        // 사본이 날아가고, 돌아온 병원이 `Loading` 상태에 도착해 조용히 버려진다.
-        val loaded = (mutableUiState.value as? BriefCardUiState.Content)?.card?.id?.toLongOrNull()
-        if (cardId != null && cardId == loaded) return
-        // 이미 만든 카드를 다시 만들지 않는다. 같은 이유로 한 번 더 오는 호출이다.
-        if (cardId == null && mutableUiState.value is BriefCardUiState.Content) return
+        // **한 번 연 카드는 다시 읽지 않는다.** 병원을 고르러 갔다 오면 이 화면의 조합이 다시
+        // 시작되면서 이 호출이 한 번 더 온다. 이미 만든 카드를 다시 만들지 않는 것도 같은
+        // 이유다.
+        //
+        // 들고 있는 것과 같은 id일 때만 막으면 모자란다(#219). 카드를 고치면 서버가 새 버전을
+        // 만들어 id가 달라지는데 라우트는 누를 때의 옛 id를 그대로 들고 있다. 그 둘을 견주면
+        // 다르니 옛 버전을 다시 읽어 오고, 거기서 또 고치면 같은 부모에서 버전이 가지를 친다.
+        // 가지에 들어간 편집은 목록이 최신 한 장만 내면서 영영 보이지 않는다(Backend#114).
+        //
+        // ViewModel이 목적지 엔트리에 묶여 있어 한 화면이 사는 동안 라우트의 id는 바뀌지
+        // 않는다. 화면이 든 카드가 그 id에서 나온 최신본이라 다시 읽을 이유가 없다.
+        if (mutableUiState.value is BriefCardUiState.Content) return
         mutableUiState.value = BriefCardUiState.Loading
         viewModelScope.launch {
             val result =
@@ -98,7 +105,7 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
 
         viewModelScope.launch {
             when (
-                val result = repository.update(
+                val result = patch(
                     cardId,
                     axes = emptyList(),
                     questions = state.card.questions,
@@ -112,6 +119,27 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
                     mutableUiState.value = state.copy(saveFailed = true)
             }
         }
+    }
+
+    /**
+     * 카드를 고친다. 서버가 "이미 고친 카드"라고 막으면 최신 카드로 갈아타고 한 번만 다시
+     * 보낸다(Backend#117).
+     *
+     * 옛 id를 들고 있을 길은 #219에서 막았다. 그래도 못 찾은 경로가 남아 있으면 여기서
+     * 드러나고, 조용히 버전이 가지를 치는 대신 고친 값이 최신 카드에 얹힌다.
+     *
+     * 한 번만 따라간다. 두 번째도 막히면 그대로 실패로 알린다 — 계속 따라가면 어디서 멈출지
+     * 알 수 없고, 그 사이에 다른 사람이 고치고 있는 것이라면 덮어쓰기를 반복하게 된다.
+     */
+    private suspend fun patch(
+        cardId: Long,
+        axes: List<AxisEdit>,
+        questions: List<String>,
+        clinic: BriefCardHospital? = null,
+    ): ApiResult<BriefCard> {
+        val first = repository.update(cardId, axes, questions, clinic)
+        val latest = (first as? ApiResult.Rejected)?.latestCardId() ?: return first
+        return repository.update(latest, axes, questions, clinic)
     }
 
     /** Nav 우측 `편집`. 카드 안의 모든 값을 한 번에 연다. */
@@ -140,7 +168,7 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
         if (draft == null || cardId == null) return
 
         viewModelScope.launch {
-            when (val result = repository.update(cardId, state.changedAxes(), draft.questions)) {
+            when (val result = patch(cardId, state.changedAxes(), draft.questions)) {
                 is ApiResult.Success ->
                     mutableUiState.value =
                         BriefCardUiState.Content(

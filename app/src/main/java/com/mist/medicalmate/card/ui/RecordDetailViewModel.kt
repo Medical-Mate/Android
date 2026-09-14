@@ -27,7 +27,7 @@ import java.util.Locale
  * 숫자가 아닌 id는 부르기 전에 [RecordDetailUiState.Failed]다. 목록에서 들어오는 경로만
  * 있어서 지금은 나지 않지만, 지워진 기록의 링크로 들어오는 경우가 이 상태가 된다.
  *
- * 시안의 여러 단계 타임라인(1j-3-X·1j-3-R)은 [recordDetailFixtures]에 남아 Preview가 그린다.
+ * 시안의 펼친 카드(1j-3-X)는 [recordDetailFixtures]에 남아 Preview가 그린다.
  */
 @HiltViewModel
 class RecordDetailViewModel
@@ -74,9 +74,36 @@ internal constructor(
                 mutableUiState.value = RecordDetailUiState.Failed
                 return@launch
             }
-            val card = visit.cardId?.let { id -> (cardRepository.card(id) as? ApiResult.Success)?.value }
+            val cardId = visit.cardId
+            val card = cardId?.let { id -> (cardRepository.card(id) as? ApiResult.Success)?.value }
+            val visits = if (cardId == null) listOf(visit) else history(cardId, visit)
             mutableUiState.value =
-                RecordDetailUiState.Content(visit.toDetail(card = card, next = nextVisit(visit.cardId)))
+                RecordDetailUiState.Content(recordDetail(visits, card = card, next = nextVisit(cardId)))
+        }
+    }
+
+    /**
+     * 이 카드에 쌓인 기록 전부. 최근 진료일이 앞이다.
+     *
+     * **목록을 `cardId`로 거르지 않는다**(Backend#121). 재방문 전에 카드를 고치면 첫 기록과
+     * 두 번째 기록이 서로 다른 카드 행에 붙고, 목록이 주는 `cardId`는 최신 버전이라 묶을
+     * 열쇠가 되지 못한다. 서버가 문답 단위로 모아 주는 경로를 쓴다.
+     *
+     * 모아 주는 목록에는 축이 없어서 기록마다 한 번씩 더 읽는다. 재방문 횟수만큼이고 보통
+     * 한두 번이다. 읽지 못한 기록은 빼고 그린다 — 한 건 때문에 화면 전체를 실패로 두면 이미
+     * 읽은 기록까지 못 보게 된다.
+     *
+     * 모으지 못하면 열어 본 기록 하나만 그린다. 지금까지 하던 것과 같다.
+     */
+    private suspend fun history(cardId: Long, opened: Visit): List<Visit> {
+        val summaries = (repository.cardVisits(cardId) as? ApiResult.Success)?.value.orEmpty()
+        if (summaries.size <= 1) return listOf(opened)
+        return summaries.mapNotNull { summary ->
+            if (summary.id == opened.id) {
+                opened
+            } else {
+                summary.id.toLongOrNull()?.let { (repository.visit(it) as? ApiResult.Success)?.value }
+            }
         }
     }
 
@@ -110,29 +137,68 @@ internal constructor(
  * `1j-3-R`(재방문 누적)은 최신이 위인데, 디자인 피드백이 "최신 기록이 맨 위로 가는게 멘탈
  * 모델"이라고 적어 둔 쪽을 따랐다.
  *
- * **원문 인용을 담지 않는다.** 시안의 진료 후 기록 단계에는 저장된 항목만 있다. 원문은
- * 1q-1에서 확인하고 저장하는 값이고, 여기는 나중에 다시 읽는 자리다.
- *
  * 값이 없는 줄은 만들지 않는다. 환자가 적지 않은 것을 빈 줄로 남기면 무엇을 안 적었는지가
  * 아니라 무엇이 비었는지로 읽힌다.
  */
-private fun Visit.toDetail(card: BriefCard?, next: Appointment?): RecordDetail {
-    // 항목이 가변이다(#178). 이름과 차례는 저장소가 정하고 여기는 그대로 편다.
-    val items = items.map { RecordDetailItem(key = it.label, value = it.value) }
-    val day = visitedOn?.format(VISITED_ON).orEmpty()
+private fun recordDetail(visits: List<Visit>, card: BriefCard?, next: Appointment?): RecordDetail {
+    val newest = visits.first()
+    val records = visits.mapIndexed { index, visit -> visit.toRecordStep(visitKind(visits.size, index)) }
     return RecordDetail(
-        id = id,
-        title = card?.title?.takeIf { it.isNotBlank() } ?: clinic.orEmpty(),
+        id = newest.id,
+        title = card?.title?.takeIf { it.isNotBlank() } ?: newest.clinic.orEmpty(),
         status = RecordItem.Status.CONFIRMED,
-        clinicLine = listOfNotNull(visitedOn?.format(CLINIC_LINE), clinic).joinToString(" · "),
-        steps =
-        listOfNotNull(
-            next?.toPending(),
-            RecordStep.Block(at = "$day · 진료 후 기록", title = "진료에서 들은 것", items = items),
-            card?.toStep(),
-        ),
+        // 몇 번 다녀왔는지는 상태가 아니라 세어 봐야 아는 값이다. 한 번이면 뱃지가 상태를 그린다.
+        badge = if (visits.size > 1) "진료 ${visits.size}회" else null,
+        clinicLine = clinicLine(visits),
+        steps = listOfNotNull(next?.toPending()) + records + listOfNotNull(card?.toStep()),
     )
 }
+
+/**
+ * 머리글 둘째 줄.
+ *
+ * **다녀온 횟수에 따라 모양이 다르다.** 한 번이면 `2026.09.12 · 서울OO병원 내과`로 시안
+ * `1j-3` 그대로이고, 여러 번이면 `서울OO병원 내과 · 09.12 초진 · 09.26 재방문`으로 `1j-3-R`을
+ * 따른다. 병원이 앞으로 가는 것은 뒤에 날짜가 여럿 붙기 때문이다.
+ *
+ * 여러 번인 쪽은 오래된 차례다. 타임라인은 최신이 위인데 이 줄만 반대인 이유는, 여기가
+ * 흘러온 순서를 한 줄로 읽는 자리이기 때문이다.
+ */
+private fun clinicLine(visits: List<Visit>): String {
+    val clinic = visits.firstNotNullOfOrNull { visit -> visit.clinic?.takeIf { it.isNotBlank() } }
+    if (visits.size == 1) {
+        return listOfNotNull(visits.first().visitedOn?.format(CLINIC_LINE), clinic).joinToString(" · ")
+    }
+    val days =
+        visits.reversed().mapIndexedNotNull { index, visit ->
+            visit.visitedOn?.format(VISITED_ON)?.let { "$it ${if (index == 0) "초진" else "재방문"}" }
+        }
+    return (listOfNotNull(clinic) + days).joinToString(" · ")
+}
+
+/**
+ * 몇 번째 진료인지. 한 건이면 붙이지 않는다.
+ *
+ * [index]는 최신이 0이라 가장 오래된 것이 초진이다.
+ */
+private fun visitKind(count: Int, index: Int): String? = when {
+    count <= 1 -> null
+    index == count - 1 -> "초진"
+    else -> "재방문"
+}
+
+/**
+ * 기록 하나를 타임라인 단계로.
+ *
+ * **원문 인용을 담지 않는다.** 시안의 진료 후 기록 단계에는 저장된 항목만 있다. 원문은
+ * 1q-1에서 확인하고 저장하는 값이고, 여기는 나중에 다시 읽는 자리다.
+ */
+private fun Visit.toRecordStep(kind: String?) = RecordStep.Block(
+    // 항목이 가변이다(#178). 이름과 차례는 저장소가 정하고 여기는 그대로 편다.
+    at = listOfNotNull(visitedOn?.format(VISITED_ON), "진료 후 기록", kind).joinToString(" · "),
+    title = "진료에서 들은 것",
+    items = items.map { RecordDetailItem(key = it.label, value = it.value) },
+)
 
 /**
  * 다음 일정을 예정 단계로.
@@ -176,6 +242,6 @@ private val PENDING_AT: DateTimeFormatter = DateTimeFormatter.ofPattern("MM.dd �
 
 private val PENDING_TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)
 
-private val VISITED_ON: DateTimeFormatter = DateTimeFormatter.ofPattern("MM.dd", Locale.KOREAN)
-
 private val CLINIC_LINE: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy.MM.dd", Locale.KOREAN)
+
+private val VISITED_ON: DateTimeFormatter = DateTimeFormatter.ofPattern("MM.dd", Locale.KOREAN)

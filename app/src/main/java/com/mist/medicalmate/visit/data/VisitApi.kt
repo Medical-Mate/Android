@@ -26,6 +26,15 @@ internal interface VisitApi {
     suspend fun visit(@Path("visitId") visitId: Long): VisitResponse
 
     /**
+     * 한 카드의 진료 기록 전부. 최근 진료일 순이다.
+     *
+     * 체인의 아무 카드 id나 받는다. 재방문 전에 카드를 고치면 첫 기록과 두 번째 기록이
+     * 서로 다른 카드 행에 붙는데 서버가 문답 단위로 모아 준다(Backend#121).
+     */
+    @GET("api/cards/{cardId}/visits")
+    suspend fun cardVisits(@Path("cardId") cardId: Long): List<VisitSummaryResponse>
+
+    /**
      * 진료 후 기록을 남긴다.
      *
      * **확정한 카드에만** 남길 수 있고 카드 하나에 기록 하나다. 모든 항목이 선택이라

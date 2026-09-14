@@ -163,6 +163,18 @@ data class VisitHeadline(
  * [VisitRecordDraft]를 따로 두는 이유는 취소가 있기 때문이다. 원본을 바로 고치면 되돌릴
  * 것이 없다.
  */
+/**
+ * 저장이 안 된 갈래.
+ *
+ * 다시 눌러 풀리는 것과 아닌 것을 가른다. 둘을 한 문구로 묶으면 영영 안 되는 실패에도
+ * "다시 눌러주세요"가 나오고, 실제로 기기에서 같은 400을 다섯 번 누르게 됐다(#220).
+ *
+ * [RETRYABLE]은 서버에 닿지 못했거나 서버가 잠시 받지 못한 경우다. [REJECTED]는 이 요청
+ * 자체를 받지 않는 경우다. 서버가 이 자리에서 거절하는 것은 확정하지 않은 카드뿐이다 —
+ * 카드에 기록이 이미 있는 경우는 재방문마다 따로 남게 되면서 사라졌다(Backend#121).
+ */
+enum class VisitSaveFailure { RETRYABLE, REJECTED }
+
 sealed interface VisitRecordUiState {
     data object Loading : VisitRecordUiState
 
@@ -175,14 +187,14 @@ sealed interface VisitRecordUiState {
      * [deleteRequested]는 삭제 확인 대화상자(1q-1-DC)가 떠 있는지다. 삭제를 취소하면 편집
      * 모드는 그대로 남아야 해서 편집 상태와 분리한다.
      *
-     * [saveFailed]는 저장하기를 눌렀는데 서버가 받지 못한 경우다. 화면은 그대로 두고
+     * [saveFailure]는 저장하기를 눌렀는데 서버가 받지 못한 경우다. 화면은 그대로 두고
      * 알리기만 한다. 진료 직후에 적은 글이라 닫아 버리면 다시 적을 수 없다.
      */
     data class Content(
         val record: VisitRecord,
         val draft: VisitRecordDraft? = null,
         val deleteRequested: Boolean = false,
-        val saveFailed: Boolean = false,
+        val saveFailure: VisitSaveFailure? = null,
     ) : VisitRecordUiState {
         val editing: Boolean get() = draft != null
 

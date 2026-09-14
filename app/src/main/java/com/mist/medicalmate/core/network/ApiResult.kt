@@ -1,5 +1,6 @@
 package com.mist.medicalmate.core.network
 
+import kotlinx.serialization.json.JsonObject
 import java.io.IOException
 
 /**
@@ -17,8 +18,14 @@ sealed interface ApiResult<out T> {
      *
      * @param requestId 서버 로그와 이어붙이는 유일한 열쇠다. 장애를 추적할 때 쓴다.
      */
-    data class Rejected(val code: ApiErrorCode, val message: String?, val requestId: String?, val retryable: Boolean) :
-        ApiResult<Nothing>
+    data class Rejected(
+        val code: ApiErrorCode,
+        val message: String?,
+        val requestId: String?,
+        val retryable: Boolean,
+        /** 오류마다 다른 값. 무엇이 오는지는 코드마다 다르다(Backend#117). */
+        val details: JsonObject? = null,
+    ) : ApiResult<Nothing>
 
     /** 서버에 닿지 못한 경우. 응답이 없으므로 에러 코드가 없다. */
     data class NetworkUnavailable(val cause: IOException) : ApiResult<Nothing>

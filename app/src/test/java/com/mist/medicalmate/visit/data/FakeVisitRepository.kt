@@ -40,6 +40,21 @@ internal class FakeVisitRepository(
 
     override suspend fun visits(): ApiResult<List<VisitListItem>> = list
 
+    /**
+     * 한 카드에 쌓인 기록. 기본은 빈 목록이라 열어 본 기록 하나만 그려진다.
+     *
+     * 재방문 누적을 보는 시험에서만 채운다.
+     */
+    var cardVisits: ApiResult<List<VisitListItem>> = ApiResult.Success(emptyList())
+
+    /** 모아 달라고 받은 카드 id. */
+    var cardVisitsOf: Long? = null
+
+    override suspend fun cardVisits(cardId: Long): ApiResult<List<VisitListItem>> {
+        cardVisitsOf = cardId
+        return cardVisits
+    }
+
     override suspend fun visit(visitId: Long): ApiResult<Visit> {
         requestedId = visitId
         requestedIds += visitId
@@ -49,11 +64,14 @@ internal class FakeVisitRepository(
     /** 저장이 거절되는 경우를 만든다. 확정하지 않은 카드에 서버가 400을 준다(#196). */
     var createFails: Boolean = false
 
+    /** 서버가 받지 않은 경우. 연결이 끊긴 것([createFails])과 갈래가 다르다. */
+    var createRejection: ApiResult.Rejected? = null
+
     override suspend fun create(cardId: Long, visit: NewVisit): ApiResult<Visit> {
         createCount += 1
         this.cardId = cardId
         request = visit
-        return if (createFails) OFFLINE else saved
+        return createRejection ?: if (createFails) OFFLINE else saved
     }
 
     override suspend fun delete(visitId: Long): ApiResult<Unit> {

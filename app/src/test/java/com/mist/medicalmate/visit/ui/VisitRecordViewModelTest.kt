@@ -1,5 +1,6 @@
 package com.mist.medicalmate.visit.ui
 
+import com.mist.medicalmate.core.network.ApiErrorCode
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.visit.data.FakeVisitRepository
 import com.mist.medicalmate.visit.data.VisitClassification
@@ -323,8 +324,8 @@ class VisitRecordViewModelTest {
 
     @Test
     fun `저장이 거절되면 화면을 나가지 않고 알린다`() {
-        // 확정하지 않은 카드에 서버가 400을 준다(#196). 아무 말도 하지 않으면 버튼이 안 먹는
-        // 것으로 읽고 계속 누른다 — 기기에서 세 번 눌러 세 번 거절당했다.
+        // 아무 말도 하지 않으면 버튼이 안 먹는 것으로 읽고 계속 누른다 — 기기에서 세 번
+        // 눌러 세 번 거절당했다.
         val repository = FakeVisitRepository()
         repository.createFails = true
         val viewModel = filled(repository)
@@ -333,8 +334,35 @@ class VisitRecordViewModelTest {
         viewModel.onSaveClick(cardId = "3", onSaved = { left = true })
 
         val content = viewModel.uiState.value as VisitRecordUiState.Content
-        assertTrue(content.saveFailed)
+        assertEquals(VisitSaveFailure.RETRYABLE, content.saveFailure)
         assertFalse(left)
+    }
+
+    @Test
+    fun `서버가 받지 않는 요청은 다시 누르라고 하지 않는다`() {
+        // 카드에 이미 기록이 있으면 400이고 다시 눌러도 영영 같다(Backend#119). 기기에서
+        // 다섯 번 눌러 다섯 번 거절당했다.
+        val repository = FakeVisitRepository()
+        repository.createRejection = rejection(retryable = false)
+        val viewModel = filled(repository)
+
+        viewModel.onSaveClick(cardId = "3", onSaved = {})
+
+        val content = viewModel.uiState.value as VisitRecordUiState.Content
+        assertEquals(VisitSaveFailure.REJECTED, content.saveFailure)
+    }
+
+    @Test
+    fun `서버가 잠시 받지 못한 것은 다시 누를 수 있다고 한다`() {
+        // 상류가 죽은 경우다. 같은 400이라도 서버가 재시도 여지를 알려준다.
+        val repository = FakeVisitRepository()
+        repository.createRejection = rejection(retryable = true)
+        val viewModel = filled(repository)
+
+        viewModel.onSaveClick(cardId = "3", onSaved = {})
+
+        val content = viewModel.uiState.value as VisitRecordUiState.Content
+        assertEquals(VisitSaveFailure.RETRYABLE, content.saveFailure)
     }
 
     @Test
@@ -349,7 +377,7 @@ class VisitRecordViewModelTest {
         viewModel.onSaveClick(cardId = "3", onSaved = {})
 
         val content = viewModel.uiState.value as VisitRecordUiState.Content
-        assertFalse(content.saveFailed)
+        assertNull(content.saveFailure)
     }
 
     @Test
@@ -445,6 +473,14 @@ class VisitRecordViewModelTest {
 
     private fun viewModel(repository: FakeVisitRepository = FakeVisitRepository()) =
         VisitRecordViewModel(repository, Clock.fixed(Instant.parse("2026-09-12T01:00:00Z"), ZoneId.of("Asia/Seoul")))
+
+    /** 서버가 받지 않은 응답. `retryable`만 관심사라 나머지는 채운다. */
+    private fun rejection(retryable: Boolean) = ApiResult.Rejected(
+        code = ApiErrorCode.INVALID_REQUEST,
+        message = null,
+        requestId = null,
+        retryable = retryable,
+    )
 
     private fun filled(repository: FakeVisitRepository) = viewModel(
         repository.apply { classification = ApiResult.Success(ALL_FOUR) },

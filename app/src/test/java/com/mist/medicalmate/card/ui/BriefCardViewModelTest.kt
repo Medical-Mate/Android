@@ -3,12 +3,15 @@ package com.mist.medicalmate.card.ui
 import com.mist.medicalmate.card.data.AxisEdit
 import com.mist.medicalmate.card.data.CardListItem
 import com.mist.medicalmate.card.data.CardRepository
+import com.mist.medicalmate.core.network.ApiErrorCode
 import com.mist.medicalmate.core.network.ApiResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -219,6 +222,118 @@ class BriefCardViewModelTest {
         val content = viewModel.uiState.value as BriefCardUiState.Content
         assertTrue(content.editing)
     }
+
+    @Test
+    fun `고친 뒤 화면이 다시 열려도 옛 버전으로 돌아가지 않는다`() {
+        // 고치면 서버가 새 버전을 만들어 id가 달라지는데 라우트는 누를 때의 옛 id를 그대로
+        // 들고 있다. 그 둘을 견줘서 다시 읽으면 옛 버전으로 되돌아간다(Backend#114).
+        val repository = FakeCardRepository(nextVersion = testCard.copy(id = "20"))
+        val viewModel = BriefCardViewModel(repository)
+        viewModel.open(1)
+        viewModel.onEditClick()
+        viewModel.onEditDoneClick()
+
+        viewModel.open(1)
+
+        val content = viewModel.uiState.value as BriefCardUiState.Content
+        assertEquals("20", content.card.id)
+    }
+
+    @Test
+    fun `고친 뒤의 수정은 새 버전으로 간다`() {
+        // 옛 id로 다시 보내면 서버가 같은 부모에서 가지를 친다. 가지에 들어간 편집은
+        // 목록이 최신 한 장만 내면서 영영 보이지 않는다.
+        val repository = FakeCardRepository(nextVersion = testCard.copy(id = "20"))
+        val viewModel = BriefCardViewModel(repository)
+        viewModel.open(1)
+        viewModel.onEditClick()
+        viewModel.onEditDoneClick()
+        viewModel.open(1)
+
+        viewModel.onHospitalPicked("서울OO병원 내과", null)
+
+        assertEquals(20L, repository.updatedId)
+    }
+
+    @Test
+    fun `이미 고친 카드라고 막히면 최신 카드로 갈아타고 다시 보낸다`() {
+        // 옛 id를 들고 있는 경로는 #219에서 막았지만 못 찾은 자리가 남아 있으면 여기서
+        // 드러난다. 서버가 갈아탈 카드를 알려주므로(Backend#117) 고친 값을 잃지 않는다.
+        val repository = FakeCardRepository()
+        repository.updateRejections += alreadyEdited(latestCardId = 20)
+        val viewModel = BriefCardViewModel(repository)
+        viewModel.open(1)
+        viewModel.onEditClick()
+
+        viewModel.onEditDoneClick()
+
+        assertEquals(listOf(1L, 20L), repository.updatedIds)
+        assertFalse(viewModel.content().saveFailed)
+    }
+
+    @Test
+    fun `갈아탄 뒤에도 막히면 실패로 알린다`() {
+        // 계속 따라가면 어디서 멈출지 알 수 없고, 다른 데서 고치고 있는 중이라면 그 편집을
+        // 덮어쓰기를 반복하게 된다.
+        val repository = FakeCardRepository()
+        repository.updateRejections += alreadyEdited(latestCardId = 20)
+        repository.updateRejections += alreadyEdited(latestCardId = 21)
+        val viewModel = BriefCardViewModel(repository)
+        viewModel.open(1)
+        viewModel.onEditClick()
+
+        viewModel.onEditDoneClick()
+
+        assertEquals(listOf(1L, 20L), repository.updatedIds)
+        assertTrue(viewModel.content().saveFailed)
+    }
+
+    @Test
+    fun `갈아탈 카드를 알려주지 않으면 다시 보내지 않는다`() {
+        // 어디로 보낼지 모르는 채로 한 번 더 보내면 막힌 그 카드로 또 간다.
+        val repository = FakeCardRepository()
+        repository.updateRejections += alreadyEdited(latestCardId = null)
+        val viewModel = BriefCardViewModel(repository)
+        viewModel.open(1)
+        viewModel.onEditClick()
+
+        viewModel.onEditDoneClick()
+
+        assertEquals(listOf(1L), repository.updatedIds)
+        assertTrue(viewModel.content().saveFailed)
+    }
+
+    @Test
+    fun `다른 이유로 거절되면 그대로 실패다`() {
+        // 갈아타는 것은 이미 고친 카드일 때만이다. 아무 거절에나 다시 보내면 서버가 막은
+        // 것을 두 번 보내게 된다.
+        val repository = FakeCardRepository()
+        repository.updateRejections +=
+            ApiResult.Rejected(
+                code = ApiErrorCode.INVALID_REQUEST,
+                message = null,
+                requestId = null,
+                retryable = false,
+            )
+        val viewModel = BriefCardViewModel(repository)
+        viewModel.open(1)
+        viewModel.onEditClick()
+
+        viewModel.onEditDoneClick()
+
+        assertEquals(listOf(1L), repository.updatedIds)
+        assertTrue(viewModel.content().saveFailed)
+    }
+
+    /** 서버가 이미 고친 카드라고 막는 응답. 갈아탈 카드는 `details`에 온다. */
+    private fun alreadyEdited(latestCardId: Long?) = ApiResult.Rejected(
+        code = ApiErrorCode.CARD_ALREADY_EDITED,
+        message = null,
+        requestId = null,
+        retryable = false,
+        details =
+        latestCardId?.let { buildJsonObject { put("latestCardId", it) } },
+    )
 
     @Test
     fun `변경에서 고른 병원을 서버에 보낸다`() {
@@ -485,6 +600,8 @@ class BriefCardDeleteTest {
 internal class FakeCardRepository(
     private val card: BriefCard = testCard,
     private val result: ApiResult<BriefCard>? = null,
+    /** 고치면 서버가 내주는 새 버전. 확정한 카드를 고칠 때의 모양이다. */
+    private val nextVersion: BriefCard? = null,
     private val list: ApiResult<List<CardListItem>> = ApiResult.Success(emptyList()),
     /** 지우기가 실패해야 하는 시험이 있다. 다른 호출의 [result]와 따로 둔다. */
     var deleteFails: Set<String> = emptySet(),
@@ -514,17 +631,30 @@ internal class FakeCardRepository(
     /** `변경`으로 보낸 병원. 화면에만 남지 않고 서버로 가는지가 관심사다. */
     var updatedClinic: BriefCardHospital? = null
 
+    /** 어느 id로 보냈는지. 옛 버전으로 가면 서버에서 가지가 난다. */
+    var updatedId: Long? = null
+
+    /** 보낸 차례대로의 id. 막힌 뒤에 어느 카드로 갈아탔는지가 관심사다. */
+    val updatedIds = mutableListOf<Long>()
+
+    /** 서버가 막는 응답. 앞에서부터 하나씩 쓰고 다 쓰면 보통대로 답한다. */
+    val updateRejections = mutableListOf<ApiResult.Rejected>()
+
     override suspend fun update(
         cardId: Long,
         axes: List<AxisEdit>,
         questions: List<String>,
         clinic: BriefCardHospital?,
     ): ApiResult<BriefCard> {
+        updatedId = cardId
+        updatedIds += cardId
         updatedAxes = axes
         updatedQuestions = questions
         updatedClinic = clinic
         return when {
             updateFails -> OFFLINE
+            updateRejections.isNotEmpty() -> updateRejections.removeAt(0)
+            nextVersion != null -> ApiResult.Success(nextVersion.copy(hospital = clinic ?: nextVersion.hospital))
             else -> result ?: ApiResult.Success(card.copy(hospital = clinic ?: card.hospital))
         }
     }
