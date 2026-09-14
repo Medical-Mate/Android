@@ -43,18 +43,20 @@ private fun OnboardingRoute(onDoneClick: () -> Unit) {
     val pages = remember { OnboardingPage.entries }
     val page = pages[index]
 
-    // 뒤로가기로 앞 장을 되짚는다(#227). 상단 바에 뒤로가기를 두지 않는 것은 시안대로이지만,
-    // 기기 뒤로가기까지 막으면 잘못 넘긴 장을 다시 볼 길이 없다.
+    // 뒤로가기와 오른쪽으로 미는 것이 앞 장을 되짚는다(#227 · #239). 상단 바에 뒤로가기를
+    // 두지 않는 것은 시안대로이지만, 둘 다 막으면 잘못 넘긴 장을 다시 볼 길이 없다.
     //
     // **첫 장에서는 아무 일도 하지 않는다.** 그냥 두면 로그인 화면으로 나가는데, 이미 로그인한
     // 사람을 로그인 화면에 세우는 것이라 로그아웃된 것으로 읽힌다. 소개를 끝내거나 건너뛰어야
     // 앞으로 간다.
-    BackHandler {
+    val toPrevious = {
         if (index > 0) {
             forward = false
             index -= 1
         }
     }
+
+    BackHandler { toPrevious() }
 
     OnboardingScreen(
         page = page,
@@ -68,5 +70,6 @@ private fun OnboardingRoute(onDoneClick: () -> Unit) {
         },
         onSkipClick = onDoneClick,
         forward = forward,
+        onPreviousClick = toPrevious,
     )
 }

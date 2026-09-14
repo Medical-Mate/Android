@@ -480,6 +480,10 @@
     <string name="home_calendar">캘린더</string>
     <string name="home_schedule_meta">%1$s %2$s</string>
     <string name="home_schedule_dday">D-%1$d</string>
+    <!-- 병원 이름 뒤에 초진인지 재진인지를 붙인다. 시안 1n-1의 "서울OO병원 내과 재진"이다. -->
+    <string name="home_schedule_title">%1$s %2$s</string>
+    <string name="home_schedule_first">초진</string>
+    <string name="home_schedule_follow_up">재진</string>
 
     <string name="home_empty_title">아직 진료 기록이 없어요</string>
     <string name="home_empty_description">증상을 정리해두면 진료실에서 바로 보여줄 수 있어요</string>

@@ -10,6 +10,11 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavDestination
+import androidx.navigation.NavDestination.Companion.hasRoute
+import com.mist.medicalmate.calendar.ui.CalendarDestination
+import com.mist.medicalmate.card.ui.RecordDestination
+import com.mist.medicalmate.home.ui.HomeDestination
 
 /**
  * 화면 전환.
@@ -23,30 +28,58 @@ import androidx.navigation.NavBackStackEntry
  *
  * **가장자리를 쓸어 돌아가는 것도 같은 전환을 쓴다.** 돌아가는 길이 하나여야 한다.
  *
+ * **탭끼리 오갈 때는 아무것도 하지 않는다.** 세 탭은 서로의 형제이고 백스택에도 쌓이지
+ * 않는다. 미는 전환은 들어가고 나오는 깊이를 말하는 것이라, 같은 층을 옮기는 데 쓰면
+ * 캘린더에서 기록으로 가는 것이 한 단계 들어가는 것처럼 보인다.
+ *
  * 디자인 문서에 화면 전환 규격이 없다. 시간과 easing은 Material의 표준 전환 값이다.
  */
 internal object MedicalMateNavTransitions {
     val enter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
-        slideInHorizontally(animationSpec = tween(DURATION, easing = FastOutSlowInEasing)) { it } +
-            fadeIn(animationSpec = tween(DURATION, easing = FastOutSlowInEasing))
+        if (betweenTabs()) {
+            EnterTransition.None
+        } else {
+            slideInHorizontally(animationSpec = tween(DURATION, easing = FastOutSlowInEasing)) { it } +
+                fadeIn(animationSpec = tween(DURATION, easing = FastOutSlowInEasing))
+        }
     }
 
     val exit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
-        slideOutHorizontally(animationSpec = tween(DURATION, easing = FastOutSlowInEasing)) {
-            -it / PARALLAX
-        } + fadeOut(animationSpec = tween(DURATION, easing = FastOutSlowInEasing))
+        if (betweenTabs()) {
+            ExitTransition.None
+        } else {
+            slideOutHorizontally(animationSpec = tween(DURATION, easing = FastOutSlowInEasing)) {
+                -it / PARALLAX
+            } + fadeOut(animationSpec = tween(DURATION, easing = FastOutSlowInEasing))
+        }
     }
 
     val popEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
-        slideInHorizontally(animationSpec = tween(DURATION, easing = FastOutSlowInEasing)) {
-            -it / PARALLAX
-        } + fadeIn(animationSpec = tween(DURATION, easing = FastOutSlowInEasing))
+        if (betweenTabs()) {
+            EnterTransition.None
+        } else {
+            slideInHorizontally(animationSpec = tween(DURATION, easing = FastOutSlowInEasing)) {
+                -it / PARALLAX
+            } + fadeIn(animationSpec = tween(DURATION, easing = FastOutSlowInEasing))
+        }
     }
 
     val popExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
-        slideOutHorizontally(animationSpec = tween(DURATION, easing = FastOutSlowInEasing)) { it } +
-            fadeOut(animationSpec = tween(DURATION, easing = FastOutSlowInEasing))
+        if (betweenTabs()) {
+            ExitTransition.None
+        } else {
+            slideOutHorizontally(animationSpec = tween(DURATION, easing = FastOutSlowInEasing)) { it } +
+                fadeOut(animationSpec = tween(DURATION, easing = FastOutSlowInEasing))
+        }
     }
+
+    /** 떠나는 곳과 닿는 곳이 모두 탭인지. */
+    private fun AnimatedContentTransitionScope<NavBackStackEntry>.betweenTabs(): Boolean =
+        initialState.destination.isTab() && targetState.destination.isTab()
+
+    private fun NavDestination.isTab(): Boolean = hasRoute(HomeDestination::class) ||
+        hasRoute(CalendarDestination::class) ||
+        hasRoute(RecordDestination::class)
 
     /**
      * 가장자리를 쓸어 돌아갈 때.

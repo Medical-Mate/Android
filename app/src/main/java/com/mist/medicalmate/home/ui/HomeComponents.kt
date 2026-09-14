@@ -210,8 +210,14 @@ internal fun SavedCardRow(card: SavedCardSummary, onClick: () -> Unit) {
  */
 @Composable
 internal fun ScheduleRow(schedule: HomeSchedule, today: LocalDate, onClick: () -> Unit) {
+    // 시안 1n-1의 줄 제목이 "서울OO병원 내과 재진"이다. 병원 뒤에 초진인지 재진인지를 붙여
+    // 같은 병원의 일정 둘을 목록에서 가를 수 있게 한다.
+    val visit =
+        stringResource(
+            if (schedule.followUp) R.string.home_schedule_follow_up else R.string.home_schedule_first,
+        )
     MedicalMateListRow(
-        title = schedule.title,
+        title = stringResource(R.string.home_schedule_title, schedule.title, visit),
         meta =
         stringResource(
             R.string.home_schedule_meta,

@@ -88,7 +88,7 @@ data class HomeCallbacks(
     val onResumeClick: (String?) -> Unit = {},
     val onSavedCardClick: (cardId: String) -> Unit = {},
     val onAllCardsClick: () -> Unit = {},
-    val onScheduleClick: (String) -> Unit = {},
+    val onScheduleClick: (date: LocalDate, appointmentId: String) -> Unit = { _, _ -> },
     val onCalendarClick: () -> Unit = {},
     val onNotificationClick: () -> Unit = {},
     val onProfileClick: () -> Unit = {},
@@ -261,7 +261,7 @@ private fun LazyListScope.upcomingSection(content: HomeUiState.Content, today: L
         ScheduleRow(
             schedule = schedule,
             today = today,
-            onClick = { callbacks.onScheduleClick(schedule.id) },
+            onClick = { callbacks.onScheduleClick(schedule.date, schedule.id) },
         )
     }
 }

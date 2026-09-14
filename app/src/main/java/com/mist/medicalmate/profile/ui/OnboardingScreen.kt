@@ -11,6 +11,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -28,6 +29,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -66,6 +69,7 @@ fun OnboardingScreen(
     onSkipClick: () -> Unit,
     modifier: Modifier = Modifier,
     forward: Boolean = true,
+    onPreviousClick: () -> Unit = {},
 ) {
     Column(
         modifier =
@@ -74,7 +78,12 @@ fun OnboardingScreen(
             .background(MedicalMateTheme.colors.bgSurface),
     ) {
         TopBar(page = page, onSkipClick = onSkipClick)
-        PageContent(page = page, forward = forward)
+        PageContent(
+            page = page,
+            forward = forward,
+            onNext = onNextClick,
+            onPrevious = onPreviousClick,
+        )
         MedicalMateBottomCtaBar {
             MedicalMateButton(
                 label = stringResource(page.ctaLabel),
@@ -140,7 +149,13 @@ private fun TopBar(page: OnboardingPage, onSkipClick: () -> Unit) {
  * 잘리기 전에 160 넘게 흡수한다.
  */
 @Composable
-private fun ColumnScope.PageContent(page: OnboardingPage, forward: Boolean) {
+private fun ColumnScope.PageContent(
+    page: OnboardingPage,
+    forward: Boolean,
+    onNext: () -> Unit,
+    onPrevious: () -> Unit,
+) {
+    val threshold = with(LocalDensity.current) { SwipeThreshold.toPx() }
     AnimatedContent(
         targetState = page,
         transitionSpec = {
@@ -153,7 +168,28 @@ private fun ColumnScope.PageContent(page: OnboardingPage, forward: Boolean) {
                 slideOutHorizontally(spec) { width -> -direction * width / PAGE_PARALLAX } + fadeOut(fade)
                 )
         },
-        modifier = Modifier.fillMaxWidth().weight(1f),
+        modifier =
+        Modifier
+            .fillMaxWidth()
+            .weight(1f)
+            // 손가락으로 넘기고 되짚는다(#239). 끌리는 동안 화면이 따라오지는 않는다 —
+            // `AnimatedContent`가 장을 통째로 갈아 끼우는 구조라 중간 상태가 없고,
+            // 손을 떼는 순간 같은 전환이 돈다.
+            .pointerInput(page) {
+                var dragged = 0f
+                detectHorizontalDragGestures(
+                    onDragStart = { dragged = 0f },
+                    onDragEnd = {
+                        when {
+                            dragged <= -threshold && !page.isLast -> onNext()
+                            dragged >= threshold -> onPrevious()
+                        }
+                    },
+                ) { change, amount ->
+                    change.consume()
+                    dragged += amount
+                }
+            },
         label = "onboarding",
     ) { shown ->
         Column(modifier = Modifier.fillMaxSize()) {
@@ -227,6 +263,9 @@ private val TopBarHeight = 56.dp
 
 /** 그림 칸 304와 그 아래 여백 80. Content 664에서 글과 빈 칸이 나머지를 쓴다. */
 private val IllustrationHeight = 304.dp
+
+/** 장이 넘어가는 최소 거리. 이보다 짧으면 넘기려던 것이 아니라 스쳤다고 본다. */
+private val SwipeThreshold = 56.dp
 
 private val IllustrationBottom = 80.dp
 

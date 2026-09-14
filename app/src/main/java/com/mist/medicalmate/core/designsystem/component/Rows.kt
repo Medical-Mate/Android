@@ -1,5 +1,6 @@
 package com.mist.medicalmate.core.designsystem.component
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +24,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.core.designsystem.MedicalMateElevation
@@ -321,11 +323,20 @@ fun MedicalMateSectionHeader(
         )
         when {
             actionLabel != null && onActionClick != null ->
-                MedicalMateButton(
-                    onClick = onActionClick,
-                    label = actionLabel,
-                    type = MedicalMateButtonType.GHOST,
-                    size = MedicalMateButtonSize.S,
+                Text(
+                    text = actionLabel,
+                    style = MedicalMateTheme.typography.bodyMStrong,
+                    color = MedicalMateTheme.colors.fgLink,
+                    modifier =
+                    Modifier
+                        // 마스터의 액션은 버튼이 아니라 글자다. `Ghost` 버튼을 쓰면 좌우
+                        // 여백이 붙어 오른쪽 끝이 콘텐츠 가장자리에서 안으로 들어간다 —
+                        // 시안은 거기가 콘텐츠 가장자리이고 화면에서 20이다.
+                        //
+                        // 위아래 8은 터치 높이를 40으로 만든다. 걷어낸 `Ghost` S 버튼과
+                        // 같은 높이라 구역 머리의 높이가 그대로다.
+                        .clickable(role = Role.Button, onClick = onActionClick)
+                        .padding(vertical = MedicalMateSpace.s8),
                 )
 
             caption != null ->

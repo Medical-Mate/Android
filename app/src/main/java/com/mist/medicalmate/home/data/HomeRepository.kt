@@ -204,13 +204,24 @@ private fun HomeResponse.upcoming(on: LocalDate?): List<HomeSchedule> = listOfNo
         on?.let { date ->
             HomeSchedule(
                 id = appointment.appointmentId.toString(),
-                title = appointment.cards.firstOrNull()?.title ?: appointment.clinicName.orEmpty(),
+                // 병원과 진료과를 합친다. 카드 제목을 쓰던 것을 시안(`1n-1`)에 맞춰 바꿨다 —
+                // 캘린더도 같은 자리를 병원으로 적고, 무엇을 가져가는지는 아래 줄이 말한다.
+                // `purpose`는 앱이 채우지 않으므로 합치지 않는다.
+                title =
+                listOfNotNull(appointment.clinicName, appointment.department)
+                    .filter { it.isNotBlank() }
+                    .joinToString(" ")
+                    .ifEmpty { appointment.cards.firstOrNull()?.title.orEmpty() },
                 date = date,
                 time = appointment.scheduledTime?.let(::parseTime)?.format(TIME_FORMAT),
+                followUp = appointment.origin == FOLLOW_UP_ORIGIN,
             )
         }
     },
 )
+
+/** 진료 후 기록에서 잡힌 재방문. 줄 제목이 "재진"으로 끝난다. */
+private const val FOLLOW_UP_ORIGIN = "VISIT_FOLLOW_UP"
 
 /** 못 읽으면 시간 미정으로 본다. 일정 하나 때문에 홈 전체가 죽는 것보다 낫다. */
 private fun parseTime(value: String): LocalTime? = runCatching { LocalTime.parse(value) }.getOrNull()

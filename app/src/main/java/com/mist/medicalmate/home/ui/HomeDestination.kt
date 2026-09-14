@@ -10,30 +10,16 @@ import kotlinx.serialization.Serializable
 internal data object HomeDestination
 
 /**
- * 그래프 등록. 아직 없는 목적지(카드 1e, 기록 1j, 캘린더 1r, 내 정보 1s)의 콜백은 기본값인
- * 빈 동작으로 남기고, 화면이 생길 때 여기서 `navController.navigate(...)`를 연결한다.
+ * 그래프 등록.
  *
- * [onIntakeClick]에 세션 id가 함께 간다. 증상 정리 시작하기는 `null`, 이어서 하기는 서버에
- * 남은 문답의 id다. 같은 화면으로 가고 그 화면이 id를 보고 불러온다.
+ * 나가는 길을 하나씩 받지 않고 [HomeCallbacks]를 통째로 받는다. 목적지가 늘 때마다 이
+ * 함수의 서명이 함께 길어지는데, 여기가 하는 일은 그 묶음을 `HomeRoute`에 넘기는 것뿐이라
+ * 중간에서 한 번 더 풀어 쓸 이유가 없다.
+ *
+ * 아직 없는 목적지의 콜백은 호출자가 기본값(빈 동작)으로 둔다.
  */
-internal fun NavGraphBuilder.homeDestination(
-    onIntakeClick: (String?) -> Unit,
-    onCardClick: (cardId: String) -> Unit,
-    onAllCardsClick: () -> Unit,
-    onProfileClick: () -> Unit,
-    onTabSelect: (MedicalMateTab) -> Unit,
-) {
+internal fun NavGraphBuilder.homeDestination(callbacks: HomeCallbacks, onTabSelect: (MedicalMateTab) -> Unit) {
     composable<HomeDestination> {
-        HomeRoute(
-            callbacks =
-            HomeCallbacks(
-                onStartIntakeClick = { onIntakeClick(null) },
-                onResumeClick = onIntakeClick,
-                onSavedCardClick = onCardClick,
-                onAllCardsClick = onAllCardsClick,
-                onProfileClick = onProfileClick,
-            ),
-            onTabSelect = onTabSelect,
-        )
+        HomeRoute(callbacks = callbacks, onTabSelect = onTabSelect)
     }
 }
