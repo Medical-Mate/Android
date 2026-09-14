@@ -70,15 +70,18 @@ internal constructor(
                     ?.filter { it.status != AppointmentStatus.CANCELED }
                     .orEmpty()
             val appointment = live.firstOrNull { it.id == appointmentId } ?: live.firstOrNull()
-            val record = (visitRepository.visits() as? ApiResult.Success)?.value?.firstOrNull { it.visitedOn == date }
+            val records = (visitRepository.visits() as? ApiResult.Success)?.value.orEmpty()
+                .filter { it.visitedOn == date }
             mutableUiState.value =
                 dayState(date).copy(
                     schedule = appointment?.toDaySchedule(LocalDate.now(clock)),
                     card = appointment?.toDayCard(),
-                    record = record?.toDayRecord(),
+                    records = records.map { it.toDayRecord() },
                     // 진료가 끝난 날에는 진료 전 할 일을 두지 않는다. 시안 1r-2-A도 그렇다.
-                    todos = if (record == null) appointment?.todos.toDayTodos() else emptyList(),
-                    nextEvent = record?.let { nextEvent(date, it) },
+                    todos = if (records.isEmpty()) appointment?.todos.toDayTodos() else emptyList(),
+                    // 다음 일정은 그 날의 첫 기록에서 찾는다. 같은 날 둘이면 재방문 날짜도
+                    // 둘일 수 있는데, 이 자리는 "다음이 언제인지" 하나를 알리는 곳이다.
+                    nextEvent = records.firstOrNull()?.let { nextEvent(date, it) },
                 )
         }
     }

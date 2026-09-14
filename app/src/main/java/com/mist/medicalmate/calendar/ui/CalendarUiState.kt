@@ -64,13 +64,19 @@ data class CalendarDayUiState(
     val schedule: CalendarSchedule?,
     val card: DayCard?,
     val todos: List<DayTodo> = emptyList(),
-    val record: DayRecord? = null,
+    /**
+     * 그 날 남긴 진료 후 기록. 여럿일 수 있다.
+     *
+     * 하루에 진료를 두 번 받으면 기록도 두 건이다(#235). 카드와 일정은 초진에 묶이고 기록만
+     * 진료마다 쌓이는 것이 확정된 설계라, 이 자리가 한 건만 보면 둘째가 화면에서 사라진다.
+     */
+    val records: List<DayRecord> = emptyList(),
     val nextEvent: DayNextEvent? = null,
     val todoDraft: List<DayTodo>? = null,
     val deleteRequested: Boolean = false,
 ) {
     /** 다녀온 날인지. 기록이 있으면 진료가 끝난 것이다. */
-    val visited: Boolean get() = record != null
+    val visited: Boolean get() = records.isNotEmpty()
 
     /** 편집 중인지(1r-2-E). 사본이 있으면 편집이다. */
     val editing: Boolean get() = todoDraft != null
@@ -101,7 +107,22 @@ data class CalendarDayUiState(
  *
  * [meta]와 [status]는 일정 응답에 없다. 카드를 따로 읽어야 나오는 값이라 비어 있을 수 있다.
  */
-data class DayCard(val id: String, val title: String, val meta: String? = null, val status: String? = null)
+data class DayCard(
+    val id: String,
+    val title: String,
+    val meta: String? = null,
+    val status: String? = null,
+    /**
+     * 이 카드로 이미 만들어진 일정이 선 날.
+     *
+     * 있으면 카드만 있는 날 시트가 "만들기"가 아니라 "보러가기"가 된다(#235). 14일 카드로
+     * 16일 일정을 만든 뒤 14일을 다시 눌러도 또 만들라고 하던 자리다.
+     *
+     * **이 달 안에서만 찾는다.** 캘린더가 그 달 일정만 들고 있다. 달을 넘어간 일정은 못 찾고
+     * 그때는 만들기로 남는다.
+     */
+    val scheduledOn: LocalDate? = null,
+)
 
 /** 진료 전 할 일 한 줄. */
 data class DayTodo(val id: String, val label: String, val done: Boolean)

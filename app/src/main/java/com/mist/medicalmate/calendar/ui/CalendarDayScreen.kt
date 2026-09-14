@@ -294,8 +294,8 @@ private fun ColumnScope.TodoSection(state: CalendarDayUiState, callbacks: Calend
 @Composable
 private fun ColumnScope.RecordSection(state: CalendarDayUiState, callbacks: CalendarDayCallbacks) {
     MedicalMateSectionHeader(title = stringResource(R.string.calendar_day_record))
-    val record = state.record
-    if (record == null) {
+    val records = state.records
+    if (records.isEmpty()) {
         val card = state.card
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -311,11 +311,13 @@ private fun ColumnScope.RecordSection(state: CalendarDayUiState, callbacks: Cale
         }
         return
     }
-    MedicalMateListRow(
-        title = record.title,
-        meta = record.meta,
-        onClick = { callbacks.onRecordOpenClick(record.id) },
-    )
+    records.forEach { record ->
+        MedicalMateListRow(
+            title = record.title,
+            meta = record.meta,
+            onClick = { callbacks.onRecordOpenClick(record.id) },
+        )
+    }
 }
 
 /**
