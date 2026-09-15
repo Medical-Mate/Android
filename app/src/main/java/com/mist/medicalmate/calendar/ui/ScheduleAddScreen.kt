@@ -5,8 +5,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
@@ -17,9 +19,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
@@ -37,6 +41,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMatePickerField
 import com.mist.medicalmate.core.designsystem.component.MedicalMateRowDelete
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTodoRow
+import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -201,17 +206,30 @@ private fun ColumnScope.CardSection(state: ScheduleAddUiState, callbacks: Schedu
  * **줄이 붙으면 "할 일 추가"까지 화면에 들여놓는다**(#243). 이 구역이 폼의 맨 아래라 줄
  * 하나가 늘어나는 것만으로 다음에 누를 자리가 접힌 화면 밖으로 나간다. 여러 개를 잇달아
  * 적는 자리인데 한 줄마다 손으로 스크롤하게 된다.
+ *
+ * **키보드가 다 올라온 뒤에 옮긴다**(#249). 새 줄이 포커스를 받아 키보드가 올라오는데, 줄이
+ * 붙는 순간 한 번만 옮기면 그 뒤에 올라온 키보드가 "할 일 추가"를 다시 가렸다. 키보드 높이가
+ * 바뀌는 동안은 기다리고 멎은 뒤에 옮긴다.
  */
 @Composable
 private fun ColumnScope.TodoSection(state: ScheduleAddUiState, todo: ScheduleAddTodoActions) {
     val addRow = remember { BringIntoViewRequester() }
     var shown by remember { mutableIntStateOf(state.todos.size) }
+    var pending by remember { mutableStateOf(false) }
+    val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
 
     LaunchedEffect(state.todos.size) {
-        val added = state.todos.size > shown
-        shown = state.todos.size
         // 처음 불러온 것과 지운 것에는 움직이지 않는다. 늘어난 때만 따라간다.
-        if (added) addRow.bringIntoView()
+        if (state.todos.size > shown) pending = true
+        shown = state.todos.size
+    }
+    LaunchedEffect(pending, imeBottom) {
+        if (!pending) return@LaunchedEffect
+        // 키보드 높이가 바뀌는 동안은 이 효과가 매 프레임 다시 시작된다. 잠깐 기다리는 것이
+        // "멎은 뒤"를 가리는 방법이고, 키보드가 서 있을 때 옮긴 뒤에야 끝낸다.
+        delay(IME_SETTLE_MS)
+        addRow.bringIntoView()
+        if (imeBottom > 0) pending = false
     }
 
     MedicalMateSectionHeader(title = stringResource(R.string.schedule_add_todo))
@@ -237,6 +255,9 @@ private fun ColumnScope.TodoSection(state: ScheduleAddUiState, todo: ScheduleAdd
         modifier = Modifier.bringIntoViewRequester(addRow),
     )
 }
+
+/** 키보드 높이가 멎었다고 보는 시간. 한 프레임 단위로 바뀌는 값을 그대로 따라가면 옮기는 도중에 또 옮긴다. */
+private const val IME_SETTLE_MS = 120L
 
 /** 필드에 적는 "9월 26일 (토)". 컴포저블 밖에 둬서 기기 로케일을 직접 읽지 않는다. */
 private val dateFormat = DateTimeFormatter.ofPattern("M월 d일 (E)")
