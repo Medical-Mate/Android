@@ -8,6 +8,7 @@ import com.mist.medicalmate.calendar.data.AppointmentStatus
 import com.mist.medicalmate.card.data.CardRepository
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.visit.data.Visit
+import com.mist.medicalmate.visit.data.VisitFollowUp
 import com.mist.medicalmate.visit.data.VisitListItem
 import com.mist.medicalmate.visit.data.VisitRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -84,7 +86,11 @@ internal constructor(
                     recordDetail(
                         visits = visits,
                         card = card,
-                        next = nextVisit(cardId),
+                        // 예정은 이 진료보다 뒤의 것이다. 잡아 둔 일정이 있으면 그것, 없으면
+                        // 기록의 재방문 날짜다 — 캘린더가 점을 찍는 값과 같다.
+                        pending =
+                        nextVisit(cardId, visit.visitedOn)?.toPending()
+                            ?: visit.followUp?.takeIf { it.date > (visit.visitedOn ?: LocalDate.MIN) }?.toPending(),
                         // 카드 응답의 제목이 비어 있을 수 있다. 목록이 카드를 만들 때 박아 둔
                         // 제목을 들고 있어서(1j-1의 줄과 같은 값) 그것으로 받친다.
                         cardTitle = summaries.firstNotNullOfOrNull { it.cardTitle.takeIf(String::isNotBlank) },
@@ -122,13 +128,16 @@ internal constructor(
      * 일정이 그것이다. 없으면 예정 단계를 두지 않는다 — 시안의 점선 블록은 다음이 잡혔을 때
      * 나오는 것이고, 안 잡힌 상태를 알리는 자리가 아니다.
      */
-    private suspend fun nextVisit(cardId: Long?): Appointment? {
+    private suspend fun nextVisit(cardId: Long?, after: LocalDate?): Appointment? {
         if (cardId == null) return null
         return (appointments.upcoming() as? ApiResult.Success)
             ?.value
             ?.firstOrNull { appointment ->
                 appointment.cards.any { it.id == cardId } &&
-                    appointment.status != AppointmentStatus.CANCELED
+                    appointment.status != AppointmentStatus.CANCELED &&
+                    // 이 진료 자체의 일정은 다음이 아니다. 서버의 "앞으로의 일정"이 오늘 것을
+                    // 하루 종일 담아서(Backend#123) 진료한 날 열면 그 날 일정이 예정으로 섰다.
+                    (after == null || appointment.on > after)
             }
     }
 
@@ -148,7 +157,12 @@ internal constructor(
  * 값이 없는 줄은 만들지 않는다. 환자가 적지 않은 것을 빈 줄로 남기면 무엇을 안 적었는지가
  * 아니라 무엇이 비었는지로 읽힌다.
  */
-private fun recordDetail(visits: List<Visit>, card: BriefCard?, next: Appointment?, cardTitle: String?): RecordDetail {
+private fun recordDetail(
+    visits: List<Visit>,
+    card: BriefCard?,
+    pending: RecordStep.Pending?,
+    cardTitle: String?,
+): RecordDetail {
     val newest = visits.first()
     val records = visits.mapIndexed { index, visit -> visit.toRecordStep(visitKind(visits.size, index)) }
     return RecordDetail(
@@ -161,7 +175,7 @@ private fun recordDetail(visits: List<Visit>, card: BriefCard?, next: Appointmen
         // 몇 번 다녀왔는지는 상태가 아니라 세어 봐야 아는 값이다. 한 번이면 뱃지가 상태를 그린다.
         badge = if (visits.size > 1) "진료 ${visits.size}회" else null,
         clinicLine = clinicLine(visits),
-        steps = listOfNotNull(next?.toPending()) + records + listOfNotNull(card?.toStep()),
+        steps = listOfNotNull(pending) + records + listOfNotNull(card?.toStep()),
     )
 }
 
@@ -226,6 +240,19 @@ private fun Appointment.toPending() = RecordStep.Pending(
     message = "다음 진료가 예약돼 있어요",
     // 시각이 없으면 날짜만 적는다. 시간 미정인 일정이다(#202).
     detail = listOfNotNull(on.format(PENDING_DATE), time?.format(PENDING_TIME)).joinToString(" "),
+)
+
+/**
+ * 아직 일정으로 잡지 않은 재방문을 예정 단계로.
+ *
+ * 기록에 "일주일 뒤"라고 남긴 날짜다. 캘린더가 같은 값으로 점을 찍는데 상세에는 없어서, 달력은
+ * 22일이고 상세는 다른 날을 가리키는 일이 있었다(#245). 잡아 둔 일정이 아니라 예약됐다고 적지
+ * 않고, 범위로 말한 것이면 "전후"를 붙인다.
+ */
+private fun VisitFollowUp.toPending() = RecordStep.Pending(
+    at = date.format(PENDING_AT),
+    message = "재방문 예정이에요",
+    detail = date.format(PENDING_DATE) + if (approximate) " 전후" else "",
 )
 
 /**

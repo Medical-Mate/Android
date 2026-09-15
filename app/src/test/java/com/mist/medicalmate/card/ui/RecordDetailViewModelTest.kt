@@ -8,6 +8,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.visit.data.FakeVisitRepository
 import com.mist.medicalmate.visit.data.Visit
+import com.mist.medicalmate.visit.data.VisitFollowUp
 import com.mist.medicalmate.visit.data.VisitItem
 import com.mist.medicalmate.visit.data.VisitListItem
 import kotlinx.coroutines.Dispatchers
@@ -128,6 +129,27 @@ class RecordDetailViewModelTest {
         assertEquals("09.26 예정", pending.at)
         assertEquals("다음 진료가 예약돼 있어요", pending.message)
         assertEquals("9월 26일 (토) 오전 10:30", pending.detail)
+    }
+
+    @Test
+    fun `그 날 일정은 예정으로 세우지 않는다`() {
+        // 서버의 "앞으로의 일정"이 오늘 것을 하루 종일 담는다(Backend#123). 진료한 날 상세를
+        // 열면 그 진료 자체의 일정이 다음 진료로 섰다.
+        val sameDay = NEXT.copy(on = LocalDate.of(2026, 9, 12))
+        val steps = content(FULL, card = CARD, appointments = listOf(sameDay)).detail.steps
+
+        assertTrue(steps.none { it is RecordStep.Pending })
+    }
+
+    @Test
+    fun `잡아 둔 일정이 없으면 기록의 재방문 날짜가 예정이다`() {
+        // 캘린더가 같은 값으로 점을 찍는다. 상세만 비어 있으면 달력과 상세가 다른 말을 한다.
+        val withRevisit = FULL.copy(followUp = VisitFollowUp(date = LocalDate.of(2026, 9, 22), approximate = true))
+        val pending = content(withRevisit).detail.steps.first() as RecordStep.Pending
+
+        assertEquals("09.22 예정", pending.at)
+        assertEquals("재방문 예정이에요", pending.message)
+        assertEquals("9월 22일 (화) 전후", pending.detail)
     }
 
     @Test

@@ -217,11 +217,7 @@ private fun ColumnScope.ScheduleSection(state: CalendarDayUiState, callbacks: Ca
                     color = MedicalMateTheme.colors.fgSubtle,
                 )
         }
-        Text(
-            text = schedule.title,
-            style = MedicalMateTheme.typography.headingS,
-            color = MedicalMateTheme.colors.fgDefault,
-        )
+        ScheduleTitle(schedule)
         Text(
             text = schedule.time ?: stringResource(R.string.calendar_time_unset),
             style = MedicalMateTheme.typography.bodyM,
@@ -256,6 +252,23 @@ private fun ColumnScope.CardSection(state: CalendarDayUiState, callbacks: Calend
         badgeTone = MedicalMateBadgeTone.NEUTRAL,
         type = MedicalMateListRowType.BADGE,
         onClick = { callbacks.onCardOpenClick(card.id) },
+    )
+}
+
+/**
+ * 일정 카드의 제목. 시안 `1r-2`의 "서울OO병원 내과 재진".
+ *
+ * 홈의 일정 줄과 같은 규칙으로 병원 뒤에 초진·재진을 붙인다. 가르는 값은 서버의 `origin`이다 —
+ * 진료 후 기록의 재방문을 확정해 만든 일정만 재진이다(#245).
+ */
+@Composable
+private fun ScheduleTitle(schedule: CalendarSchedule) {
+    val kind =
+        stringResource(if (schedule.followUp) R.string.home_schedule_follow_up else R.string.home_schedule_first)
+    Text(
+        text = stringResource(R.string.home_schedule_title, schedule.title, kind),
+        style = MedicalMateTheme.typography.headingS,
+        color = MedicalMateTheme.colors.fgDefault,
     )
 }
 

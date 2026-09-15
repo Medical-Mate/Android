@@ -250,7 +250,10 @@ data class VisitRecord(
     val classifiedCount: Int? = null,
     /** 어느 항목에도 들어가지 않은 문장. 저장 요청에 그대로 실린다. */
     val patientNotes: List<String> = emptyList(),
-    /** AI가 뽑은 재방문 날짜. 저장 요청에 실린다. 일정은 이 값으로 생기지 않는다. */
+    /**
+     * AI가 뽑은 재방문 날짜. 저장 요청에 실리고, 저장이 되면 이 날짜로 일정이 만들어진다(#245).
+     * 화면의 재방문 줄이 이 날짜를 보여주고 고칠 수 있어서 저장이 곧 확인이다.
+     */
     val followUp: VisitFollowUp? = null,
 )
 

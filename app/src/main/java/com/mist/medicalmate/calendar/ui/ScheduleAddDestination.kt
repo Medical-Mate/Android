@@ -47,6 +47,13 @@ internal data class ScheduleAddDestination(
      * 그 문구가 카드를 정해 놓고 들어가는 길이라 화면에서 다시 고르게 하면 두 번 고른다.
      */
     val cardId: String? = null,
+    /**
+     * 진료 후 기록의 재방문을 확정하러 들어온 것인지.
+     *
+     * 그러면 일정이 `VISIT_FOLLOW_UP`으로 만들어진다. 홈과 일자 화면이 그 값으로 "재진"을 적어서,
+     * 캘린더에 점만 남는 것이 아니라 무엇 하러 가는 날인지가 남는다(#245).
+     */
+    val followUp: Boolean = false,
 )
 
 internal fun NavGraphBuilder.scheduleAddDestination(
@@ -63,6 +70,7 @@ internal fun NavGraphBuilder.scheduleAddDestination(
             date = route.date?.let(LocalDate::parse),
             appointmentId = route.appointmentId,
             cardId = route.cardId,
+            followUp = route.followUp,
             onHospitalPick = onHospitalPick,
             onCardNew = onCardNew,
             onSaved = onSaved,
@@ -84,6 +92,7 @@ private fun ScheduleAddRoute(
     date: LocalDate?,
     appointmentId: Long?,
     cardId: String?,
+    followUp: Boolean,
     onHospitalPick: () -> Unit,
     onCardNew: () -> Unit,
     onSaved: () -> Unit,
@@ -93,7 +102,7 @@ private fun ScheduleAddRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(Unit) { viewModel.load(appointmentId, date, cardId) }
+    LaunchedEffect(Unit) { viewModel.load(appointmentId, date, cardId, followUp) }
 
     // 병원 찾기에서 골라 돌아온 값. 엔트리가 그대로 살아 있어서 적어 둔 날짜·시간·할 일이
     // 남는다. 라우트 인자는 처음부터 병원이 정해진 채로 열리는 경우(1r-4-B)에 쓴다.

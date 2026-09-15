@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mist.medicalmate.calendar.data.Appointment
 import com.mist.medicalmate.calendar.data.AppointmentEdit
+import com.mist.medicalmate.calendar.data.AppointmentOrigin
 import com.mist.medicalmate.calendar.data.AppointmentRepository
 import com.mist.medicalmate.calendar.data.AppointmentStatus
 import com.mist.medicalmate.calendar.data.AppointmentTodo
@@ -140,7 +141,7 @@ internal constructor(
             ?.value
             ?.firstOrNull { it.status != AppointmentStatus.CANCELED && it.on > date }
         if (booked != null) return booked.toNextEvent(today)
-        return record.followUp?.takeIf { it.date > date }?.toRevisit(record.clinic)
+        return record.followUp?.takeIf { it.date > date }?.toRevisit(record.clinic, record.cardId?.toString())
     }
 
     /** 할 일 조작. 다섯 가지라 여기 얹으면 한 클래스가 너무 많은 일을 한다. */
@@ -251,11 +252,13 @@ private fun List<AppointmentTodo>?.toDayTodos(): List<DayTodo> =
  * **대략이면 "전후"를 붙인다**(Backend#101). "2주 뒤"에서 나온 날짜를 정확한 날짜처럼 적으면
  * 그날이 아니면 안 되는 것으로 읽힌다. 서버 문서도 달력에 그 말을 붙여 달라고 적었다.
  */
-private fun VisitFollowUp.toRevisit(clinic: String?) = DayNextEvent(
+private fun VisitFollowUp.toRevisit(clinic: String?, cardId: String?) = DayNextEvent(
     chip = date.format(REVISIT_CHIP) + if (approximate) " 전후" else "",
     title = clinic?.let { "$it 재방문" } ?: "재방문 예정",
     on = date,
     clinic = clinic,
+    cardId = cardId,
+    followUp = true,
 )
 
 private fun Appointment.toDaySchedule(today: LocalDate) = CalendarSchedule(
@@ -264,6 +267,7 @@ private fun Appointment.toDaySchedule(today: LocalDate) = CalendarSchedule(
     time = time?.format(DAY_TIME_FORMAT),
     detail = cards.firstOrNull()?.title.orEmpty(),
     dday = on.toEpochDay() - today.toEpochDay(),
+    followUp = origin == AppointmentOrigin.VISIT_FOLLOW_UP,
 )
 
 /** 시안 1r-2-A의 "9월 26일 (토)". */

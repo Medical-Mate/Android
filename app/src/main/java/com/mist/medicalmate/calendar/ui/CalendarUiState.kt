@@ -47,7 +47,18 @@ data class CalendarUiState(
  * 넣는다. 지난 일정은 음수가 되고 화면이 표시를 감춘다.
  */
 /** [time]이 없으면 시간 미정이다. 화면이 그 자리에 "시간 미정"을 적는다(#202). */
-data class CalendarSchedule(val id: String, val title: String, val time: String?, val detail: String, val dday: Long)
+/**
+ * @param followUp 진료 후 기록의 재방문으로 잡힌 일정인지. 시안 `1r-2`의 카드 제목이 "서울OO병원
+ *   내과 재진"이라 병원 뒤에 초진·재진을 붙이는데 그 둘을 가르는 값이 서버의 `origin`이다.
+ */
+data class CalendarSchedule(
+    val id: String,
+    val title: String,
+    val time: String?,
+    val detail: String,
+    val dday: Long,
+    val followUp: Boolean = false,
+)
 
 /**
  * 캘린더 일자 화면의 상태. Figma 1r-2 `406:2514`, 1r-2-A `1060:2879`, 1r-2-A2 `1060:2998`.
@@ -166,6 +177,15 @@ data class DayRecord(val id: String, val title: String, val meta: String)
 data class DayNextEvent(
     val chip: String,
     val title: String,
+    /** 그 진료를 준비한 카드. 확정하러 가는 일정 추가가 가져갈 카드로 미리 고른다. */
+    val cardId: String? = null,
+    /**
+     * 진료 후 기록의 재방문에서 나온 것인지.
+     *
+     * 확정하러 가면 일정이 `VISIT_FOLLOW_UP`으로 만들어져 홈과 일자 화면이 "재진"으로 적는다.
+     * 이 표시가 없으면 캘린더에 점만 찍히고 무엇 하러 가는 날인지가 남지 않는다(#245).
+     */
+    val followUp: Boolean = false,
     /** 그 일정이 선 날. 이 화면의 날짜가 아니다 — 다음 진료는 다른 날이다. */
     val on: LocalDate,
     val at: String? = null,

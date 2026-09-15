@@ -337,6 +337,9 @@ class CalendarDayViewModelTest {
         val next = viewModel.state().nextEvent
         assertEquals("9월 26일 (토)", next?.chip)
         assertNull(next?.at)
+        // 확정하러 가는 길이 카드와 출처를 들고 간다. 만들어진 일정이 무엇 하러 가는 날인지 남는다.
+        assertEquals(true, next?.followUp)
+        assertEquals(testVisit.cardId?.toString(), next?.cardId)
     }
 
     @Test

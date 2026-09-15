@@ -2,6 +2,7 @@ package com.mist.medicalmate.visit.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mist.medicalmate.core.model.FollowUpScheduler
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.visit.data.AXIS_FOLLOW_UP
 import com.mist.medicalmate.visit.data.NewVisit
@@ -35,6 +36,7 @@ class VisitRecordViewModel
 @Inject
 internal constructor(
     private val repository: VisitRepository,
+    private val followUpScheduler: FollowUpScheduler,
     private val clock: Clock,
 ) : ViewModel() {
     /** 저장 요청이 나가 있는 동안. 저장하기를 두 번 누르면 기록이 두 개 생긴다. */
@@ -137,6 +139,11 @@ internal constructor(
      *
      * 실패하면 화면에 남는다. 일정 추가(1r-4)와 같다. 나가 버리면 적은 것이 사라지고 다시
      * 누를 수도 없다.
+     *
+     * **저장이 되면 재방문 날짜로 일정을 만든다**(#245). 이 화면의 재방문 줄에 날짜가 보이고
+     * 고칠 수 있어서 저장이 곧 확인이다. 서버가 기록에서 일정을 만들지 않으므로 앱이 만들고,
+     * 못 만들어도 저장은 성공이다 — 기록이 본체고 일정은 덧붙이는 것이다. 만들어진 일정은
+     * 돌아가는 일자 화면의 "다음 일정"에 바로 선다.
      */
     fun onSaveClick(cardId: String?, onSaved: () -> Unit) {
         val content = mutableUiState.value as? VisitRecordUiState.Content
@@ -147,6 +154,7 @@ internal constructor(
         update { it.copy(saveFailure = null) }
         viewModelScope.launch {
             val result = repository.create(card, content.record.toNewVisit(visitedOn))
+            if (result is ApiResult.Success) scheduleFollowUp(content.record, card)
             saving = false
             when (result) {
                 is ApiResult.Success -> onSaved()
@@ -160,6 +168,13 @@ internal constructor(
                     }
             }
         }
+    }
+
+    /** 재방문 날짜가 진료일보다 뒤일 때만 일정을 만든다. 지난 날짜는 예정이 아니다. */
+    private suspend fun scheduleFollowUp(record: VisitRecord, cardId: Long) {
+        val on = record.followUp?.date ?: return
+        if (!on.isAfter(visitedOn)) return
+        followUpScheduler.schedule(record.clinic, on, cardId)
     }
 
     /**

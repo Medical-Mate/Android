@@ -1,5 +1,6 @@
 package com.mist.medicalmate.visit.ui
 
+import com.mist.medicalmate.core.model.FollowUpScheduler
 import com.mist.medicalmate.core.network.ApiErrorCode
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.visit.data.FakeVisitRepository
@@ -131,6 +132,40 @@ class VisitRecordViewModelTest {
 
         assertEquals(LocalDate.of(2026, 9, 26), repository.request?.followUp?.date)
         assertEquals(listOf("접수 오래 걸렸어요"), repository.request?.patientNotes)
+    }
+
+    @Test
+    fun `저장이 되면 재방문 날짜로 일정을 만든다`() {
+        // 이 화면의 재방문 줄에 날짜가 보이고 고칠 수 있어서 저장이 곧 확인이다(#245).
+        val scheduler = FakeFollowUpScheduler()
+        val viewModel = viewModel(classifying(), scheduler).apply { load(CLINIC, NOTE, TODAY) }
+
+        viewModel.onSaveClick(cardId = "3", onSaved = {})
+
+        assertEquals(listOf(Triple(CLINIC, LocalDate.of(2026, 9, 26), 3L)), scheduler.scheduled)
+    }
+
+    @Test
+    fun `재방문 날짜가 없으면 일정을 만들지 않는다`() {
+        val scheduler = FakeFollowUpScheduler()
+        // 나누지 못한 기록이다. 재방문 줄이 없다.
+        val viewModel = viewModel(FakeVisitRepository(), scheduler).apply { load(CLINIC, NOTE, TODAY) }
+
+        viewModel.onSaveClick(cardId = "3", onSaved = {})
+
+        assertTrue(scheduler.scheduled.isEmpty())
+    }
+
+    @Test
+    fun `저장이 거절되면 일정도 만들지 않는다`() {
+        // 기록이 본체다. 기록 없이 일정만 남으면 무엇 하러 가는 날인지 알 수 없다.
+        val scheduler = FakeFollowUpScheduler()
+        val repository = classifying().apply { createRejection = rejection(retryable = false) }
+        val viewModel = viewModel(repository, scheduler).apply { load(CLINIC, NOTE, TODAY) }
+
+        viewModel.onSaveClick(cardId = "3", onSaved = {})
+
+        assertTrue(scheduler.scheduled.isEmpty())
     }
 
     @Test
@@ -471,8 +506,14 @@ class VisitRecordViewModelTest {
     /** 나눈 결과를 주는 저장소. 편집·저장 시험의 바탕이다. */
     private fun sorted() = FakeVisitRepository().apply { classification = ApiResult.Success(ALL_FOUR) }
 
-    private fun viewModel(repository: FakeVisitRepository = FakeVisitRepository()) =
-        VisitRecordViewModel(repository, Clock.fixed(Instant.parse("2026-09-12T01:00:00Z"), ZoneId.of("Asia/Seoul")))
+    private fun viewModel(
+        repository: FakeVisitRepository = FakeVisitRepository(),
+        scheduler: FakeFollowUpScheduler = FakeFollowUpScheduler(),
+    ) = VisitRecordViewModel(
+        repository,
+        scheduler,
+        Clock.fixed(Instant.parse("2026-09-12T01:00:00Z"), ZoneId.of("Asia/Seoul")),
+    )
 
     /** 서버가 받지 않은 응답. `retryable`만 관심사라 나머지는 채운다. */
     private fun rejection(retryable: Boolean) = ApiResult.Rejected(
@@ -541,5 +582,14 @@ class VisitRecordViewModelTest {
                 patientNotes = listOf("접수 오래 걸렸어요"),
                 labels = mapOf("0" to "findings"),
             )
+    }
+}
+
+/** 만들라고 한 일정을 적어 두는 대역. */
+private class FakeFollowUpScheduler : FollowUpScheduler {
+    val scheduled = mutableListOf<Triple<String?, LocalDate, Long>>()
+
+    override suspend fun schedule(clinic: String?, on: LocalDate, cardId: Long) {
+        scheduled += Triple(clinic, on, cardId)
     }
 }

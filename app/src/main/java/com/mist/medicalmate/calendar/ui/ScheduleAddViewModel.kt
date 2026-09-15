@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mist.medicalmate.calendar.data.Appointment
 import com.mist.medicalmate.calendar.data.AppointmentEdit
+import com.mist.medicalmate.calendar.data.AppointmentOrigin
 import com.mist.medicalmate.calendar.data.AppointmentRepository
 import com.mist.medicalmate.calendar.data.AppointmentTodo
 import com.mist.medicalmate.calendar.data.NewAppointment
@@ -50,7 +51,7 @@ internal constructor(
      * 통째로 갈아끼우면 골라 둔 카드가 조용히 풀린다. 그대로 저장하면 카드가 안 걸린 일정이
      * 되고, 나중에 그 일정으로는 진료 후 기록을 남길 수 없다.
      */
-    fun load(appointmentId: Long? = null, date: LocalDate? = null, cardId: String? = null) {
+    fun load(appointmentId: Long? = null, date: LocalDate? = null, cardId: String? = null, followUp: Boolean = false) {
         viewModelScope.launch {
             // 이미 한 번 담아 왔으면 다시 읽지 않는다. 고치는 중에 들어온 값을 덮어쓴다.
             val editing = if (mutableUiState.value.appointmentId == null) appointment(appointmentId, date) else null
@@ -63,6 +64,7 @@ internal constructor(
                 val picks = cards.map { card -> card.toPick().copy(picked = card.id in picked) }
                 state.copy(
                     appointmentId = editing?.id ?: state.appointmentId,
+                    followUp = state.followUp || followUp,
                     // 골라 둔 카드의 병원을 채운다. 손으로 고를 때와 같은 규칙이다(1r-4-B).
                     hospital = state.hospital ?: editing?.title ?: picks.pickedClinic(),
                     date = state.date ?: editing?.on,
@@ -215,6 +217,9 @@ internal constructor(
                         // 안 골랐으면 시각 없이 보낸다. 서버가 "시간 미정"으로 만든다(#202).
                         time = state.time,
                         cardIds = cardIds,
+                        // 재방문을 확정한 일정은 출처를 남긴다. 홈과 일자 화면이 이 값으로
+                        // "재진"을 적는다(#245).
+                        origin = if (state.followUp) AppointmentOrigin.VISIT_FOLLOW_UP else AppointmentOrigin.MANUAL,
                         todos = todos,
                     ),
                 )
