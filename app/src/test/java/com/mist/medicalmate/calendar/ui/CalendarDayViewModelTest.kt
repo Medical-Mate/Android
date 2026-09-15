@@ -286,23 +286,40 @@ class CalendarDayViewModelTest {
     }
 
     @Test
-    fun `기록 줄의 메타는 상세의 항목이다`() {
-        // 시안의 `위염 초기 · 2주 약 · 09.26 재방문`. 두 줄로 적힌 값은 첫 줄만 잇는다(#256).
+    fun `기록 줄의 메타는 소견·약·재방문 셋만 그 차례로 잇는다`() {
+        // 시안의 `위염 초기 · 2주 약 · 09.26 재방문`(#262). 검사와 AI가 늘린 축은 빼고, 서버가 준
+        // 차례가 아니라 시안 차례다. 두 줄로 적힌 값은 첫 줄만 쓴다(#256).
         val detail =
             FakeVisitRepository.EMPTY_VISIT.copy(
                 id = "2",
                 items =
                 listOf(
+                    VisitItem(axis = "follow_up", label = "재방문", value = "09.26 재방문"),
                     VisitItem(axis = "findings", label = "소견", value = "위염 초기"),
                     VisitItem(axis = "tests", label = "검사", value = "혈액검사 시행\n결과는 다음 방문 때 확인"),
-                    VisitItem(axis = "follow_up", label = "재방문", value = "09.26 재방문"),
+                    VisitItem(axis = "medication_instructions", label = "약", value = "2주 약\n커피 줄이기"),
+                    VisitItem(axis = "other", label = "기타", value = "물 많이"),
                 ),
             )
         val viewModel = dayViewModel(visits = listOf(testVisit), visitDetails = mapOf(2L to ApiResult.Success(detail)))
 
         viewModel.load(VisitDate)
 
-        assertEquals("위염 초기 · 혈액검사 시행 · 09.26 재방문", viewModel.state().records.single().meta)
+        assertEquals("위염 초기 · 2주 약 · 09.26 재방문", viewModel.state().records.single().meta)
+    }
+
+    @Test
+    fun `소견·약·재방문이 다 없으면 기록 줄에 병원이 남는다`() {
+        val detail =
+            FakeVisitRepository.EMPTY_VISIT.copy(
+                id = "2",
+                items = listOf(VisitItem(axis = "tests", label = "검사", value = "혈액검사 시행")),
+            )
+        val viewModel = dayViewModel(visits = listOf(testVisit), visitDetails = mapOf(2L to ApiResult.Success(detail)))
+
+        viewModel.load(VisitDate)
+
+        assertEquals("서울OO병원 내과", viewModel.state().records.single().meta)
     }
 
     @Test
