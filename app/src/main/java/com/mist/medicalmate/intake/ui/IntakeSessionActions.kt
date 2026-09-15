@@ -25,15 +25,31 @@ internal class IntakeSessionActions(
     /**
      * 짚은 부위로 세션을 연다.
      *
+     * **첫 질문은 서버 것이다**(#259). 세션을 만들면서 AI 첫 질문을 대화에 넣어 응답에 실어
+     * 준다. 전에는 앱이 만든 문장을 먼저 세우고 응답의 마디를 버렸는데, 첫 답을 보내면
+     * 대화 전체가 서버 것으로 갈아 끼워지면서 첫 질문이 다른 문장으로 바뀌어 보였다. 그래서
+     * 응답이 오기 전에는 답을 기다리는 점 셋만 두고, 응답의 마디를 그대로 첫 마디로 세운다.
+     *
      * 실패해도 문답은 그대로 진행한다. 세션 id가 없으면 임시저장이 안 될 뿐이고, 여기서
-     * 막으면 답하던 사람이 아무것도 못 하게 된다. 카드를 만들 때 id가 없으면 그때 다시
+     * 막으면 답하던 사람이 아무것도 못 하게 된다. 그때만 앱이 만든 첫 물음을 세운다 —
+     * 서버 문장이 없는데 빈 화면으로 둘 수는 없다. 카드를 만들 때 id가 없으면 그때 다시
      * 만들면 된다.
      */
     fun start(selection: BodyMapSelection, siteText: String) {
         scope.launch {
             val result = repository.start(siteCodes = listOf(selection.siteCode), siteText = siteText)
-            if (result is ApiResult.Success) {
-                update { it.copy(sessionId = result.value.id) }
+            update { state ->
+                when (result) {
+                    is ApiResult.Success ->
+                        state.copy(
+                            sessionId = result.value.id,
+                            messages = result.value.toMessages().ifEmpty { state.openingFor(siteText) },
+                            awaitingReply = false,
+                        )
+
+                    is ApiResult.Rejected, is ApiResult.NetworkUnavailable ->
+                        state.copy(messages = state.openingFor(siteText), awaitingReply = false)
+                }
             }
         }
     }
@@ -100,14 +116,7 @@ internal class IntakeSessionActions(
  * 겹치지 않아야 하고, `seq`는 서버가 세션 안에서 유일하게 매긴 값이다.
  */
 private fun IntakeUiState.restoredWith(session: IntakeSession): IntakeUiState {
-    val restored =
-        session.messages.map {
-            IntakeMessage(
-                id = it.seq,
-                sender = if (it.fromPatient) IntakeMessage.Sender.PATIENT else IntakeMessage.Sender.AI,
-                text = it.text,
-            )
-        }
+    val restored = session.toMessages()
     return copy(
         step = session.leftAt(),
         sessionId = session.id,
@@ -141,13 +150,21 @@ private fun IntakeSession.leftAt(): IntakeStep = when {
 /** 서버가 준 1~5를 눈금으로. 밖이면 화면의 기본값을 그대로 둔다. */
 private fun severityOf(level: Int): MedicalMateSeverity? = MedicalMateSeverity.entries.firstOrNull { it.level == level }
 
+/** 서버의 마디를 화면 마디로. 마디 id는 서버의 `seq`다 — 세션 안에서 유일하고, 이어 붙는 마디와 겹치지 않는다. */
+private fun IntakeSession.toMessages(): List<IntakeMessage> = messages.map {
+    IntakeMessage(
+        id = it.seq,
+        sender = if (it.fromPatient) IntakeMessage.Sender.PATIENT else IntakeMessage.Sender.AI,
+        text = it.text,
+    )
+}
+
 /**
- * 서버에 마디가 하나도 없을 때 첫 물음을 다시 연다.
+ * 서버 마디가 없을 때 앱이 세우는 첫 물음.
  *
- * 지금 계약에는 답을 보내는 경로가 없어서 세션을 만들어도 대화가 서버에 쌓이지 않는다.
- * 그대로 두면 이어서 하기로 들어온 화면이 빈 채로 열려 무엇을 해야 하는지 알 수 없다.
- * 첫 물음은 어차피 앱이 만들고 있으므로 여기서도 같은 문장을 쓴다. 답을 보내는 경로가
- * 생기면 사라진다(#137).
+ * 세션을 못 만들었거나(연결 없음) 응답에 마디가 비어 있을 때만 쓴다. 첫 질문은 서버가
+ * 만드는 것이라(#259) 서버 마디가 있으면 이 문장은 화면에 나오지 않는다. 빈 화면으로 두면
+ * 무엇을 해야 하는지 알 수 없어 그때만 이 문장으로 문답을 이어 간다.
  */
 private fun IntakeUiState.openingFor(siteText: String?): List<IntakeMessage> =
     siteText?.let { listOf(newMessage(IntakeMessage.Sender.AI, intakeOpeningLine(it))) }.orEmpty()

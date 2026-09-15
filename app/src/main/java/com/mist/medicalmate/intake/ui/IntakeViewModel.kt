@@ -149,16 +149,18 @@ internal constructor(private val repository: SessionRepository, speech: SpeechTo
                 val selection = state.bodyMap.selection?.takeIf { state.canLeaveBodyPart }
                 val part = selection?.title()
                 if (selection != null && part != null) {
-                    // 서버에 세션을 연다. 여기서부터 임시저장이 남는다.
-                    session.start(selection, part)
+                    // 첫 질문은 서버가 세션을 만들면서 준다(#259). 오기 전까지는 답을 기다리는
+                    // 점 셋만 두고 보내기를 막는다. 앱 문장을 먼저 세우면 응답이 올 때 바뀐다.
                     mutableUiState.update {
                         it.copy(
                             bodyPart = part,
-                            messages =
-                            listOf(it.newMessage(IntakeMessage.Sender.AI, intakeOpeningLine(part))),
+                            messages = emptyList(),
+                            awaitingReply = true,
                             step = IntakeStep.SYMPTOM_CHAT,
                         )
                     }
+                    // 서버에 세션을 연다. 여기서부터 임시저장이 남는다.
+                    session.start(selection, part)
                 }
             }
 

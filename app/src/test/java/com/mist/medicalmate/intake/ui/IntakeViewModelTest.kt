@@ -41,6 +41,8 @@ private class FakeSessionRepository(
     private val session: IntakeSession = savedSession,
     private val startFails: Boolean = false,
     ends: Boolean = false,
+    /** 세션을 만들 때 서버가 돌려주는 것. 기본은 마디가 빈 세션이라 앱이 첫 물음을 세운다. */
+    private val started: IntakeSession = session,
 ) : SessionRepository {
     var startedCodes: List<String>? = null
     var startedText: String? = null
@@ -48,7 +50,7 @@ private class FakeSessionRepository(
     override suspend fun start(siteCodes: List<String>, siteText: String?): ApiResult<IntakeSession> {
         startedCodes = siteCodes
         startedText = siteText
-        return if (startFails) ApiResult.NetworkUnavailable(java.io.IOException()) else ApiResult.Success(session)
+        return if (startFails) ApiResult.NetworkUnavailable(java.io.IOException()) else ApiResult.Success(started)
     }
 
     override suspend fun load(sessionId: Long): ApiResult<IntakeSession> = ApiResult.Success(session)
@@ -230,7 +232,7 @@ class IntakeViewModelTest {
     }
 
     @Test
-    fun `구역까지 고르면 부위가 정해지고 첫 마디에 그 이름이 들어간다`() {
+    fun `구역까지 고르면 부위가 정해지고 서버 마디가 없으면 앱이 첫 마디에 그 이름을 넣는다`() {
         val viewModel = intakeViewModel()
 
         viewModel.bodyMap.onDotClick("ANC:014@LEFT")
@@ -243,6 +245,33 @@ class IntakeViewModelTest {
         assertEquals(1, state.messages.size)
         assertEquals(IntakeMessage.Sender.AI, state.messages.first().sender)
         assertTrue(state.messages.first().text.startsWith("왼쪽 무릎이 불편하시군요"))
+        assertFalse(state.awaitingReply)
+    }
+
+    @Test
+    fun `첫 질문은 세션을 만든 서버가 준 마디다`() {
+        // 앱 문장을 먼저 세우면 첫 답을 보낸 뒤 서버 대화로 갈아 끼우면서 첫 질문이 바뀌어 보였다(#259).
+        val opening = IntakeSessionMessage(seq = 1, fromPatient = false, text = "명치가 어떻게 불편하세요?")
+        val viewModel = intakeViewModel(FakeSessionRepository(started = savedSession.copy(messages = listOf(opening))))
+
+        viewModel.openChatStep()
+
+        val first = viewModel.uiState.value.messages.single()
+        assertEquals(1L, first.id)
+        assertEquals(IntakeMessage.Sender.AI, first.sender)
+        assertEquals("명치가 어떻게 불편하세요?", first.text)
+        assertFalse(viewModel.uiState.value.awaitingReply)
+    }
+
+    @Test
+    fun `세션을 못 만들면 앱이 첫 물음을 세우고 보내기를 막지 않는다`() {
+        val viewModel = intakeViewModel(FakeSessionRepository(startFails = true))
+
+        viewModel.openChatStep()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.messages.single().text.contains("불편하시군요"))
+        assertFalse(state.awaitingReply)
     }
 
     @Test
