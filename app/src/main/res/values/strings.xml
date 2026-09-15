@@ -122,6 +122,7 @@
     <string name="visit_record_delete_body">원문 메모까지 사라지고 되돌릴 수 없어요.</string>
     <string name="visit_record_delete_confirm">삭제</string>
     <string name="visit_record_failed_title">기록을 정리하지 못했어요</string>
+    <string name="visit_detail_failed_title">기록을 불러오지 못했어요</string>
     <string name="visit_record_failed_description">인터넷 연결을 확인하고 다시 시도해주세요</string>
     <string name="visit_record_retry">다시 시도</string>
     <string name="visit_record_save_failed">저장하지 못했어요. 다시 눌러주세요.</string>
@@ -171,6 +172,8 @@
     <string name="calendar_day_record_empty_action">진료 후 기록하기</string>
     <!-- 1r-2-A·A2 다녀온 날. 할 일이 사라지고 기록과 다음 일정이 붙는다. -->
     <string name="calendar_day_visited">진료 완료</string>
+    <!-- 일정 카드의 마지막 줄. %1$s는 카드 제목. 시안 1r-2-A의 "복부 통증 브리핑 카드를 가져가요". -->
+    <string name="calendar_day_schedule_card">%1$s 브리핑 카드를 가져가요</string>
     <string name="calendar_day_card_done">브리핑 카드</string>
     <!-- 카드 줄의 보조 문구. 시안 1r-2·1r-1-S가 작성일과 항목 수를 함께 적는다. -->
     <string name="calendar_day_card_meta">%1$s · %2$d항목</string>

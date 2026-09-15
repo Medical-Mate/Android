@@ -223,11 +223,15 @@ private fun ColumnScope.ScheduleSection(state: CalendarDayUiState, callbacks: Ca
             style = MedicalMateTheme.typography.bodyM,
             color = MedicalMateTheme.colors.fgSubtle,
         )
-        Text(
-            text = schedule.detail,
-            style = MedicalMateTheme.typography.bodyM,
-            color = MedicalMateTheme.colors.fgSubtle,
-        )
+        // 시안(`1060:2883`)의 "복부 통증 브리핑 카드를 가져가요"(#256). 카드 제목만 두면 그 줄이
+        // 무엇을 뜻하는지가 없다. 카드가 걸리지 않은 일정에는 줄을 두지 않는다.
+        if (schedule.detail.isNotBlank()) {
+            Text(
+                text = stringResource(R.string.calendar_day_schedule_card, schedule.detail),
+                style = MedicalMateTheme.typography.bodyM,
+                color = MedicalMateTheme.colors.fgSubtle,
+            )
+        }
     }
 }
 

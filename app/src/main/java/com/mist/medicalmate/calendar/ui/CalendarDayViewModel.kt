@@ -81,7 +81,7 @@ internal constructor(
                 dayState(date).copy(
                     schedule = appointment?.toDaySchedule(LocalDate.now(clock)),
                     card = appointment?.toDayCard()?.filled(),
-                    records = records.map { it.toDayRecord() },
+                    records = records.map { it.toDayRecord().filled() },
                     // 진료가 끝난 날에는 진료 전 할 일을 두지 않는다. 시안 1r-2-A도 그렇다.
                     todos = if (records.isEmpty()) appointment?.todos.toDayTodos() else emptyList(),
                     // 다음 일정은 그 날의 첫 기록에서 찾는다. 같은 날 둘이면 재방문 날짜도
@@ -118,6 +118,20 @@ internal constructor(
             itemCount = detail?.items?.size,
             clinicAddress = detail?.hospital?.address,
         )
+    }
+
+    /**
+     * 기록 줄의 메타를 항목으로 채운다. 시안의 `위염 초기 · 2주 약 · 09.26 재방문`.
+     *
+     * 카드 줄이 상세를 따로 읽어 작성일·항목 수를 채우는 것(#243)과 같은 길이다. 값의 첫 줄만
+     * 잇는다 — 검사 항목처럼 두 줄로 적힌 값을 통째로 넣으면 한 줄 메타가 넘친다. 항목이 하나도
+     * 없으면(하나도 못 나눈 기록) 목록의 병원 이름이 그대로 남는다.
+     */
+    private suspend fun DayRecord.filled(): DayRecord = coroutineScope {
+        val visitId = id.toLongOrNull() ?: return@coroutineScope this@filled
+        val detail = (visitRepository.visit(visitId) as? ApiResult.Success)?.value ?: return@coroutineScope this@filled
+        val summary = detail.items.map { it.value.lineSequence().first().trim() }.filter { it.isNotBlank() }
+        if (summary.isEmpty()) this@filled else copy(meta = summary.joinToString(" · "))
     }
 
     /**
@@ -208,14 +222,14 @@ private fun Appointment.toDayCard(): DayCard? {
 }
 
 /**
- * 그 날 남긴 진료 후 기록.
+ * 그 날 남긴 진료 후 기록. 시안(`1060:2968`)의 제목은 `진료 후 기록`이다(#256).
  *
- * 무엇을 들었는지는 목록 응답에 없다. 상세를 따로 읽어야 나오는데, 이 줄은 기록 상세로
- * 들어가는 길이라 그 값이 없어도 제 일을 한다. 기록 목록(1j-1)의 줄과 같은 모양이다.
+ * 무엇을 들었는지는 목록 응답에 없어 여기서는 병원만 적고, [filled]가 상세를 읽어 항목으로
+ * 바꾼다. 못 읽어도 이 줄은 상세로 들어가는 길이라 병원 이름으로 제 일을 한다.
  */
 private fun VisitListItem.toDayRecord() = DayRecord(
     id = id,
-    title = cardTitle.ifBlank { clinic.orEmpty() },
+    title = "진료 후 기록",
     meta = clinic.orEmpty(),
 )
 

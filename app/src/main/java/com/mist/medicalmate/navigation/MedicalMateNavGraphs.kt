@@ -32,10 +32,12 @@ import com.mist.medicalmate.profile.ui.profileSetupDestination
 import com.mist.medicalmate.visit.ui.ClinicConfirmDestination
 import com.mist.medicalmate.visit.ui.HospitalPickDestination
 import com.mist.medicalmate.visit.ui.HospitalPickPurpose
+import com.mist.medicalmate.visit.ui.VisitDetailDestination
 import com.mist.medicalmate.visit.ui.VisitNoteDestination
 import com.mist.medicalmate.visit.ui.VisitRecordDestination
 import com.mist.medicalmate.visit.ui.clinicConfirmDestination
 import com.mist.medicalmate.visit.ui.hospitalPickDestination
+import com.mist.medicalmate.visit.ui.visitDetailDestination
 import com.mist.medicalmate.visit.ui.visitNoteDestination
 import com.mist.medicalmate.visit.ui.visitRecordDestination
 
@@ -174,7 +176,9 @@ internal fun NavGraphBuilder.calendarDestinations(navController: NavHostControll
                 },
             )
         },
-        onRecordOpen = { recordId -> navController.navigate(RecordDetailDestination(recordId)) },
+        // 그 날 남긴 기록 하나를 보는 줄이라 기록 상세(1j-3)가 아니라 진료 후 기록 상세로 간다(#256).
+        // 1j-3은 카드·기록·예정을 타임라인으로 모아 보이는 자리고, 기록 탭의 줄만 그리로 간다.
+        onRecordOpen = { recordId -> navController.navigate(VisitDetailDestination(recordId)) },
         // 1r-2-A의 다음 일정이 시간만 비어 있는 상태다. 확정하러 가면 병원이 이미 채워진
         // 일정 추가(1r-4-B)가 열린다.
         onScheduleConfirm = { clinic, date, appointmentId, cardId, followUp ->
@@ -223,6 +227,7 @@ private fun NavGraphBuilder.clinicConfirmFlow(navController: NavHostController) 
 
 internal fun NavGraphBuilder.visitDestinations(navController: NavHostController) {
     clinicConfirmFlow(navController)
+    visitDetailDestination(onExit = { navController.popBackStack() })
     hospitalPickDestination(
         // 진료 후(1m). 고른 병원 이름과 붙일 카드를 메모 화면으로 넘긴다.
         onPicked = { cardId, cardTitle, visitedOn, hospital ->
