@@ -67,8 +67,12 @@ internal fun VisitRecordCard(state: VisitRecordUiState.Content, callbacks: Visit
                 )
             }
         }
-        if (state.items.isNotEmpty()) MedicalMateDivider()
-        Memo(memo = state.record.memo)
+        // 저장한 기록을 다시 볼 때 원문이 없을 수 있다(#256). 빈 인용을 세우면 적지 않은 말이
+        // 있는 것으로 읽힌다.
+        if (state.record.memo.isNotBlank()) {
+            if (state.items.isNotEmpty()) MedicalMateDivider()
+            Memo(memo = state.record.memo)
+        }
         state.record.classifiedCount?.takeIf { !state.editing }?.let { Caption(it) }
     }
 }

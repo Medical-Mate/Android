@@ -9,7 +9,9 @@ import com.mist.medicalmate.calendar.data.NewAppointment
 import com.mist.medicalmate.card.ui.FakeCardRepository
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.visit.data.FakeVisitRepository
+import com.mist.medicalmate.visit.data.Visit
 import com.mist.medicalmate.visit.data.VisitFollowUp
+import com.mist.medicalmate.visit.data.VisitItem
 import com.mist.medicalmate.visit.data.VisitListItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -278,8 +280,39 @@ class CalendarDayViewModelTest {
 
         val record = viewModel.state().records.single()
         assertEquals("2", record.id)
-        assertEquals("갈비뼈 · 일주일", record.title)
+        // 시안(`1060:2968`)의 제목이다. 카드 제목은 위의 카드 줄이 이미 적고 있다(#256).
+        assertEquals("진료 후 기록", record.title)
         assertTrue(viewModel.state().visited)
+    }
+
+    @Test
+    fun `기록 줄의 메타는 상세의 항목이다`() {
+        // 시안의 `위염 초기 · 2주 약 · 09.26 재방문`. 두 줄로 적힌 값은 첫 줄만 잇는다(#256).
+        val detail =
+            FakeVisitRepository.EMPTY_VISIT.copy(
+                id = "2",
+                items =
+                listOf(
+                    VisitItem(axis = "findings", label = "소견", value = "위염 초기"),
+                    VisitItem(axis = "tests", label = "검사", value = "혈액검사 시행\n결과는 다음 방문 때 확인"),
+                    VisitItem(axis = "follow_up", label = "재방문", value = "09.26 재방문"),
+                ),
+            )
+        val viewModel = dayViewModel(visits = listOf(testVisit), visitDetails = mapOf(2L to ApiResult.Success(detail)))
+
+        viewModel.load(VisitDate)
+
+        assertEquals("위염 초기 · 혈액검사 시행 · 09.26 재방문", viewModel.state().records.single().meta)
+    }
+
+    @Test
+    fun `상세를 못 읽으면 기록 줄에 병원이 남는다`() {
+        val viewModel =
+            dayViewModel(visits = listOf(testVisit), visitDetails = mapOf(2L to FakeVisitRepository.OFFLINE))
+
+        viewModel.load(VisitDate)
+
+        assertEquals("서울OO병원 내과", viewModel.state().records.single().meta)
     }
 
     @Test
@@ -379,10 +412,11 @@ class CalendarDayViewModelTest {
 private fun dayViewModel(
     appointments: List<Appointment> = listOf(testAppointment),
     visits: List<VisitListItem> = emptyList(),
+    visitDetails: Map<Long, ApiResult<Visit>> = emptyMap(),
     repository: FakeAppointmentRepository = FakeAppointmentRepository(appointments),
 ) = CalendarDayViewModel(
     repository,
-    FakeVisitRepository(list = ApiResult.Success(visits)),
+    FakeVisitRepository(list = ApiResult.Success(visits), details = visitDetails),
     FakeCardRepository(),
     fixedClock,
 )
