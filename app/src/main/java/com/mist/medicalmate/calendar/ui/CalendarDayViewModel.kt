@@ -10,6 +10,9 @@ import com.mist.medicalmate.calendar.data.AppointmentStatus
 import com.mist.medicalmate.calendar.data.AppointmentTodo
 import com.mist.medicalmate.card.data.CardRepository
 import com.mist.medicalmate.core.network.ApiResult
+import com.mist.medicalmate.visit.data.AXIS_FINDINGS
+import com.mist.medicalmate.visit.data.AXIS_FOLLOW_UP
+import com.mist.medicalmate.visit.data.AXIS_MEDICATION
 import com.mist.medicalmate.visit.data.VisitFollowUp
 import com.mist.medicalmate.visit.data.VisitListItem
 import com.mist.medicalmate.visit.data.VisitRepository
@@ -123,14 +126,21 @@ internal constructor(
     /**
      * 기록 줄의 메타를 항목으로 채운다. 시안의 `위염 초기 · 2주 약 · 09.26 재방문`.
      *
-     * 카드 줄이 상세를 따로 읽어 작성일·항목 수를 채우는 것(#243)과 같은 길이다. 값의 첫 줄만
-     * 잇는다 — 검사 항목처럼 두 줄로 적힌 값을 통째로 넣으면 한 줄 메타가 넘친다. 항목이 하나도
-     * 없으면(하나도 못 나눈 기록) 목록의 병원 이름이 그대로 남는다.
+     * 카드 줄이 상세를 따로 읽어 작성일·항목 수를 채우는 것(#243)과 같은 길이다.
+     *
+     * **소견·약·재방문 셋만 그 차례로 잇는다**(#262). 시안이 그 셋이고, 이 줄이 답하는 물음은
+     * "무엇을 들었고 언제 다시 가는지"다. 검사처럼 결과가 다음에 나오는 항목이나 AI가 늘린
+     * 축까지 붙이면 한 줄 메타가 넘친다. 값의 첫 줄만 쓴다 — 두 줄로 적힌 값을 통째로 넣으면
+     * 마찬가지다. 셋이 다 없으면 목록의 병원 이름이 그대로 남는다.
      */
     private suspend fun DayRecord.filled(): DayRecord = coroutineScope {
         val visitId = id.toLongOrNull() ?: return@coroutineScope this@filled
         val detail = (visitRepository.visit(visitId) as? ApiResult.Success)?.value ?: return@coroutineScope this@filled
-        val summary = detail.items.map { it.value.lineSequence().first().trim() }.filter { it.isNotBlank() }
+        val summary =
+            RECORD_META_AXES
+                .mapNotNull { axis -> detail.items.firstOrNull { it.axis == axis } }
+                .map { it.value.lineSequence().first().trim() }
+                .filter { it.isNotBlank() }
         if (summary.isEmpty()) this@filled else copy(meta = summary.joinToString(" · "))
     }
 
@@ -283,6 +293,9 @@ private fun Appointment.toDaySchedule(today: LocalDate) = CalendarSchedule(
     dday = on.toEpochDay() - today.toEpochDay(),
     followUp = origin == AppointmentOrigin.VISIT_FOLLOW_UP,
 )
+
+/** 기록 줄 메타에 잇는 축과 그 차례. 시안(`1060:2968`)의 `위염 초기 · 2주 약 · 09.26 재방문`이다. */
+private val RECORD_META_AXES = listOf(AXIS_FINDINGS, AXIS_MEDICATION, AXIS_FOLLOW_UP)
 
 /** 시안 1r-2-A의 "9월 26일 (토)". */
 private val REVISIT_CHIP: DateTimeFormatter = DateTimeFormatter.ofPattern("M월 d일 (E)", Locale.KOREAN)
