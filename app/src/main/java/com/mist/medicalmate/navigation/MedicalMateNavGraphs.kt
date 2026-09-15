@@ -29,10 +29,12 @@ import com.mist.medicalmate.profile.ui.myProfileDestination
 import com.mist.medicalmate.profile.ui.onboardingIntroDestination
 import com.mist.medicalmate.profile.ui.profileCompleteDestination
 import com.mist.medicalmate.profile.ui.profileSetupDestination
+import com.mist.medicalmate.visit.ui.ClinicConfirmDestination
 import com.mist.medicalmate.visit.ui.HospitalPickDestination
 import com.mist.medicalmate.visit.ui.HospitalPickPurpose
 import com.mist.medicalmate.visit.ui.VisitNoteDestination
 import com.mist.medicalmate.visit.ui.VisitRecordDestination
+import com.mist.medicalmate.visit.ui.clinicConfirmDestination
 import com.mist.medicalmate.visit.ui.hospitalPickDestination
 import com.mist.medicalmate.visit.ui.visitNoteDestination
 import com.mist.medicalmate.visit.ui.visitRecordDestination
@@ -152,14 +154,24 @@ internal fun NavGraphBuilder.calendarDestinations(navController: NavHostControll
         onCardOpen = { cardId -> navController.navigate(BriefCardDestination(cardId)) },
         // 이 날 일정에 걸린 카드에 기록이 붙는다. 서버가 카드 하나에 기록 하나를 받는다.
         // 카드 제목도 함께 간다. 1p가 무엇으로 진료받았는지를 그 값으로 적는다.
-        onRecordAdd = { cardId, cardTitle, visitedOn ->
+        //
+        // 일정에 병원이 있으면 그 병원이 맞는지 먼저 묻는다(1m-12, #246). 병원은 일정을 추가할
+        // 때 이미 등록해 두는 값이라 아는 채로 다시 찾게 할 이유가 없다. 없을 때만 찾기로 간다.
+        onRecordAdd = { cardId, cardTitle, visitedOn, clinic, address ->
+            // 오늘이 아니라 그 일자다. 어제 진료를 오늘 적어도 기록은 그 날에 남는다.
+            val on = visitedOn.toString()
             navController.navigate(
-                HospitalPickDestination(
-                    cardId = cardId,
-                    cardTitle = cardTitle,
-                    // 오늘이 아니라 그 일자다. 어제 진료를 오늘 적어도 기록은 그 날에 남는다.
-                    visitedOn = visitedOn.toString(),
-                ),
+                if (clinic.isNullOrBlank()) {
+                    HospitalPickDestination(cardId = cardId, cardTitle = cardTitle, visitedOn = on)
+                } else {
+                    ClinicConfirmDestination(
+                        clinic = clinic,
+                        address = address,
+                        cardId = cardId,
+                        cardTitle = cardTitle,
+                        visitedOn = on,
+                    )
+                },
             )
         },
         onRecordOpen = { recordId -> navController.navigate(RecordDetailDestination(recordId)) },
@@ -187,7 +199,28 @@ internal fun NavGraphBuilder.calendarDestinations(navController: NavHostControll
     )
 }
 
+/**
+ * 1m-12 병원 확인(#246). 일정에 등록한 병원이 맞으면 그 병원으로 바로 메모(1p)로 가고, 다른
+ * 곳에서 진료받았으면 전처럼 병원 찾기(1m)로 간다. 1m을 거칠 때와 같은 값을 나른다.
+ */
+private fun NavGraphBuilder.clinicConfirmFlow(navController: NavHostController) {
+    clinicConfirmDestination(
+        onConfirmed = { clinic, cardId, cardTitle, visitedOn ->
+            navController.navigate(
+                VisitNoteDestination(clinic = clinic, cardId = cardId, cardTitle = cardTitle, visitedOn = visitedOn),
+            )
+        },
+        onOther = { cardId, cardTitle, visitedOn ->
+            navController.navigate(
+                HospitalPickDestination(cardId = cardId, cardTitle = cardTitle, visitedOn = visitedOn),
+            )
+        },
+        onExit = { navController.popBackStack() },
+    )
+}
+
 internal fun NavGraphBuilder.visitDestinations(navController: NavHostController) {
+    clinicConfirmFlow(navController)
     hospitalPickDestination(
         // 진료 후(1m). 고른 병원 이름과 붙일 카드를 메모 화면으로 넘긴다.
         onPicked = { cardId, cardTitle, visitedOn, hospital ->

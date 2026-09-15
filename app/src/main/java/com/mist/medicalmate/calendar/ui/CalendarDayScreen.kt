@@ -123,8 +123,14 @@ data class CalendarDayCallbacks(
     val onBackClick: () -> Unit = {},
     val onCardOpenClick: (String) -> Unit = {},
     val onTodoToggle: (String, Boolean) -> Unit = { _, _ -> },
-    /** 기록을 붙일 카드의 id와 제목. 제목은 1p가 "무엇으로 진료받았는지"를 적는 데 쓴다. */
-    val onRecordAddClick: (cardId: String, cardTitle: String) -> Unit = { _, _ -> },
+    /**
+     * 기록을 붙일 카드의 id와 제목, 그 날 일정의 병원과 주소.
+     *
+     * 제목은 1p가 "무엇으로 진료받았는지"를 적는 데 쓴다. 병원은 1m-12가 "이 병원이 맞나요"를
+     * 묻는 데 쓴다 — 없으면 병원 찾기로 바로 간다.
+     */
+    val onRecordAddClick: (cardId: String, cardTitle: String, clinic: String?, address: String?) -> Unit =
+        { _, _, _, _ -> },
     val onRecordOpenClick: (String) -> Unit = {},
     val onNextEventConfirmClick: () -> Unit = {},
     val onEditClick: () -> Unit = {},
@@ -306,7 +312,10 @@ private fun ColumnScope.RecordSection(state: CalendarDayUiState, callbacks: Cale
                 title = stringResource(R.string.calendar_day_record_empty_title),
                 description = stringResource(R.string.calendar_day_record_empty_description),
                 actionLabel = card?.let { stringResource(R.string.calendar_day_record_empty_action) },
-                onActionClick = card?.let { { callbacks.onRecordAddClick(it.id, it.title) } },
+                onActionClick =
+                card?.let {
+                    { callbacks.onRecordAddClick(it.id, it.title, state.schedule?.title, it.clinicAddress) }
+                },
             )
         }
         return
