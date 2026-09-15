@@ -153,6 +153,17 @@ class RecordDetailViewModelTest {
     }
 
     @Test
+    fun `첫 기록에서 열어도 예정은 최신 기록보다 뒤다`() {
+        // 첫 진료(09.12) 뒤 재방문(09.26)을 다녀왔고 그 재방문에서 09.30이 잡혔다. 첫 기록을
+        // 열면 09.26 일정이 첫 진료보다 뒤라 예정으로 섰다 — 이미 다녀온 날인데(#251).
+        val revisitDay = NEXT.copy(id = 8, on = LocalDate.of(2026, 9, 26))
+        val after = NEXT.copy(id = 9, on = LocalDate.of(2026, 9, 30))
+        val steps = revisited(appointments = listOf(revisitDay, after), opened = "77").detail.steps
+
+        assertEquals("09.30 예정", (steps.first() as RecordStep.Pending).at)
+    }
+
+    @Test
     fun `다른 카드의 일정은 끌어오지 않는다`() {
         val other = listOf(com.mist.medicalmate.calendar.data.AppointmentCard(id = 99, title = null))
         val steps = content(FULL, appointments = listOf(NEXT.copy(cards = other))).detail.steps
@@ -312,9 +323,12 @@ class RecordDetailViewModelTest {
     )
 
     /** 두 번 다녀온 카드. 상세는 최신([SECOND])을 연 것으로 둔다. */
-    private fun revisited(): RecordDetailUiState.Content {
-        val viewModel = viewModel(repository = revisitedRepository())
-        viewModel.load("78")
+    private fun revisited(
+        appointments: List<Appointment> = emptyList(),
+        opened: String = "78",
+    ): RecordDetailUiState.Content {
+        val viewModel = viewModel(repository = revisitedRepository(), appointments = appointments)
+        viewModel.load(opened)
         return viewModel.uiState.value as RecordDetailUiState.Content
     }
 

@@ -136,7 +136,13 @@ private fun CalendarUiState.withMonth(
     return copy(
         appointments = live,
         cards = monthCards,
-        recordDays = monthCards.map { it.writtenOn.dayOfMonth }.toSet(),
+        // 카드를 쓴 날과 진료 후 기록을 남긴 날이 "기록 있음"이다(#251). 기록을 남긴 날을 빼면
+        // 재방문하고 기록까지 남긴 날이 여전히 "예정"으로 남는다 — 그 날 일정이 있어서다.
+        recordDays =
+        (monthCards.map { it.writtenOn } + visits.map { it.visitedOn })
+            .filter { YearMonth.from(it) == month }
+            .map { it.dayOfMonth }
+            .toSet(),
         plannedDays = plannedDays(live, visits, month, today),
         schedules = onSelected.map { it.toSchedule(today) },
         cardSheet = if (onSelected.isEmpty()) monthCards.cardOn(selected, live) else null,

@@ -81,16 +81,20 @@ internal constructor(
             val card = cardId?.let { id -> (cardRepository.card(id) as? ApiResult.Success)?.value }
             val summaries = cardId?.let { (repository.cardVisits(it) as? ApiResult.Success)?.value }.orEmpty()
             val visits = if (summaries.size <= 1) listOf(visit) else history(summaries, visit)
+            // 예정은 열어 본 기록이 아니라 **가장 최근 기록**보다 뒤의 것이다(#251). 첫 기록에서
+            // 열어도 상세는 그 카드의 기록을 모두 세우므로, 이미 다녀온 재방문 일정이 예정으로
+            // 서면 안 된다. 잡아 둔 일정이 있으면 그것, 없으면 최신 기록의 재방문 날짜다 —
+            // 캘린더가 점을 찍는 값과 같다.
+            val latest = visits.maxByOrNull { it.visitedOn ?: LocalDate.MIN } ?: visit
+            val latestOn = latest.visitedOn ?: LocalDate.MIN
             mutableUiState.value =
                 RecordDetailUiState.Content(
                     recordDetail(
                         visits = visits,
                         card = card,
-                        // 예정은 이 진료보다 뒤의 것이다. 잡아 둔 일정이 있으면 그것, 없으면
-                        // 기록의 재방문 날짜다 — 캘린더가 점을 찍는 값과 같다.
                         pending =
-                        nextVisit(cardId, visit.visitedOn)?.toPending()
-                            ?: visit.followUp?.takeIf { it.date > (visit.visitedOn ?: LocalDate.MIN) }?.toPending(),
+                        nextVisit(cardId, latest.visitedOn)?.toPending()
+                            ?: latest.followUp?.takeIf { it.date > latestOn }?.toPending(),
                         // 카드 응답의 제목이 비어 있을 수 있다. 목록이 카드를 만들 때 박아 둔
                         // 제목을 들고 있어서(1j-1의 줄과 같은 값) 그것으로 받친다.
                         cardTitle = summaries.firstNotNullOfOrNull { it.cardTitle.takeIf(String::isNotBlank) },
