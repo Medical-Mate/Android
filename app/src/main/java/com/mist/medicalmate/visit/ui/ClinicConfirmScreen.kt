@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -115,11 +116,14 @@ private fun ColumnScope.ConfirmContent(
             ClinicRow(clinic = clinic, address = address)
             MedicalMateDivider()
         }
+        // 시안은 글자가 콘텐츠 왼쪽 끝에 붙는다. 버튼의 좌우 여백 20을 그만큼 왼쪽으로 물려 글자를
+        // 그 자리에 두고 터치 영역은 그대로 남긴다 — 버튼 컴포넌트의 여백을 건드리지 않는다.
         MedicalMateButton(
             label = stringResource(R.string.clinic_confirm_other),
             onClick = onOtherClick,
             type = MedicalMateButtonType.GHOST,
             size = MedicalMateButtonSize.M,
+            modifier = Modifier.offset(x = -MedicalMateSpace.s20),
         )
     }
 }
