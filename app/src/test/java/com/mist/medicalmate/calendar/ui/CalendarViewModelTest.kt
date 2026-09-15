@@ -6,6 +6,7 @@ import com.mist.medicalmate.calendar.data.AppointmentStatus
 import com.mist.medicalmate.calendar.data.NewAppointment
 import com.mist.medicalmate.card.data.CardListItem
 import com.mist.medicalmate.card.ui.FakeCardRepository
+import com.mist.medicalmate.core.designsystem.component.MedicalMateDateMarker
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.visit.data.FakeVisitRepository
 import com.mist.medicalmate.visit.data.VisitFollowUp
@@ -73,6 +74,9 @@ class CalendarViewModelTest {
             )
 
         val state = monthViewModel(visits = listOf(revisit)).uiState.value
+        // 진료 후 기록을 남긴 날은 "기록 있음"이다. 그 날 일정이 있어도 기록이 앞선다(#251).
+        assertTrue(revisit.visitedOn.dayOfMonth in state.recordDays)
+        assertEquals(MedicalMateDateMarker.RECORD, state.markerOn(revisit.visitedOn.dayOfMonth))
 
         assertEquals(setOf(12, 26), state.plannedDays)
     }
