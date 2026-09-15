@@ -168,8 +168,11 @@ private fun buttonColors(type: MedicalMateButtonType, enabled: Boolean, pressed:
         MedicalMateButtonType.OUTLINE ->
             ButtonColorsSpec(Color.Transparent, colors.fgDefault, colors.borderDefault)
 
+        // 마스터(`291:670`)의 Ghost는 세 크기 모두 `fg/subtle`이다. 브랜드색으로 두면 링크와
+        // 구별되지 않는다 — 문서가 "링크와 버튼은 색이 아니라 면 유무로 갈린다"고 적는데, Ghost는
+        // 면이 없어서 색까지 링크와 같으면 둘이 한 가지로 보인다.
         MedicalMateButtonType.GHOST ->
-            ButtonColorsSpec(Color.Transparent, colors.fgPrimary, null)
+            ButtonColorsSpec(Color.Transparent, colors.fgSubtle, null)
 
         MedicalMateButtonType.DANGER ->
             ButtonColorsSpec(colors.bgDanger, colors.fgDanger, null)

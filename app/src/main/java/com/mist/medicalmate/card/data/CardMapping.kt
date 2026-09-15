@@ -95,9 +95,9 @@ private fun axisLabel(axis: String): String = when (axis) {
     "onset" -> "시작"
     "character" -> "양상"
     "radiation" -> "뻗치는 곳"
-    "associated" -> "같이 있는 증상"
+    "associated" -> "동반증상"
     "time_course" -> "경과"
-    "exacerbating_relieving" -> "심해질 때·나아질 때"
+    "exacerbating_relieving" -> "심해질 때"
     "severity" -> "강도"
     else -> axis
 }
