@@ -1,5 +1,7 @@
 package com.mist.medicalmate.card.ui
 
+import com.mist.medicalmate.core.model.MAX_BRIEF_CARD_QUESTIONS
+
 /**
  * 편집 모드에서 카드 사본을 고치는 조작.
  *
@@ -55,9 +57,20 @@ class BriefCardEditActions(private val update: ((BriefCardDraft) -> BriefCardDra
      *
      * 문서의 항목 추가 규칙이다. 빈 항목이 생기고 적으면 그대로 항목이 된다. 번호는 목록
      * 순서가 정하므로 3개였으면 새 질문이 4번이 된다.
+     *
+     * 상한(#264)에 닿으면 더하지 않는다. 화면이 그 줄을 이미 감추지만 상태 쪽에서도 막아야
+     * 서버가 거절할 목록이 만들어지지 않는다.
      */
     fun onQuestionAddClick() {
-        update { draft -> draft.copy(questions = draft.questions + "") }
+        update { draft ->
+            if (draft.questions.size >=
+                MAX_BRIEF_CARD_QUESTIONS
+            ) {
+                draft
+            } else {
+                draft.copy(questions = draft.questions + "")
+            }
+        }
     }
 }
 

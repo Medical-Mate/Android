@@ -34,6 +34,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateLoadingSpinne
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
+import com.mist.medicalmate.core.model.MAX_BRIEF_CARD_QUESTIONS
 
 /**
  * 와이어프레임 1e-1과 1e-1-E. Figma `404:1679`, `597:4804`.
@@ -164,7 +165,7 @@ private fun ColumnScope.CardContent(state: BriefCardUiState.Content, callbacks: 
         }
         QuestionsCallout(
             questions = state.questions,
-            edit = if (state.editing) questionEdit(callbacks) else null,
+            edit = if (state.editing) questionEdit(callbacks, state.questions.size) else null,
         )
         HospitalSection(
             hospital = state.card.hospital,
@@ -187,9 +188,11 @@ private fun ColumnScope.CardContent(state: BriefCardUiState.Content, callbacks: 
 
 /** 질문 편집에 필요한 문구와 조작을 모은다. 문구는 화면이 들고 조작은 사본이 받는다. */
 @Composable
-private fun questionEdit(callbacks: BriefCardCallbacks): MedicalMateCalloutEdit {
+private fun questionEdit(callbacks: BriefCardCallbacks, questionCount: Int): MedicalMateCalloutEdit {
     val deleteLabelFormat = stringResource(R.string.brief_card_question_delete, QUESTION_NUMBER_SLOT)
     return MedicalMateCalloutEdit(
+        // 상한(#264)에 닿으면 `질문 추가` 줄을 감춘다. 문답 4단계와 같은 수다.
+        canAdd = questionCount < MAX_BRIEF_CARD_QUESTIONS,
         addLabel = stringResource(R.string.brief_card_question_add),
         deleteContentDescription = { number ->
             deleteLabelFormat.replace(QUESTION_NUMBER_SLOT.toString(), number.toString())

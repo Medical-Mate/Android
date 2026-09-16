@@ -138,6 +138,15 @@ class BriefCardViewModelTest {
     }
 
     @Test
+    fun `질문은 다섯 개를 넘겨 더하지 않는다`() {
+        // 문답 4단계와 같은 상한이다(#264). 서버가 그 수를 넘기면 거절한다.
+        val viewModel = editing()
+        repeat(10) { viewModel.editActions.onQuestionAddClick() }
+
+        assertEquals(5, viewModel.content().questions.size)
+    }
+
+    @Test
     fun `질문을 지우면 뒤 질문의 번호가 밀린다`() {
         val viewModel = editing()
         val third = viewModel.content().questions[2]
