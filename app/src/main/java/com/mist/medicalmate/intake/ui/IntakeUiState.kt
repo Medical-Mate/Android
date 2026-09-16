@@ -3,6 +3,7 @@ package com.mist.medicalmate.intake.ui
 import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
 import com.mist.medicalmate.core.model.IntakeStep
+import com.mist.medicalmate.core.model.MAX_BRIEF_CARD_QUESTIONS
 
 /**
  * 문답의 한 마디. Figma `313:999` Bubble.
@@ -95,7 +96,10 @@ data class IntakeUiState(
      */
     val speaking: String? get() = draft.takeIf { inputMode == IntakeInputMode.VOICE && it.isNotBlank() }
 
-    val canAddQuestion: Boolean get() = questionDraft.isNotBlank()
+    /** 질문이 상한까지 찼는지. 찼으면 추가 버튼이 꺼지고 필드 아래에 그 사실을 적는다(#264). */
+    val questionsFull: Boolean get() = questions.size >= MAX_BRIEF_CARD_QUESTIONS
+
+    val canAddQuestion: Boolean get() = questionDraft.isNotBlank() && !questionsFull
 
     /**
      * 다음 마디. id를 지금 있는 것들에서 이어 붙인다.

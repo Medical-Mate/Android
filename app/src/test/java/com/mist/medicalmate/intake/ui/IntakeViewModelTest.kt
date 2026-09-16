@@ -645,6 +645,23 @@ class IntakeViewModelTest {
     }
 
     @Test
+    fun `질문은 다섯 개까지만 들어간다`() {
+        // 서버 상한과 같다(Backend#132). 넘치는 목록을 보내면 거절되고 카드에 질문이 하나도 안 남았다(#264).
+        val viewModel = intakeViewModel()
+        repeat(6) { index ->
+            viewModel.question.onDraftChange("질문 ${index + 1}")
+            viewModel.question.onAdd()
+        }
+
+        val state = viewModel.uiState.value
+        assertEquals(5, state.questions.size)
+        assertTrue(state.questionsFull)
+        // 여섯째는 들어가지 않았고, 적어 둔 글은 지워지지 않는다.
+        assertEquals("질문 6", state.questionDraft)
+        assertFalse(state.canAddQuestion)
+    }
+
+    @Test
     fun `빈 질문은 들어가지 않고 없는 자리를 지워도 그대로다`() {
         val viewModel = intakeViewModel()
 

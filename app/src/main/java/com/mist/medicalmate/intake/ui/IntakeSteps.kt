@@ -37,6 +37,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSeveritySlider
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTextField
 import com.mist.medicalmate.core.model.IntakeStep
+import com.mist.medicalmate.core.model.MAX_BRIEF_CARD_QUESTIONS
 
 /**
  * 단계별 본문. [IntakeScreen]에서만 쓴다.
@@ -152,6 +153,13 @@ internal fun QuestionsStep(state: IntakeUiState, callbacks: IntakeCallbacks, mod
             value = state.questionDraft,
             onValueChange = callbacks.onQuestionDraftChange,
             placeholder = stringResource(R.string.intake_questions_placeholder),
+            // 상한(#264)에 닿으면 왜 더 못 넣는지를 필드 아래에 적는다. 버튼만 꺼 두면 고장으로 읽힌다.
+            helperText =
+            if (state.questionsFull) {
+                stringResource(R.string.intake_questions_full, MAX_BRIEF_CARD_QUESTIONS)
+            } else {
+                null
+            },
             trailing = {
                 MedicalMateIconButton(
                     onClick = {
@@ -175,7 +183,7 @@ private fun SavedQuestions(state: IntakeUiState, callbacks: IntakeCallbacks, las
 
     MedicalMateSectionHeader(
         title = stringResource(R.string.intake_questions_saved),
-        caption = stringResource(R.string.intake_questions_count, state.questions.size),
+        caption = stringResource(R.string.intake_questions_count, state.questions.size, MAX_BRIEF_CARD_QUESTIONS),
     )
     Text(
         text = stringResource(R.string.intake_questions_ai_hint),

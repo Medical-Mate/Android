@@ -306,7 +306,9 @@
     <string name="intake_questions_add">질문 추가</string>
     <string name="intake_questions_saved">적어둔 질문</string>
     <string name="intake_questions_ai_hint">AI가 추천하는 질문이에요</string>
-    <string name="intake_questions_count">%1$d개</string>
+    <!-- 적어둔 질문 수와 상한. 상한은 서버와 같은 5개다(#264). -->
+    <string name="intake_questions_count">%1$d / %2$d개</string>
+    <string name="intake_questions_full">질문은 %1$d개까지 적을 수 있어요</string>
     <string name="intake_questions_remove">%1$d번째 질문 지우기</string>
 
     <!-- Figma V2 · 스플래시(1320:4553). -->

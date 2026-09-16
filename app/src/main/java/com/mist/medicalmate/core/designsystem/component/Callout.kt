@@ -51,6 +51,8 @@ data class MedicalMateCalloutEdit(
     val onQuestionChange: (Int, String) -> Unit,
     val onQuestionDelete: (Int) -> Unit,
     val onQuestionAdd: () -> Unit,
+    /** 더할 자리가 남았는지. 상한에 닿으면 `질문 추가` 줄을 그리지 않는다. 상한은 제품이 정한다. */
+    val canAdd: Boolean = true,
 )
 
 @Composable
@@ -91,7 +93,7 @@ fun MedicalMateCallout(
             questions.forEachIndexed { index, question ->
                 QuestionPill(number = index + 1, question = question, index = index, edit = edit)
             }
-            if (edit != null) {
+            if (edit != null && edit.canAdd) {
                 MedicalMateAddRow(label = edit.addLabel, onClick = edit.onQuestionAdd)
             }
         }
