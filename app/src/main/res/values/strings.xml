@@ -217,7 +217,6 @@
     <string name="schedule_add_share_filled_body">병원과 날짜가 맞는지 확인하고 저장해주세요</string>
     <string name="schedule_add_share_missed">문자에서 날짜를 찾지 못했어요</string>
     <string name="schedule_add_share_missed_body">날짜는 직접 골라주세요</string>
-    <string name="share_to_schedule">진료 일정 추가</string>
     <string name="schedule_add_date_sheet">날짜 선택</string>
     <string name="schedule_add_time_sheet">시간 선택</string>
     <string name="schedule_add_sheet_confirm">확인</string>
