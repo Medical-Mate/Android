@@ -202,3 +202,33 @@ class HospitalNameCharTest {
         assertEquals("튼튼정형외과", hospitalIn("예약 안내·튼튼정형외과"))
     }
 }
+
+/** 띄어 쓴 병원 이름(#270). 붙여 쓴 이름을 못 찾았을 때만 본다. */
+class SpacedHospitalNameTest {
+    @Test
+    fun `머리의 띄어 쓴 이름을 든다`() {
+        assertEquals("강남 세브란스 병원", hospitalIn("[Web발신]\n[강남 세브란스 병원] 10/15 14시 예약"))
+        assertEquals("밝은 안과", hospitalIn("[밝은 안과] 예약 안내"))
+        assertEquals("튼튼 정형외과", hospitalIn("[예약안내 튼튼 정형외과] 10/15"))
+    }
+
+    @Test
+    fun `본문의 띄어 쓴 이름을 든다`() {
+        assertEquals("강남 세브란스 병원", hospitalIn("안녕하세요 강남 세브란스 병원입니다. 10월 15일 예약"))
+        assertEquals("튼튼 정형외과의원", hospitalIn("10/15 14시 튼튼 정형외과의원 진료 예약"))
+        assertEquals("서울대 병원 소화기내과", hospitalIn("서울대 병원 소화기내과 10월 15일 예약"))
+    }
+
+    @Test
+    fun `이름이 아닌 앞말은 받지 않는다`() {
+        assertNull(hospitalIn("10월 15일 예약하신 병원에 오실 때 신분증을 지참하세요"))
+        assertNull(hospitalIn("해당 병원으로 문의 바랍니다"))
+        assertNull(hospitalIn("홍길동님 정형외과 진료가 10/15 예약되었습니다"))
+        assertNull(hospitalIn("오후 2시 가까운 병원에 방문하세요"))
+    }
+
+    @Test
+    fun `붙여 쓴 이름이 있으면 그것이 먼저다`() {
+        assertEquals("튼튼정형외과", hospitalIn("해당 병원 안내 - 튼튼정형외과 10/15 예약"))
+    }
+}
