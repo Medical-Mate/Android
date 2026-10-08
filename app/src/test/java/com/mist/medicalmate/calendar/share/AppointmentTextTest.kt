@@ -232,3 +232,17 @@ class SpacedHospitalNameTest {
         assertEquals("튼튼정형외과", hospitalIn("해당 병원 안내 - 튼튼정형외과 10/15 예약"))
     }
 }
+
+/** 문자 앱이 넣어 보내는 보이지 않는 공백(#270). */
+class InvisibleSpaceTest {
+    @Test
+    fun `줄바꿈 없는 공백과 전각 공백도 띄어쓰기다`() {
+        assertEquals("한국튼튼 정형외과", hospitalIn("[Web발신]\n-한국튼튼 정형외과-\n10월 15일 14시"))
+        assertEquals("한국튼튼 정형외과", hospitalIn("-한국튼튼　정형외과-"))
+    }
+
+    @Test
+    fun `폭 없는 문자는 지운다`() {
+        assertEquals("튼튼정형외과", hospitalIn("[튼튼​정형외과] 예약"))
+    }
+}

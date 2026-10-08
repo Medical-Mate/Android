@@ -14,8 +14,14 @@ package com.mist.medicalmate.calendar.share
  * `예약하신 병원`·`해당 병원` 같은 말이 이름으로 잡히기 쉽다. 규칙은 [spacedHospitalIn]에 있다.
  *
  * 진료과가 바로 뒤에 붙어 있으면 함께 든다. 같은 병원의 다른 과는 다른 일정이다.
+ *
+ * **보이지 않는 공백을 먼저 고른다.** 문자 앱이 띄어쓰기 자리에 줄바꿈 없는 공백(U+00A0)이나 전각
+ * 공백을 넣어 보내고, 폭 없는 문자를 끼우기도 한다. 정규식의 `\s`는 그것을 공백으로 보지 않아서
+ * `한국튼튼 정형외과`가 한 낱말로 붙는다.
  */
-internal fun hospitalIn(text: String): String? {
+internal fun hospitalIn(text: String): String? = hospitalInPlain(text.replace(INVISIBLE, "").replace(ODD_SPACES, " "))
+
+private fun hospitalInPlain(text: String): String? {
     val bracketed = BRACKET.findAll(text).map { it.groupValues[1] }.toList()
     return bracketed.firstNotNullOfOrNull(::joinedHospitalIn)
         ?: bracketed.firstNotNullOfOrNull { spacedHospitalIn(it, header = true) }
@@ -84,6 +90,12 @@ private const val MAX_NAME_WORDS = 2
 private val BRACKET = Regex("""[\[【]([^\]】]{2,40})[\]】]""")
 
 private val SPACES = Regex("\\s+")
+
+/** 폭 없는 문자와 줄 나눔 하이픈. 글자 사이에 끼어 있어도 지운다. */
+private val INVISIBLE = Regex("[\\u200B-\\u200D\\u2060\\uFEFF\\u00AD]")
+
+/** `\s`가 공백으로 보지 않는 공백들. 줄바꿈 없는 공백, 여러 폭의 공백, 전각 공백이다. */
+private val ODD_SPACES = Regex("[\\u00A0\\u1680\\u2000-\\u200A\\u202F\\u205F\\u3000]")
 
 /**
  * 진료과 이름. 병원 이름의 끝, 병원 뒤에 붙는 과, 홀로 선 과를 가려내는 데 함께 쓴다.
