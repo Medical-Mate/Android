@@ -3,6 +3,8 @@ package com.mist.medicalmate.calendar.data
 import com.mist.medicalmate.calendar.reminder.DefaultVisitReminders
 import com.mist.medicalmate.calendar.reminder.ReminderScheduler
 import com.mist.medicalmate.calendar.reminder.WorkManagerReminderScheduler
+import com.mist.medicalmate.calendar.share.AppointmentTextReader
+import com.mist.medicalmate.calendar.share.MlKitAppointmentTextReader
 import com.mist.medicalmate.core.model.FollowUpScheduler
 import com.mist.medicalmate.core.model.VisitReminders
 import dagger.Binds
@@ -37,4 +39,8 @@ internal abstract class CalendarRepositoryModule {
 
     @Binds
     abstract fun bindReminderScheduler(impl: WorkManagerReminderScheduler): ReminderScheduler
+
+    /** 공유받은 예약 문자를 읽는다(#270). 유닛 테스트는 가짜로 갈아 끼운다. */
+    @Binds
+    abstract fun bindAppointmentTextReader(impl: MlKitAppointmentTextReader): AppointmentTextReader
 }

@@ -1,0 +1,116 @@
+package com.mist.medicalmate.calendar.share
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Test
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.ZonedDateTime
+
+/** 예약 문자에서 일정 칸을 고르는 규칙(#270). 추출기 자체는 기기에서만 돈다. */
+class AppointmentTextTest {
+    @Test
+    fun `문자 머리의 대괄호에서 병원을 찾는다`() {
+        assertEquals("서울OO병원", hospitalIn("[Web발신]\n[서울OO병원] 10월 15일 오후 2시 예약되었습니다."))
+    }
+
+    @Test
+    fun `병원 뒤에 붙은 진료과는 함께 든다`() {
+        assertEquals("서울OO병원 정형외과", hospitalIn("[서울OO병원 정형외과] 예약 안내"))
+        assertEquals("마디병원 재활의학과", hospitalIn("마디병원 재활의학과 10/15 진료 예약"))
+    }
+
+    @Test
+    fun `진료과 자리에 다른 말이 오면 떼어 낸다`() {
+        assertEquals("서울OO병원", hospitalIn("[서울OO병원 예약안내] 10/15"))
+        assertEquals("서울OO병원", hospitalIn("[서울OO병원 결과 안내]"))
+    }
+
+    @Test
+    fun `대괄호가 없으면 본문에서 찾는다`() {
+        assertEquals("연세이비인후과의원", hospitalIn("연세이비인후과의원에서 알려드립니다. 10월 15일 진료"))
+        assertEquals("튼튼치과", hospitalIn("안녕하세요 튼튼치과입니다"))
+        assertEquals("경희한의원", hospitalIn("경희한의원 예약 확인"))
+    }
+
+    @Test
+    fun `병원 이름 꼴이 없으면 비운다`() {
+        assertNull(hospitalIn("[Web발신] 10월 15일 오후 2시 예약되었습니다. 병원에 오실 때 신분증을 지참하세요."))
+    }
+
+    @Test
+    fun `처음 나온 앞날을 고른다`() {
+        val mentions =
+            listOf(
+                mention(0, 6, LocalDateTime.of(2026, 10, 15, 14, 30), hasTime = true),
+                mention(30, 36, LocalDateTime.of(2026, 10, 14, 18, 0), hasTime = true),
+            )
+
+        assertEquals(LocalDate.of(2026, 10, 15) to LocalTime.of(14, 30), pickSchedule(mentions, TODAY))
+    }
+
+    @Test
+    fun `지난 날은 건너뛴다`() {
+        val mentions =
+            listOf(
+                mention(0, 5, LocalDateTime.of(2026, 9, 30, 0, 0), hasTime = false),
+                mention(20, 26, LocalDateTime.of(2026, 10, 15, 0, 0), hasTime = false),
+            )
+
+        assertEquals(LocalDate.of(2026, 10, 15) to null, pickSchedule(mentions, TODAY))
+    }
+
+    @Test
+    fun `날짜 바로 뒤의 시각은 같은 일정이다`() {
+        // "10월 15일(목) 오후 2시"를 추출기가 둘로 나누어 준 경우다.
+        val mentions =
+            listOf(
+                mention(0, 7, LocalDateTime.of(2026, 10, 15, 0, 0), hasTime = false),
+                mention(11, 16, LocalDateTime.of(2026, 10, 8, 14, 0), hasTime = true),
+            )
+
+        assertEquals(LocalDate.of(2026, 10, 15) to LocalTime.of(14, 0), pickSchedule(mentions, TODAY))
+    }
+
+    @Test
+    fun `떨어진 시각은 붙이지 않는다`() {
+        // "10월 15일 진료 예약 ... 변경은 오후 6시까지"의 6시는 진료 시각이 아니다.
+        val mentions =
+            listOf(
+                mention(0, 7, LocalDateTime.of(2026, 10, 15, 0, 0), hasTime = false),
+                mention(30, 36, LocalDateTime.of(2026, 10, 8, 18, 0), hasTime = true),
+            )
+
+        assertEquals(LocalDate.of(2026, 10, 15) to null, pickSchedule(mentions, TODAY))
+    }
+
+    @Test
+    fun `날짜가 없으면 둘 다 비운다`() {
+        assertEquals(null to null, pickSchedule(emptyList(), TODAY))
+    }
+
+    @Test
+    fun `하루까지 짚지 못한 것은 버린다`() {
+        assertNull(dateTimeMention(0, 4, EPOCH_MILLIS, Granularity.COARSE, SEOUL))
+    }
+
+    @Test
+    fun `시각까지 짚었으면 분 단위로 든다`() {
+        val found = dateTimeMention(0, 4, EPOCH_MILLIS, Granularity.TIME, SEOUL)
+
+        assertEquals(LocalDateTime.of(2026, 10, 15, 14, 30), found?.at)
+        assertEquals(true, found?.hasTime)
+    }
+
+    private fun mention(start: Int, end: Int, at: LocalDateTime, hasTime: Boolean) =
+        DateTimeMention(start, end, at, hasTime)
+
+    private companion object {
+        val TODAY: LocalDate = LocalDate.of(2026, 10, 8)
+        val SEOUL: ZoneId = ZoneId.of("Asia/Seoul")
+        val EPOCH_MILLIS =
+            ZonedDateTime.of(2026, 10, 15, 14, 30, 42, 0, SEOUL).toInstant().toEpochMilli()
+    }
+}

@@ -55,6 +55,13 @@ internal data class ScheduleAddDestination(
      * 캘린더에 점만 남는 것이 아니라 무엇 하러 가는 날인지가 남는다(#245).
      */
     val followUp: Boolean = false,
+    /**
+     * 공유받은 예약 문자(#270).
+     *
+     * 있으면 화면이 열리면서 이 글에서 병원·날짜·시간을 읽어 빈 칸을 채운다. 라우트에 담는 이유는
+     * 병원과 같다 — 화면이 다시 만들어져도 남아야 한다.
+     */
+    val sharedText: String? = null,
 )
 
 internal fun NavGraphBuilder.scheduleAddDestination(
@@ -72,6 +79,7 @@ internal fun NavGraphBuilder.scheduleAddDestination(
             appointmentId = route.appointmentId,
             cardId = route.cardId,
             followUp = route.followUp,
+            sharedText = route.sharedText,
             onHospitalPick = onHospitalPick,
             onCardNew = onCardNew,
             onSaved = onSaved,
@@ -94,6 +102,7 @@ private fun ScheduleAddRoute(
     appointmentId: Long?,
     cardId: String?,
     followUp: Boolean,
+    sharedText: String?,
     onHospitalPick: () -> Unit,
     onCardNew: () -> Unit,
     onSaved: () -> Unit,
@@ -104,7 +113,8 @@ private fun ScheduleAddRoute(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val requestNotificationPermission = rememberNotificationPermission()
 
-    LaunchedEffect(Unit) { viewModel.load(appointmentId, date, cardId, followUp) }
+    // 문자 앱에서 공유받았으면 그 글로 빈 칸을 채운다(#270).
+    LaunchedEffect(Unit) { viewModel.load(appointmentId, date, cardId, followUp, sharedText) }
 
     // 병원 찾기에서 골라 돌아온 값. 엔트리가 그대로 살아 있어서 적어 둔 날짜·시간·할 일이
     // 남는다. 라우트 인자는 처음부터 병원이 정해진 채로 열리는 경우(1r-4-B)에 쓴다.

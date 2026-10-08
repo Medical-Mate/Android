@@ -37,6 +37,8 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateCardPick
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavLeading
+import com.mist.medicalmate.core.designsystem.component.MedicalMateNotice
+import com.mist.medicalmate.core.designsystem.component.MedicalMateNoticeTone
 import com.mist.medicalmate.core.designsystem.component.MedicalMatePickerField
 import com.mist.medicalmate.core.designsystem.component.MedicalMateRowDelete
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
@@ -112,6 +114,7 @@ private fun ColumnScope.FormContent(state: ScheduleAddUiState, callbacks: Schedu
             .verticalScroll(rememberScrollState())
             .padding(horizontal = MedicalMateSize.gutter, vertical = MedicalMateSpace.s8),
     ) {
+        ShareReadNotice(state.shareRead)
         FieldLabel(stringResource(R.string.schedule_add_hospital))
         MedicalMatePickerField(
             value = state.hospital,
@@ -124,6 +127,31 @@ private fun ColumnScope.FormContent(state: ScheduleAddUiState, callbacks: Schedu
         CardSection(state = state, callbacks = callbacks)
         TodoSection(state = state, todo = callbacks.todo)
     }
+}
+
+/**
+ * 공유받은 예약 문자를 읽은 결과(#270).
+ *
+ * 시안에 없는 자리다. 문자에서 읽은 값은 틀릴 수 있어서, 채웠다는 사실을 칸 위에 남겨 확인하고
+ * 저장하게 한다. 날짜를 못 찾았으면 그것도 적는다.
+ */
+@Composable
+private fun ShareReadNotice(read: ScheduleAddShareRead) {
+    val (title, body) =
+        when (read) {
+            ScheduleAddShareRead.NONE -> return
+            ScheduleAddShareRead.READING -> R.string.schedule_add_share_reading to null
+            ScheduleAddShareRead.FILLED ->
+                R.string.schedule_add_share_filled to R.string.schedule_add_share_filled_body
+            ScheduleAddShareRead.MISSED ->
+                R.string.schedule_add_share_missed to R.string.schedule_add_share_missed_body
+        }
+    MedicalMateNotice(
+        title = stringResource(title),
+        body = body?.let { stringResource(it) },
+        tone = if (read == ScheduleAddShareRead.MISSED) MedicalMateNoticeTone.WARNING else MedicalMateNoticeTone.INFO,
+        modifier = Modifier.padding(top = MedicalMateSpace.s8),
+    )
 }
 
 /** 필드 위의 작은 이름. 시안이 필드마다 위에 한 줄 둔다. */

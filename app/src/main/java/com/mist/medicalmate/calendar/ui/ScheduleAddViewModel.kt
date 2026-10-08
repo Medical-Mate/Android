@@ -8,6 +8,8 @@ import com.mist.medicalmate.calendar.data.AppointmentOrigin
 import com.mist.medicalmate.calendar.data.AppointmentRepository
 import com.mist.medicalmate.calendar.data.AppointmentTodo
 import com.mist.medicalmate.calendar.data.NewAppointment
+import com.mist.medicalmate.calendar.share.AppointmentTextReader
+import com.mist.medicalmate.calendar.share.SharedAppointment
 import com.mist.medicalmate.card.data.CardListItem
 import com.mist.medicalmate.card.data.CardRepository
 import com.mist.medicalmate.core.network.ApiResult
@@ -36,6 +38,7 @@ class ScheduleAddViewModel
 internal constructor(
     private val repository: AppointmentRepository,
     private val cardRepository: CardRepository,
+    private val textReader: AppointmentTextReader,
 ) : ViewModel() {
     /** 두 번 눌러 일정이 둘 생기는 것을 막는다. */
     private var saving = false
@@ -50,8 +53,25 @@ internal constructor(
      * 나갔다 돌아오면 이 화면이 컴포지션에 다시 들어오면서 한 번 더 오는데, 그때 목록을
      * 통째로 갈아끼우면 골라 둔 카드가 조용히 풀린다. 그대로 저장하면 카드가 안 걸린 일정이
      * 되고, 나중에 그 일정으로는 진료 후 기록을 남길 수 없다.
+     *
+     * [sharedText]는 문자 앱에서 공유받은 예약 문자다(#270). 읽은 값으로 **비어 있는 칸만**
+     * 채운다. 한국어 모델을 처음 받으면 몇 초가 걸리고, 그 사이 사람이 고른 값이 나중의 뜻이다.
+     * 읽기는 **한 번만** 한다. 다시 읽으면 시트에서 지운 시각이 문자 값으로 되살아난다.
      */
-    fun load(appointmentId: Long? = null, date: LocalDate? = null, cardId: String? = null, followUp: Boolean = false) {
+    fun load(
+        appointmentId: Long? = null,
+        date: LocalDate? = null,
+        cardId: String? = null,
+        followUp: Boolean = false,
+        sharedText: String? = null,
+    ) {
+        if (!sharedText.isNullOrBlank() && mutableUiState.value.shareRead == ScheduleAddShareRead.NONE) {
+            mutableUiState.update { it.copy(shareRead = ScheduleAddShareRead.READING) }
+            viewModelScope.launch {
+                val read = textReader.read(sharedText)
+                mutableUiState.update { it.filledFrom(read) }
+            }
+        }
         viewModelScope.launch {
             // 이미 한 번 담아 왔으면 다시 읽지 않는다. 고치는 중에 들어온 값을 덮어쓴다.
             val editing = if (mutableUiState.value.appointmentId == null) appointment(appointmentId, date) else null
@@ -228,6 +248,14 @@ internal constructor(
         }
     }
 }
+
+/** 문자에서 읽은 값으로 빈 칸을 채운다. 날짜를 찾았는지가 화면의 안내를 정한다. */
+private fun ScheduleAddUiState.filledFrom(read: SharedAppointment) = copy(
+    hospital = hospital ?: read.hospital,
+    date = date ?: read.date,
+    time = time ?: read.time,
+    shareRead = if (read.date != null) ScheduleAddShareRead.FILLED else ScheduleAddShareRead.MISSED,
+)
 
 /** 골라 둔 카드의 병원. 일정 추가가 병원 칸을 채울 때 쓴다. */
 private fun List<ScheduleAddCard>.pickedClinic(): String? =

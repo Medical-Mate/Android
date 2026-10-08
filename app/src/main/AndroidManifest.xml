@@ -38,6 +38,18 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!--
+              예약 문자 공유(#270). 문자 앱의 공유 메뉴에 "진료 일정 추가"로 뜨고, 받은 글로 일정
+              추가 화면을 채워 연다. 글은 기기 안에서만 읽는다.
+            -->
+            <intent-filter android:label="@string/share_to_schedule">
+                <action android:name="android.intent.action.SEND" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:mimeType="text/plain" />
+            </intent-filter>
         </activity>
 
         <!--

@@ -316,6 +316,7 @@ dependencies {
     implementation(libs.hilt.android)
     implementation(libs.kakao.user)
     implementation(libs.mlkit.genai.speech)
+    implementation(libs.mlkit.entity.extraction)
     implementation(libs.filament.android)
     implementation(libs.filament.gltfio)
     ksp(libs.hilt.compiler)
