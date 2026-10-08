@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
@@ -13,6 +14,7 @@ import androidx.core.content.ContextCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.mist.medicalmate.R
+import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -32,13 +34,14 @@ import java.util.Locale
 internal class VisitReminderWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val appointmentId = inputData.getLong(KEY_APPOINTMENT_ID, 0L)
+        val date = inputData.getString(KEY_DATE)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
         val title = inputData.getString(KEY_TITLE).orEmpty()
         val time = inputData.getString(KEY_TIME)?.let { runCatching { LocalTime.parse(it) }.getOrNull() }
-        show(appointmentId, title, time)
+        show(appointmentId, date, title, time)
         return Result.success()
     }
 
-    private fun show(appointmentId: Long, title: String, time: LocalTime?) {
+    private fun show(appointmentId: Long, date: LocalDate?, title: String, time: LocalTime?) {
         val context = applicationContext
         // lint가 권한 확인을 알아보려면 호출과 같은 함수 안에 있어야 한다.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
@@ -54,7 +57,7 @@ internal class VisitReminderWorker(context: Context, params: WorkerParameters) :
                 .setSmallIcon(R.drawable.ic_bell)
                 .setContentTitle(context.getString(R.string.visit_reminder_title))
                 .setContentText(body(context, title, time))
-                .setContentIntent(openApp(context))
+                .setContentIntent(openDay(context, appointmentId, date))
                 .setAutoCancel(true)
                 .setCategory(NotificationCompat.CATEGORY_REMINDER)
                 .build()
@@ -63,6 +66,7 @@ internal class VisitReminderWorker(context: Context, params: WorkerParameters) :
 
     internal companion object {
         const val KEY_APPOINTMENT_ID = "appointmentId"
+        const val KEY_DATE = "date"
         const val KEY_TITLE = "title"
         const val KEY_TIME = "time"
     }
@@ -79,10 +83,31 @@ private fun body(context: Context, title: String, time: LocalTime?): String {
     return if (time == null) name else context.getString(R.string.visit_reminder_body_timed, name, time.format(TIME))
 }
 
-/** 알림을 누르면 앱을 연다. 세션 확인을 거쳐 홈으로 간다. */
-private fun openApp(context: Context): PendingIntent? {
-    val intent = context.packageManager.getLaunchIntentForPackage(context.packageName) ?: return null
-    return PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+/**
+ * 알림을 누르면 그 일정의 일자 화면(1r-2)을 연다.
+ *
+ * 앱의 시작 인텐트에 [VisitReminderLink]를 싣는다. `MainActivity`를 이름으로 부르지 않는 것은
+ * 도메인이 앱 진입점을 참조하지 않게 하려는 것이다. 열려 있던 앱이면 그 Activity가 새
+ * 인텐트를 받도록 위에 쌓인 것을 걷어낸다 — 새 Activity가 하나 더 뜨면 세션 확인과
+ * 스플래시를 다시 거친다.
+ *
+ * 요청 코드를 일정마다 다르게 둔다. 같으면 시스템이 앞서 만든 `PendingIntent`의 내용을
+ * 덮어서, 알림이 둘일 때 어느 쪽을 눌러도 같은 날이 열린다.
+ *
+ * 날짜를 못 읽은 예약이면 앱만 연다. 세션 확인을 거쳐 홈으로 간다.
+ */
+private fun openDay(context: Context, appointmentId: Long, date: LocalDate?): PendingIntent? {
+    val launch = context.packageManager.getLaunchIntentForPackage(context.packageName) ?: return null
+    val intent =
+        launch.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP).also { intent ->
+            date?.let { VisitReminderLink(it, appointmentId).writeTo(intent) }
+        }
+    return PendingIntent.getActivity(
+        context,
+        appointmentId.hashCode(),
+        intent,
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+    )
 }
 
 /** 채널은 이미 있으면 그대로 둔다. 사용자가 시스템 설정에서 바꾼 중요도를 덮지 않는다. */

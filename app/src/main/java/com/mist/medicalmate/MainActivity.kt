@@ -1,5 +1,6 @@
 package com.mist.medicalmate
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -18,6 +20,7 @@ import com.mist.medicalmate.auth.ui.AccountActionState
 import com.mist.medicalmate.auth.ui.SessionUiState
 import com.mist.medicalmate.auth.ui.SessionViewModel
 import com.mist.medicalmate.auth.ui.SplashScreen
+import com.mist.medicalmate.calendar.reminder.VisitReminderLink
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.navigation.MedicalMateNavHost
 import com.mist.medicalmate.profile.ui.AccountActionCallbacks
@@ -27,14 +30,34 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    /**
+     * 진료 알림을 눌러 열린 일정(#268). 그래프가 그 날로 옮기고 나면 비운다.
+     *
+     * 다시 만들어진 Activity(`savedInstanceState`가 있거나 최근 앱에서 연 경우)는 처음 받은
+     * 인텐트를 그대로 들고 있다. 그때 다시 읽으면 한참 전에 누른 알림의 날로 또 옮겨 간다.
+     */
+    private val reminderLink = mutableStateOf<VisitReminderLink?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        val fromHistory = intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0
+        if (savedInstanceState == null && !fromHistory) reminderLink.value = VisitReminderLink.from(intent)
         setContent {
             MedicalMateTheme {
-                MedicalMateApp()
+                MedicalMateApp(
+                    reminderLink = reminderLink.value,
+                    onReminderLinkHandled = { reminderLink.value = null },
+                )
             }
         }
+    }
+
+    /** 앱이 열려 있을 때 알림을 누른 경우. 알림이 위에 쌓인 것을 걷어내고 이 Activity로 보낸다. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        VisitReminderLink.from(intent)?.let { reminderLink.value = it }
     }
 }
 
@@ -61,6 +84,8 @@ class MainActivity : ComponentActivity() {
  */
 @Composable
 private fun MedicalMateApp(
+    reminderLink: VisitReminderLink?,
+    onReminderLinkHandled: () -> Unit,
     sessionViewModel: SessionViewModel = hiltViewModel(),
     onboardingGateViewModel: OnboardingGateViewModel = hiltViewModel(),
 ) {
@@ -83,6 +108,8 @@ private fun MedicalMateApp(
         MedicalMateNavHost(
             session = session,
             onboardingCompleted = onboardingCompleted == true,
+            reminderLink = reminderLink,
+            onReminderLinkHandled = onReminderLinkHandled,
             onAuthenticated = sessionViewModel::onSignedIn,
             onOnboardingCompleted = {
                 sessionViewModel.onOnboardingCompleted()
