@@ -89,19 +89,39 @@ private const val MAX_GAP = 6
  * 예약 문자는 대개 머리에 `[서울OO병원]`처럼 보낸 곳을 적는다. 대괄호 안을 먼저 보고, 없으면
  * 본문에서 찾는다. `[Web발신]`·`[광고]`처럼 병원이 아닌 머리는 이름 꼴이 아니라 건너뛴다.
  *
+ * **과 이름으로 끝나는 의원도 병원이다.** 동네 의원은 `튼튼정형외과`·`밝은안과`처럼 `의원`을
+ * 떼고 부르는 일이 흔하다. 다만 과 이름만 홀로 선 것(`정형외과 진료 예약`)은 어느 병원인지가
+ * 아니라 어느 과인지라 건너뛴다.
+ *
  * 진료과가 바로 뒤에 붙어 있으면 함께 든다. 같은 병원의 다른 과는 다른 일정이다.
  */
 internal fun hospitalIn(text: String): String? {
     val bracketed = BRACKET.findAll(text).map { it.groupValues[1] }
     return (bracketed + text).firstNotNullOfOrNull { part ->
-        HOSPITAL.find(part)?.value?.trim()
+        HOSPITAL.findAll(part)
+            .firstOrNull { !BARE_DEPARTMENT.matches(it.groupValues[1]) }
+            ?.value
+            ?.trim()
     }
 }
 
 private val BRACKET = Regex("""[\[【]([^\]】]{2,40})[\]】]""")
 
+/**
+ * 진료과 이름. 병원 이름의 끝, 병원 뒤에 붙는 과, 홀로 선 과를 가려내는 데 함께 쓴다.
+ *
+ * `~의학과`를 `[가-힣]+의학과`로 묶지 않는다. 그러면 `튼튼재활의학과`가 통째로 과 이름이 되어
+ * 홀로 선 과로 버려진다.
+ */
+private const val DEPARTMENT =
+    "(?:정신건강의학과|재활의학과|가정의학과|영상의학과|마취통증의학과|비뇨의학과|응급의학과" +
+        "|소아청소년과|이비인후과|산부인과|정형외과|신경외과|성형외과|흉부외과|비뇨기과" +
+        "|소아과|청소년과|피부과|신경과|내과|외과|안과)"
+
 private val HOSPITAL =
     Regex(
-        "[가-힣A-Za-z0-9]+(?:병원|의원|치과|클리닉|의료원|보건소|메디컬센터)" +
-            "(?:\\s[가-힣]{0,6}(?:의학과|내과|외과|안과|피부과|소아과|청소년과|산부인과|인후과|비뇨기과|신경과))?",
+        "([가-힣A-Za-z0-9]+(?:병원|의원|치과|클리닉|의료원|보건소|메디컬센터|$DEPARTMENT))" +
+            "(?:\\s[가-힣]{0,6}$DEPARTMENT)?",
     )
+
+private val BARE_DEPARTMENT = Regex(DEPARTMENT)

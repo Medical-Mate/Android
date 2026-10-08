@@ -36,6 +36,31 @@ class AppointmentTextTest {
     }
 
     @Test
+    fun `과 이름으로 끝나는 의원도 병원이다`() {
+        assertEquals("튼튼정형외과", hospitalIn("[Web발신]\n[튼튼정형외과] 10/15 오후 2시 예약"))
+        assertEquals("밝은안과", hospitalIn("안녕하세요 밝은안과입니다. 10월 15일 진료 예약"))
+        assertEquals("우리소아청소년과", hospitalIn("[우리소아청소년과] 예약 안내"))
+        assertEquals("튼튼재활의학과", hospitalIn("튼튼재활의학과에서 알려드립니다"))
+        assertEquals("서울내과", hospitalIn("서울내과 10월 15일 내원 예정"))
+    }
+
+    @Test
+    fun `과 이름만 홀로 서면 병원이 아니다`() {
+        assertNull(hospitalIn("[Web발신] 정형외과 진료가 10월 15일 오후 2시에 예약되었습니다."))
+        assertNull(hospitalIn("[재활의학과] 10/15 예약"))
+    }
+
+    @Test
+    fun `홀로 선 과를 건너뛰고 뒤의 병원을 찾는다`() {
+        assertEquals("튼튼정형외과", hospitalIn("정형외과 진료 예약 안내 - 튼튼정형외과"))
+    }
+
+    @Test
+    fun `병원 뒤의 세부 진료과도 함께 든다`() {
+        assertEquals("서울OO병원 소화기내과", hospitalIn("[서울OO병원 소화기내과] 10/15 예약"))
+    }
+
+    @Test
     fun `병원 이름 꼴이 없으면 비운다`() {
         assertNull(hospitalIn("[Web발신] 10월 15일 오후 2시 예약되었습니다. 병원에 오실 때 신분증을 지참하세요."))
     }
