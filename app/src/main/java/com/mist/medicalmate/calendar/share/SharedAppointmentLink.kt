@@ -54,14 +54,28 @@ internal data class SharedAppointmentLink(
         private fun fromInsert(intent: Intent, zone: ZoneId): SharedAppointmentLink? = fromEvent(
             beginMillis = intent.getLongExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, -1L),
             allDay = intent.getBooleanExtra(CalendarContract.EXTRA_EVENT_ALL_DAY, false),
-            texts =
-            listOf(
-                CalendarContract.Events.TITLE,
-                CalendarContract.Events.EVENT_LOCATION,
-                CalendarContract.Events.DESCRIPTION,
-            ).map(intent::getStringExtra),
+            texts = eventTexts(intent),
             zone = zone,
         )
+
+        /**
+         * 병원을 찾을 글. 캘린더의 제목·장소·설명을 먼저 두고 나머지 글 값을 뒤에 잇는다.
+         *
+         * **정해진 키만 보지 않는다.** 갤럭시 메시지의 "일정 추가"는 날짜만 알아본 것이라 문자 본문을
+         * 어느 키에 싣는지가 보낸 앱마다 다르고 문서에도 없다. 제목에 날짜 글만 넣고 본문은 다른 키에
+         * 둘 수 있어서, 글로 된 값은 모두 모아 병원을 찾는다.
+         */
+        private fun eventTexts(intent: Intent): List<String?> {
+            val known =
+                listOf(
+                    CalendarContract.Events.TITLE,
+                    CalendarContract.Events.EVENT_LOCATION,
+                    CalendarContract.Events.DESCRIPTION,
+                )
+            val extras = intent.extras ?: return emptyList()
+            val others = extras.keySet().filterNot { it in known }.sorted()
+            return (known + others).map { key -> extras.getCharSequence(key)?.toString() }.distinct()
+        }
 
         /**
          * 일정 추가 요청의 값을 [SharedAppointmentLink]로. 인텐트를 걷어낸 부분이라 JVM에서 시험한다.

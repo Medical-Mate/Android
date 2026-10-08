@@ -175,3 +175,30 @@ class SharedAppointmentLinkTest {
         val SEOUL: ZoneId = ZoneId.of("Asia/Seoul")
     }
 }
+
+/** 이름 안에 특수문자가 든 병원(#270). 이름을 둘러싼 특수문자는 원래 잡힌다. */
+class HospitalNameCharTest {
+    @Test
+    fun `이름을 둘러싼 특수문자는 떼고 든다`() {
+        assertEquals("튼튼정형외과", hospitalIn("★튼튼정형외과★ 10/15 예약"))
+        assertEquals("서울병원", hospitalIn("『서울병원』 예약 안내"))
+        assertEquals("튼튼정형외과", hospitalIn("*튼튼정형외과* 예약"))
+        assertEquals("서울OO병원", hospitalIn("(서울OO병원) 10/15 예약"))
+    }
+
+    @Test
+    fun `가림 글자가 든 이름도 병원이다`() {
+        assertEquals("서울○○병원", hospitalIn("[서울○○병원] 10월 15일 예약"))
+        assertEquals("서울**병원", hospitalIn("서울**병원 예약 안내"))
+    }
+
+    @Test
+    fun `전각 글자 이름도 병원이다`() {
+        assertEquals("ＯＯ병원", hospitalIn("[ＯＯ병원] 예약"))
+    }
+
+    @Test
+    fun `말 사이의 가운뎃점은 이름에 붙이지 않는다`() {
+        assertEquals("튼튼정형외과", hospitalIn("예약 안내·튼튼정형외과"))
+    }
+}
