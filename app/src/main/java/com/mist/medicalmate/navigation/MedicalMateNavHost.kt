@@ -13,7 +13,7 @@ import androidx.navigation.compose.rememberNavController
 import com.mist.medicalmate.auth.ui.LoginDestination
 import com.mist.medicalmate.auth.ui.SessionUiState
 import com.mist.medicalmate.calendar.reminder.VisitReminderLink
-import com.mist.medicalmate.calendar.share.SharedAppointmentText
+import com.mist.medicalmate.calendar.share.SharedAppointmentLink
 import com.mist.medicalmate.calendar.ui.CalendarDayDestination
 import com.mist.medicalmate.calendar.ui.CalendarDestination
 import com.mist.medicalmate.calendar.ui.ScheduleAddDestination
@@ -58,7 +58,7 @@ internal fun MedicalMateNavHost(
     onboardingCompleted: Boolean,
     reminderLink: VisitReminderLink?,
     onReminderLinkHandled: () -> Unit,
-    sharedText: SharedAppointmentText?,
+    sharedText: SharedAppointmentLink?,
     onSharedTextHandled: () -> Unit,
     onAuthenticated: (onboardingRequired: Boolean) -> Unit,
     onOnboardingCompleted: () -> Unit,
@@ -138,7 +138,7 @@ private fun ExternalLinkSync(
     onboardingCompleted: Boolean,
     reminderLink: VisitReminderLink?,
     onReminderLinkHandled: () -> Unit,
-    sharedText: SharedAppointmentText?,
+    sharedText: SharedAppointmentLink?,
     onSharedTextHandled: () -> Unit,
 ) {
     // 진료 알림을 누르면 그 일정의 일자 화면(1r-2)을 연다(#268).
@@ -152,7 +152,7 @@ private fun ExternalLinkSync(
         navigate(CalendarDayDestination(target.date.toString(), target.appointmentId)) { launchSingleTop = true }
     }
 
-    // 문자 앱에서 예약 문자를 공유받으면 그 글을 들고 일정 추가(1r-4)를 연다(#270).
+    // 문자 앱에서 예약 문자를 공유받거나 일정 추가를 요청받으면 그 값을 들고 일정 추가(1r-4)를 연다(#270).
     PendingLinkSync(
         navController = navController,
         link = sharedText,
@@ -160,7 +160,13 @@ private fun ExternalLinkSync(
         onboardingCompleted = onboardingCompleted,
         onHandled = onSharedTextHandled,
     ) { shared ->
-        navigate(ScheduleAddDestination(sharedText = shared.text))
+        navigate(
+            ScheduleAddDestination(
+                date = shared.date?.toString(),
+                time = shared.time?.toString(),
+                sharedText = shared.text,
+            ),
+        )
     }
 }
 

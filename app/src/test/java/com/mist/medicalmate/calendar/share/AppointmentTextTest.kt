@@ -139,3 +139,39 @@ class AppointmentTextTest {
             ZonedDateTime.of(2026, 10, 15, 14, 30, 42, 0, SEOUL).toInstant().toEpochMilli()
     }
 }
+
+/** 다른 앱의 일정 추가 요청에서 받는 값(#270). 갤럭시 메시지의 "일정 추가"가 이 길이다. */
+class SharedAppointmentLinkTest {
+    @Test
+    fun `보낸 앱이 읽은 날짜와 시각을 그대로 받는다`() {
+        val begin = ZonedDateTime.of(2026, 10, 15, 14, 0, 0, 0, SEOUL).toInstant().toEpochMilli()
+
+        val link =
+            SharedAppointmentLink.fromEvent(begin, allDay = false, listOf("튼튼정형외과 예약", null, ""), SEOUL)
+
+        assertEquals(LocalDate.of(2026, 10, 15), link?.date)
+        assertEquals(LocalTime.of(14, 0), link?.time)
+        assertEquals("튼튼정형외과 예약", link?.text)
+    }
+
+    @Test
+    fun `하루 종일 일정이면 시각을 버리고 날짜는 UTC로 읽는다`() {
+        // 하루 종일 일정의 시작은 그 날 0시 UTC다. 서울 시각으로 읽으면 오전 9시가 진료 시각으로 들어간다.
+        val begin = ZonedDateTime.of(2026, 10, 15, 0, 0, 0, 0, ZoneId.of("UTC")).toInstant().toEpochMilli()
+
+        val link = SharedAppointmentLink.fromEvent(begin, allDay = true, emptyList(), ZoneId.of("America/New_York"))
+
+        assertEquals(LocalDate.of(2026, 10, 15), link?.date)
+        assertNull(link?.time)
+        assertNull(link?.text)
+    }
+
+    @Test
+    fun `날짜도 글도 없으면 넘길 것이 없다`() {
+        assertNull(SharedAppointmentLink.fromEvent(-1L, allDay = false, listOf(null, " "), SEOUL))
+    }
+
+    private companion object {
+        val SEOUL: ZoneId = ZoneId.of("Asia/Seoul")
+    }
+}

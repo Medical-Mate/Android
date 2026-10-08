@@ -15,6 +15,7 @@ import com.mist.medicalmate.navigation.ConsumeResult
 import com.mist.medicalmate.navigation.NavResult
 import kotlinx.serialization.Serializable
 import java.time.LocalDate
+import java.time.LocalTime
 
 /**
  * 와이어프레임 1r-4. 일정 하나를 새로 만든다.
@@ -62,6 +63,13 @@ internal data class ScheduleAddDestination(
      * 병원과 같다 — 화면이 다시 만들어져도 남아야 한다.
      */
     val sharedText: String? = null,
+    /**
+     * 열릴 때 이미 정해진 시각.
+     *
+     * 다른 앱이 일정 추가를 요청하면서 시각까지 넘겨준 경우다(#270). [date]와 같이 비어 있을 때만
+     * 채운다.
+     */
+    val time: String? = null,
 )
 
 internal fun NavGraphBuilder.scheduleAddDestination(
@@ -80,6 +88,7 @@ internal fun NavGraphBuilder.scheduleAddDestination(
             cardId = route.cardId,
             followUp = route.followUp,
             sharedText = route.sharedText,
+            time = route.time?.let(LocalTime::parse),
             onHospitalPick = onHospitalPick,
             onCardNew = onCardNew,
             onSaved = onSaved,
@@ -103,6 +112,7 @@ private fun ScheduleAddRoute(
     cardId: String?,
     followUp: Boolean,
     sharedText: String?,
+    time: LocalTime?,
     onHospitalPick: () -> Unit,
     onCardNew: () -> Unit,
     onSaved: () -> Unit,
@@ -113,6 +123,11 @@ private fun ScheduleAddRoute(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val requestNotificationPermission = rememberNotificationPermission()
 
+    // 캘린더에서 고른 날이나 일자 화면의 그 날. 없이 열리면 이 화면에서 고른다(1r-4-D).
+    // 다른 앱의 일정 추가 요청이면 시각도 함께 온다(#270). 글을 읽기 전에 채워 둔다 — 읽은 결과는
+    // 빈 칸만 채우고, 날짜 칸이 찼는지로 안내를 고른다.
+    LaunchedEffect(date, time) { viewModel.onDatePrefilled(date, time) }
+
     // 문자 앱에서 공유받았으면 그 글로 빈 칸을 채운다(#270).
     LaunchedEffect(Unit) { viewModel.load(appointmentId, date, cardId, followUp, sharedText) }
 
@@ -121,9 +136,6 @@ private fun ScheduleAddRoute(
     entry.ConsumeResult(NavResult.HOSPITAL_NAME, viewModel::onHospitalPicked)
 
     LaunchedEffect(hospitalName) { viewModel.onHospitalPicked(hospitalName) }
-
-    // 캘린더에서 고른 날이나 일자 화면의 그 날. 없이 열리면 이 화면에서 고른다(1r-4-D).
-    LaunchedEffect(date) { viewModel.onDatePrefilled(date) }
 
     ScheduleAddScreen(
         state = state,

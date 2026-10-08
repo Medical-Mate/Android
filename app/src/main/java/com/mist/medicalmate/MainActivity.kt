@@ -21,7 +21,7 @@ import com.mist.medicalmate.auth.ui.SessionUiState
 import com.mist.medicalmate.auth.ui.SessionViewModel
 import com.mist.medicalmate.auth.ui.SplashScreen
 import com.mist.medicalmate.calendar.reminder.VisitReminderLink
-import com.mist.medicalmate.calendar.share.SharedAppointmentText
+import com.mist.medicalmate.calendar.share.SharedAppointmentLink
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.navigation.MedicalMateNavHost
 import com.mist.medicalmate.profile.ui.AccountActionCallbacks
@@ -40,7 +40,7 @@ class MainActivity : ComponentActivity() {
     private val reminderLink = mutableStateOf<VisitReminderLink?>(null)
 
     /** 문자 앱에서 공유받은 예약 문자(#270). 같은 이유로 그래프가 일정 추가를 열고 나면 비운다. */
-    private val sharedText = mutableStateOf<SharedAppointmentText?>(null)
+    private val sharedText = mutableStateOf<SharedAppointmentLink?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,7 +48,7 @@ class MainActivity : ComponentActivity() {
         val fromHistory = intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0
         if (savedInstanceState == null && !fromHistory) {
             reminderLink.value = VisitReminderLink.from(intent)
-            sharedText.value = SharedAppointmentText.from(intent)
+            sharedText.value = SharedAppointmentLink.from(intent)
         }
         setContent {
             MedicalMateTheme {
@@ -67,7 +67,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         VisitReminderLink.from(intent)?.let { reminderLink.value = it }
-        SharedAppointmentText.from(intent)?.let { sharedText.value = it }
+        SharedAppointmentLink.from(intent)?.let { sharedText.value = it }
     }
 }
 
@@ -96,7 +96,7 @@ class MainActivity : ComponentActivity() {
 private fun MedicalMateApp(
     reminderLink: VisitReminderLink?,
     onReminderLinkHandled: () -> Unit,
-    sharedText: SharedAppointmentText?,
+    sharedText: SharedAppointmentLink?,
     onSharedTextHandled: () -> Unit,
     sessionViewModel: SessionViewModel = hiltViewModel(),
     onboardingGateViewModel: OnboardingGateViewModel = hiltViewModel(),

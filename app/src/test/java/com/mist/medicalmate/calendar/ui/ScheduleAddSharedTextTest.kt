@@ -85,6 +85,22 @@ class ScheduleAddSharedTextTest {
     }
 
     @Test
+    fun `다른 앱이 넘긴 날짜와 시각이 있으면 글에서 날짜를 못 찾아도 채운 것이다`() {
+        // 갤럭시 메시지의 "일정 추가"는 날짜를 숫자로 넘기고 글은 병원을 찾는 데만 쓴다.
+        val viewModel = viewModel(FakeTextReader(SharedAppointment(hospital = "튼튼정형외과")))
+
+        // 화면이 여는 차례 그대로다. 넘겨받은 날짜를 먼저 채우고 글을 읽는다.
+        viewModel.onDatePrefilled(SEP_26, TEN_THIRTY)
+        viewModel.load(sharedText = "튼튼정형외과 예약")
+
+        val state = viewModel.uiState.value
+        assertEquals("튼튼정형외과", state.hospital)
+        assertEquals(SEP_26, state.date)
+        assertEquals(TEN_THIRTY, state.time)
+        assertEquals(ScheduleAddShareRead.FILLED, state.shareRead)
+    }
+
+    @Test
     fun `화면이 다시 조합돼도 한 번만 읽는다`() {
         // 병원을 고르러 나갔다 돌아오면 같은 호출이 또 온다. 다시 읽으면 지운 시각이 되살아난다.
         val reader = FakeTextReader(SharedAppointment(date = SEP_26, time = TEN_THIRTY))

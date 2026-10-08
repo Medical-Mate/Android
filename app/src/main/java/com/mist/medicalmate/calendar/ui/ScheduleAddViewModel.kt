@@ -124,12 +124,13 @@ internal constructor(
     /**
      * 열릴 때 이미 정해져 있던 날. 캘린더에서 고른 날이거나 일자 화면의 그 날이다.
      *
-     * 이미 날이 들어 있으면 덮지 않는다. 병원을 고르러 나갔다 돌아오는 길에 이 화면이 다시
+     * [time]은 다른 앱이 일정 추가를 요청하면서 시각까지 넘겨준 경우에만 온다(#270).
+     *
+     * 이미 들어 있으면 덮지 않는다. 병원을 고르러 나갔다 돌아오는 길에 이 화면이 다시
      * 조합되는데, 그때 덮으면 시트에서 고쳐 둔 날이 처음 값으로 되돌아간다.
      */
-    fun onDatePrefilled(date: LocalDate?) {
-        if (date == null) return
-        mutableUiState.update { if (it.date == null) it.copy(date = date) else it }
+    fun onDatePrefilled(date: LocalDate?, time: LocalTime? = null) {
+        mutableUiState.update { it.copy(date = it.date ?: date, time = it.time ?: time) }
     }
 
     /** 날짜와 시간 필드가 같은 자리에 시트를 띄운다. 어느 쪽인지만 다르다. */
@@ -254,7 +255,8 @@ private fun ScheduleAddUiState.filledFrom(read: SharedAppointment) = copy(
     hospital = hospital ?: read.hospital,
     date = date ?: read.date,
     time = time ?: read.time,
-    shareRead = if (read.date != null) ScheduleAddShareRead.FILLED else ScheduleAddShareRead.MISSED,
+    // 날짜 칸이 찼는지로 본다. 다른 앱이 날짜를 넘겨준 경우에는 글에 날짜가 없어도 칸이 차 있다.
+    shareRead = if ((date ?: read.date) != null) ScheduleAddShareRead.FILLED else ScheduleAddShareRead.MISSED,
 )
 
 /** 골라 둔 카드의 병원. 일정 추가가 병원 칸을 채울 때 쓴다. */
