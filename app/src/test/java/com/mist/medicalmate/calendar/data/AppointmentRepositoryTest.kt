@@ -1,5 +1,6 @@
 package com.mist.medicalmate.calendar.data
 
+import com.mist.medicalmate.core.model.FakeVisitReminders
 import com.mist.medicalmate.core.network.ApiResult
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
@@ -7,6 +8,7 @@ import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import java.io.IOException
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
@@ -22,6 +24,8 @@ import java.time.YearMonth
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppointmentRepositoryTest {
+    private val reminders = FakeVisitReminders()
+
     @Test
     fun `날짜와 시각을 따로 보낸다`() = runTest {
         val api = RecordingApi()
@@ -195,7 +199,46 @@ class AppointmentRepositoryTest {
         assertEquals(AppointmentStatus.SCHEDULED, (result as ApiResult.Success).value.single().status)
     }
 
-    private fun repository(api: AppointmentApi) = DefaultAppointmentRepository(api, Json)
+    @Test
+    fun `일정을 만들면 알림 예약을 다시 맞춘다`() = runTest {
+        repository(RecordingApi()).create(NewAppointment(clinicName = null, on = LocalDate.of(2026, 9, 30)))
+
+        assertEquals(1, reminders.refreshes)
+    }
+
+    @Test
+    fun `일정을 고치거나 지워도 다시 맞춘다`() = runTest {
+        val repository = repository(RecordingApi())
+
+        repository.update(1, AppointmentEdit(time = LocalTime.of(11, 0)))
+        repository.delete(1)
+
+        assertEquals(2, reminders.refreshes)
+    }
+
+    @Test
+    fun `저장이 안 되면 예약을 건드리지 않는다`() = runTest {
+        // 바뀐 것이 없다. 다시 읽어 봐야 같은 목록이다.
+        val repository = repository(RecordingApi(offline = true))
+
+        repository.create(NewAppointment(clinicName = null, on = LocalDate.of(2026, 9, 30)))
+        repository.delete(1)
+
+        assertEquals(0, reminders.refreshes)
+    }
+
+    @Test
+    fun `읽기만 하면 맞추지 않는다`() = runTest {
+        // 예약을 맞추는 쪽이 이 읽기를 부른다. 읽기가 다시 맞추라고 하면 끝없이 돈다.
+        val repository = repository(RecordingApi())
+
+        repository.upcoming()
+        repository.day(LocalDate.of(2026, 9, 30))
+
+        assertEquals(0, reminders.refreshes)
+    }
+
+    private fun repository(api: AppointmentApi) = DefaultAppointmentRepository(api, Json, reminders)
 
     /**
      * 흔한 응답 하나.
@@ -212,7 +255,10 @@ class AppointmentRepositoryTest {
             cards = cards,
         )
 
-    private class RecordingApi(private val list: List<AppointmentResponse> = emptyList()) : AppointmentApi {
+    private class RecordingApi(
+        private val list: List<AppointmentResponse> = emptyList(),
+        private val offline: Boolean = false,
+    ) : AppointmentApi {
         var created: CreateAppointmentRequest? = null
         var updated: UpdateAppointmentRequest? = null
 
@@ -221,6 +267,7 @@ class AppointmentRepositoryTest {
         override suspend fun upcoming() = list
 
         override suspend fun create(request: CreateAppointmentRequest): AppointmentResponse {
+            if (offline) throw IOException("offline")
             created = request
             return AppointmentResponse(appointmentId = 1, scheduledOn = request.scheduledOn)
         }
@@ -230,6 +277,8 @@ class AppointmentRepositoryTest {
             return AppointmentResponse(appointmentId = appointmentId, scheduledOn = "2026-09-30")
         }
 
-        override suspend fun delete(appointmentId: Long) = Unit
+        override suspend fun delete(appointmentId: Long) {
+            if (offline) throw IOException("offline")
+        }
     }
 }

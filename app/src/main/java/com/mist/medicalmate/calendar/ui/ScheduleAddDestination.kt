@@ -10,6 +10,7 @@ import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.mist.medicalmate.core.notification.rememberNotificationPermission
 import com.mist.medicalmate.navigation.ConsumeResult
 import com.mist.medicalmate.navigation.NavResult
 import kotlinx.serialization.Serializable
@@ -101,6 +102,7 @@ private fun ScheduleAddRoute(
     viewModel: ScheduleAddViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val requestNotificationPermission = rememberNotificationPermission()
 
     LaunchedEffect(Unit) { viewModel.load(appointmentId, date, cardId, followUp) }
 
@@ -126,7 +128,11 @@ private fun ScheduleAddRoute(
             onTimeConfirm = viewModel::onTimeConfirm,
             onCardPickChange = viewModel::onCardPickChange,
             onCardNewClick = onCardNew,
-            onSaveClick = { viewModel.onSaveClick(onSaved) },
+            onSaveClick = {
+                // 일정을 잡는 순간이 진료 알림이 왜 필요한지 보이는 자리다.
+                requestNotificationPermission()
+                viewModel.onSaveClick(onSaved)
+            },
         ),
         modifier = modifier,
     )

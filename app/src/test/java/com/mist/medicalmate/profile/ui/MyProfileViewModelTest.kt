@@ -1,5 +1,6 @@
 package com.mist.medicalmate.profile.ui
 
+import com.mist.medicalmate.core.model.FakeVisitReminders
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.profile.data.FakeHealthProfileRepository
 import com.mist.medicalmate.profile.data.FakeLocalSettingsStore
@@ -22,6 +23,8 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MyProfileViewModelTest {
+    private val reminders = FakeVisitReminders()
+
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -167,7 +170,7 @@ class MyProfileViewModelTest {
         repository: FakeHealthProfileRepository = FakeHealthProfileRepository(),
         settings: FakeSettingsRepository = FakeSettingsRepository(),
         local: FakeLocalSettingsStore = FakeLocalSettingsStore(),
-    ) = MyProfileViewModel(repository, settings, local)
+    ) = MyProfileViewModel(repository, settings, local, reminders)
 
     private fun profile(
         name: String? = FakeHealthProfileRepository.PROFILE.name,
@@ -230,6 +233,34 @@ class MyProfileViewModelTest {
         viewModel.onSettingChange(AppSetting.VISIT_REMINDER, false)
 
         assertTrue(viewModel.uiState.value.isOn(AppSetting.VISIT_REMINDER))
+    }
+
+    @Test
+    fun `알림 토글이 저장되면 예약을 다시 맞춘다`() {
+        // 끄면 걸린 것이 지워지고 켜면 다가오는 일정으로 다시 걸린다.
+        val viewModel = viewModel()
+
+        viewModel.onSettingChange(AppSetting.VISIT_REMINDER, false)
+
+        assertEquals(1, reminders.refreshes)
+    }
+
+    @Test
+    fun `알림 저장이 실패하면 예약을 건드리지 않는다`() {
+        val viewModel = viewModel(settings = FakeSettingsRepository(write = FakeSettingsRepository.OFFLINE))
+
+        viewModel.onSettingChange(AppSetting.VISIT_REMINDER, false)
+
+        assertEquals(0, reminders.refreshes)
+    }
+
+    @Test
+    fun `다른 토글은 예약과 상관없다`() {
+        val viewModel = viewModel()
+
+        viewModel.onSettingChange(AppSetting.CARD_AUTO_SAVE, false)
+
+        assertEquals(0, reminders.refreshes)
     }
 
     @Test

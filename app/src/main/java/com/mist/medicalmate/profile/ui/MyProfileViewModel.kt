@@ -2,6 +2,7 @@ package com.mist.medicalmate.profile.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mist.medicalmate.core.model.VisitReminders
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.profile.data.HealthField
 import com.mist.medicalmate.profile.data.HealthProfile
@@ -36,7 +37,8 @@ import kotlinx.coroutines.launch
  * 앱을 다시 깔면 "안 받겠다"고 한 사람에게 알림이 다시 가기 때문이다. 나머지 둘은 이 기기에서
  * 어떻게 보일지의 문제라 `DataStore`에 둔다.
  *
- * **알림을 예약하는 것은 여전히 앱이다.** 그 값은 예약할지 말지를 정한다.
+ * **알림을 예약하는 것은 여전히 앱이다.** 그 값은 예약할지 말지를 정한다. 저장되면 예약을
+ * 다시 맞춘다 — 끄면 걸린 것이 지워지고 켜면 다가오는 일정으로 다시 걸린다(#268).
  *
  * 토글을 누르면 화면을 먼저 바꾸고 저장을 보낸다. 왕복을 기다리면 누른 뒤에 잠깐 안 바뀐
  * 것처럼 보인다. 실패하면 되돌린다.
@@ -48,6 +50,7 @@ internal constructor(
     private val repository: HealthProfileRepository,
     private val settings: SettingsRepository,
     private val localSettings: LocalSettingsStore,
+    private val reminders: VisitReminders,
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(MyProfileUiState())
     val uiState: StateFlow<MyProfileUiState> = mutableUiState.asStateFlow()
@@ -118,7 +121,10 @@ internal constructor(
     }
 
     private suspend fun saveReminder(enabled: Boolean) {
-        if (settings.setVisitReminder(enabled) is ApiResult.Success) return
+        if (settings.setVisitReminder(enabled) is ApiResult.Success) {
+            reminders.refresh()
+            return
+        }
         mutableUiState.update { it.copy(settings = it.settings + (AppSetting.VISIT_REMINDER to !enabled)) }
     }
 }

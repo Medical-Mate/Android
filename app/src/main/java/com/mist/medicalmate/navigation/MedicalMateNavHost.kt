@@ -12,6 +12,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import com.mist.medicalmate.auth.ui.LoginDestination
 import com.mist.medicalmate.auth.ui.SessionUiState
+import com.mist.medicalmate.calendar.reminder.VisitReminderLink
 import com.mist.medicalmate.calendar.ui.CalendarDayDestination
 import com.mist.medicalmate.calendar.ui.CalendarDestination
 import com.mist.medicalmate.card.ui.BriefCardDestination
@@ -53,6 +54,8 @@ import kotlinx.coroutines.flow.drop
 internal fun MedicalMateNavHost(
     session: SessionUiState,
     onboardingCompleted: Boolean,
+    reminderLink: VisitReminderLink?,
+    onReminderLinkHandled: () -> Unit,
     onAuthenticated: (onboardingRequired: Boolean) -> Unit,
     onOnboardingCompleted: () -> Unit,
     accountActions: AccountActionCallbacks,
@@ -111,6 +114,49 @@ internal fun MedicalMateNavHost(
         session = session,
         onboardingCompleted = onboardingCompleted,
     )
+
+    ReminderLinkSync(
+        navController = navController,
+        link = reminderLink,
+        session = session,
+        onboardingCompleted = onboardingCompleted,
+        onHandled = onReminderLinkHandled,
+    )
+}
+
+/**
+ * 진료 알림을 누르면 그 일정의 일자 화면(1r-2)을 연다(#268).
+ *
+ * 홈 위에 얹는다. 앱을 새로 연 경우 시작 목적지가 홈이라 뒤로 가면 홈이 나온다. 열려 있던
+ * 앱이면 보던 화면 위에 얹혀 뒤로 가면 그 화면으로 돌아간다.
+ *
+ * **홈에 갈 수 있는 세션일 때만 옮긴다.** 로그아웃한 뒤 트레이에 남은 알림을 누르면 링크를
+ * 버린다. 그대로 들고 있다가 다음 로그인 뒤에 옮기면 다른 계정의 날짜가 열린다. 온보딩
+ * 중이어도 버린다 — 온보딩을 건너뛰고 들어가는 길이 되면 안 된다.
+ *
+ * 화면을 옮기기 **전에** 소비 표시를 남긴다. 옮기면서 이 효과가 취소되면 뒤에 둔 코드는
+ * 돌지 않아서, 같은 링크가 다음 조합에서 다시 흘러나간다.
+ */
+@Composable
+private fun ReminderLinkSync(
+    navController: NavHostController,
+    link: VisitReminderLink?,
+    session: SessionUiState,
+    onboardingCompleted: Boolean,
+    onHandled: () -> Unit,
+) {
+    val currentSession by rememberUpdatedState(session)
+    val currentOnboardingCompleted by rememberUpdatedState(onboardingCompleted)
+    val currentOnHandled by rememberUpdatedState(onHandled)
+
+    LaunchedEffect(link) {
+        val target = link ?: return@LaunchedEffect
+        currentOnHandled()
+        if (currentSession.destination(currentOnboardingCompleted) != HomeDestination) return@LaunchedEffect
+        navController.navigate(CalendarDayDestination(target.date.toString(), target.appointmentId)) {
+            launchSingleTop = true
+        }
+    }
 }
 
 /**

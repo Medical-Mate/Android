@@ -11,6 +11,12 @@
     -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
+    <!--
+      진료 하루 전 알림(#268). Android 13부터 권한이다. 일정을 저장하거나 알림 토글을 켤 때
+      묻는다 - 무엇을 알릴지 보이는 순간이어야 거절할지 말지를 판단할 수 있다.
+    -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
         android:name=".MedicalMateApplication"
         android:allowBackup="false"

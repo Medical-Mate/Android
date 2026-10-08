@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mist.medicalmate.auth.data.AuthRepository
 import com.mist.medicalmate.auth.data.AuthResult
+import com.mist.medicalmate.core.model.VisitReminders
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.async
@@ -57,11 +58,18 @@ sealed interface AccountActionState {
  * **서버에 물어보지 못한 것과 서버가 거절한 것을 나눈다.** 응답이 늦거나 연결이 안 되면
  * [SessionUiState.RestoreFailed]다. 두 경우 모두 로그인 화면으로 가지만, 그쪽은 왜 다시
  * 로그인해야 하는지 문구로 알려준다.
+ *
+ * **진료 알림 예약도 세션을 따른다**(#268). 로그인하면 그 계정의 일정으로 다시 걸고,
+ * 로그아웃하면 지운다. 앱을 열 때마다 다시 거는 것이 다른 기기에서 고친 일정을 이 기기에
+ * 맞추는 길이기도 하다.
  */
 @HiltViewModel
 class SessionViewModel
 @Inject
-constructor(private val authRepository: AuthRepository) : ViewModel() {
+constructor(
+    private val authRepository: AuthRepository,
+    private val reminders: VisitReminders,
+) : ViewModel() {
     private val mutableUiState = MutableStateFlow<SessionUiState>(SessionUiState.Checking)
     val uiState: StateFlow<SessionUiState> = mutableUiState.asStateFlow()
 
@@ -71,6 +79,7 @@ constructor(private val authRepository: AuthRepository) : ViewModel() {
     init {
         restore()
         observeSession()
+        syncReminders()
     }
 
     fun onSignedIn(onboardingRequired: Boolean) {
@@ -145,6 +154,27 @@ constructor(private val authRepository: AuthRepository) : ViewModel() {
                 val current = mutableUiState.value
                 if (current is SessionUiState.SignedIn || current == SessionUiState.RestoreFailed) {
                     mutableUiState.value = SessionUiState.SignedOut
+                }
+            }
+        }
+    }
+
+    /**
+     * 세션이 정해질 때마다 알림 예약을 맞춘다.
+     *
+     * 로그아웃은 스스로 한 것이든 재발급이 거절된 것이든 [SessionUiState.SignedOut]으로 모인다.
+     * 그 자리에서 지우면 둘 다 덮인다.
+     *
+     * 복구에 실패한 상태([SessionUiState.RestoreFailed])는 건드리지 않는다. 토큰이 그대로 남아
+     * 있고 연결만 안 된 것이라, 지우면 다음에 앱을 열 때까지 걸어 둔 알림이 사라진다.
+     */
+    private fun syncReminders() {
+        viewModelScope.launch {
+            uiState.collect { state ->
+                when (state) {
+                    is SessionUiState.SignedIn -> reminders.refresh()
+                    SessionUiState.SignedOut -> reminders.clear()
+                    SessionUiState.Checking, SessionUiState.RestoreFailed -> Unit
                 }
             }
         }
