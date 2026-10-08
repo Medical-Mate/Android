@@ -1,5 +1,6 @@
 package com.mist.medicalmate.calendar.data
 
+import com.mist.medicalmate.core.model.VisitReminders
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.core.network.apiCall
 import com.mist.medicalmate.core.network.map
@@ -30,11 +31,18 @@ interface AppointmentRepository {
     suspend fun delete(id: Long): ApiResult<Unit>
 }
 
+/**
+ * 일정을 바꾸는 호출이 성공하면 진료 알림 예약을 다시 맞춘다(#268).
+ *
+ * 화면마다 부르게 하면 일정을 바꾸는 자리(일정 추가·수정, 일자 화면의 삭제와 할 일, 진료 후
+ * 기록의 재방문)가 하나 늘 때마다 잊을 자리가 하나 는다. 바꾸는 길이 모두 여기를 지난다.
+ */
 internal class DefaultAppointmentRepository
 @Inject
 constructor(
     private val api: AppointmentApi,
     private val json: Json,
+    private val reminders: VisitReminders,
 ) : AppointmentRepository {
     override suspend fun month(month: YearMonth): ApiResult<List<Appointment>> =
         apiCall(json) { api.appointments(year = month.year, month = month.monthValue) }
@@ -61,6 +69,7 @@ constructor(
             ),
         )
     }.map { it.toAppointment() }
+        .also(::onChanged)
 
     override suspend fun update(id: Long, edit: AppointmentEdit): ApiResult<Appointment> = apiCall(json) {
         api.update(
@@ -76,8 +85,13 @@ constructor(
             ),
         )
     }.map { it.toAppointment() }
+        .also(::onChanged)
 
-    override suspend fun delete(id: Long): ApiResult<Unit> = apiCall(json) { api.delete(id) }
+    override suspend fun delete(id: Long): ApiResult<Unit> = apiCall(json) { api.delete(id) }.also(::onChanged)
+
+    private fun onChanged(result: ApiResult<*>) {
+        if (result is ApiResult.Success) reminders.refresh()
+    }
 }
 
 /**

@@ -1,5 +1,6 @@
 package com.mist.medicalmate.profile.data
 
+import com.mist.medicalmate.core.model.VisitReminderSetting
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.core.network.apiCall
 import com.mist.medicalmate.core.network.map
@@ -20,9 +21,12 @@ interface SettingsRepository {
 internal class DefaultSettingsRepository
 @Inject
 constructor(private val api: SettingsApi, private val json: Json) :
-    SettingsRepository {
+    SettingsRepository,
+    VisitReminderSetting {
     override suspend fun visitReminder(): ApiResult<Boolean> =
         apiCall(json) { api.settings() }.map { it.visitReminderEnabled }
+
+    override suspend fun enabled(): ApiResult<Boolean> = visitReminder()
 
     override suspend fun setVisitReminder(enabled: Boolean): ApiResult<Boolean> =
         apiCall(json) { api.update(SettingsRequest(visitReminderEnabled = enabled)) }

@@ -3,6 +3,7 @@ package com.mist.medicalmate.auth.ui
 import com.mist.medicalmate.auth.data.AuthRepository
 import com.mist.medicalmate.auth.data.AuthResult
 import com.mist.medicalmate.auth.data.Session
+import com.mist.medicalmate.core.model.FakeVisitReminders
 import com.mist.medicalmate.core.network.ApiErrorCode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -23,6 +24,8 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SessionViewModelTest {
+    private val reminders = FakeVisitReminders()
+
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -35,7 +38,8 @@ class SessionViewModelTest {
 
     @Test
     fun `저장된 토큰이 없으면 SignedOut이다`() = runTest {
-        val viewModel = SessionViewModel(FakeAuthRepository(restoreResult = null))
+        val viewModel =
+            SessionViewModel(reminders = reminders, authRepository = FakeAuthRepository(restoreResult = null))
 
         advanceUntilIdle()
 
@@ -46,6 +50,8 @@ class SessionViewModelTest {
     fun `복구에 성공하면 SignedIn이다`() = runTest {
         val viewModel =
             SessionViewModel(
+                reminders = reminders,
+                authRepository =
                 FakeAuthRepository(
                     restoreResult = AuthResult.Success(Session(onboardingRequired = false)),
                 ),
@@ -61,6 +67,8 @@ class SessionViewModelTest {
         // 읽기 제한(60초)까지 응답이 오지 않는 상황
         val viewModel =
             SessionViewModel(
+                reminders = reminders,
+                authRepository =
                 FakeAuthRepository(
                     restoreResult = AuthResult.Success(Session(onboardingRequired = false)),
                     restoreDelayMillis = 60_000L,
@@ -76,6 +84,8 @@ class SessionViewModelTest {
     fun `상한 전에는 스플래시를 유지한다`() = runTest {
         val viewModel =
             SessionViewModel(
+                reminders = reminders,
+                authRepository =
                 FakeAuthRepository(
                     restoreResult = AuthResult.Success(Session(onboardingRequired = false)),
                     restoreDelayMillis = 60_000L,
@@ -91,6 +101,8 @@ class SessionViewModelTest {
     fun `상한 안에 늦게 도착한 복구는 반영된다`() = runTest {
         val viewModel =
             SessionViewModel(
+                reminders = reminders,
+                authRepository =
                 FakeAuthRepository(
                     restoreResult = AuthResult.Success(Session(onboardingRequired = true)),
                     restoreDelayMillis = SessionViewModel.MAX_SPLASH_MILLIS - 1,
@@ -106,6 +118,8 @@ class SessionViewModelTest {
     fun `상한을 넘긴 뒤 도착한 성공은 화면을 흔들지 않는다`() = runTest {
         val viewModel =
             SessionViewModel(
+                reminders = reminders,
+                authRepository =
                 FakeAuthRepository(
                     restoreResult = AuthResult.Success(Session(onboardingRequired = true)),
                     restoreDelayMillis = 30_000L,
@@ -129,7 +143,7 @@ class SessionViewModelTest {
                 restoreResult = AuthResult.Success(Session(onboardingRequired = false)),
                 restoreDelayMillis = 60_000L,
             )
-        val viewModel = SessionViewModel(repository)
+        val viewModel = SessionViewModel(reminders = reminders, authRepository = repository)
         advanceTimeBy(SessionViewModel.MAX_SPLASH_MILLIS + 1)
         assertEquals(SessionUiState.RestoreFailed, viewModel.uiState.value)
 
@@ -145,6 +159,8 @@ class SessionViewModelTest {
     fun `토큰이 거절되면 SignedOut이다`() = runTest {
         val viewModel =
             SessionViewModel(
+                reminders = reminders,
+                authRepository =
                 FakeAuthRepository(
                     restoreResult =
                     AuthResult.Rejected(
@@ -164,7 +180,10 @@ class SessionViewModelTest {
         // 서버에 못 물어본 것은 서버가 거절한 것과 다르다. 가는 곳은 같은 로그인 화면이지만
         // 화면이 왜 다시 로그인해야 하는지 알려야 해서 상태를 구분한다.
         val viewModel =
-            SessionViewModel(FakeAuthRepository(restoreResult = AuthResult.NetworkUnavailable))
+            SessionViewModel(
+                reminders = reminders,
+                authRepository = FakeAuthRepository(restoreResult = AuthResult.NetworkUnavailable),
+            )
 
         advanceUntilIdle()
 
@@ -180,7 +199,7 @@ class SessionViewModelTest {
                 restoreResult = AuthResult.Success(Session(onboardingRequired = false)),
                 restoreDelayMillis = 60_000L,
             )
-        val viewModel = SessionViewModel(repository)
+        val viewModel = SessionViewModel(reminders = reminders, authRepository = repository)
 
         advanceTimeBy(SessionViewModel.MAX_SPLASH_MILLIS + 1)
         assertEquals(SessionUiState.RestoreFailed, viewModel.uiState.value)
@@ -192,7 +211,8 @@ class SessionViewModelTest {
 
     @Test
     fun `로그인을 마치면 SignedIn으로 올린다`() = runTest {
-        val viewModel = SessionViewModel(FakeAuthRepository(restoreResult = null))
+        val viewModel =
+            SessionViewModel(reminders = reminders, authRepository = FakeAuthRepository(restoreResult = null))
 
         viewModel.onSignedIn(onboardingRequired = true)
 
@@ -207,7 +227,7 @@ class SessionViewModelTest {
             FakeAuthRepository(
                 restoreResult = AuthResult.Success(Session(onboardingRequired = false)),
             )
-        val viewModel = SessionViewModel(repository)
+        val viewModel = SessionViewModel(reminders = reminders, authRepository = repository)
 
         viewModel.logout()
 
@@ -225,7 +245,7 @@ class SessionViewModelTest {
                 restoreResult = AuthResult.Success(Session(onboardingRequired = false)),
                 withdrawResult = AuthResult.Success(Session(onboardingRequired = false)),
             )
-        val viewModel = SessionViewModel(repository)
+        val viewModel = SessionViewModel(reminders = reminders, authRepository = repository)
 
         viewModel.withdraw()
 
@@ -243,7 +263,7 @@ class SessionViewModelTest {
                 withdrawResult =
                 AuthResult.Rejected(code = ApiErrorCode.INTERNAL, requestId = "req_test"),
             )
-        val viewModel = SessionViewModel(repository)
+        val viewModel = SessionViewModel(reminders = reminders, authRepository = repository)
 
         viewModel.withdraw()
 
@@ -260,7 +280,7 @@ class SessionViewModelTest {
                 restoreResult = AuthResult.Success(Session(onboardingRequired = false)),
                 withdrawResult = AuthResult.NetworkUnavailable,
             )
-        val viewModel = SessionViewModel(repository)
+        val viewModel = SessionViewModel(reminders = reminders, authRepository = repository)
 
         viewModel.withdraw()
 
@@ -277,7 +297,7 @@ class SessionViewModelTest {
                 restoreResult = AuthResult.Success(Session(onboardingRequired = false)),
                 withdrawResult = AuthResult.NetworkUnavailable,
             )
-        val viewModel = SessionViewModel(repository)
+        val viewModel = SessionViewModel(reminders = reminders, authRepository = repository)
 
         viewModel.withdraw()
         viewModel.onAccountActionFailureAcknowledged()
@@ -287,7 +307,8 @@ class SessionViewModelTest {
 
     @Test
     fun `최소 노출 시간이 지나기 전에는 Checking이다`() = runTest {
-        val viewModel = SessionViewModel(FakeAuthRepository(restoreResult = null))
+        val viewModel =
+            SessionViewModel(reminders = reminders, authRepository = FakeAuthRepository(restoreResult = null))
 
         advanceTimeBy(500)
 
@@ -296,7 +317,8 @@ class SessionViewModelTest {
 
     @Test
     fun `복구가 늦게 끝나도 그 사이 옮겨간 상태를 덮지 않는다`() = runTest {
-        val viewModel = SessionViewModel(FakeAuthRepository(restoreResult = null))
+        val viewModel =
+            SessionViewModel(reminders = reminders, authRepository = FakeAuthRepository(restoreResult = null))
 
         viewModel.onSignedIn(onboardingRequired = false)
         advanceUntilIdle()
@@ -306,7 +328,8 @@ class SessionViewModelTest {
 
     @Test
     fun `온보딩이 필요한 로그인은 그 표시를 들고 있다`() = runTest {
-        val viewModel = SessionViewModel(FakeAuthRepository(restoreResult = null))
+        val viewModel =
+            SessionViewModel(reminders = reminders, authRepository = FakeAuthRepository(restoreResult = null))
 
         viewModel.onSignedIn(onboardingRequired = true)
 
@@ -317,7 +340,8 @@ class SessionViewModelTest {
 
     @Test
     fun `온보딩을 마치면 로그인 상태는 그대로 두고 표시만 내린다`() = runTest {
-        val viewModel = SessionViewModel(FakeAuthRepository(restoreResult = null))
+        val viewModel =
+            SessionViewModel(reminders = reminders, authRepository = FakeAuthRepository(restoreResult = null))
         viewModel.onSignedIn(onboardingRequired = true)
 
         viewModel.onOnboardingCompleted()
@@ -329,7 +353,8 @@ class SessionViewModelTest {
 
     @Test
     fun `로그인 상태가 아니면 온보딩 완료는 아무것도 바꾸지 않는다`() = runTest {
-        val viewModel = SessionViewModel(FakeAuthRepository(restoreResult = null))
+        val viewModel =
+            SessionViewModel(reminders = reminders, authRepository = FakeAuthRepository(restoreResult = null))
 
         viewModel.onOnboardingCompleted()
 
@@ -341,7 +366,7 @@ class SessionViewModelTest {
     @Test
     fun `세션이 화면 밖에서 끝나면 로그인 화면으로 보낸다`() = runTest {
         val repository = FakeAuthRepository(restoreResult = AuthResult.Success(Session(false)))
-        val viewModel = SessionViewModel(repository)
+        val viewModel = SessionViewModel(reminders = reminders, authRepository = repository)
         advanceUntilIdle()
         assertTrue(viewModel.uiState.value is SessionUiState.SignedIn)
 
@@ -354,11 +379,67 @@ class SessionViewModelTest {
     @Test
     fun `복구 중에는 세션이 비어 있어도 상태를 바꾸지 않는다`() = runTest {
         val repository = FakeAuthRepository(restoreResult = null)
-        val viewModel = SessionViewModel(repository)
+        val viewModel = SessionViewModel(reminders = reminders, authRepository = repository)
 
         repository.dropSession()
 
         assertEquals(SessionUiState.Checking, viewModel.uiState.value)
+    }
+
+    @Test
+    fun `로그인하면 진료 알림 예약을 맞춘다`() = runTest {
+        SessionViewModel(
+            reminders = reminders,
+            authRepository = FakeAuthRepository(restoreResult = AuthResult.Success(Session(false))),
+        )
+
+        advanceUntilIdle()
+
+        assertEquals(1, reminders.refreshes)
+        assertEquals(0, reminders.clears)
+    }
+
+    @Test
+    fun `로그아웃하면 걸린 알림을 지운다`() = runTest {
+        // 다음 계정에 이전 계정의 진료 알림이 가면 안 된다.
+        val viewModel =
+            SessionViewModel(
+                reminders = reminders,
+                authRepository = FakeAuthRepository(restoreResult = AuthResult.Success(Session(false))),
+            )
+        advanceUntilIdle()
+
+        viewModel.logout()
+        advanceUntilIdle()
+
+        assertEquals(1, reminders.clears)
+    }
+
+    @Test
+    fun `세션이 화면 밖에서 끝나도 알림을 지운다`() = runTest {
+        // 재발급이 거절된 경우다. 스스로 로그아웃한 것과 같은 자리로 모인다.
+        val repository = FakeAuthRepository(restoreResult = AuthResult.Success(Session(false)))
+        SessionViewModel(reminders = reminders, authRepository = repository)
+        advanceUntilIdle()
+
+        repository.dropSession()
+        advanceUntilIdle()
+
+        assertEquals(1, reminders.clears)
+    }
+
+    @Test
+    fun `복구에 실패하면 걸린 알림을 그대로 둔다`() = runTest {
+        // 토큰이 남아 있고 연결만 안 된 것이다. 지우면 다음에 열 때까지 알림이 사라진다.
+        SessionViewModel(
+            reminders = reminders,
+            authRepository = FakeAuthRepository(restoreResult = AuthResult.NetworkUnavailable),
+        )
+
+        advanceUntilIdle()
+
+        assertEquals(0, reminders.refreshes)
+        assertEquals(0, reminders.clears)
     }
 
     private class FakeAuthRepository(

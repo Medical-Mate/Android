@@ -367,6 +367,13 @@
     <string name="my_profile_setting_visit_reminder">진료 하루 전 알림</string>
     <string name="my_profile_setting_card_auto_save">브리핑 카드 자동 저장</string>
     <string name="my_profile_setting_handoff_brightness">진료실 화면 밝기 최대</string>
+
+    <!-- 진료 하루 전 알림(#268). 시안에 없어 정한 문구다. -->
+    <string name="visit_reminder_channel_name">진료 알림</string>
+    <string name="visit_reminder_channel_description">진료 전날 저녁에 다음 날 일정을 알려 드려요</string>
+    <string name="visit_reminder_title">내일 진료가 있어요</string>
+    <string name="visit_reminder_body_timed">%1$s · %2$s</string>
+    <string name="visit_reminder_untitled">캘린더에서 일정을 확인해 주세요</string>
     <string name="health_edit_title">건강 정보 수정</string>
     <string name="health_edit_notice_title">바꾸면 다음 브리핑 카드부터 반영돼요</string>
     <string name="health_edit_notice_body">이미 만든 카드는 그대로 남고,\n새로 만드는 카드에 적용됩니다.</string>

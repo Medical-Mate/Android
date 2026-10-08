@@ -1,6 +1,7 @@
 package com.mist.medicalmate.profile.data
 
 import com.mist.medicalmate.core.model.CurrentUserProvider
+import com.mist.medicalmate.core.model.VisitReminderSetting
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -33,6 +34,10 @@ internal abstract class ProfileRepositoryModule {
 
     @Binds
     abstract fun bindSettingsRepository(impl: DefaultSettingsRepository): SettingsRepository
+
+    /** 알림 예약(`calendar`)이 토글을 읽는다. 도메인이 서로 참조하지 않게 `core`의 인터페이스로 연결한다. */
+    @Binds
+    abstract fun bindVisitReminderSetting(impl: DefaultSettingsRepository): VisitReminderSetting
 
     @Binds
     abstract fun bindLocalSettingsStore(impl: DefaultLocalSettingsStore): LocalSettingsStore
