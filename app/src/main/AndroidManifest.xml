@@ -38,6 +38,31 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!--
+              예약 문자 공유(#270). 받은 글로 일정 추가 화면을 채워 연다. 글은 기기 안에서만 읽는다.
+              공유 메뉴에는 앱 이름으로 뜬다. 따로 라벨을 달면 사람들이 찾는 "진료메이트"가 보이지 않는다.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+
+            <!--
+              캘린더 일정 추가 요청(#270). 갤럭시 메시지가 날짜를 알아보면 띄우는 "일정 추가"처럼,
+              다른 앱이 캘린더에 일정을 넣어 달라고 할 때 고르는 앱 목록에 뜬다. 보낸 앱이 읽은
+              날짜·시각을 그대로 받는다.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.INSERT" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:mimeType="vnd.android.cursor.dir/event" />
+            </intent-filter>
         </activity>
 
         <!--

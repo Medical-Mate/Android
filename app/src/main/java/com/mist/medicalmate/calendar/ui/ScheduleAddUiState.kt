@@ -39,6 +39,15 @@ data class ScheduleAddUiState(
      */
     val showErrors: Boolean = false,
     val sheet: ScheduleAddSheet = ScheduleAddSheet.NONE,
+    /** 공유받은 예약 문자를 읽은 결과(#270). 문자 없이 열렸으면 [ScheduleAddShareRead.NONE]이다. */
+    val shareRead: ScheduleAddShareRead = ScheduleAddShareRead.NONE,
+    /**
+     * 열어야 할 병원 검색(#270). 예약 문자에서 읽은 병원 이름이다.
+     *
+     * 문자 속 이름만으로는 어느 지점인지 모른다. 그 이름으로 찾은 목록을 띄워 주소를 보고 고르게 한다.
+     * 화면이 병원 찾기를 열면서 지운다.
+     */
+    val hospitalSearch: String? = null,
 ) {
     /** 고른 카드 수. 섹션 머리 오른쪽에 적는다. */
     val pickedCardCount: Int get() = cards.count { it.picked }
@@ -73,6 +82,24 @@ data class ScheduleAddCard(
  * 완료된 행의 순서다.
  */
 data class ScheduleAddTodo(val id: String, val label: String, val done: Boolean = false, val editing: Boolean = false)
+
+/**
+ * 공유받은 예약 문자를 어디까지 읽었는지(#270).
+ *
+ * 읽은 값은 틀릴 수 있다. 채운 뒤에도 화면 위에 그 사실을 남겨 확인하고 저장하게 한다. 날짜를
+ * 못 찾으면 그것도 알린다 — 말없이 빈 칸으로 두면 공유가 안 된 것으로 읽힌다.
+ */
+@Keep
+enum class ScheduleAddShareRead {
+    NONE,
+    READING,
+
+    /** 날짜를 찾아 채웠다. */
+    FILLED,
+
+    /** 날짜를 못 찾았다. 병원은 찾았으면 채워져 있다. */
+    MISSED,
+}
 
 /** 떠 있는 시트. 날짜(1r-4-D)와 시간(1r-4-T)이 같은 자리를 쓴다. */
 @Keep

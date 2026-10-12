@@ -8,6 +8,8 @@ import com.mist.medicalmate.calendar.data.AppointmentOrigin
 import com.mist.medicalmate.calendar.data.AppointmentRepository
 import com.mist.medicalmate.calendar.data.AppointmentTodo
 import com.mist.medicalmate.calendar.data.NewAppointment
+import com.mist.medicalmate.calendar.share.AppointmentTextReader
+import com.mist.medicalmate.calendar.share.SharedAppointment
 import com.mist.medicalmate.card.data.CardListItem
 import com.mist.medicalmate.card.data.CardRepository
 import com.mist.medicalmate.core.network.ApiResult
@@ -36,6 +38,7 @@ class ScheduleAddViewModel
 internal constructor(
     private val repository: AppointmentRepository,
     private val cardRepository: CardRepository,
+    private val textReader: AppointmentTextReader,
 ) : ViewModel() {
     /** 두 번 눌러 일정이 둘 생기는 것을 막는다. */
     private var saving = false
@@ -50,11 +53,29 @@ internal constructor(
      * 나갔다 돌아오면 이 화면이 컴포지션에 다시 들어오면서 한 번 더 오는데, 그때 목록을
      * 통째로 갈아끼우면 골라 둔 카드가 조용히 풀린다. 그대로 저장하면 카드가 안 걸린 일정이
      * 되고, 나중에 그 일정으로는 진료 후 기록을 남길 수 없다.
+     *
+     * [sharedText]는 문자 앱에서 공유받은 예약 문자다(#270). 읽은 값으로 **비어 있는 칸만**
+     * 채운다. 한국어 모델을 처음 받으면 몇 초가 걸리고, 그 사이 사람이 고른 값이 나중의 뜻이다.
+     * 읽기는 **한 번만** 한다. 다시 읽으면 시트에서 지운 시각이 문자 값으로 되살아난다.
      */
-    fun load(appointmentId: Long? = null, date: LocalDate? = null, cardId: String? = null, followUp: Boolean = false) {
+    fun load(
+        appointmentId: Long? = null,
+        date: LocalDate? = null,
+        cardId: String? = null,
+        followUp: Boolean = false,
+        sharedText: String? = null,
+    ) {
+        if (!sharedText.isNullOrBlank() && mutableUiState.value.shareRead == ScheduleAddShareRead.NONE) {
+            mutableUiState.update { it.copy(shareRead = ScheduleAddShareRead.READING) }
+            viewModelScope.launch {
+                val read = textReader.read(sharedText)
+                mutableUiState.update { it.filledFrom(read) }
+            }
+        }
         viewModelScope.launch {
             // 이미 한 번 담아 왔으면 다시 읽지 않는다. 고치는 중에 들어온 값을 덮어쓴다.
-            val editing = if (mutableUiState.value.appointmentId == null) appointment(appointmentId, date) else null
+            val editing =
+                if (mutableUiState.value.appointmentId == null) repository.find(appointmentId, date) else null
             val cards = (cardRepository.cards() as? ApiResult.Success)?.value.orEmpty()
             mutableUiState.update { state ->
                 val picked =
@@ -77,14 +98,13 @@ internal constructor(
     }
 
     /**
-     * 고치러 들어온 일정.
+     * 문자에서 읽은 병원으로 병원 찾기를 열었다(#270). 다시 열리지 않게 지운다.
      *
-     * 서버에 일정 하나를 id로 읽는 경로가 없어서 그 날의 목록에서 찾는다. 날짜는 라우트가
-     * 함께 실어 온다 — 그 일정이 선 날에서만 들어오는 길이라 늘 있다.
+     * 화면을 옮기기 전에 부른다. 옮기면서 효과가 취소되면 뒤에 둔 코드는 돌지 않아서, 병원을 고르고
+     * 돌아왔을 때 같은 검색이 또 열린다.
      */
-    private suspend fun appointment(appointmentId: Long?, date: LocalDate?): Appointment? {
-        if (appointmentId == null || date == null) return null
-        return (repository.day(date) as? ApiResult.Success)?.value?.firstOrNull { it.id == appointmentId }
+    fun onHospitalSearchOpened() {
+        mutableUiState.update { it.copy(hospitalSearch = null) }
     }
 
     private var nextTodo = 1
@@ -104,12 +124,13 @@ internal constructor(
     /**
      * 열릴 때 이미 정해져 있던 날. 캘린더에서 고른 날이거나 일자 화면의 그 날이다.
      *
-     * 이미 날이 들어 있으면 덮지 않는다. 병원을 고르러 나갔다 돌아오는 길에 이 화면이 다시
+     * [time]은 다른 앱이 일정 추가를 요청하면서 시각까지 넘겨준 경우에만 온다(#270).
+     *
+     * 이미 들어 있으면 덮지 않는다. 병원을 고르러 나갔다 돌아오는 길에 이 화면이 다시
      * 조합되는데, 그때 덮으면 시트에서 고쳐 둔 날이 처음 값으로 되돌아간다.
      */
-    fun onDatePrefilled(date: LocalDate?) {
-        if (date == null) return
-        mutableUiState.update { if (it.date == null) it.copy(date = date) else it }
+    fun onDatePrefilled(date: LocalDate?, time: LocalTime? = null) {
+        mutableUiState.update { it.copy(date = it.date ?: date, time = it.time ?: time) }
     }
 
     /** 날짜와 시간 필드가 같은 자리에 시트를 띄운다. 어느 쪽인지만 다르다. */
@@ -228,6 +249,32 @@ internal constructor(
         }
     }
 }
+
+/**
+ * 고치러 들어온 일정.
+ *
+ * 서버에 일정 하나를 id로 읽는 경로가 없어서 그 날의 목록에서 찾는다. 날짜는 라우트가
+ * 함께 실어 온다 — 그 일정이 선 날에서만 들어오는 길이라 늘 있다.
+ */
+private suspend fun AppointmentRepository.find(appointmentId: Long?, date: LocalDate?): Appointment? {
+    if (appointmentId == null || date == null) return null
+    return (day(date) as? ApiResult.Success)?.value?.firstOrNull { it.id == appointmentId }
+}
+
+/**
+ * 문자에서 읽은 값으로 빈 칸을 채운다. 날짜를 찾았는지가 화면의 안내를 정한다.
+ *
+ * 병원을 문자에서 채웠으면 그 이름으로 병원 찾기를 연다([ScheduleAddUiState.hospitalSearch]).
+ * 같은 이름의 다른 지점이 있을 수 있어 사람이 주소를 보고 고른다. 이미 고른 병원이 있으면 열지 않는다.
+ */
+private fun ScheduleAddUiState.filledFrom(read: SharedAppointment) = copy(
+    hospital = hospital ?: read.hospital,
+    hospitalSearch = read.hospital.takeIf { hospital == null },
+    date = date ?: read.date,
+    time = time ?: read.time,
+    // 날짜 칸이 찼는지로 본다. 다른 앱이 날짜를 넘겨준 경우에는 글에 날짜가 없어도 칸이 차 있다.
+    shareRead = if ((date ?: read.date) != null) ScheduleAddShareRead.FILLED else ScheduleAddShareRead.MISSED,
+)
 
 /** 골라 둔 카드의 병원. 일정 추가가 병원 칸을 채울 때 쓴다. */
 private fun List<ScheduleAddCard>.pickedClinic(): String? =

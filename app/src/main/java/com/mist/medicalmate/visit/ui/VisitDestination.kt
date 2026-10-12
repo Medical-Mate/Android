@@ -50,6 +50,13 @@ internal data class HospitalPickDestination(
      * 때문이다. 그때 기록이 오늘 날짜로 남으면 그 일자 화면에는 영영 나오지 않는다.
      */
     val visitedOn: String? = null,
+    /**
+     * 열자마자 찾을 이름(#270).
+     *
+     * 일정 추가가 예약 문자에서 읽은 병원 이름이거나 병원 칸에 이미 적힌 이름이다. 그 이름으로
+     * 찾은 목록에서 같은 이름의 여러 지점을 주소로 가려 고르게 한다.
+     */
+    val query: String? = null,
 )
 
 /**
@@ -141,6 +148,7 @@ internal fun NavGraphBuilder.hospitalPickDestination(
             cardTitle = route.cardTitle,
             sessionId = route.sessionId,
             visitedOn = route.visitedOn,
+            query = route.query,
             onPicked = onPicked,
             onCardRequested = onCardRequested,
             onScheduleRequested = onScheduleRequested,
@@ -183,6 +191,7 @@ private fun HospitalPickRoute(
     cardTitle: String?,
     sessionId: Long?,
     visitedOn: String?,
+    query: String?,
     onPicked: (cardId: String?, cardTitle: String?, visitedOn: String?, hospital: Hospital) -> Unit,
     onCardRequested: (cardId: String?, sessionId: Long?, hospital: Hospital?) -> Unit,
     onScheduleRequested: (Hospital?) -> Unit,
@@ -192,7 +201,9 @@ private fun HospitalPickRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(purpose, cardId) { viewModel.load(purpose, forExistingCard = cardId != null) }
+    LaunchedEffect(purpose, cardId, query) {
+        viewModel.load(purpose, forExistingCard = cardId != null, initialQuery = query)
+    }
 
     val selected = state.selected
 

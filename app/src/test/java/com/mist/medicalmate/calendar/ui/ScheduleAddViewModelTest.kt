@@ -314,7 +314,11 @@ class ScheduleAddViewModelTest {
         // "재진"으로 적고, 카드가 걸려야 그 날 무엇을 들고 가는지가 남는다(#245).
         val repository = RecordingAppointmentRepository()
         val viewModel =
-            ScheduleAddViewModel(repository, FakeCardRepository(list = ApiResult.Success(pickableCards)))
+            ScheduleAddViewModel(
+                repository,
+                FakeCardRepository(list = ApiResult.Success(pickableCards)),
+                FakeTextReader(),
+            )
                 .apply {
                     load(date = LocalDate.of(2026, 9, 26), cardId = "1", followUp = true)
                     // 날짜는 라우트가 따로 넣는다. 화면이 열릴 때 그 순서로 온다.
@@ -486,7 +490,7 @@ class ScheduleAddViewModelTest {
 
     /** 고치러 들어온 화면. */
     private fun editViewModel(repository: RecordingAppointmentRepository) =
-        ScheduleAddViewModel(repository, FakeCardRepository(list = ApiResult.Success(pickableCards)))
+        ScheduleAddViewModel(repository, FakeCardRepository(list = ApiResult.Success(pickableCards)), FakeTextReader())
             .apply { load(appointmentId = 7, date = LocalDate.of(2026, 9, 26)) }
 
     /** 시간 미정으로 저장된 일정. */
@@ -510,7 +514,7 @@ class ScheduleAddViewModelTest {
         }
 }
 private fun addViewModel(repository: RecordingAppointmentRepository = RecordingAppointmentRepository()) =
-    ScheduleAddViewModel(repository, FakeCardRepository(list = ApiResult.Success(pickableCards)))
+    ScheduleAddViewModel(repository, FakeCardRepository(list = ApiResult.Success(pickableCards)), FakeTextReader())
         .apply { load() }
 
 /** 고를 수 있는 카드 둘. 화면이 열릴 때 서버에서 받는다. */

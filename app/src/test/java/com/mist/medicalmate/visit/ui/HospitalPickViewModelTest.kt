@@ -131,7 +131,7 @@ class HospitalPickViewModelTest {
     fun `고르면 완료를 누를 수 있다`() = runTest(dispatcher) {
         val viewModel = searched()
 
-        viewModel.onHospitalClick("서울OO병원 내과")
+        viewModel.onHospitalClick(Hospital("서울OO병원 내과"))
 
         assertEquals(Hospital("서울OO병원 내과"), viewModel.uiState.value.selected)
         assertTrue(viewModel.uiState.value.canSubmit)
@@ -142,7 +142,7 @@ class HospitalPickViewModelTest {
         // 보이지 않는 것이 골라져 있으면 완료를 눌렀을 때 무엇이 저장되는지 알 수 없다.
         val repository = FakeHospitalRepository(hospitals = SEOUL, total = 2)
         val viewModel = searched(repository)
-        viewModel.onHospitalClick("서울OO병원 내과")
+        viewModel.onHospitalClick(Hospital("서울OO병원 내과"))
 
         repository.hospitals = listOf(Hospital("OO정형외과의원"))
         viewModel.onQueryChange("정형")
