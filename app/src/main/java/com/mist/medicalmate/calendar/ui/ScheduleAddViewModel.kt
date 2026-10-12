@@ -22,6 +22,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /**
  * 일정 추가 상태 보유자.
@@ -115,6 +117,15 @@ internal constructor(
             update = { change -> mutableUiState.update { it.copy(todos = change(it.todos)) } },
         )
 
+    /** 받아쓴 말(#282). 화면의 칸과 버튼을 말로 부른다. */
+    internal val voice =
+        ScheduleAddVoiceActions(
+            reader = textReader,
+            state = { mutableUiState.value },
+            update = { change -> mutableUiState.update(change) },
+            nextTodoId = { "todo-new-${nextTodo++}" },
+        )
+
     /** 병원 찾기에서 돌아왔다. 라우트가 이름을 실어 온다. */
     fun onHospitalPicked(name: String?) {
         if (name.isNullOrBlank()) return
@@ -161,11 +172,7 @@ internal constructor(
      * 사라진다.
      */
     fun onCardPickChange(id: String, picked: Boolean) {
-        mutableUiState.update { state ->
-            val cards = state.cards.map { if (it.id == id) it.copy(picked = picked) else it }
-            val clinic = cards.firstOrNull { it.id == id && it.picked }?.clinic?.takeIf { it.isNotBlank() }
-            state.copy(cards = cards, hospital = state.hospital ?: clinic)
-        }
+        mutableUiState.update { it.withCardPicked(id, picked) }
     }
 
     private companion object {
@@ -287,6 +294,22 @@ private fun ScheduleAddUiState.filledFrom(read: SharedAppointment) = copy(
  */
 private val ScheduleAddUiState.isRevisit: Boolean
     get() = followUp || cards.any { it.picked && it.visited }
+
+/** 카드를 고르거나 푼다. 고른 카드의 병원으로 빈 병원 칸을 채운다. 버튼과 말(#282)이 함께 쓴다. */
+internal fun ScheduleAddUiState.withCardPicked(id: String, picked: Boolean): ScheduleAddUiState {
+    val cards = cards.map { if (it.id == id) it.copy(picked = picked) else it }
+    val clinic = cards.firstOrNull { it.id == id && it.picked }?.clinic?.takeIf { it.isNotBlank() }
+    return copy(cards = cards, hospital = hospital ?: clinic)
+}
+
+/** 저장할지 물을 때 무엇을 저장하는지. "10월 20일 (화) 오후 3:00 · 고려튼튼통증의학과". */
+internal fun ScheduleAddUiState.voiceSummary(): String =
+    listOfNotNull(date?.format(VOICE_DATE), time?.format(VOICE_TIME)).joinToString(" ") +
+        hospital?.let { " · $it" }.orEmpty()
+
+internal val VOICE_DATE: DateTimeFormatter = DateTimeFormatter.ofPattern("M월 d일 (E)", Locale.KOREAN)
+
+internal val VOICE_TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)
 
 /** 골라 둔 카드의 병원. 일정 추가가 병원 칸을 채울 때 쓴다. */
 private fun List<ScheduleAddCard>.pickedClinic(): String? =

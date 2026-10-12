@@ -1,7 +1,9 @@
 package com.mist.medicalmate.voice.ui
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
 import com.mist.medicalmate.core.speech.SpeechChunk
 import com.mist.medicalmate.core.speech.SpeechToText
@@ -9,38 +11,51 @@ import com.mist.medicalmate.core.speech.VoiceWake
 import com.mist.medicalmate.core.speech.VoiceWakeTrace
 import com.mist.medicalmate.core.speech.WakeWordDetector
 import com.mist.medicalmate.core.speech.WakeWordModelState
+import com.mist.medicalmate.core.voice.VoiceTargets
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.takeWhile
+import kotlinx.coroutines.flow.timeout
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.Duration.Companion.milliseconds
+
+/** 패널에 적을 한 줄. 문구는 리소스이고 [args]가 그 안에 들어간다. */
+data class VoiceMessage(@StringRes val text: Int, val args: List<String> = emptyList())
 
 /**
  * 음성 명령 패널.
  *
- * @param heard 지금까지 알아들은 말. 말하는 중에 계속 바뀐다.
- * @param missed 한 번 말했는데 명령으로 못 알아들었다. 패널은 열어 두고 다시 듣는다.
+ * @param heard 지금 말하고 있는 글. 말하는 중에 계속 바뀌고, 말이 끝나면 비운다.
+ * @param message 방금 한 일이나 물을 것. 처음에는 말할 수 있는 예다.
+ * @param confirming [message]가 "할까요?"이고 "네"를 기다린다.
  */
 data class VoicePanel(
     val voice: MedicalMateVoiceState = MedicalMateVoiceState.IDLE,
     val heard: String = "",
-    val missed: Boolean = false,
+    val message: VoiceMessage = VoiceMessage(R.string.voice_command_hint),
+    val confirming: Boolean = false,
 )
+
+/** 알아들은 전역 명령과 그 말 전체. 일정 추가는 말 속의 날짜·병원까지 들고 간다. */
+data class VoiceCommandRequest(val command: VoiceCommand, val text: String)
 
 /**
  * @param command 알아들은 명령. 그래프가 화면을 옮기기 **전에** [VoiceCommandViewModel.onCommandHandled]로
  *   비운다.
  */
-data class VoiceCommandUiState(val panel: VoicePanel? = null, val command: VoiceCommand? = null)
+data class VoiceCommandUiState(val panel: VoicePanel? = null, val command: VoiceCommandRequest? = null)
 
 /**
  * "헤이 메이트"로 부르고 명령을 듣는다(#273).
@@ -51,6 +66,13 @@ data class VoiceCommandUiState(val panel: VoicePanel? = null, val command: Voice
  * **두 단계로 듣는다.** 호출어는 Vosk가, 그 뒤의 명령은 받아쓰기(ML Kit)가 듣는다. Vosk는
  * 영어 모델을 "hey mate"와 그 밖의 말 둘로 좁혀 두어 한국어 명령을 받아쓸 수 없다. 한
  * 마이크를 둘이 나눠 쓰므로 감지기를 완전히 거둔 뒤에 받아쓰기를 연다.
+ *
+ * **부르면 대화가 이어진다**(#282). 명령 하나를 처리해도 패널을 닫지 않고 다음 말을 기다린다.
+ * 한 흐름을 말로 끝까지 하려면 단계마다 다시 부르지 않아야 한다. 받아쓴 말은 먼저 지금 화면에
+ * 가고([VoiceTargets]), 화면이 모르는 말이면 전역 명령으로 넘어간다. 저장처럼 되돌리기 어려운
+ * 일은 화면이 [VoiceReply.Confirm]을 돌려주고, 다음 말이 "네"일 때만 한다. 확인한 일을 하고
+ * 나면 패널을 닫는다. 흐름이 끝난 자리다. 12초 동안 아무것도 들리지 않거나 "그만"이라고 하면
+ * 닫는다.
  *
  * 감지기는 다음이 모두 참일 때만 돈다. 하나라도 거짓이 되면 마이크를 놓는다.
  * - 설정에서 켰고 모델을 다 받았다
@@ -75,6 +97,9 @@ internal constructor(
 
     private var detectorJob: Job? = null
     private var commandJob: Job? = null
+
+    /** 화면들이 알아듣는 말을 등록하는 자리. `navigation`이 그래프 전체에 내려 준다. */
+    val targets = VoiceTargets()
 
     init {
         val setting = combine(voiceWake.enabled, voiceWake.model, ::Pair)
@@ -134,29 +159,41 @@ internal constructor(
      * 기다린 다음 받아쓰기를 연다.
      */
     private fun onWake() {
-        trace.log { "호출됨. 명령을 듣는다" }
+        trace.log { "호출됨. 대화를 시작한다" }
         val detecting = detectorJob
         detecting?.cancel()
         mutableUiState.update { it.copy(panel = VoicePanel()) }
         commandJob =
             viewModelScope.launch {
                 detecting?.join()
-                val command = withTimeoutOrNull(LISTEN_TIMEOUT_MS) { awaitCommand() }
-                trace.log { "명령: ${command ?: "없음 (시간이 다 됐거나 받아쓰기가 실패했다)"}" }
+                converse()
                 speech.stop()
                 commandJob = null
-                mutableUiState.update { it.copy(panel = null, command = command ?: it.command) }
+                mutableUiState.update { it.copy(panel = null) }
             }
     }
 
     /**
-     * 명령 하나를 알아들을 때까지 듣는다.
+     * 말이 끊길 때까지 듣고 답한다.
      *
-     * 못 알아들은 말이면 패널에 그 말을 남기고 계속 듣는다. 받아쓰기가 실패하면 그만둔다.
+     * 받아쓰기가 실패하거나, [IDLE_TIMEOUT_MS] 동안 아무것도 안 들리거나, 그만하라고 하거나,
+     * 확인한 일을 마치면 끝난다.
      */
-    private suspend fun awaitCommand(): VoiceCommand? {
-        var command: VoiceCommand? = null
+    @OptIn(FlowPreview::class)
+    private suspend fun converse() {
+        val conversation =
+            VoiceConversation(
+                targets = targets,
+                trace = trace,
+                say = { message, confirming -> updatePanel { it.copy(message = message, confirming = confirming) } },
+                command = { request -> mutableUiState.update { it.copy(command = request) } },
+            )
         speech.listen()
+            .timeout(IDLE_TIMEOUT_MS.milliseconds)
+            .catch { error ->
+                if (error !is TimeoutCancellationException) throw error
+                trace.log { "대화: ${IDLE_TIMEOUT_MS}ms 동안 들린 것이 없어 닫는다" }
+            }
             .takeWhile { chunk ->
                 when (chunk) {
                     SpeechChunk.Preparing -> {
@@ -170,24 +207,17 @@ internal constructor(
                     }
 
                     is SpeechChunk.Final -> {
-                        command = parseVoiceCommand(chunk.text)
-                        trace.log { "명령 받아쓰기: \"${chunk.text}\" → ${command ?: "모르는 말"}" }
-                        if (command == null) {
-                            updatePanel {
-                                it.copy(voice = MedicalMateVoiceState.IDLE, heard = chunk.text, missed = true)
-                            }
-                        }
-                        command == null
+                        updatePanel { it.copy(voice = MedicalMateVoiceState.LISTENING, heard = "") }
+                        conversation.respond(chunk.text)
                     }
 
                     SpeechChunk.Failed -> {
-                        trace.log { "명령 받아쓰기: 실패" }
+                        trace.log { "대화: 받아쓰기 실패" }
                         false
                     }
                 }
             }
             .collect()
-        return command
     }
 
     /**
@@ -217,7 +247,7 @@ internal constructor(
     }
 
     private companion object {
-        /** 부르고 이만큼 아무 명령도 없으면 닫는다. 못 알아들어 다시 말하는 것까지 넣은 길이다. */
-        const val LISTEN_TIMEOUT_MS = 12_000L
+        /** 이만큼 아무것도 들리지 않으면 닫는다. 말하는 중의 글도 들린 것으로 친다. */
+        const val IDLE_TIMEOUT_MS = 12_000L
     }
 }

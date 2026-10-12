@@ -54,14 +54,6 @@ enum class MedicalMateVoiceState(@StringRes val titleRes: Int, @StringRes val de
  * [description]으로 둘째 줄을 갈아 끼울 수 있다. 상태가 말해 주지 못하는 것이 있을 때만
  * 쓴다 — 문답이 끝난 뒤 "다음"이라고 말할 수 있다는 안내가 그 자리다(#190). **시안에 없는
  * 문구라 디자인 트랙 확인이 필요하다.**
- *
- * [alternativeLabel]은 아래 버튼의 이름이다. 기본은 "직접 입력할게요"이고, 적을 칸이 없는
- * 자리(호출어로 연 음성 명령, #273)에서는 "닫기"다. 그 자리의 대안은 화면을 직접 누르는 것이라
- * 패널을 닫는 것이 곧 대안이다.
- *
- * 파형은 [MedicalMateVoiceState.LISTENING]에서만 보인다. 움직임 축소 설정에서 흔들림을
- * 줄이더라도 "듣고 있어요" 문구는 남아야 하므로(문서의 접근성 기준), 상태를 파형으로만 알리지
- * 않는다. 지금 파형은 정지 막대이고 애니메이션은 넣지 않았다.
  */
 @Composable
 fun MedicalMateVoiceInput(
@@ -70,7 +62,6 @@ fun MedicalMateVoiceInput(
     onTypeInsteadClick: () -> Unit,
     modifier: Modifier = Modifier,
     description: String? = null,
-    alternativeLabel: String? = null,
 ) {
     val colors = MedicalMateTheme.colors
 
@@ -94,7 +85,7 @@ fun MedicalMateVoiceInput(
         )
         MedicalMateButton(
             onClick = onTypeInsteadClick,
-            label = alternativeLabel ?: stringResource(R.string.voice_type_instead),
+            label = stringResource(R.string.voice_type_instead),
             type = MedicalMateButtonType.GHOST,
             size = MedicalMateButtonSize.S,
         )

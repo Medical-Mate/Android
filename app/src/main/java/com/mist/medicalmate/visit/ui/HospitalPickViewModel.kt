@@ -2,7 +2,10 @@ package com.mist.medicalmate.visit.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mist.medicalmate.R
 import com.mist.medicalmate.core.network.ApiResult
+import com.mist.medicalmate.core.voice.VoiceReply
+import com.mist.medicalmate.core.voice.VoiceWords
 import com.mist.medicalmate.visit.data.HospitalRepository
 import com.mist.medicalmate.visit.data.HospitalSearchResult
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -180,6 +183,49 @@ internal constructor(private val repository: HospitalRepository) : ViewModel() {
             }
         }
     }
+
+    /**
+     * 받아쓴 말(#282). "첫 번째"면 그 줄을 고르고 바로 마친다. 다시 고르려면 뒤로 와서 고른다.
+     * 화면 이동이라 확인은 받지 않는다. 병원 이름이면 그것으로 다시 찾는다.
+     *
+     * @param submit 고른 병원으로 마친다. 목적마다 돌아가는 곳이 달라 라우트가 넘긴다.
+     */
+    fun onVoice(text: String, submit: (Hospital?) -> Unit): VoiceReply =
+        when (val voice = parseHospitalPickVoice(text)) {
+            null -> VoiceReply.NotMine
+            is HospitalPickVoice.Pick -> {
+                val results = mutableUiState.value.results
+                val hospital = if (voice.ordinal ==
+                    VoiceWords.LAST
+                ) {
+                    results.lastOrNull()
+                } else {
+                    results.getOrNull(voice.ordinal)
+                }
+                if (hospital == null) {
+                    VoiceReply.Done(R.string.voice_hospital_no_row)
+                } else {
+                    onHospitalClick(hospital)
+                    submit(hospital)
+                    VoiceReply.Done(R.string.voice_hospital_picked, listOf(hospital.name))
+                }
+            }
+
+            HospitalPickVoice.Submit -> {
+                val selected = mutableUiState.value.selected
+                if (selected == null) {
+                    VoiceReply.Done(R.string.voice_hospital_no_row)
+                } else {
+                    submit(selected)
+                    VoiceReply.Done(R.string.voice_hospital_picked, listOf(selected.name))
+                }
+            }
+
+            is HospitalPickVoice.Search -> {
+                onQueryChange(voice.query)
+                VoiceReply.Done(R.string.voice_hospital_searching, listOf(voice.query))
+            }
+        }
 
     private fun ApiResult<HospitalSearchResult>.isHit(): Boolean =
         this is ApiResult.Success && value.hospitals.isNotEmpty()

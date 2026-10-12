@@ -11,6 +11,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.mist.medicalmate.core.notification.rememberNotificationPermission
+import com.mist.medicalmate.core.voice.VoiceTargetEffect
 import com.mist.medicalmate.navigation.ConsumeResult
 import com.mist.medicalmate.navigation.NavResult
 import kotlinx.serialization.Serializable
@@ -145,6 +146,15 @@ private fun ScheduleAddRoute(
         onHospitalPick(query)
     }
 
+    val save = {
+        // 일정을 잡는 순간이 진료 알림이 왜 필요한지 보이는 자리다.
+        requestNotificationPermission()
+        viewModel.onSaveClick(onSaved)
+    }
+
+    // "헤이 메이트" 다음의 말(#282). 날짜·시간·병원·카드·할 일을 채우고, 저장은 확인을 받는다.
+    VoiceTargetEffect { text -> viewModel.voice.handle(text, save) }
+
     ScheduleAddScreen(
         state = state,
         callbacks =
@@ -158,11 +168,7 @@ private fun ScheduleAddRoute(
             onTimeConfirm = viewModel::onTimeConfirm,
             onCardPickChange = viewModel::onCardPickChange,
             onCardNewClick = onCardNew,
-            onSaveClick = {
-                // 일정을 잡는 순간이 진료 알림이 왜 필요한지 보이는 자리다.
-                requestNotificationPermission()
-                viewModel.onSaveClick(onSaved)
-            },
+            onSaveClick = save,
         ),
         modifier = modifier,
     )

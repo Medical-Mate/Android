@@ -2,9 +2,13 @@ package com.mist.medicalmate.navigation
 
 import android.Manifest
 import android.content.pm.PackageManager
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -15,15 +19,20 @@ import com.mist.medicalmate.auth.ui.SessionUiState
 import com.mist.medicalmate.calendar.ui.ScheduleAddDestination
 import com.mist.medicalmate.card.ui.BriefCardListDestination
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
+import com.mist.medicalmate.core.voice.LocalVoiceTargets
 import com.mist.medicalmate.home.ui.HomeDestination
 import com.mist.medicalmate.intake.ui.IntakeDestination
 import com.mist.medicalmate.profile.ui.MyProfileDestination
 import com.mist.medicalmate.voice.ui.VoiceCommand
 import com.mist.medicalmate.voice.ui.VoiceCommandPanel
+import com.mist.medicalmate.voice.ui.VoiceCommandRequest
 import com.mist.medicalmate.voice.ui.VoiceCommandViewModel
 
 /**
- * "헤이 메이트"로 부르고 말한 대로 화면을 옮긴다(#273).
+ * "헤이 메이트"로 부르고 말한 대로 화면을 옮긴다(#273·#282).
+ *
+ * 그래프([content])를 감싼다. 화면들이 "이 화면에서 알아듣는 말"을 등록할 자리
+ * ([LocalVoiceTargets])를 내려 주고, 막대를 그래프 위 아래쪽에 띄운다.
  *
  * 그래프 밖의 층이라 [VoiceCommandViewModel]은 Activity 스코프다. 이 함수는 `NavHost`
  * 목적지 밖에서 불리므로 `hiltViewModel()`이 Activity의 스토어에서 꺼낸다.
@@ -36,11 +45,13 @@ import com.mist.medicalmate.voice.ui.VoiceCommandViewModel
  * 거둘 수 있다.
  */
 @Composable
-internal fun VoiceCommandSync(
+internal fun VoiceCommandHost(
     navController: NavHostController,
     session: SessionUiState,
     onboardingCompleted: Boolean,
+    modifier: Modifier = Modifier,
     viewModel: VoiceCommandViewModel = hiltViewModel(),
+    content: @Composable () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -59,22 +70,35 @@ internal fun VoiceCommandSync(
 
     // 화면을 옮기기 전에 비운다. 옮기면서 이 효과가 취소되면 같은 명령이 다시 흘러나간다.
     LaunchedEffect(state.command) {
-        val command = state.command ?: return@LaunchedEffect
+        val request = state.command ?: return@LaunchedEffect
         viewModel.onCommandHandled()
-        navController.perform(command)
+        navController.perform(request)
     }
 
-    state.panel?.let { panel -> VoiceCommandPanel(panel = panel, onDismiss = viewModel::dismiss) }
+    Box(modifier = modifier) {
+        CompositionLocalProvider(LocalVoiceTargets provides viewModel.targets, content = content)
+        state.panel?.let { panel ->
+            VoiceCommandPanel(
+                panel = panel,
+                onDismiss = viewModel::dismiss,
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
+        }
+    }
 }
 
 /**
  * 명령을 화면 이동으로.
  *
- * 탭 셋은 탭을 누른 것과 같다. 뒤로는 시작 화면에서 멈춘다 — 그 아래로 pop하면 그래프가
+ * 탭 셋은 탭을 누른 것과 같다. 뒤로는 시작 화면에서 멈춘다. 그 아래로 pop하면 그래프가
  * 빈다.
+ *
+ * 일정 추가는 말에 날짜가 들어 있으면 그 말을 예약 문자처럼 들고 간다. "10월 20일 오후 3시
+ * 고려튼튼통증의학과 일정 추가해 줘"가 칸이 채워진 일정 추가가 된다(#282). 날짜가 없는 "일정
+ * 추가해 줘"에 넘기면 "날짜를 찾지 못했어요"가 떠서 넘기지 않는다.
  */
-private fun NavHostController.perform(command: VoiceCommand) {
-    when (command) {
+private fun NavHostController.perform(request: VoiceCommandRequest) {
+    when (request.command) {
         VoiceCommand.HOME -> selectTab(MedicalMateTab.HOME)
         VoiceCommand.CALENDAR -> selectTab(MedicalMateTab.CALENDAR)
         VoiceCommand.RECORD -> selectTab(MedicalMateTab.RECORD)
@@ -82,6 +106,12 @@ private fun NavHostController.perform(command: VoiceCommand) {
         VoiceCommand.BACK -> if (previousBackStackEntry != null) popBackStack()
         VoiceCommand.INTAKE -> navigate(IntakeDestination(null))
         VoiceCommand.BRIEF_CARDS -> navigate(BriefCardListDestination) { launchSingleTop = true }
-        VoiceCommand.SCHEDULE_ADD -> navigate(ScheduleAddDestination())
+        VoiceCommand.SCHEDULE_ADD ->
+            navigate(ScheduleAddDestination(sharedText = request.text.takeIf(::mentionsDate)))
     }
 }
+
+/** 말에 날짜가 들어 있는지. 숫자나 "내일"·"다음 주"·요일 같은 말을 본다. 읽는 것은 일정 추가가 한다. */
+private fun mentionsDate(text: String): Boolean = DATE_HINT.containsMatchIn(text)
+
+private val DATE_HINT = Regex("""\d|오늘|내일|모레|글피|다음\s?주|이번\s?주|다음\s?달|[월화수목금토일]요일""")

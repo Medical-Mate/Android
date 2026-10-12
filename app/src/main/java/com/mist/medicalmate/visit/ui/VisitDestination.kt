@@ -10,6 +10,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.mist.medicalmate.core.speech.rememberMicPermission
+import com.mist.medicalmate.core.voice.VoiceTargetEffect
 import kotlinx.serialization.Serializable
 import java.time.LocalDate
 
@@ -205,22 +206,24 @@ private fun HospitalPickRoute(
         viewModel.load(purpose, forExistingCard = cardId != null, initialQuery = query)
     }
 
-    val selected = state.selected
+    // 목적마다 돌아가는 자리가 다르다. 진료 후에는 고른 병원의 id만 다음 화면으로 가고,
+    // 진료 전에는 카드가 이름과 주소를 바로 그려야 해서 병원을 그대로 넘긴다. 일정
+    // 추가는 필드에 이름만 채우고 돌아간다. 버튼과 말(#282)이 같은 길로 간다.
+    val submit: (Hospital?) -> Unit = { selected ->
+        when (purpose) {
+            HospitalPickPurpose.AFTER_VISIT -> selected?.let { onPicked(cardId, cardTitle, visitedOn, it) }
+            HospitalPickPurpose.BEFORE_VISIT -> onCardRequested(cardId, sessionId, selected)
+            HospitalPickPurpose.SCHEDULE -> onScheduleRequested(selected)
+        }
+    }
+
+    VoiceTargetEffect { text -> viewModel.onVoice(text, submit) }
 
     HospitalPickScreen(
         state = state,
         onQueryChange = viewModel::onQueryChange,
         onHospitalClick = viewModel::onHospitalClick,
-        // 목적마다 돌아가는 자리가 다르다. 진료 후에는 고른 병원의 id만 다음 화면으로 가고,
-        // 진료 전에는 카드가 이름과 주소를 바로 그려야 해서 병원을 그대로 넘긴다. 일정
-        // 추가는 필드에 이름만 채우고 돌아간다.
-        onSubmitClick = {
-            when (purpose) {
-                HospitalPickPurpose.AFTER_VISIT -> selected?.let { onPicked(cardId, cardTitle, visitedOn, it) }
-                HospitalPickPurpose.BEFORE_VISIT -> onCardRequested(cardId, sessionId, selected)
-                HospitalPickPurpose.SCHEDULE -> onScheduleRequested(selected)
-            }
-        },
+        onSubmitClick = { submit(state.selected) },
         onBackClick = onExit,
         modifier = modifier,
     )

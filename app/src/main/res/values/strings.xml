@@ -592,10 +592,26 @@
     <string name="voice_type_instead">직접 입력할게요</string>
     <string name="voice_mic_start">말하기 시작</string>
     <string name="voice_mic_stop">말하기 끝내기</string>
-    <!-- "헤이 메이트"로 부르면 뜨는 음성 명령 패널(#273). 시안에 없는 문구다. -->
+    <!-- "헤이 메이트"로 부르면 뜨는 음성 명령 막대(#273·#282). 시안에 없는 문구다. -->
     <string name="voice_command_hint">"캘린더 열어줘"처럼 말씀해 주세요</string>
     <string name="voice_command_missed">알아듣지 못했어요(“%1$s”). 다시 말씀해 주세요</string>
     <string name="voice_command_close">닫기</string>
+    <string name="voice_command_cancelled">하지 않았어요. 이어서 말씀해 주세요</string>
+    <string name="voice_command_confirm_again">"네"나 "아니요"로 답해 주세요</string>
+    <string name="voice_command_moved">옮겼어요. 이어서 말씀해 주세요</string>
+    <!-- 일정 추가(1r-4)를 말로(#282). 시안에 없는 문구다. -->
+    <string name="voice_schedule_filled">%1$s 적었어요</string>
+    <string name="voice_schedule_filled_hospital">%1$s 적었어요. 병원은 목록에서 골라 주세요: %2$s</string>
+    <string name="voice_schedule_hospital_search">병원을 찾았어요. 몇 번째인지 말씀해 주세요: %1$s</string>
+    <string name="voice_schedule_confirm_save">이 일정을 저장할까요? %1$s</string>
+    <string name="voice_schedule_missing">병원과 날짜를 먼저 말씀해 주세요</string>
+    <string name="voice_schedule_todo_added">할 일을 더했어요: %1$s</string>
+    <string name="voice_schedule_card_picked">가져갈 카드로 골랐어요: %1$s</string>
+    <string name="voice_schedule_card_missing">그 카드를 찾지 못했어요. 몇 번째 카드인지 말씀해 주세요</string>
+    <!-- 병원 찾기(1m · 1m-B)를 말로(#282). 시안에 없는 문구다. -->
+    <string name="voice_hospital_picked">골랐어요: %1$s</string>
+    <string name="voice_hospital_no_row">목록에 그 병원이 없어요. 몇 번째인지 다시 말씀해 주세요</string>
+    <string name="voice_hospital_searching">다시 찾아요: %1$s</string>
 
     <!-- 통증 슬라이더 양끝 라벨. Figma Severity Slider 마스터에서 읽었다. -->
     <string name="severity_scale_low">가벼운 불편</string>
