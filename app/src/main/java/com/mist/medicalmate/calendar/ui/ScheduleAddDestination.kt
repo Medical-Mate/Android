@@ -152,8 +152,18 @@ private fun ScheduleAddRoute(
         viewModel.onSaveClick(onSaved)
     }
 
-    // "헤이 메이트" 다음의 말(#282). 날짜·시간·병원·카드·할 일을 채우고, 저장은 확인을 받는다.
-    VoiceTargetEffect { text -> viewModel.voice.handle(text, save) }
+    // "헤이 메이트" 다음의 말(#282). 화면의 칸과 버튼을 모두 말로 부른다. 저장과 나가기는 확인을 받는다.
+    VoiceTargetEffect { text ->
+        viewModel.voice.handle(
+            text,
+            ScheduleAddVoiceRoutes(
+                save = save,
+                exit = onExit,
+                openHospital = { onHospitalPick(state.hospital) },
+                newCard = onCardNew,
+            ),
+        )
+    }
 
     ScheduleAddScreen(
         state = state,
