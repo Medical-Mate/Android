@@ -29,7 +29,7 @@ internal class MlKitAppointmentTextReader @Inject constructor() : AppointmentTex
     override suspend fun read(text: String): SharedAppointment {
         val zone = ZoneId.systemDefault()
         val now = ZonedDateTime.now(zone)
-        val (date, time) = pickSchedule(mentionsIn(text, now), now.toLocalDate())
+        val (date, time) = pickSchedule(mentionsIn(text, now), now.toLocalDate(), text)
         return SharedAppointment(hospital = hospitalIn(text), date = date, time = time)
     }
 

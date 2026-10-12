@@ -303,3 +303,55 @@ class HospitalSampleTest {
         assertNull(hospitalIn("10/15 예약 변경은 고객센터로 문의"))
     }
 }
+
+/** 추출기가 날짜만 주고 시각을 빠뜨렸을 때 글에서 직접 읽는 시각(#270). */
+class TimeNearTest {
+    @Test
+    fun `기기에서 시각이 빠졌던 문자`() {
+        // "09월08일 10시00분"에서 추출기가 날짜만 주었다.
+        val text = "[Web발신]\n태릉씨티치과입니다. 홍길동님의 예약은 09월08일 10시00분입니다. 방문때뵙겠습니다."
+        val start = text.indexOf("09월08일")
+        val dated = DateTimeMention(start, start + 6, LocalDateTime.of(2027, 9, 8, 0, 0), hasTime = false)
+
+        assertEquals(LocalDate.of(2027, 9, 8) to LocalTime.of(10, 0), pickSchedule(listOf(dated), TODAY, text))
+    }
+
+    @Test
+    fun `날짜 바로 뒤의 여러 시각 꼴`() {
+        assertEquals(LocalTime.of(14, 0), after("10월 15일", "10월 15일(목) 오후 2시 예약"))
+        assertEquals(LocalTime.of(14, 30), after("10월 15일", "10월 15일 2시 반 예약"))
+        assertEquals(LocalTime.of(17, 58), after("2026-10-15", "2026-10-15 17:58 진료예약"))
+        assertEquals(LocalTime.of(9, 30), after("10/15", "10/15, 오전 9시 30분"))
+        assertEquals(LocalTime.of(12, 10), after("10/15", "10/15 12시10분"))
+    }
+
+    @Test
+    fun `오전 오후가 없으면 1시에서 7시는 오후다`() {
+        assertEquals(LocalTime.of(15, 0), after("10/15", "10/15 3시"))
+        assertEquals(LocalTime.of(8, 0), after("10/15", "10/15 8시"))
+    }
+
+    @Test
+    fun `날짜 자리 안에 시각이 들어 있어도 읽는다`() {
+        // 추출기가 날짜와 시각을 한 덩어리로 잡고 하루까지만 짚은 경우다.
+        val text = "예약은 10월15일 10시00분입니다"
+        val start = text.indexOf("10월15일")
+
+        assertEquals(LocalTime.of(10, 0), timeNear(text, start, start + "10월15일 10시00분".length))
+    }
+
+    @Test
+    fun `떨어진 시각은 읽지 않는다`() {
+        assertNull(after("10월 15일", "10월 15일 진료, 변경은 오후 6시까지"))
+        assertNull(after("10월 15일", "10월 15일 예약입니다"))
+    }
+
+    private fun after(date: String, text: String): LocalTime? {
+        val start = text.indexOf(date)
+        return timeNear(text, start, start + date.length)
+    }
+
+    private companion object {
+        val TODAY: LocalDate = LocalDate.of(2026, 10, 12)
+    }
+}

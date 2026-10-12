@@ -65,8 +65,15 @@ internal enum class Granularity {
  * **시각은 그 날짜와 붙어 있을 때만 받는다.** 추출기가 "10월 15일(목) 오후 2시"를 날짜와 시각
  * 두 군데로 나누어 줄 수 있어서, 날짜 바로 뒤([MAX_GAP]자 안)에 시작하는 시각은 같은 일정으로
  * 본다. 떨어진 시각("변경은 오후 6시까지")을 붙이면 엉뚱한 시각이 들어간다.
+ *
+ * **추출기가 시각을 못 읽으면 [text]에서 직접 읽는다.** `09월08일 10시00분`에서 날짜만 나오고
+ * 시각이 빠진 일이 기기에서 있었다. 규칙은 [timeNear]에 있고 붙어 있어야 한다는 조건은 같다.
  */
-internal fun pickSchedule(mentions: List<DateTimeMention>, today: LocalDate): Pair<LocalDate?, LocalTime?> {
+internal fun pickSchedule(
+    mentions: List<DateTimeMention>,
+    today: LocalDate,
+    text: String = "",
+): Pair<LocalDate?, LocalTime?> {
     val ahead = mentions.filter { !it.at.toLocalDate().isBefore(today) }.sortedBy { it.start }
     val dated = ahead.firstOrNull() ?: return null to null
     val time =
@@ -76,9 +83,64 @@ internal fun pickSchedule(mentions: List<DateTimeMention>, today: LocalDate): Pa
             ahead.firstOrNull { it.hasTime && it.start >= dated.end && it.start - dated.end <= MAX_GAP }
                 ?.at
                 ?.toLocalTime()
+                ?: timeNear(text, dated.start, dated.end)
         }
     return dated.at.toLocalDate() to time
 }
+
+/**
+ * 날짜 자리 안이나 바로 뒤에 적힌 시각.
+ *
+ * 날짜 자리 안을 먼저 본다. 추출기가 `09월08일 10시00분`을 한 덩어리로 잡고도 하루까지만 짚어
+ * 줄 수 있다. 다음으로 날짜 바로 뒤를 본다. 사이에는 공백·쉼표와 요일 괄호(`(목)`)만 끼어도 된다.
+ *
+ * 읽는 꼴은 `10시`·`10시00분`·`10시 30분`·`2시 반`·`17:58`이고 앞에 `오전`·`오후`가 붙어도 된다.
+ * **오전·오후 없이 1시~7시면 오후로 본다.** 의원 진료 시간에 새벽 진료가 없다.
+ */
+internal fun timeNear(text: String, start: Int, end: Int): LocalTime? {
+    if (start < 0 || end > text.length || start >= end) return null
+    val inside = TIME.find(text.substring(start, end))
+    val after = TIME_AFTER.find(text.substring(end).take(TIME_WINDOW))
+    return (inside ?: after)?.let(::toLocalTime)
+}
+
+private fun toLocalTime(match: MatchResult): LocalTime? {
+    fun group(name: String): String = match.groups[name]?.value.orEmpty()
+    val meridiem = group("meridiem")
+    val hour = group("hour").toInt()
+    val minuteText = group("minute")
+    val half = group("half")
+    val colonMinute = group("colon")
+    val minute =
+        when {
+            colonMinute.isNotEmpty() -> colonMinute.toInt()
+            minuteText.isNotEmpty() -> minuteText.toInt()
+            half.isNotEmpty() -> HALF_HOUR
+            else -> 0
+        }
+    val afternoon = meridiem in PM_WORDS || (meridiem.isEmpty() && hour in 1..LAST_PM_GUESS)
+    val hour24 = if (afternoon && hour < NOON) hour + NOON else hour
+    return if (hour24 in 0..LAST_HOUR && minute in 0..LAST_MINUTE) LocalTime.of(hour24, minute) else null
+}
+
+private const val TIME_PATTERN =
+    """(?<meridiem>오전|오후|낮|저녁|밤)?\s*(?<!\d)(?<hour>\d{1,2})\s*""" +
+        """(?:시\s*(?:(?<minute>\d{1,2})\s*분|(?<half>반))?|:(?<colon>\d{2}))"""
+
+private val TIME = Regex(TIME_PATTERN)
+
+/** 날짜 바로 뒤. 공백·쉼표와 요일 괄호만 건너뛴다. */
+private val TIME_AFTER = Regex("""^[\s,]*(?:\([^)]{1,3}\)[\s,]*)?$TIME_PATTERN""")
+
+private val PM_WORDS = setOf("오후", "저녁", "밤")
+
+/** 날짜 뒤에서 시각을 찾는 글자 수. `(목) 오후 12시 30분`이 들어간다. */
+private const val TIME_WINDOW = 20
+private const val HALF_HOUR = 30
+private const val NOON = 12
+private const val LAST_PM_GUESS = 7
+private const val LAST_HOUR = 23
+private const val LAST_MINUTE = 59
 
 /** 날짜와 시각 사이에 끼어도 되는 글자 수. `(목) `가 다섯 자다. */
 private const val MAX_GAP = 6
