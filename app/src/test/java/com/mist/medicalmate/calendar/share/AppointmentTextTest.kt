@@ -262,3 +262,44 @@ class RealMessageTest {
         assertNull(hospitalIn("통증의학과 진료 예약 안내"))
     }
 }
+
+/**
+ * 병원 검색(`GET /api/demo/hospitals`)에서 받은 실제 이름 표본으로 찾은 것들(2026-10-12).
+ * 2,746개를 `[이름]`·`-이름-`·본문 세 자리에 넣어 돌려 놓친 꼴을 골라 남겼다.
+ */
+class HospitalSampleTest {
+    @Test
+    fun `옛 과 이름과 치과 세부 과로 끝나는 의원`() {
+        assertEquals("샘신경정신과의원", hospitalIn("[샘신경정신과의원] 10/15 예약"))
+        assertEquals("고잔방사선과의원", hospitalIn("고잔방사선과의원 10/15 예약"))
+        assertEquals("미소를만드는치과교정과의원", hospitalIn("[미소를만드는치과교정과의원] 예약"))
+        assertNull(hospitalIn("치과교정과 진료 예약 안내"))
+    }
+
+    @Test
+    fun `이름 안의 괄호도 이름이다`() {
+        assertEquals("센(SEN)이비인후과의원", hospitalIn("[센(SEN)이비인후과의원] 10/15 예약"))
+        assertEquals("엔유아이씨(N-UIC)치과의원", hospitalIn("엔유아이씨(N-UIC)치과의원 예약"))
+        assertEquals("홍은연세림(林)치과의원", hospitalIn("[홍은연세림(林)치과의원] 예약"))
+    }
+
+    @Test
+    fun `띄어 쓴 치과의원과 한의원`() {
+        assertEquals("우리가족 이사랑 치과의원", hospitalIn("[우리가족 이사랑 치과의원] 10/15 예약"))
+        assertEquals("세방 한의원", hospitalIn("[세방 한의원] 10/15 예약"))
+    }
+
+    @Test
+    fun `같은 기호로 두른 머리도 머리다`() {
+        assertEquals("파밀리에 치과의원", hospitalIn("-파밀리에 치과의원- 10/15 14시 예약"))
+        assertEquals("행복한 치과의원", hospitalIn("★행복한 치과의원★ 예약 안내"))
+        assertEquals("늘 건강한 한의원", hospitalIn("『늘 건강한 한의원』 10/15"))
+    }
+
+    @Test
+    fun `건강센터와 암센터는 받고 고객센터는 받지 않는다`() {
+        assertEquals("국립암센터", hospitalIn("[국립암센터] 10/15 예약"))
+        assertEquals("동부건강센터", hospitalIn("동부건강센터 10/15 방문 예약"))
+        assertNull(hospitalIn("10/15 예약 변경은 고객센터로 문의"))
+    }
+}

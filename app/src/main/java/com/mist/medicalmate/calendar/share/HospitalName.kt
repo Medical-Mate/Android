@@ -22,12 +22,20 @@ package com.mist.medicalmate.calendar.share
 internal fun hospitalIn(text: String): String? = hospitalInPlain(text.replace(INVISIBLE, "").replace(ODD_SPACES, " "))
 
 private fun hospitalInPlain(text: String): String? {
-    val bracketed = BRACKET.findAll(text).map { it.groupValues[1] }.toList()
+    val bracketed = headersIn(text)
     return bracketed.firstNotNullOfOrNull(::joinedHospitalIn)
         ?: bracketed.firstNotNullOfOrNull { spacedHospitalIn(it, header = true) }
         ?: joinedHospitalIn(text)
         ?: spacedHospitalIn(text, header = false)
 }
+
+/**
+ * 감싼 머리들. 보낸 곳의 이름을 무엇으로 감싸는지는 병원마다 다르다 — `[…]`·`<…>`·`『…』`·`(…)`
+ * 같은 짝 괄호도 있고 `-고려튼튼 통증의학과-`·`★…★`처럼 같은 기호로 앞뒤를 두르기도 한다.
+ * 감싼 것 안은 이름 자리라 띄어 쓴 이름의 꾸밈 끝말(`-파밀리에 치과의원-`)도 받는다.
+ */
+private fun headersIn(text: String): List<String> =
+    (PAIRED.findAll(text).map { it.groupValues[1] } + WRAPPED.findAll(text).map { it.groupValues[2] }).toList()
 
 /** 붙여 쓴 병원 이름. 과 이름만 홀로 선 것은 건너뛰고 다음을 본다. */
 private fun joinedHospitalIn(part: String): String? = HOSPITAL.findAll(part)
@@ -87,7 +95,11 @@ private fun isNotName(word: String, header: Boolean): Boolean = word in NOT_NAME
 /** 띄어 쓴 이름에서 받는 앞말 낱말 수. */
 private const val MAX_NAME_WORDS = 2
 
-private val BRACKET = Regex("""[\[【]([^\]】]{2,40})[\]】]""")
+/** 짝 괄호로 감싼 것. 한 줄 안에서만 본다. */
+private val PAIRED = Regex("""[\[【<＜〈《「『(]([^\]】>＞〉》」』)\n]{2,40})[\]】>＞〉》」』)]""")
+
+/** 같은 기호로 앞뒤를 두른 것(`-…-`·`★…★`). 한 줄 안에서 가장 가까운 짝을 잡는다. */
+private val WRAPPED = Regex("""([-~*=＝★☆■□◆◇●▶♡♥])([^\n]{2,40}?)\1""")
 
 private val SPACES = Regex("\\s+")
 
@@ -103,15 +115,29 @@ private val ODD_SPACES = Regex("[\\u00A0\\u1680\\u2000-\\u200A\\u202F\\u205F\\u3
  * `~의학과`를 `[가-힣]+의학과`로 묶지 않는다. 그러면 `튼튼재활의학과`가 통째로 과 이름이 되어
  * 홀로 선 과로 버려진다. 큰 병원의 세부 과(`소화기내과`)도 하나씩 적는다 — 빠지면 `서울대 병원
  * 소화기내과`에서 `소화기내과`가 병원 이름으로 잡힌다.
+ *
+ * 목록은 심평원 진료과목에 의원 이름에서 아직 쓰이는 옛 이름(`신경정신과`·`방사선과`·`마취과`)을
+ * 더한 것이다. 병원 검색(`GET /api/demo/hospitals`)에서 이름 2,746개를 표본으로 받아 과 이름으로
+ * 끝나는데 목록에 없는 끝을 찾아 채웠다(2026-10-12). 빠진 과로 끝나는 의원은 이름을 놓친다.
  */
 private const val DEPARTMENT =
     "(?:소화기내과|순환기내과|호흡기내과|내분비내과|신장내과|감염내과|혈액종양내과|류마티스내과|알레르기내과" +
         "|정신건강의학과|마취통증의학과|통증의학과|재활의학과|가정의학과|영상의학과|비뇨의학과|응급의학과" +
-        "|직업환경의학과|진단검사의학과|핵의학과|방사선종양학과|병리과|한방내과" +
+        "|직업환경의학과|진단검사의학과|예방의학과|핵의학과|방사선종양학과|방사선과|병리과|결핵과|마취과" +
+        "|신경정신과|정신과|심장혈관흉부외과" +
+        "|치과교정과|치과보철과|치과보존과|구강악안면외과|구강내과|구강병리과|영상치의학과|소아치과|예방치과|치주과" +
+        "|한방내과|한방부인과|한방소아과|한방신경정신과|한방재활의학과|한방안이비인후피부과|침구과|사상체질과" +
         "|소아청소년과|이비인후과|산부인과|정형외과|신경외과|성형외과|흉부외과|비뇨기과" +
         "|소아과|청소년과|피부과|신경과|내과|외과|안과)"
 
-private const val SUFFIX = "(?:병원|의원|치과|클리닉|의료원|보건소|메디컬센터|$DEPARTMENT)"
+/**
+ * 센터로 끝나는 곳. `센터`만으로는 받지 않는다 — 문자 끝의 `고객센터`·`콜센터`가 병원으로 잡힌다.
+ * 표본에서 본 `국립암센터`·`동부건강센터`·`와부건강생활지원센터` 꼴만 적는다.
+ */
+private const val CENTER =
+    "(?:메디컬센터|암센터|건강센터|보건센터|검진센터|건강증진센터|건강생활지원센터|정신건강센터|의료센터)"
+
+private const val SUFFIX = "(?:병원|의원|치과|클리닉|의료원|보건소|$CENTER|$DEPARTMENT)"
 
 /**
  * 병원 이름을 이루는 글자.
@@ -120,14 +146,21 @@ private const val SUFFIX = "(?:병원|의원|치과|클리닉|의료원|보건�
  * 이름 **안에서만** 받는다 — 첫 글자로 받으면 `*튼튼정형외과*`가 `*튼튼정형외과`로 잡힌다.
  * `&`·`·`·`-`는 받지 않는다. 이름 안보다 말과 말 사이에 더 자주 와서(`예약 안내·튼튼정형외과`)
  * 앞말까지 이름으로 붙는다.
+ *
+ * 이름 안의 짧은 괄호(`센(SEN)이비인후과의원`)는 받는다. 영문 표기를 괄호로 덧붙이는 의원이 흔하다.
+ * 이름 앞의 괄호(`(사)경찰공제회`)는 첫 글자가 될 수 없어 떨어진다.
  */
 private const val NAME_HEAD = "[가-힣A-Za-z0-9Ａ-Ｚａ-ｚ０-９○◯]"
-private const val NAME_BODY = "[가-힣A-Za-z0-9Ａ-Ｚａ-ｚ０-９○◯●◎*＊]"
+private const val NAME_BODY =
+    "(?:[가-힣A-Za-z0-9Ａ-Ｚａ-ｚ０-９○◯●◎*＊]|\\([가-힣一-鿿A-Za-z0-9 \\-]{1,12}\\))"
 
 private val HOSPITAL = Regex("($NAME_HEAD$NAME_BODY*$SUFFIX)(?:\\s[가-힣]{0,6}$DEPARTMENT)?")
 
-/** 과 이름만 홀로 선 것. `정형외과의원`도 어느 병원인지가 없다. */
-private val BARE_DEPARTMENT = Regex("$DEPARTMENT(?:의원)?")
+/**
+ * 어느 병원인지가 없는 이름. 과 이름만 홀로 선 것(`정형외과`·`정형외과의원`)과 `치과의원`·`한의원`이다.
+ * 이것만 잡히면 띄어 쓴 이름(`우리가족 이사랑 치과의원`)을 마저 본다.
+ */
+private val BARE_DEPARTMENT = Regex("$DEPARTMENT(?:치과)?(?:의원|병원)?|치과(?:의원|병원)|한의원|한방병원")
 
 private val NAME_CHAR = Regex(NAME_HEAD)
 
@@ -139,7 +172,7 @@ private val NAME_WORD = Regex("$NAME_HEAD$NAME_BODY*")
  */
 private val SUFFIX_WORD =
     Regex(
-        "^((?:$DEPARTMENT)?의원|$SUFFIX)" +
+        "^((?:$DEPARTMENT)?(?:치과)?(?:의원|병원)|한의원|한방병원|$SUFFIX)" +
             "(?:$|[^가-힣A-Za-z0-9]|에서|에게|에|은|는|이|가|을|를|의|으로|로|입니다|이에요|예요|과|와|도)",
     )
 
