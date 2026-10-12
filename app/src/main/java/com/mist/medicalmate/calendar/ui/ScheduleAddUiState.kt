@@ -65,6 +65,8 @@ data class ScheduleAddUiState(
  *
  * [clinic]은 그 카드로 가기로 한 병원이다. [meta]에 이미 글로 들어 있지만 거기서 다시
  * 떼어낼 수 없어 따로 든다. 카드를 고르면 병원 칸을 이 값으로 채운다(1r-4-B).
+ *
+ * [visited]는 이 카드로 이미 진료를 받았는지다. 그 카드로 잡는 일정은 재진이다(#272).
  */
 data class ScheduleAddCard(
     val id: String,
@@ -72,6 +74,7 @@ data class ScheduleAddCard(
     val meta: String,
     val clinic: String? = null,
     val picked: Boolean = false,
+    val visited: Boolean = false,
 )
 
 /**

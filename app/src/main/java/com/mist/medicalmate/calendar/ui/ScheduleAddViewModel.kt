@@ -238,9 +238,8 @@ internal constructor(
                         // 안 골랐으면 시각 없이 보낸다. 서버가 "시간 미정"으로 만든다(#202).
                         time = state.time,
                         cardIds = cardIds,
-                        // 재방문을 확정한 일정은 출처를 남긴다. 홈과 일자 화면이 이 값으로
-                        // "재진"을 적는다(#245).
-                        origin = if (state.followUp) AppointmentOrigin.VISIT_FOLLOW_UP else AppointmentOrigin.MANUAL,
+                        // 재진인 일정은 출처를 남긴다. 홈과 일자 화면이 이 값으로 "재진"을 적는다.
+                        origin = if (state.isRevisit) AppointmentOrigin.VISIT_FOLLOW_UP else AppointmentOrigin.MANUAL,
                         todos = todos,
                     ),
                 )
@@ -276,6 +275,19 @@ private fun ScheduleAddUiState.filledFrom(read: SharedAppointment) = copy(
     shareRead = if ((date ?: read.date) != null) ScheduleAddShareRead.FILLED else ScheduleAddShareRead.MISSED,
 )
 
+/**
+ * 재진인 일정인지.
+ *
+ * 진료 후 기록의 재방문을 확정하러 들어왔거나(#245), **이미 진료를 마친 카드를 골랐으면**
+ * 재진이다(#272). 뒤의 것이 없으면 같은 카드로 다시 잡은 일정이 일자 화면과 홈에서 "초진"으로
+ * 뜨고, 기록 상세(1j-3)는 같은 진료를 재방문으로 적어 두 화면이 어긋난다.
+ *
+ * 서버의 `origin`은 원래 일정이 어디서 왔는지인데 화면이 그 값 하나로 초진·재진을 가르므로 여기에
+ * 싣는다. 서버가 초진·재진을 따로 내려 주면 그 값을 쓴다.
+ */
+private val ScheduleAddUiState.isRevisit: Boolean
+    get() = followUp || cards.any { it.picked && it.visited }
+
 /** 골라 둔 카드의 병원. 일정 추가가 병원 칸을 채울 때 쓴다. */
 private fun List<ScheduleAddCard>.pickedClinic(): String? =
     firstOrNull { it.picked }?.clinic?.takeIf { it.isNotBlank() }
@@ -296,6 +308,7 @@ private fun CardListItem.toPick() = ScheduleAddCard(
     title = title,
     meta = "${writtenOn.format(CARD_DATE)} 작성 · ${clinic?.takeIf { it.isNotBlank() } ?: CLINIC_UNSET}",
     clinic = clinic,
+    visited = visited,
 )
 
 private const val CLINIC_UNSET = "병원 미정"
