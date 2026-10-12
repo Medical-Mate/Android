@@ -70,12 +70,15 @@ internal fun parseVoskWords(json: String): List<HeardWord> = try {
  * "메이트야"는 한 낱말로는 어휘에 없다. 받아쓰면 `메이트 였다`나 `메이트 의`처럼 `메이트`가
  * 홀로 서고 뒤는 그때그때 다르다. 그래서 `메이트`만 본다.
  *
- * **신뢰도 0.9 아래는 버린다.** 같은 시험에서 호출어 셋은 모두 1.0이었고 "룸메이트야"는
- * `용 메이트 의`의 0.85였다. 사람 목소리와 소음에서 이 선이 맞는지는 기기에서 다시 본다.
+ * **신뢰도 0.6 아래는 버린다.** 처음에는 0.9였다. PC의 TTS로는 호출어가 모두 1.0이고
+ * "룸메이트야"가 0.85라 그 사이에 뒀는데, 갤럭시에서 사람 목소리로 25번 부르자 9번만
+ * 켜졌다(#278). 놓친 것 가운데 `메이트`를 맞게 듣고도 0.66·0.75·0.84로 떨어진 것이
+ * 셋이었다. 그 셋을 잡으려고 내렸고, 대신 "룸메이트야"에도 켜진다. 같은 측정에서 1분 넘게
+ * 이어진 대화에 엉뚱하게 켜진 일은 없었다.
  */
 internal fun isWakeWord(words: List<HeardWord>): Boolean =
     words.any { it.word == WAKE_WORD && it.conf >= WAKE_WORD_MIN_CONFIDENCE }
 
 private const val WAKE_WORD = "메이트"
 
-private const val WAKE_WORD_MIN_CONFIDENCE = 0.9
+private const val WAKE_WORD_MIN_CONFIDENCE = 0.6

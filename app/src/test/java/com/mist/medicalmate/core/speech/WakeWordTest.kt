@@ -24,9 +24,30 @@ class WakeWordTest {
     }
 
     @Test
-    fun `룸메이트야는 신뢰도가 모자라 호출이 아니다`() {
-        // 받아쓰면 `용 메이트 의`가 되는데 `메이트`가 0.85다. 선을 0.9에 둔 이유다.
-        assertFalse(isWakeWord(parseVoskWords(result("용" to 0.83, "메이트" to 0.85, "의" to 0.76, "안녕" to 1.0))))
+    fun `사람 목소리로 신뢰도가 떨어진 메이트도 호출이다`() {
+        // 갤럭시에서 실제로 부른 것 가운데 놓쳤던 셋이다(#278). 선을 0.9에서 0.6으로 내린 이유다.
+        listOf(
+            result("메이트" to 0.66, "양" to 0.48),
+            result("메이트" to 0.75, "야" to 0.82),
+            result("메이트" to 0.84, "냐" to 0.88),
+        ).forEach { json -> assertTrue(json, isWakeWord(parseVoskWords(json))) }
+    }
+
+    @Test
+    fun `신뢰도가 0점6에 못 미치면 호출이 아니다`() {
+        assertFalse(isWakeWord(parseVoskWords(result("메이트" to 0.59, "야" to 0.82))))
+    }
+
+    @Test
+    fun `메이트와 비슷한 다른 낱말은 호출이 아니다`() {
+        // 갤럭시에서 "메이트야"를 이렇게 받아쓴 일이 많았다. 받아 주면 놓친 것은 줄지만, 일상
+        // 대화에서 켜질 위험을 녹음으로 재 보기 전에는 넣지 않는다.
+        listOf(
+            result("네이트" to 1.0, "에" to 1.0, "요" to 1.0),
+            result("레이트" to 1.0),
+            result("메이플" to 0.88, "양" to 0.27),
+            result("메인" to 0.78, "디야" to 1.0),
+        ).forEach { json -> assertFalse(json, isWakeWord(parseVoskWords(json))) }
     }
 
     @Test
