@@ -246,3 +246,19 @@ class InvisibleSpaceTest {
         assertEquals("튼튼정형외과", hospitalIn("[튼튼​정형외과] 예약"))
     }
 }
+
+/** 기기에서 공유받은 실제 예약 문자 모양(#270). 이름만 가렸다. */
+class RealMessageTest {
+    @Test
+    fun `통증의학과로 끝나는 띄어 쓴 의원`() {
+        val sms = "[Web발신]\n안녕하세요 홍길동님         2026-10-15 17:58 진료예약 입니다\n  -고려튼튼 통증의학과-"
+
+        assertEquals("고려튼튼 통증의학과", hospitalIn(sms))
+    }
+
+    @Test
+    fun `통증의학과로 끝나는 붙여 쓴 의원`() {
+        assertEquals("고려튼튼통증의학과", hospitalIn("-고려튼튼통증의학과- 10/15 예약"))
+        assertNull(hospitalIn("통증의학과 진료 예약 안내"))
+    }
+}
