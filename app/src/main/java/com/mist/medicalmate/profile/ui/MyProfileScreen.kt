@@ -71,11 +71,12 @@ fun MyProfileScreen(
             accountActions = accountActions,
             onHealthEditClick = onHealthEditClick,
             onSettingChange = onSettingChange,
+            onDeleteVoiceModel = voiceWakeCallbacks.onDeleteModel,
         )
     }
 
     if (state.voiceWake.confirming) {
-        VoiceWakeConfirmDialog(callbacks = voiceWakeCallbacks)
+        VoiceWakeConfirmDialog(modelReady = state.voiceWake.modelReady, callbacks = voiceWakeCallbacks)
     }
 }
 
@@ -85,6 +86,7 @@ private fun ColumnScope.ProfileContent(
     accountActions: AccountActionCallbacks,
     onHealthEditClick: () -> Unit,
     onSettingChange: (AppSetting, Boolean) -> Unit,
+    onDeleteVoiceModel: () -> Unit,
 ) {
     Column(
         modifier =
@@ -109,6 +111,7 @@ private fun ColumnScope.ProfileContent(
         MedicalMateSectionHeader(title = stringResource(R.string.my_profile_settings))
         SettingsCard(state = state, onSettingChange = onSettingChange)
         VoiceWakeStatusLine(state.voiceWake.status)
+        if (state.canDeleteVoiceModel) VoiceWakeModelDelete(onClick = onDeleteVoiceModel)
         AccountActions(
             accountActions = accountActions,
             modifier = Modifier.padding(top = MedicalMateSpace.s24),

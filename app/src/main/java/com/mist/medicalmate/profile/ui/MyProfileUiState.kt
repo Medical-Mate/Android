@@ -21,6 +21,10 @@ data class MyProfileUiState(
     /** 그릴 토글. 음성 호출은 이 기기에서 켤 수 있을 때만 있다. */
     val visibleSettings: List<AppSetting>
         get() = AppSetting.entries.filter { it != AppSetting.VOICE_WAKE || voiceWake.supported }
+
+    /** "음성 모델 지우기"를 둘지. 꺼 둔 채 모델이 남아 있을 때만이다. */
+    val canDeleteVoiceModel: Boolean
+        get() = voiceWake.supported && voiceWake.modelReady && !isOn(AppSetting.VOICE_WAKE)
 }
 
 /**
@@ -29,13 +33,18 @@ data class MyProfileUiState(
  * 다른 토글과 달리 켜는 데 단계가 있다. 내려받을 크기를 알리고(확인 창) 마이크 권한을 받은
  * 뒤에야 켜진다. 켜진 뒤에도 모델을 다 받기 전까지는 듣지 않아서 그 사이를 적는다.
  *
+ * 꺼도 받아 둔 모델은 남는다(#280). 그래서 꺼 둔 채 모델이 있으면 지우는 버튼을 둔다. 켜져
+ * 있을 때 지우면 듣던 것이 끊기므로 그때는 두지 않는다.
+ *
  * @param supported 이 기기에서 켤 수 있는지. 아니면 토글을 그리지 않는다.
  * @param confirming 켜려고 눌러 확인 창이 떠 있다. 아직 켜지지 않았다.
+ * @param modelReady 받아 둔 모델이 있다. 켤 때 다시 받지 않는다.
  */
 data class VoiceWakeUi(
     val supported: Boolean = false,
     val confirming: Boolean = false,
     val status: VoiceWakeStatus = VoiceWakeStatus.Idle,
+    val modelReady: Boolean = false,
 )
 
 /** 토글 아래 한 줄. 문구는 화면이 고른다. */

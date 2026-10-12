@@ -69,7 +69,11 @@ internal constructor(
             }
         }
         viewModelScope.launch {
-            voiceWake.model.collect { model -> updateVoiceWake { it.copy(status = model.toStatus(it.status)) } }
+            voiceWake.model.collect { model ->
+                updateVoiceWake {
+                    it.copy(status = model.toStatus(it.status), modelReady = model == WakeWordModelState.Ready)
+                }
+            }
         }
     }
 
@@ -145,7 +149,7 @@ internal constructor(
         }
     }
 
-    /** 켜려고 누르면 확인 창부터 띄운다. 끄면 바로 끄고 모델을 지운다. */
+    /** 켜려고 누르면 확인 창부터 띄운다. 끄면 바로 끈다. 받아 둔 모델은 남긴다(#280). */
     private fun onVoiceWakeChange(enabled: Boolean) {
         if (enabled) {
             updateVoiceWake { it.copy(confirming = true, status = VoiceWakeStatus.Idle) }
@@ -159,6 +163,11 @@ internal constructor(
     fun onVoiceWakeConfirmed() {
         updateVoiceWake { it.copy(confirming = false) }
         viewModelScope.launch { voiceWake.enable() }
+    }
+
+    /** "음성 모델 지우기"를 눌렀다. 꺼 둔 상태에서만 버튼이 있다. */
+    fun onVoiceWakeModelDelete() {
+        viewModelScope.launch { voiceWake.deleteModel() }
     }
 
     /** 확인 창을 닫았다. 아무것도 바뀌지 않는다. */

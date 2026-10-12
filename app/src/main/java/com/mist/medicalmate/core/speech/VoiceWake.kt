@@ -26,8 +26,12 @@ import kotlinx.coroutines.launch
  * 내 정보(1s)의 토글과 앱 전체의 호출어 감지가 함께 본다. 두 도메인이 쓰는 값이라 `core`에
  * 둔다.
  *
- * **켠다는 것은 모델을 받는다는 것이다.** 켜면 41MB를 받고 끄면 지운다. 받다가 실패하면 다시
- * 꺼진다 — 켜져 있는데 듣지 않는 토글은 고장으로 읽힌다.
+ * **켠다는 것은 모델을 받는다는 것이다.** 켜면 41MB를 받는다. 받다가 실패하면 다시 꺼진다 —
+ * 켜져 있는데 듣지 않는 토글은 고장으로 읽힌다.
+ *
+ * **꺼도 모델은 남긴다**(#280). 처음에는 끄면 지웠다. 한국어 모델이 풀면 264MB라 꺼 둔 기능이
+ * 그만큼 차지하면 안 됐다. 영어 모델은 68MB라, 껐다 켤 때마다 41MB를 다시 받는 쪽이 더
+ * 불편하다. 공간을 돌려받는 것은 [deleteModel]이 따로 맡는다.
  *
  * 이 기기에서만 쓰는 값이라 `DataStore`다. 기기마다 모델을 받아야 하므로 계정에 붙일 이유가
  * 없다.
@@ -48,8 +52,11 @@ interface VoiceWake {
     /** 켜고 모델을 받는다. 마이크 권한은 화면이 먼저 받아 둔다. */
     suspend fun enable()
 
-    /** 끄고 받아 둔 모델을 지운다. */
+    /** 끈다. 받아 둔 모델은 남긴다. 다시 켜면 받지 않고 바로 듣는다. */
     suspend fun disable()
+
+    /** 받아 둔 모델을 지워 공간을 돌려준다. 받는 중이면 멈춘다. 꺼 둔 상태에서만 부른다. */
+    suspend fun deleteModel()
 }
 
 private val Context.speechDataStore: DataStore<Preferences> by preferencesDataStore(name = "speech")
@@ -102,6 +109,9 @@ constructor(
 
     override suspend fun disable() {
         context.speechDataStore.edit { it[enabledKey] = false }
+    }
+
+    override suspend fun deleteModel() {
         store.delete()
     }
 

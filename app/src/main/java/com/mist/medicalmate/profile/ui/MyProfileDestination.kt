@@ -67,7 +67,11 @@ private fun MyProfileRoute(
         },
         modifier = modifier,
         voiceWakeCallbacks =
-        VoiceWakeCallbacks(onConfirm = requestMicPermission, onCancel = viewModel::onVoiceWakeCancel),
+        VoiceWakeCallbacks(
+            onConfirm = requestMicPermission,
+            onCancel = viewModel::onVoiceWakeCancel,
+            onDeleteModel = viewModel::onVoiceWakeModelDelete,
+        ),
     )
 }
 

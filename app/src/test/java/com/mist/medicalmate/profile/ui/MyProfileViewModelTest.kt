@@ -276,15 +276,77 @@ class MyProfileViewModelTest {
     }
 
     @Test
-    fun `음성 호출을 끄면 바로 끄고 모델을 지운다`() {
-        // 68MB를 돌려준다. 끄는 데는 확인을 거치지 않는다 — 되돌리기 어려운 쪽이 아니다.
+    fun `음성 호출을 끄면 바로 끄고 받아 둔 모델은 남긴다`() {
+        // 끄는 데는 확인을 거치지 않는다. 모델은 남겨 다시 켤 때 41MB를 또 받지 않게 한다(#280).
         val voiceWake = FakeVoiceWake(usable = true, enabled = true, model = WakeWordModelState.Ready)
         val viewModel = viewModel(voiceWake = voiceWake)
 
         viewModel.onSettingChange(AppSetting.VOICE_WAKE, false)
 
-        assertFalse(viewModel.uiState.value.isOn(AppSetting.VOICE_WAKE))
+        val state = viewModel.uiState.value
+        assertFalse(state.isOn(AppSetting.VOICE_WAKE))
         assertEquals(1, voiceWake.disableCalls)
+        assertEquals(0, voiceWake.deleteCalls)
+        assertTrue(state.voiceWake.modelReady)
+    }
+
+    @Test
+    fun `꺼 둔 채 모델이 남아 있으면 지우기 버튼이 있다`() {
+        val viewModel =
+            viewModel(voiceWake = FakeVoiceWake(usable = true, enabled = false, model = WakeWordModelState.Ready))
+
+        viewModel.load()
+
+        assertTrue(viewModel.uiState.value.canDeleteVoiceModel)
+    }
+
+    @Test
+    fun `켜져 있으면 지우기 버튼이 없다`() {
+        // 듣던 모델을 지우면 호출이 끊긴다.
+        val viewModel =
+            viewModel(voiceWake = FakeVoiceWake(usable = true, enabled = true, model = WakeWordModelState.Ready))
+
+        viewModel.load()
+
+        assertFalse(viewModel.uiState.value.canDeleteVoiceModel)
+    }
+
+    @Test
+    fun `받아 둔 모델이 없으면 지우기 버튼이 없다`() {
+        val viewModel = viewModel(voiceWake = FakeVoiceWake(usable = true, enabled = false))
+
+        viewModel.load()
+
+        assertFalse(viewModel.uiState.value.canDeleteVoiceModel)
+    }
+
+    @Test
+    fun `지우기를 누르면 모델을 지우고 버튼이 사라진다`() {
+        val voiceWake = FakeVoiceWake(usable = true, enabled = false, model = WakeWordModelState.Ready)
+        val viewModel = viewModel(voiceWake = voiceWake)
+        viewModel.load()
+
+        viewModel.onVoiceWakeModelDelete()
+
+        assertEquals(1, voiceWake.deleteCalls)
+        assertFalse(viewModel.uiState.value.voiceWake.modelReady)
+        assertFalse(viewModel.uiState.value.canDeleteVoiceModel)
+    }
+
+    @Test
+    fun `모델이 남아 있으면 다시 켤 때 받지 않는다`() {
+        // 확인 창도 받는다는 문장 없이 뜬다. 그 문구는 modelReady를 보고 화면이 고른다.
+        val voiceWake = FakeVoiceWake(usable = true, enabled = false, model = WakeWordModelState.Ready)
+        val viewModel = viewModel(voiceWake = voiceWake)
+        viewModel.onSettingChange(AppSetting.VOICE_WAKE, true)
+        assertTrue(viewModel.uiState.value.voiceWake.modelReady)
+
+        viewModel.onVoiceWakeConfirmed()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.isOn(AppSetting.VOICE_WAKE))
+        assertEquals(VoiceWakeStatus.Idle, state.voiceWake.status)
+        assertEquals(WakeWordModelState.Ready, voiceWake.model.value)
     }
 
     private fun profile(

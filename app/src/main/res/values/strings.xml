@@ -383,6 +383,8 @@
     <string name="my_profile_voice_wake_downloading">음성 모델을 받는 중이에요 (%1$d%%)</string>
     <string name="my_profile_voice_wake_failed">음성 모델을 받지 못했어요. 연결을 확인하고 다시 켜 주세요</string>
     <string name="my_profile_voice_wake_denied">마이크 권한이 있어야 켤 수 있어요</string>
+    <string name="my_profile_voice_wake_confirm_message_ready">앱을 쓰는 동안 "헤이 메이트"라고 부르면 말로 화면을 옮길 수 있어요. 받아 둔 음성 모델을 그대로 써요. 소리는 휴대폰 밖으로 나가지 않아요.</string>
+    <string name="my_profile_voice_wake_delete_model">음성 모델 지우기 (68MB)</string>
 
     <!-- 진료 하루 전 알림(#268). 시안에 없어 정한 문구다. -->
     <string name="visit_reminder_channel_name">진료 알림</string>
