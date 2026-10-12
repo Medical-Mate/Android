@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  FileProvider가 내주는 자리(#275). 브리핑 카드 공유 이미지만 담는 캐시 폴더 하나다.
+  캐시 전체를 열지 않는다.
+-->
+<paths>
+    <cache-path name="shared" path="shared/" />
+</paths>

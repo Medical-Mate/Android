@@ -55,6 +55,10 @@ enum class MedicalMateNavLeading {
  * [MedicalMateNavLeading.BACK]과 [MedicalMateNavLeading.CLOSE]는 뜻이 다르다. 뒤로는
  * 흐름을 한 단계 되돌리고, 닫기는 흐름 전체를 벗어난다. 문답 중간에서 닫기를 누르면
  * 작성 내용을 어떻게 할지 물어야 한다.
+ *
+ * [secondaryActionLabel]은 주요 액션 왼쪽에 서는 두 번째 텍스트 액션이다(#275). 마스터에 없는
+ * 자리다 — 브리핑 카드의 `공유`가 `편집` 옆에 서야 해서 같은 모양으로 하나 더 둔다. 둘이 서면
+ * 제목 좌우를 그만큼 더 비운다. 디자인 트랙 확인이 필요하다.
  */
 @Composable
 fun MedicalMateNavBar(
@@ -66,6 +70,8 @@ fun MedicalMateNavBar(
     onActionClick: (() -> Unit)? = null,
     actionEnabled: Boolean = true,
     surface: MedicalMateSurfaceStyle = MedicalMateSurfaceStyle.OPAQUE,
+    secondaryActionLabel: String? = null,
+    onSecondaryActionClick: (() -> Unit)? = null,
 ) {
     val colors = MedicalMateTheme.colors
     val background =
@@ -75,6 +81,13 @@ fun MedicalMateNavBar(
         }
 
     val hasAction = actionLabel != null && onActionClick != null
+    val hasSecondary = hasAction && secondaryActionLabel != null && onSecondaryActionClick != null
+    val titleInset =
+        when {
+            hasSecondary -> TitleInsetWithTwoActions
+            hasAction -> TitleInsetWithAction
+            else -> TitleInset
+        }
 
     Box(
         modifier =
@@ -95,18 +108,10 @@ fun MedicalMateNavBar(
             }
             // 슬롯이 비어 있어도 자리를 지킨다. 마스터가 그렇게 두는 이유가 제목의 가운데를
             // 흔들지 않기 위해서인데, 제목을 따로 가운데에 두는 지금도 좌우 균형에 쓰인다.
-            Box(
-                modifier = Modifier.heightIn(min = MedicalMateSize.touchMin),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (hasAction) {
-                    ActionSlot(
-                        label = actionLabel,
-                        onClick = onActionClick,
-                        enabled = actionEnabled,
-                    )
-                }
-            }
+            TrailingSlots(
+                action = if (hasAction) NavAction(actionLabel, onActionClick, actionEnabled) else null,
+                secondary = if (hasSecondary) NavAction(secondaryActionLabel, onSecondaryActionClick) else null,
+            )
         }
         Text(
             text = title,
@@ -118,8 +123,24 @@ fun MedicalMateNavBar(
             modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = if (hasAction) TitleInsetWithAction else TitleInset),
+                .padding(horizontal = titleInset),
         )
+    }
+}
+
+private class NavAction(val label: String, val onClick: () -> Unit, val enabled: Boolean = true)
+
+/**
+ * 우측 슬롯. 액션이 없어도 자리를 지킨다. 둘이면 보조 액션이 왼쪽이다.
+ */
+@Composable
+private fun TrailingSlots(action: NavAction?, secondary: NavAction?) {
+    Row(
+        modifier = Modifier.heightIn(min = MedicalMateSize.touchMin),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        secondary?.let { ActionSlot(label = it.label, onClick = it.onClick, enabled = it.enabled) }
+        action?.let { ActionSlot(label = it.label, onClick = it.onClick, enabled = it.enabled) }
     }
 }
 
@@ -200,3 +221,6 @@ private val TitleInset = 60.dp
 
 /** 텍스트 액션이 있을 때. 마스터가 88로 더 비운다. */
 private val TitleInsetWithAction = 88.dp
+
+/** 텍스트 액션이 둘일 때. 두 글자 라벨 둘(각 54)에 바깥 8을 더하고 조금 남긴다. */
+private val TitleInsetWithTwoActions = 120.dp

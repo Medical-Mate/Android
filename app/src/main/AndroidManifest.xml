@@ -85,6 +85,20 @@
                     android:scheme="kakao${KAKAO_NATIVE_APP_KEY}" />
             </intent-filter>
         </activity>
+
+        <!--
+          브리핑 카드 공유(#275). 찍은 카드 이미지를 공유 시트로 내주는 자리다. 저장소 권한 없이
+          받는 앱에만 그 파일 하나를 읽게 한다.
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 
 </manifest>
