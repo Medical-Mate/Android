@@ -12,6 +12,9 @@ import com.google.mlkit.genai.speechrecognition.speechRecognizerOptions
 import com.google.mlkit.genai.speechrecognition.speechRecognizerRequest
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 import java.util.Locale
 
@@ -36,6 +39,14 @@ interface SpeechToText {
      * 화면이 마이크를 그리지 않는다 — 눌러 봐야 안 되는 버튼을 두는 것보다 낫다.
      */
     suspend fun available(): Boolean
+
+    /**
+     * 지금 누군가 받아쓰고 있는지.
+     *
+     * 호출어 감지기(#273)가 이것을 보고 마이크를 내준다. 두 쪽이 한 마이크를 같이 잡으면
+     * 기기에 따라 한쪽이 무음을 받는다.
+     */
+    val active: StateFlow<Boolean>
 
     /**
      * 받아쓰기를 시작한다. 흐름이 끝날 때까지 듣는다.
@@ -73,6 +84,10 @@ internal class MlKitSpeechToText
 constructor() : SpeechToText {
     private var recognizer: SpeechRecognizer? = null
 
+    private val listening = MutableStateFlow(false)
+
+    override val active: StateFlow<Boolean> = listening.asStateFlow()
+
     override suspend fun available(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return false
         return runCatching {
@@ -103,13 +118,18 @@ constructor() : SpeechToText {
             }
         }
         val request = speechRecognizerRequest { audioSource = AudioSource.fromMic() }
-        client.startRecognition(request).collect { response ->
-            when (response) {
-                is SpeechRecognizerResponse.PartialTextResponse -> emit(SpeechChunk.Partial(response.text))
-                is SpeechRecognizerResponse.FinalTextResponse -> emit(SpeechChunk.Final(response.text))
-                is SpeechRecognizerResponse.ErrorResponse -> emit(SpeechChunk.Failed)
-                else -> Unit
+        listening.value = true
+        try {
+            client.startRecognition(request).collect { response ->
+                when (response) {
+                    is SpeechRecognizerResponse.PartialTextResponse -> emit(SpeechChunk.Partial(response.text))
+                    is SpeechRecognizerResponse.FinalTextResponse -> emit(SpeechChunk.Final(response.text))
+                    is SpeechRecognizerResponse.ErrorResponse -> emit(SpeechChunk.Failed)
+                    else -> Unit
+                }
             }
+        } finally {
+            listening.value = false
         }
     }
 

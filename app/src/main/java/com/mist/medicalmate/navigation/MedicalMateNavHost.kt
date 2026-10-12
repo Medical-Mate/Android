@@ -113,11 +113,7 @@ internal fun MedicalMateNavHost(
         visitDestinations(navController)
     }
 
-    SessionBoundarySync(
-        navController = navController,
-        session = session,
-        onboardingCompleted = onboardingCompleted,
-    )
+    SessionBoundarySync(navController = navController, session = session, onboardingCompleted = onboardingCompleted)
 
     ExternalLinkSync(
         navController = navController,
@@ -128,6 +124,8 @@ internal fun MedicalMateNavHost(
         sharedText = sharedText,
         onSharedTextHandled = onSharedTextHandled,
     )
+
+    VoiceCommandSync(navController = navController, session = session, onboardingCompleted = onboardingCompleted)
 }
 
 /** 앱 밖에서 들어온 길들. 알림과 공유가 같은 규칙으로 화면을 연다. */
@@ -215,7 +213,7 @@ private fun <T : Any> PendingLinkSync(
  * 온보딩은 가입하고 한 번만 나온다. 서버가 필요하다고 해도 기기에 마쳤다는 기록이 있으면
  * 홈으로 보낸다. 두 값을 함께 보는 이유는 `profile/data/OnboardingStore`에 적었다.
  */
-private fun SessionUiState.destination(onboardingCompleted: Boolean): Any = when (this) {
+internal fun SessionUiState.destination(onboardingCompleted: Boolean): Any = when (this) {
     SessionUiState.Checking, SessionUiState.RestoreFailed, SessionUiState.SignedOut -> LoginDestination
     is SessionUiState.SignedIn ->
         if (onboardingRequired && !onboardingCompleted) {

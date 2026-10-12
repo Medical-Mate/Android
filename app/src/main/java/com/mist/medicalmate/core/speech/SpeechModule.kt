@@ -18,4 +18,11 @@ internal abstract class SpeechModule {
     @Binds
     @Singleton
     abstract fun bindSpeechToText(impl: MlKitSpeechToText): SpeechToText
+
+    @Binds
+    abstract fun bindWakeWordDetector(impl: VoskWakeWordDetector): WakeWordDetector
+
+    @Binds
+    @Singleton
+    abstract fun bindVoiceWake(impl: DefaultVoiceWake): VoiceWake
 }

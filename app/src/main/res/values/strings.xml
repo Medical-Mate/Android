@@ -372,6 +372,15 @@
     <string name="my_profile_setting_visit_reminder">진료 하루 전 알림</string>
     <string name="my_profile_setting_card_auto_save">브리핑 카드 자동 저장</string>
     <string name="my_profile_setting_handoff_brightness">진료실 화면 밝기 최대</string>
+    <!-- 음성 호출(#273). 시안에 없는 줄과 문구다. -->
+    <string name="my_profile_setting_voice_wake">"메이트야"로 부르기</string>
+    <string name="my_profile_voice_wake_confirm_title">음성 호출을 켤까요?</string>
+    <string name="my_profile_voice_wake_confirm_message">앱을 쓰는 동안 "메이트야"라고 부르면 말로 화면을 옮길 수 있어요. 음성 모델 87MB를 내려받고 저장 공간을 264MB 써요. 소리는 휴대폰 밖으로 나가지 않아요.</string>
+    <string name="my_profile_voice_wake_confirm">켜기</string>
+    <string name="my_profile_voice_wake_cancel">취소</string>
+    <string name="my_profile_voice_wake_downloading">음성 모델을 받는 중이에요 (%1$d%%)</string>
+    <string name="my_profile_voice_wake_failed">음성 모델을 받지 못했어요. 연결을 확인하고 다시 켜 주세요</string>
+    <string name="my_profile_voice_wake_denied">마이크 권한이 있어야 켤 수 있어요</string>
 
     <!-- 진료 하루 전 알림(#268). 시안에 없어 정한 문구다. -->
     <string name="visit_reminder_channel_name">진료 알림</string>
@@ -579,6 +588,10 @@
     <string name="voice_type_instead">직접 입력할게요</string>
     <string name="voice_mic_start">말하기 시작</string>
     <string name="voice_mic_stop">말하기 끝내기</string>
+    <!-- "메이트야"로 부르면 뜨는 음성 명령 패널(#273). 시안에 없는 문구다. -->
+    <string name="voice_command_hint">"캘린더 열어줘"처럼 말씀해 주세요</string>
+    <string name="voice_command_missed">알아듣지 못했어요(“%1$s”). 다시 말씀해 주세요</string>
+    <string name="voice_command_close">닫기</string>
 
     <!-- 통증 슬라이더 양끝 라벨. Figma Severity Slider 마스터에서 읽었다. -->
     <string name="severity_scale_low">가벼운 불편</string>

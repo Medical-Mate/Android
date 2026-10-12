@@ -11,6 +11,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.mist.medicalmate.core.notification.rememberNotificationPermission
+import com.mist.medicalmate.core.speech.rememberMicPermission
 import kotlinx.serialization.Serializable
 
 /** 와이어프레임 1s-1. 홈 헤더의 아바타에서 들어온다. */
@@ -47,6 +48,9 @@ private fun MyProfileRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val requestNotificationPermission = rememberNotificationPermission()
+    // 음성 호출은 확인 창에서 켜기를 누른 뒤에 묻는다. 그때가 마이크가 왜 필요한지 보이는 자리다.
+    val requestMicPermission =
+        rememberMicPermission(onGranted = viewModel::onVoiceWakeConfirmed, onDenied = viewModel::onVoiceWakeDenied)
 
     // 1s-2에서 고치고 돌아오는 자리라 들어올 때 한 번이 아니라 보일 때마다 읽는다.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.load() }
@@ -62,6 +66,8 @@ private fun MyProfileRoute(
             viewModel.onSettingChange(setting, enabled)
         },
         modifier = modifier,
+        voiceWakeCallbacks =
+        VoiceWakeCallbacks(onConfirm = requestMicPermission, onCancel = viewModel::onVoiceWakeCancel),
     )
 }
 
