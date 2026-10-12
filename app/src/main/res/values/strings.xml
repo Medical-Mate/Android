@@ -235,6 +235,8 @@
     <string name="brief_card_status_confirmed">진료 완료</string>
     <!-- Nav 우측 액션. 문서의 CRUD 규칙이 한 자리에서 이름만 바꾼다. -->
     <string name="brief_card_edit">편집</string>
+    <string name="brief_card_share">공유</string>
+    <string name="brief_card_share_chooser">브리핑 카드 공유</string>
     <string name="brief_card_edit_done">확인</string>
     <string name="brief_card_ai_caption">AI가 말씀하신 내용을 정리했어요</string>
     <string name="brief_card_ai_tooltip">말씀하신 내용을 항목별로 정리했어요. 원문도 함께 남아요</string>

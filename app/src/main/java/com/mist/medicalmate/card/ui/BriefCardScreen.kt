@@ -12,8 +12,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.layer.GraphicsLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.R
@@ -35,6 +39,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
 import com.mist.medicalmate.core.model.MAX_BRIEF_CARD_QUESTIONS
+import kotlinx.coroutines.launch
 
 /**
  * 와이어프레임 1e-1과 1e-1-E. Figma `404:1679`, `597:4804`.
@@ -55,6 +60,9 @@ import com.mist.medicalmate.core.model.MAX_BRIEF_CARD_QUESTIONS
 @Composable
 fun BriefCardScreen(state: BriefCardUiState, callbacks: BriefCardCallbacks, modifier: Modifier = Modifier) {
     val content = state as? BriefCardUiState.Content
+    // 공유할 때 찍을 카드 본문(#275). 스크롤로 가려진 아래까지 한 장에 담는다.
+    val cardLayer = rememberGraphicsLayer()
+    val scope = rememberCoroutineScope()
     Column(
         modifier =
         modifier
@@ -67,6 +75,9 @@ fun BriefCardScreen(state: BriefCardUiState, callbacks: BriefCardCallbacks, modi
             surface = MedicalMateSurfaceStyle.GLASS,
             actionLabel = content?.let { stringResource(navActionLabel(it)) },
             onActionClick = content?.let { { onNavAction(it, callbacks) } },
+            // 편집 중에는 감춘다. 고치다 만 카드가 나간다.
+            secondaryActionLabel = stringResource(R.string.brief_card_share).takeIf { content?.editing == false },
+            onSecondaryActionClick = { scope.launch { callbacks.onShareClick(cardLayer.toImageBitmap()) } },
         )
         when (state) {
             BriefCardUiState.Loading ->
@@ -78,7 +89,7 @@ fun BriefCardScreen(state: BriefCardUiState, callbacks: BriefCardCallbacks, modi
                     modifier = Modifier.weight(1f),
                 )
 
-            is BriefCardUiState.Content -> CardContent(state = state, callbacks = callbacks)
+            is BriefCardUiState.Content -> CardContent(state = state, callbacks = callbacks, cardLayer = cardLayer)
         }
     }
 }
@@ -87,6 +98,9 @@ fun BriefCardScreen(state: BriefCardUiState, callbacks: BriefCardCallbacks, modi
  * 카드 화면에서 나가는 길들.
  *
  * 수정은 화면 안에서 모드만 바뀌므로 목적지가 아니다. 저장과 진료실 화면이 나가는 길이다.
+ *
+ * [onShareClick]은 찍은 카드 이미지를 받는다. 공유 시트를 띄우려면 `Context`가 있어야 해서 화면이 아니라
+ * 라우트가 맡는다.
  */
 data class BriefCardCallbacks(
     val onBackClick: () -> Unit = {},
@@ -100,6 +114,7 @@ data class BriefCardCallbacks(
     val onDeleteDismiss: () -> Unit = {},
     val onDeleteConfirm: () -> Unit = {},
     val onRetryClick: () -> Unit = {},
+    val onShareClick: (ImageBitmap) -> Unit = {},
 )
 
 /**
@@ -122,13 +137,19 @@ private fun onNavAction(content: BriefCardUiState.Content, callbacks: BriefCardC
 }
 
 @Composable
-private fun ColumnScope.CardContent(state: BriefCardUiState.Content, callbacks: BriefCardCallbacks) {
+private fun ColumnScope.CardContent(
+    state: BriefCardUiState.Content,
+    callbacks: BriefCardCallbacks,
+    cardLayer: GraphicsLayer,
+) {
     Column(
         modifier =
         Modifier
             .fillMaxWidth()
             .weight(1f)
             .verticalScroll(rememberScrollState())
+            // 스크롤 안쪽에 둔다. 바깥에 두면 화면에 보이는 높이만 찍힌다.
+            .recordInto(cardLayer, MedicalMateTheme.colors.bgSurface)
             .padding(
                 start = MedicalMateSize.gutter,
                 end = MedicalMateSize.gutter,
