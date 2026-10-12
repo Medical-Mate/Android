@@ -355,3 +355,26 @@ class TimeNearTest {
         val TODAY: LocalDate = LocalDate.of(2026, 10, 12)
     }
 }
+
+/** 추출기가 날짜 자리를 `10월19`까지만 잡은 경우(#270). 기기 로그 그대로이고 이름만 가렸다. */
+class TruncatedDateSpanTest {
+    @Test
+    fun `날짜 자리 끝에 남은 일을 건너뛰고 시각을 읽는다`() {
+        val text = "[Web발신]\n태릉씨티치과입니다. 홍길동님의 예약은 10월19일 10시00분입니다. 방문때뵙겠습니다."
+        val start = text.indexOf("10월19")
+        val dated = DateTimeMention(start, start + "10월19".length, LocalDateTime.of(2026, 10, 19, 0, 0), false)
+
+        assertEquals(
+            LocalDate.of(2026, 10, 19) to LocalTime.of(10, 0),
+            pickSchedule(listOf(dated), LocalDate.of(2026, 10, 12), text),
+        )
+    }
+
+    @Test
+    fun `요일 낱말도 건너뛴다`() {
+        val text = "10월 19일 월요일 오후 3시 예약"
+        val start = text.indexOf("10월 19일")
+
+        assertEquals(LocalTime.of(15, 0), timeNear(text, start, start + "10월 19일".length))
+    }
+}
