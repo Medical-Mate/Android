@@ -53,6 +53,7 @@ fun MyProfileScreen(
     onHealthEditClick: () -> Unit,
     onSettingChange: (AppSetting, Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    voiceWakeCallbacks: VoiceWakeCallbacks = VoiceWakeCallbacks(),
 ) {
     Column(
         modifier =
@@ -71,6 +72,10 @@ fun MyProfileScreen(
             onHealthEditClick = onHealthEditClick,
             onSettingChange = onSettingChange,
         )
+    }
+
+    if (state.voiceWake.confirming) {
+        VoiceWakeConfirmDialog(callbacks = voiceWakeCallbacks)
     }
 }
 
@@ -103,6 +108,7 @@ private fun ColumnScope.ProfileContent(
         HealthCard(state.health)
         MedicalMateSectionHeader(title = stringResource(R.string.my_profile_settings))
         SettingsCard(state = state, onSettingChange = onSettingChange)
+        VoiceWakeStatusLine(state.voiceWake.status)
         AccountActions(
             accountActions = accountActions,
             modifier = Modifier.padding(top = MedicalMateSpace.s24),
@@ -206,13 +212,12 @@ private fun summaryText(field: HealthField): String = when (field.status) {
 /**
  * 설정.
  *
- * 아직 저장되지 않는다. 화면 안에서 켜고 끄는 것까지가 지금 범위이고, 기기에 남기려면
- * `DataStore`가, 계정에 남기려면 API가 필요하다(#85).
+ * 음성 호출은 이 기기에서 켤 수 있을 때만 줄이 있다([MyProfileUiState.visibleSettings]).
  */
 @Composable
 private fun SettingsCard(state: MyProfileUiState, onSettingChange: (AppSetting, Boolean) -> Unit) {
     RowCard {
-        AppSetting.entries.forEach { setting ->
+        state.visibleSettings.forEach { setting ->
             MedicalMateToggle(
                 checked = state.isOn(setting),
                 onCheckedChange = { checked -> onSettingChange(setting, checked) },

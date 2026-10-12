@@ -2,6 +2,7 @@ package com.mist.medicalmate.core.speech
 
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 
 /**
@@ -20,11 +21,18 @@ internal class FakeSpeechToText(
 ) : SpeechToText {
     var stopped = false
 
+    override val active = MutableStateFlow(false)
+
     override suspend fun available(): Boolean = usable
 
     override fun listen(): Flow<SpeechChunk> = flow {
-        chunks.forEach { emit(it) }
-        if (keepOpen) awaitCancellation()
+        active.value = true
+        try {
+            chunks.forEach { emit(it) }
+            if (keepOpen) awaitCancellation()
+        } finally {
+            active.value = false
+        }
     }
 
     override suspend fun stop() {

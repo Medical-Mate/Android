@@ -1,0 +1,108 @@
+package com.mist.medicalmate.core.speech
+
+import android.app.ActivityManager
+import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.preferencesDataStore
+import dagger.hilt.android.qualifiers.ApplicationContext
+import jakarta.inject.Inject
+import jakarta.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+
+/**
+ * "메이트야"로 부르기(#273)를 켜고 끄는 자리.
+ *
+ * 내 정보(1s)의 토글과 앱 전체의 호출어 감지가 함께 본다. 두 도메인이 쓰는 값이라 `core`에
+ * 둔다.
+ *
+ * **켠다는 것은 모델을 받는다는 것이다.** 켜면 87MB를 받고 끄면 지운다. 받다가 실패하면 다시
+ * 꺼진다 — 켜져 있는데 듣지 않는 토글은 고장으로 읽힌다.
+ *
+ * 이 기기에서만 쓰는 값이라 `DataStore`다. 기기마다 모델을 받아야 하므로 계정에 붙일 이유가
+ * 없다.
+ */
+interface VoiceWake {
+    /**
+     * 이 기기에서 켤 수 있는지.
+     *
+     * 메모리가 넉넉해야 하고(모델이 500MB 가까이 쓴다) 받아쓰기를 쓸 수 있어야 한다. 부른 뒤의
+     * 명령은 받아쓰기가 듣는다. 안 되는 기기에서는 토글을 그리지 않는다.
+     */
+    suspend fun supported(): Boolean
+
+    val enabled: Flow<Boolean>
+
+    val model: StateFlow<WakeWordModelState>
+
+    /** 켜고 모델을 받는다. 마이크 권한은 화면이 먼저 받아 둔다. */
+    suspend fun enable()
+
+    /** 끄고 받아 둔 모델을 지운다. */
+    suspend fun disable()
+}
+
+private val Context.speechDataStore: DataStore<Preferences> by preferencesDataStore(name = "speech")
+
+@Singleton
+internal class DefaultVoiceWake
+@Inject
+constructor(
+    @ApplicationContext private val context: Context,
+    private val store: WakeWordModelStore,
+    private val speech: SpeechToText,
+) : VoiceWake {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    init {
+        // 받다가 실패하면 토글을 내린다. 화면이 떠 있지 않아도 내려가야 다음에 들어왔을 때 맞다.
+        scope.launch {
+            store.state
+                .filter { it == WakeWordModelState.Failed }
+                .collect { context.speechDataStore.edit { it[enabledKey] = false } }
+        }
+    }
+
+    override suspend fun supported(): Boolean = enoughMemory() && speech.available()
+
+    override val enabled: Flow<Boolean> = context.speechDataStore.data.map { it[enabledKey] ?: false }
+
+    override val model: StateFlow<WakeWordModelState> = store.state
+
+    override suspend fun enable() {
+        context.speechDataStore.edit { it[enabledKey] = true }
+        store.download()
+    }
+
+    override suspend fun disable() {
+        context.speechDataStore.edit { it[enabledKey] = false }
+        store.delete()
+    }
+
+    /**
+     * 메모리가 넉넉한지.
+     *
+     * 모델을 올리면 480MB, 듣는 동안 590MB까지 썼다(PC 측정). 4GB 기기에서는 앱이 밀려나거나
+     * 다른 앱을 밀어낸다. 6GB 기기가 `totalMem`으로 5.3~5.6GB를 알리므로 선을 5GiB에 둔다.
+     */
+    private fun enoughMemory(): Boolean {
+        val manager = context.getSystemService(ActivityManager::class.java) ?: return false
+        val info = ActivityManager.MemoryInfo().also(manager::getMemoryInfo)
+        return !manager.isLowRamDevice && info.totalMem >= MIN_TOTAL_MEMORY_BYTES
+    }
+
+    private companion object {
+        val enabledKey = booleanPreferencesKey("voice_wake")
+
+        const val MIN_TOTAL_MEMORY_BYTES = 5L * 1024 * 1024 * 1024
+    }
+}

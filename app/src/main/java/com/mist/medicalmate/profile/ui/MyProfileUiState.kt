@@ -14,21 +14,54 @@ data class MyProfileUiState(
     val profile: MyProfile = MyProfile(),
     val health: HealthSummary = HealthSummary(),
     val settings: Map<AppSetting, Boolean> = DefaultSettings,
+    val voiceWake: VoiceWakeUi = VoiceWakeUi(),
 ) {
     fun isOn(setting: AppSetting): Boolean = settings[setting] == true
+
+    /** 그릴 토글. 음성 호출은 이 기기에서 켤 수 있을 때만 있다. */
+    val visibleSettings: List<AppSetting>
+        get() = AppSetting.entries.filter { it != AppSetting.VOICE_WAKE || voiceWake.supported }
 }
 
 /**
- * 설정 세 개의 초기값. 시안 1s-1이 그린 대로다.
+ * "메이트야"로 부르기(#273)의 자리.
  *
- * 읽어 오기 전까지만 쓰인다. 알림은 계정에서, 나머지 둘은 이 기기에서 읽어 덮는다(#187).
- * 서버의 기본값도 켜짐이라 알림은 값이 같다.
+ * 다른 토글과 달리 켜는 데 단계가 있다. 내려받을 크기를 알리고(확인 창) 마이크 권한을 받은
+ * 뒤에야 켜진다. 켜진 뒤에도 모델을 다 받기 전까지는 듣지 않아서 그 사이를 적는다.
+ *
+ * @param supported 이 기기에서 켤 수 있는지. 아니면 토글을 그리지 않는다.
+ * @param confirming 켜려고 눌러 확인 창이 떠 있다. 아직 켜지지 않았다.
+ */
+data class VoiceWakeUi(
+    val supported: Boolean = false,
+    val confirming: Boolean = false,
+    val status: VoiceWakeStatus = VoiceWakeStatus.Idle,
+)
+
+/** 토글 아래 한 줄. 문구는 화면이 고른다. */
+sealed interface VoiceWakeStatus {
+    data object Idle : VoiceWakeStatus
+
+    data class Downloading(val percent: Int) : VoiceWakeStatus
+
+    data object Failed : VoiceWakeStatus
+
+    /** 마이크 권한을 거부해 켜지 못했다. */
+    data object Denied : VoiceWakeStatus
+}
+
+/**
+ * 설정의 초기값. 앞의 셋은 시안 1s-1이 그린 대로다.
+ *
+ * 읽어 오기 전까지만 쓰인다. 알림은 계정에서, 나머지는 이 기기에서 읽어 덮는다(#187).
+ * 서버의 기본값도 켜짐이라 알림은 값이 같다. 음성 호출은 켜면 모델을 받으므로 꺼진 채 시작한다.
  */
 private val DefaultSettings =
     mapOf(
         AppSetting.VISIT_REMINDER to true,
         AppSetting.CARD_AUTO_SAVE to true,
         AppSetting.HANDOFF_BRIGHTNESS to false,
+        AppSetting.VOICE_WAKE to false,
     )
 
 /**
@@ -85,6 +118,9 @@ enum class AppSetting(@StringRes val labelRes: Int) {
     VISIT_REMINDER(R.string.my_profile_setting_visit_reminder),
     CARD_AUTO_SAVE(R.string.my_profile_setting_card_auto_save),
     HANDOFF_BRIGHTNESS(R.string.my_profile_setting_handoff_brightness),
+
+    /** 시안에 없는 줄이다(#273). 이 기기에서 켤 수 있을 때만 그린다. */
+    VOICE_WAKE(R.string.my_profile_setting_voice_wake),
 }
 
 /**

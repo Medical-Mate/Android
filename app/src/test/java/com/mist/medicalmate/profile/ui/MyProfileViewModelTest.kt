@@ -2,6 +2,8 @@ package com.mist.medicalmate.profile.ui
 
 import com.mist.medicalmate.core.model.FakeVisitReminders
 import com.mist.medicalmate.core.network.ApiResult
+import com.mist.medicalmate.core.speech.FakeVoiceWake
+import com.mist.medicalmate.core.speech.WakeWordModelState
 import com.mist.medicalmate.profile.data.FakeHealthProfileRepository
 import com.mist.medicalmate.profile.data.FakeLocalSettingsStore
 import com.mist.medicalmate.profile.data.FakeSettingsRepository
@@ -170,7 +172,120 @@ class MyProfileViewModelTest {
         repository: FakeHealthProfileRepository = FakeHealthProfileRepository(),
         settings: FakeSettingsRepository = FakeSettingsRepository(),
         local: FakeLocalSettingsStore = FakeLocalSettingsStore(),
-    ) = MyProfileViewModel(repository, settings, local, reminders)
+        voiceWake: FakeVoiceWake = FakeVoiceWake(),
+    ) = MyProfileViewModel(repository, settings, local, reminders, voiceWake)
+
+    @Test
+    fun `음성 호출은 켤 수 없는 기기에서 줄이 없다`() {
+        // 메모리가 모자라거나 받아쓰기를 못 쓰는 기기다. 눌러 봐야 안 되는 토글을 두지 않는다.
+        val viewModel = viewModel(voiceWake = FakeVoiceWake(usable = false))
+
+        viewModel.load()
+
+        assertFalse(AppSetting.VOICE_WAKE in viewModel.uiState.value.visibleSettings)
+    }
+
+    @Test
+    fun `음성 호출은 켤 수 있는 기기에서 줄이 있다`() {
+        val viewModel = viewModel(voiceWake = FakeVoiceWake(usable = true))
+
+        viewModel.load()
+
+        assertTrue(AppSetting.VOICE_WAKE in viewModel.uiState.value.visibleSettings)
+    }
+
+    @Test
+    fun `음성 호출을 켜려고 누르면 확인 창부터 뜨고 아직 켜지지 않는다`() {
+        // 87MB를 받는 일이다. 모르고 켜면 안 된다.
+        val voiceWake = FakeVoiceWake(usable = true)
+        val viewModel = viewModel(voiceWake = voiceWake)
+
+        viewModel.onSettingChange(AppSetting.VOICE_WAKE, true)
+
+        val state = viewModel.uiState.value
+        assertTrue(state.voiceWake.confirming)
+        assertFalse(state.isOn(AppSetting.VOICE_WAKE))
+        assertEquals(0, voiceWake.enableCalls)
+    }
+
+    @Test
+    fun `확인하고 권한을 받으면 켜고 받는 중을 적는다`() {
+        val voiceWake = FakeVoiceWake(usable = true)
+        val viewModel = viewModel(voiceWake = voiceWake)
+        viewModel.onSettingChange(AppSetting.VOICE_WAKE, true)
+
+        viewModel.onVoiceWakeConfirmed()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.voiceWake.confirming)
+        assertTrue(state.isOn(AppSetting.VOICE_WAKE))
+        assertEquals(VoiceWakeStatus.Downloading(0), state.voiceWake.status)
+    }
+
+    @Test
+    fun `받는 중의 진행률을 적고 다 받으면 지운다`() {
+        val voiceWake = FakeVoiceWake(usable = true, enabled = true)
+        val viewModel = viewModel(voiceWake = voiceWake)
+
+        voiceWake.model.value = WakeWordModelState.Downloading(0.42f)
+        assertEquals(VoiceWakeStatus.Downloading(42), viewModel.uiState.value.voiceWake.status)
+
+        voiceWake.model.value = WakeWordModelState.Ready
+        assertEquals(VoiceWakeStatus.Idle, viewModel.uiState.value.voiceWake.status)
+    }
+
+    @Test
+    fun `받다가 실패하면 토글이 내려가고 그 사실을 적는다`() {
+        // 실제로는 VoiceWake가 꺼진 값을 저장한다. 화면은 그것을 따라간다.
+        val voiceWake = FakeVoiceWake(usable = true, enabled = true)
+        val viewModel = viewModel(voiceWake = voiceWake)
+
+        voiceWake.model.value = WakeWordModelState.Failed
+        voiceWake.enabled.value = false
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isOn(AppSetting.VOICE_WAKE))
+        assertEquals(VoiceWakeStatus.Failed, state.voiceWake.status)
+    }
+
+    @Test
+    fun `확인 창을 닫으면 아무것도 바뀌지 않는다`() {
+        val voiceWake = FakeVoiceWake(usable = true)
+        val viewModel = viewModel(voiceWake = voiceWake)
+        viewModel.onSettingChange(AppSetting.VOICE_WAKE, true)
+
+        viewModel.onVoiceWakeCancel()
+
+        assertFalse(viewModel.uiState.value.voiceWake.confirming)
+        assertFalse(viewModel.uiState.value.isOn(AppSetting.VOICE_WAKE))
+        assertEquals(0, voiceWake.enableCalls)
+    }
+
+    @Test
+    fun `마이크 권한을 거부하면 켜지 않고 그 사실을 적는다`() {
+        val voiceWake = FakeVoiceWake(usable = true)
+        val viewModel = viewModel(voiceWake = voiceWake)
+        viewModel.onSettingChange(AppSetting.VOICE_WAKE, true)
+
+        viewModel.onVoiceWakeDenied()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isOn(AppSetting.VOICE_WAKE))
+        assertEquals(VoiceWakeStatus.Denied, state.voiceWake.status)
+        assertEquals(0, voiceWake.enableCalls)
+    }
+
+    @Test
+    fun `음성 호출을 끄면 바로 끄고 모델을 지운다`() {
+        // 264MB를 돌려준다. 끄는 데는 확인을 거치지 않는다 — 되돌리기 어려운 쪽이 아니다.
+        val voiceWake = FakeVoiceWake(usable = true, enabled = true, model = WakeWordModelState.Ready)
+        val viewModel = viewModel(voiceWake = voiceWake)
+
+        viewModel.onSettingChange(AppSetting.VOICE_WAKE, false)
+
+        assertFalse(viewModel.uiState.value.isOn(AppSetting.VOICE_WAKE))
+        assertEquals(1, voiceWake.disableCalls)
+    }
 
     private fun profile(
         name: String? = FakeHealthProfileRepository.PROFILE.name,

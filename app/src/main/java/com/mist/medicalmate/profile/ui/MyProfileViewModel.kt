@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mist.medicalmate.core.model.VisitReminders
 import com.mist.medicalmate.core.network.ApiResult
+import com.mist.medicalmate.core.speech.VoiceWake
+import com.mist.medicalmate.core.speech.WakeWordModelState
 import com.mist.medicalmate.profile.data.HealthField
 import com.mist.medicalmate.profile.data.HealthProfile
 import com.mist.medicalmate.profile.data.HealthProfileRepository
@@ -42,6 +44,10 @@ import kotlinx.coroutines.launch
  *
  * 토글을 누르면 화면을 먼저 바꾸고 저장을 보낸다. 왕복을 기다리면 누른 뒤에 잠깐 안 바뀐
  * 것처럼 보인다. 실패하면 되돌린다.
+ *
+ * **음성 호출(#273)만 바로 켜지지 않는다.** 87MB를 받는 일이라 확인 창을 거치고, 화면이
+ * 마이크 권한을 받은 뒤에 [onVoiceWakeConfirmed]로 켠다. 토글의 값은 [VoiceWake.enabled]를
+ * 따라간다 — 받다가 실패하면 그쪽이 내리고 화면도 따라 내려간다.
  */
 @HiltViewModel
 class MyProfileViewModel
@@ -51,9 +57,21 @@ internal constructor(
     private val settings: SettingsRepository,
     private val localSettings: LocalSettingsStore,
     private val reminders: VisitReminders,
+    private val voiceWake: VoiceWake,
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(MyProfileUiState())
     val uiState: StateFlow<MyProfileUiState> = mutableUiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            voiceWake.enabled.collect { enabled ->
+                mutableUiState.update { it.copy(settings = it.settings + (AppSetting.VOICE_WAKE to enabled)) }
+            }
+        }
+        viewModelScope.launch {
+            voiceWake.model.collect { model -> updateVoiceWake { it.copy(status = model.toStatus(it.status)) } }
+        }
+    }
 
     /**
      * 건강 요약을 읽는다.
@@ -63,6 +81,8 @@ internal constructor(
      */
     fun load() {
         viewModelScope.launch {
+            val supported = voiceWake.supported()
+            updateVoiceWake { it.copy(supported = supported) }
             loadSettings()
             val profile = (repository.profile() as? ApiResult.Success)?.value ?: return@launch
             mutableUiState.update {
@@ -110,14 +130,49 @@ internal constructor(
      * 쓰는 값이라 되돌릴 실패가 없다.
      */
     fun onSettingChange(setting: AppSetting, enabled: Boolean) {
+        if (setting == AppSetting.VOICE_WAKE) {
+            onVoiceWakeChange(enabled)
+            return
+        }
         mutableUiState.update { it.copy(settings = it.settings + (setting to enabled)) }
         viewModelScope.launch {
             when (setting) {
                 AppSetting.VISIT_REMINDER -> saveReminder(enabled)
                 AppSetting.CARD_AUTO_SAVE -> localSettings.setCardAutoSave(enabled)
                 AppSetting.HANDOFF_BRIGHTNESS -> localSettings.setHandoffBrightness(enabled)
+                AppSetting.VOICE_WAKE -> Unit
             }
         }
+    }
+
+    /** 켜려고 누르면 확인 창부터 띄운다. 끄면 바로 끄고 모델을 지운다. */
+    private fun onVoiceWakeChange(enabled: Boolean) {
+        if (enabled) {
+            updateVoiceWake { it.copy(confirming = true, status = VoiceWakeStatus.Idle) }
+            return
+        }
+        mutableUiState.update { it.copy(settings = it.settings + (AppSetting.VOICE_WAKE to false)) }
+        viewModelScope.launch { voiceWake.disable() }
+    }
+
+    /** 확인 창에서 켜기를 눌렀고 마이크 권한도 받았다. */
+    fun onVoiceWakeConfirmed() {
+        updateVoiceWake { it.copy(confirming = false) }
+        viewModelScope.launch { voiceWake.enable() }
+    }
+
+    /** 확인 창을 닫았다. 아무것도 바뀌지 않는다. */
+    fun onVoiceWakeCancel() {
+        updateVoiceWake { it.copy(confirming = false) }
+    }
+
+    /** 켜려 했는데 마이크 권한을 거부했다. 듣지 못하는 호출어를 켜 둘 수 없다. */
+    fun onVoiceWakeDenied() {
+        updateVoiceWake { it.copy(confirming = false, status = VoiceWakeStatus.Denied) }
+    }
+
+    private fun updateVoiceWake(change: (VoiceWakeUi) -> VoiceWakeUi) {
+        mutableUiState.update { it.copy(voiceWake = change(it.voiceWake)) }
     }
 
     private suspend fun saveReminder(enabled: Boolean) {
@@ -128,6 +183,21 @@ internal constructor(
         mutableUiState.update { it.copy(settings = it.settings + (AppSetting.VISIT_REMINDER to !enabled)) }
     }
 }
+
+/**
+ * 모델 상태를 토글 아래 한 줄로.
+ *
+ * 다 받았거나 지웠으면 그 줄을 비운다. 다만 권한을 거부해 켜지 못한 것은 모델과 상관없는
+ * 사정이라 남긴다.
+ */
+private fun WakeWordModelState.toStatus(current: VoiceWakeStatus): VoiceWakeStatus = when (this) {
+    is WakeWordModelState.Downloading -> VoiceWakeStatus.Downloading((progress * PERCENT).toInt())
+    WakeWordModelState.Failed -> VoiceWakeStatus.Failed
+    WakeWordModelState.Ready, WakeWordModelState.Absent ->
+        if (current == VoiceWakeStatus.Denied) current else VoiceWakeStatus.Idle
+}
+
+private const val PERCENT = 100
 
 /**
  * 응답을 프로필 줄로.
