@@ -25,4 +25,7 @@ internal abstract class SpeechModule {
     @Binds
     @Singleton
     abstract fun bindVoiceWake(impl: DefaultVoiceWake): VoiceWake
+
+    @Binds
+    abstract fun bindVoiceWakeTrace(impl: LogcatVoiceWakeTrace): VoiceWakeTrace
 }

@@ -55,7 +55,7 @@ class VoiceCommandViewModelTest {
 
     @Test
     fun `앱이 뒤로 가면 마이크를 놓는다`() {
-        // 뒤에서 마이크를 잡는 앱이 되지 않는다. 모델도 내려 480MB를 돌려준다.
+        // 뒤에서 마이크를 잡는 앱이 되지 않는다. 모델도 내려 메모리를 돌려준다.
         val viewModel = viewModel().ready()
 
         viewModel.setForeground(false)
@@ -66,6 +66,16 @@ class VoiceCommandViewModelTest {
     @Test
     fun `로그인 화면이나 권한이 없으면 듣지 않는다`() {
         val viewModel = viewModel()
+        viewModel.setForeground(true)
+
+        assertEquals(0, detector.listeners)
+    }
+
+    @Test
+    fun `로그인했어도 마이크 권한이 없으면 듣지 않는다`() {
+        // 설정에서 권한을 거둘 수 있다. 화면으로 돌아올 때마다 다시 본다.
+        val viewModel = viewModel()
+        viewModel.setAllowed(signedIn = true, micGranted = false)
         viewModel.setForeground(true)
 
         assertEquals(0, detector.listeners)
@@ -209,7 +219,7 @@ class VoiceCommandViewModelTest {
         val viewModel = viewModel(speech = speech).ready()
         detector.wake()
 
-        viewModel.setAllowed(false)
+        viewModel.setAllowed(signedIn = false, micGranted = true)
 
         assertNull(viewModel.uiState.value.panel)
     }
@@ -217,11 +227,11 @@ class VoiceCommandViewModelTest {
     private fun viewModel(
         wake: FakeVoiceWake = FakeVoiceWake(usable = true, enabled = true, model = WakeWordModelState.Ready),
         speech: FakeSpeechToText = FakeSpeechToText(usable = true),
-    ) = VoiceCommandViewModel(wake, detector, speech)
+    ) = VoiceCommandViewModel(wake, detector, speech) {}
 
     /** 앱이 화면에 있고 홈에 갈 수 있는 세션에 마이크 권한도 있다. */
     private fun VoiceCommandViewModel.ready() = apply {
-        setAllowed(true)
+        setAllowed(signedIn = true, micGranted = true)
         setForeground(true)
     }
 }
