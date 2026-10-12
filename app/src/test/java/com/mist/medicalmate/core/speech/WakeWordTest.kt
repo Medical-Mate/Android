@@ -39,14 +39,31 @@ class WakeWordTest {
     }
 
     @Test
-    fun `메이트와 비슷한 다른 낱말은 호출이 아니다`() {
-        // 갤럭시에서 "메이트야"를 이렇게 받아쓴 일이 많았다. 받아 주면 놓친 것은 줄지만, 일상
-        // 대화에서 켜질 위험을 녹음으로 재 보기 전에는 넣지 않는다.
+    fun `메이트를 잘못 들은 네이트와 레이트도 호출이다`() {
+        // 갤럭시에서 "메이트야"를 가장 많이 이렇게 받아썼다(#278). 실제 로그의 값이다.
         listOf(
-            result("네이트" to 1.0, "에" to 1.0, "요" to 1.0),
+            result("네이트" to 0.61, "야" to 0.59),
+            result("레이트" to 0.67),
             result("레이트" to 1.0),
+            result("네이트" to 1.0, "에" to 1.0, "요" to 1.0),
+        ).forEach { json -> assertTrue(json, isWakeWord(parseVoskWords(json))) }
+    }
+
+    @Test
+    fun `네이트와 레이트도 신뢰도가 모자라면 호출이 아니다`() {
+        listOf(
+            result("네이트" to 0.39, "야" to 0.66),
+            result("레이트" to 0.37),
+        ).forEach { json -> assertFalse(json, isWakeWord(parseVoskWords(json))) }
+    }
+
+    @Test
+    fun `일상 말에 흔한 비슷한 낱말은 호출이 아니다`() {
+        // 메이플·메인도 "메이트야"를 잘못 들은 것이었지만 대화에 흔해 받지 않는다.
+        listOf(
             result("메이플" to 0.88, "양" to 0.27),
             result("메인" to 0.78, "디야" to 1.0),
+            result("레이" to 0.92, "중형" to 0.52),
         ).forEach { json -> assertFalse(json, isWakeWord(parseVoskWords(json))) }
     }
 

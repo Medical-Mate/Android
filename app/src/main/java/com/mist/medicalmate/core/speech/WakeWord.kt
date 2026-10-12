@@ -75,10 +75,16 @@ internal fun parseVoskWords(json: String): List<HeardWord> = try {
  * 켜졌다(#278). 놓친 것 가운데 `메이트`를 맞게 듣고도 0.66·0.75·0.84로 떨어진 것이
  * 셋이었다. 그 셋을 잡으려고 내렸고, 대신 "룸메이트야"에도 켜진다. 같은 측정에서 1분 넘게
  * 이어진 대화에 엉뚱하게 켜진 일은 없었다.
+ *
+ * **`네이트`·`레이트`도 받는다.** 두 번째 측정에서는 `메이트`가 들리면 늘 1.00이었고, 놓친
+ * 18번 중 12번이 모두 다른 낱말이었다. 그중 `네이트`·`레이트`가 7번으로 가장 많았다. 작은
+ * 모델이 외래어 "메이트"를 거의 몰라 첫소리 ㅁ을 ㄴ·ㄹ로 들으면 이쪽으로 끌려간다. 두
+ * 낱말은 1분 넘는 대화에서 한 번도 나오지 않았다. 다만 대화 표본이 적어 잘못 켜짐은 더
+ * 재 봐야 한다. `메이플`·`메인`은 일상 말에 흔해 받지 않는다.
  */
 internal fun isWakeWord(words: List<HeardWord>): Boolean =
-    words.any { it.word == WAKE_WORD && it.conf >= WAKE_WORD_MIN_CONFIDENCE }
+    words.any { it.word in WAKE_WORDS && it.conf >= WAKE_WORD_MIN_CONFIDENCE }
 
-private const val WAKE_WORD = "메이트"
+private val WAKE_WORDS = setOf("메이트", "네이트", "레이트")
 
 private const val WAKE_WORD_MIN_CONFIDENCE = 0.6
