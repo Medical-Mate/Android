@@ -73,7 +73,7 @@ internal data class ScheduleAddDestination(
 )
 
 internal fun NavGraphBuilder.scheduleAddDestination(
-    onHospitalPick: () -> Unit,
+    onHospitalPick: (query: String?) -> Unit,
     onCardNew: () -> Unit,
     onSaved: () -> Unit,
     onExit: () -> Unit,
@@ -113,7 +113,7 @@ private fun ScheduleAddRoute(
     followUp: Boolean,
     sharedText: String?,
     time: LocalTime?,
-    onHospitalPick: () -> Unit,
+    onHospitalPick: (query: String?) -> Unit,
     onCardNew: () -> Unit,
     onSaved: () -> Unit,
     onExit: () -> Unit,
@@ -137,13 +137,21 @@ private fun ScheduleAddRoute(
 
     LaunchedEffect(hospitalName) { viewModel.onHospitalPicked(hospitalName) }
 
+    // 예약 문자에서 병원 이름을 읽었으면 그 이름으로 찾은 목록을 바로 연다(#270). 같은 이름의 다른
+    // 지점이 있을 수 있어 사람이 주소를 보고 고른다. 옮기기 전에 소비 표시를 남긴다.
+    LaunchedEffect(state.hospitalSearch) {
+        val query = state.hospitalSearch ?: return@LaunchedEffect
+        viewModel.onHospitalSearchOpened()
+        onHospitalPick(query)
+    }
+
     ScheduleAddScreen(
         state = state,
         callbacks =
         ScheduleAddCallbacks(
             todo = viewModel.todo,
             onCloseClick = onExit,
-            onHospitalClick = onHospitalPick,
+            onHospitalClick = { onHospitalPick(state.hospital) },
             onSheetOpen = viewModel::onSheetOpen,
             onSheetDismiss = viewModel::onSheetDismiss,
             onDateConfirm = viewModel::onDateConfirm,

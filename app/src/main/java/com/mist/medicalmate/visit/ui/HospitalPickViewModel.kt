@@ -52,10 +52,47 @@ internal constructor(private val repository: HospitalRepository) : ViewModel() {
      * 그것이 픽스처였다. 서버 검색은 질의가 있어야 답이 오므로 1m도 1m-B와 같은 입력 전
      * 상태로 열린다. 시안과 어긋나는 지점이라 디자인 트랙에 올렸다(#155).
      */
-    fun load(purpose: HospitalPickPurpose = HospitalPickPurpose.AFTER_VISIT, forExistingCard: Boolean = false) {
+    fun load(
+        purpose: HospitalPickPurpose = HospitalPickPurpose.AFTER_VISIT,
+        forExistingCard: Boolean = false,
+        initialQuery: String? = null,
+    ) {
         searchJob?.cancel()
         cache.clear()
         mutableUiState.value = HospitalPickUiState(purpose = purpose, forExistingCard = forExistingCard)
+        initialQuery?.trim()?.takeIf { it.isNotEmpty() }?.let(::searchFirst)
+    }
+
+    /**
+     * 들고 들어온 이름으로 바로 찾는다(#270). 일정 추가가 예약 문자에서 읽은 병원 이름이다.
+     *
+     * **못 찾으면 이름을 바꿔 한 번씩 더 찾는다.** 문자 속 이름과 심평원에 등록된 이름이 띄어쓰기나
+     * 진료과에서 갈린다 — `고려튼튼 통증의학과`는 `고려튼튼통증의학과의원`으로, `서울OO병원 내과`는
+     * `서울OO병원`으로 올라 있다. 서버가 부분 일치라 띄어쓰기를 뺀 이름과 마지막 낱말을 뗀 이름이면
+     * 걸린다. 찾은 이름을 검색어 칸에 남겨 무엇으로 찾았는지가 보이게 한다.
+     *
+     * 입력 대기(300ms) 없이 바로 부른다. 사람이 치는 글이 아니다.
+     */
+    private fun searchFirst(query: String) {
+        val candidates =
+            listOf(query, query.replace(" ", ""), query.substringBeforeLast(' ', ""))
+                .map(String::trim)
+                .filter(String::isNotEmpty)
+                .distinct()
+        mutableUiState.update { it.copy(query = query, searching = true, failed = false) }
+        searchJob =
+            viewModelScope.launch {
+                var index = 0
+                var result: ApiResult<HospitalSearchResult>
+                do {
+                    val candidate = candidates[index++]
+                    result = repository.search(candidate)
+                    if (result is ApiResult.Success) cache[candidate] = result.value
+                } while (index < candidates.size && result is ApiResult.Success && result.value.hospitals.isEmpty())
+                val found = candidates[index - 1]
+                mutableUiState.update { it.copy(query = if (result.isHit()) found else query) }
+                apply(result)
+            }
     }
 
     /**
@@ -109,8 +146,14 @@ internal constructor(private val repository: HospitalRepository) : ViewModel() {
         }
     }
 
-    fun onHospitalClick(name: String) {
-        mutableUiState.update { state -> state.copy(selected = state.results.firstOrNull { it.name == name }) }
+    /**
+     * 줄을 골랐다.
+     *
+     * **이름이 아니라 그 줄을 고른다.** 같은 이름의 지점이 여럿 나온다(`태릉씨티치과의원`이 두 곳).
+     * 이름으로 찾으면 어느 줄을 눌러도 첫 줄이 골라진다(#270).
+     */
+    fun onHospitalClick(hospital: Hospital) {
+        mutableUiState.update { state -> state.copy(selected = hospital.takeIf { it in state.results }) }
     }
 
     /**
@@ -137,6 +180,9 @@ internal constructor(private val repository: HospitalRepository) : ViewModel() {
             }
         }
     }
+
+    private fun ApiResult<HospitalSearchResult>.isHit(): Boolean =
+        this is ApiResult.Success && value.hospitals.isNotEmpty()
 
     private companion object {
         /**

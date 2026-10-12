@@ -138,3 +138,70 @@ internal class FakeTextReader(
         return answer?.await() ?: result
     }
 }
+
+/** 문자에서 읽은 병원 이름으로 병원 찾기를 여는 것(#270). */
+@OptIn(ExperimentalCoroutinesApi::class)
+class ScheduleAddHospitalSearchTest {
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    @Test
+    fun `문자에서 병원을 읽으면 그 이름으로 병원 찾기를 연다`() {
+        val viewModel = viewModel(SharedAppointment(hospital = "태릉씨티치과"))
+
+        viewModel.load(sharedText = "태릉씨티치과입니다")
+
+        assertEquals("태릉씨티치과", viewModel.uiState.value.hospitalSearch)
+    }
+
+    @Test
+    fun `한 번 열면 다시 열지 않는다`() {
+        // 병원을 고르고 돌아오면 화면이 다시 조합된다. 그때 또 열리면 고른 것을 덮는 길로 다시 간다.
+        val viewModel = viewModel(SharedAppointment(hospital = "태릉씨티치과"))
+        viewModel.load(sharedText = "태릉씨티치과입니다")
+
+        viewModel.onHospitalSearchOpened()
+        viewModel.onHospitalPicked("태릉씨티치과의원")
+
+        assertNull(viewModel.uiState.value.hospitalSearch)
+        assertEquals("태릉씨티치과의원", viewModel.uiState.value.hospital)
+    }
+
+    @Test
+    fun `이미 고른 병원이 있으면 열지 않는다`() {
+        val answer = CompletableDeferred<SharedAppointment>()
+        val viewModel = viewModel(answer = answer)
+
+        viewModel.load(sharedText = "태릉씨티치과입니다")
+        viewModel.onHospitalPicked("서울OO병원")
+        answer.complete(SharedAppointment(hospital = "태릉씨티치과"))
+
+        assertNull(viewModel.uiState.value.hospitalSearch)
+        assertEquals("서울OO병원", viewModel.uiState.value.hospital)
+    }
+
+    @Test
+    fun `병원을 못 읽으면 열지 않는다`() {
+        val viewModel = viewModel(SharedAppointment(date = LocalDate.of(2026, 10, 19)))
+
+        viewModel.load(sharedText = "10월19일 예약")
+
+        assertNull(viewModel.uiState.value.hospitalSearch)
+    }
+
+    private fun viewModel(
+        result: SharedAppointment = SharedAppointment(),
+        answer: CompletableDeferred<SharedAppointment>? = null,
+    ) = ScheduleAddViewModel(
+        RecordingAppointmentRepository(),
+        FakeCardRepository(list = ApiResult.Success(emptyList())),
+        FakeTextReader(result, answer),
+    )
+}

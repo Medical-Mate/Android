@@ -41,6 +41,13 @@ data class ScheduleAddUiState(
     val sheet: ScheduleAddSheet = ScheduleAddSheet.NONE,
     /** 공유받은 예약 문자를 읽은 결과(#270). 문자 없이 열렸으면 [ScheduleAddShareRead.NONE]이다. */
     val shareRead: ScheduleAddShareRead = ScheduleAddShareRead.NONE,
+    /**
+     * 열어야 할 병원 검색(#270). 예약 문자에서 읽은 병원 이름이다.
+     *
+     * 문자 속 이름만으로는 어느 지점인지 모른다. 그 이름으로 찾은 목록을 띄워 주소를 보고 고르게 한다.
+     * 화면이 병원 찾기를 열면서 지운다.
+     */
+    val hospitalSearch: String? = null,
 ) {
     /** 고른 카드 수. 섹션 머리 오른쪽에 적는다. */
     val pickedCardCount: Int get() = cards.count { it.picked }

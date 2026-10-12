@@ -74,7 +74,8 @@ internal constructor(
         }
         viewModelScope.launch {
             // 이미 한 번 담아 왔으면 다시 읽지 않는다. 고치는 중에 들어온 값을 덮어쓴다.
-            val editing = if (mutableUiState.value.appointmentId == null) appointment(appointmentId, date) else null
+            val editing =
+                if (mutableUiState.value.appointmentId == null) repository.find(appointmentId, date) else null
             val cards = (cardRepository.cards() as? ApiResult.Success)?.value.orEmpty()
             mutableUiState.update { state ->
                 val picked =
@@ -97,14 +98,13 @@ internal constructor(
     }
 
     /**
-     * 고치러 들어온 일정.
+     * 문자에서 읽은 병원으로 병원 찾기를 열었다(#270). 다시 열리지 않게 지운다.
      *
-     * 서버에 일정 하나를 id로 읽는 경로가 없어서 그 날의 목록에서 찾는다. 날짜는 라우트가
-     * 함께 실어 온다 — 그 일정이 선 날에서만 들어오는 길이라 늘 있다.
+     * 화면을 옮기기 전에 부른다. 옮기면서 효과가 취소되면 뒤에 둔 코드는 돌지 않아서, 병원을 고르고
+     * 돌아왔을 때 같은 검색이 또 열린다.
      */
-    private suspend fun appointment(appointmentId: Long?, date: LocalDate?): Appointment? {
-        if (appointmentId == null || date == null) return null
-        return (repository.day(date) as? ApiResult.Success)?.value?.firstOrNull { it.id == appointmentId }
+    fun onHospitalSearchOpened() {
+        mutableUiState.update { it.copy(hospitalSearch = null) }
     }
 
     private var nextTodo = 1
@@ -250,9 +250,26 @@ internal constructor(
     }
 }
 
-/** 문자에서 읽은 값으로 빈 칸을 채운다. 날짜를 찾았는지가 화면의 안내를 정한다. */
+/**
+ * 고치러 들어온 일정.
+ *
+ * 서버에 일정 하나를 id로 읽는 경로가 없어서 그 날의 목록에서 찾는다. 날짜는 라우트가
+ * 함께 실어 온다 — 그 일정이 선 날에서만 들어오는 길이라 늘 있다.
+ */
+private suspend fun AppointmentRepository.find(appointmentId: Long?, date: LocalDate?): Appointment? {
+    if (appointmentId == null || date == null) return null
+    return (day(date) as? ApiResult.Success)?.value?.firstOrNull { it.id == appointmentId }
+}
+
+/**
+ * 문자에서 읽은 값으로 빈 칸을 채운다. 날짜를 찾았는지가 화면의 안내를 정한다.
+ *
+ * 병원을 문자에서 채웠으면 그 이름으로 병원 찾기를 연다([ScheduleAddUiState.hospitalSearch]).
+ * 같은 이름의 다른 지점이 있을 수 있어 사람이 주소를 보고 고른다. 이미 고른 병원이 있으면 열지 않는다.
+ */
 private fun ScheduleAddUiState.filledFrom(read: SharedAppointment) = copy(
     hospital = hospital ?: read.hospital,
+    hospitalSearch = read.hospital.takeIf { hospital == null },
     date = date ?: read.date,
     time = time ?: read.time,
     // 날짜 칸이 찼는지로 본다. 다른 앱이 날짜를 넘겨준 경우에는 글에 날짜가 없어도 칸이 차 있다.

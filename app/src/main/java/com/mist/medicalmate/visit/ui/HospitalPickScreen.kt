@@ -53,7 +53,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
 fun HospitalPickScreen(
     state: HospitalPickUiState,
     onQueryChange: (String) -> Unit,
-    onHospitalClick: (String) -> Unit,
+    onHospitalClick: (Hospital) -> Unit,
     onSubmitClick: () -> Unit,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -99,7 +99,7 @@ fun HospitalPickScreen(
 private fun ColumnScope.PickContent(
     state: HospitalPickUiState,
     onQueryChange: (String) -> Unit,
-    onHospitalClick: (String) -> Unit,
+    onHospitalClick: (Hospital) -> Unit,
 ) {
     val before = state.purpose.beforeVisit
     val empty = state.results.isEmpty()
@@ -195,14 +195,14 @@ private fun ColumnScope.EmptyResults() {
 }
 
 @Composable
-private fun Results(state: HospitalPickUiState, onHospitalClick: (String) -> Unit) {
+private fun Results(state: HospitalPickUiState, onHospitalClick: (Hospital) -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()) {
         state.results.forEachIndexed { index, hospital ->
             if (index > 0) MedicalMateDivider()
             ResultRow(
                 hospital = hospital,
                 selected = hospital == state.selected,
-                onClick = { onHospitalClick(hospital.name) },
+                onClick = { onHospitalClick(hospital) },
             )
         }
     }
