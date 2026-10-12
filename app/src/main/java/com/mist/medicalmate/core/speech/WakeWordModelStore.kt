@@ -38,10 +38,13 @@ sealed interface WakeWordModelState {
 }
 
 /**
- * Vosk 한국어 모델(`vosk-model-small-ko-0.22`, Apache 2.0)을 받아 둔다.
+ * Vosk 영어 소형 모델(`vosk-model-small-en-us-0.15`, Apache 2.0)을 받아 둔다.
  *
- * **앱에 넣지 않고 켠 사람만 받는다.** 압축 87MB에 풀면 264MB다. 쓰지도 않을 사람의 저장
- * 공간을 그만큼 차지할 수 없다. 받아쓰기 모델을 처음 쓸 때 받는 것과 같은 생각이다.
+ * **앱에 넣지 않고 켠 사람만 받는다.** 압축 41MB에 풀면 68MB다. 쓰지도 않을 사람의 저장
+ * 공간을 차지할 수 없다. 받아쓰기 모델을 처음 쓸 때 받는 것과 같은 생각이다.
+ *
+ * 처음에는 한국어 모델(`vosk-model-small-ko-0.22`, 풀면 264MB)이었다(#278). 그것을 받아 둔
+ * 기기에서는 같은 폴더의 다른 모델을 지운다. 그대로 두면 아무도 쓰지 않는 264MB가 남는다.
  *
  * 받는 곳은 Vosk 배포처(alphacephei.com)다. 출시 전에 Play Asset Delivery나 우리 저장소로
  * 옮길지 정한다(#273). 옮겨도 체크섬이 같으면 이 파일의 주소만 바꾸면 된다.
@@ -70,6 +73,10 @@ constructor(
         MutableStateFlow(if (modelDir.isDirectory) WakeWordModelState.Ready else WakeWordModelState.Absent)
     val state: StateFlow<WakeWordModelState> = mutableState.asStateFlow()
 
+    init {
+        scope.launch { removeOtherModels() }
+    }
+
     /** 받아 둔 모델의 자리. 아직 없으면 null이다. */
     fun directory(): File? = modelDir.takeIf { mutableState.value == WakeWordModelState.Ready }
 
@@ -92,7 +99,7 @@ constructor(
         }
     }
 
-    /** 받던 것을 멈추고 지운다. 토글을 끄면 264MB를 돌려준다. */
+    /** 받던 것을 멈추고 지운다. 토글을 끄면 68MB를 돌려준다. */
     suspend fun delete() {
         job?.cancel()
         job?.join()
@@ -100,6 +107,16 @@ constructor(
         withContext(Dispatchers.IO) { root.deleteRecursively() }
         mutableState.value = WakeWordModelState.Absent
         trace.log { "모델: 지웠다" }
+    }
+
+    /** 지금 모델이 아닌 폴더를 지운다. 이전 한국어 모델과 그것을 풀다 만 것이다. */
+    private fun removeOtherModels() {
+        root.listFiles()
+            ?.filter { !it.name.startsWith(MODEL_NAME) }
+            ?.forEach { stale ->
+                trace.log { "모델: 쓰지 않는 ${stale.name}을 지운다" }
+                stale.deleteRecursively()
+            }
     }
 
     private suspend fun fetch() {
@@ -162,7 +179,7 @@ constructor(
     }
 
     /**
-     * 압축을 푼다. 맨 앞 폴더(`vosk-model-small-ko-0.22/`)는 떼고 [target] 바로 아래에 둔다.
+     * 압축을 푼다. 맨 앞 폴더(`vosk-model-small-en-us-0.15/`)는 떼고 [target] 바로 아래에 둔다.
      *
      * 항목 이름이 `../`로 [target] 밖을 가리키면 멈춘다. 받은 파일이 앱의 다른 파일을 덮지
      * 않게 한다.
@@ -192,14 +209,14 @@ constructor(
 
     private companion object {
         const val ROOT_DIR = "wake-word"
-        const val MODEL_NAME = "vosk-model-small-ko-0.22"
+        const val MODEL_NAME = "vosk-model-small-en-us-0.15"
         const val MODEL_URL = "https://alphacephei.com/vosk/models/$MODEL_NAME.zip"
 
         /** 2026-10-12에 받은 파일의 값이다. 배포처가 같은 이름으로 다른 파일을 올리면 받기가 실패한다. */
-        const val MODEL_SHA256 = "eea36124087fed26c59996a4761519458e3bd185e8ea9d9865ad8760c4a1d989"
+        const val MODEL_SHA256 = "30f26242c4eb449f948e42cb302dd7a686cb29a3423a8367f99ff41780942498"
 
         /** 응답에 길이가 없을 때 진행률을 셀 기준. 위 파일의 크기다. */
-        const val MODEL_BYTES = 86_914_329L
+        const val MODEL_BYTES = 41_205_931L
 
         const val TIMEOUT_MS = 30_000
         const val BUFFER_BYTES = 64 * 1024

@@ -43,14 +43,14 @@ data class VoicePanel(
 data class VoiceCommandUiState(val panel: VoicePanel? = null, val command: VoiceCommand? = null)
 
 /**
- * "메이트야"로 부르고 명령을 듣는다(#273).
+ * "헤이 메이트"로 부르고 명령을 듣는다(#273).
  *
  * **Activity 스코프다.** 특정 화면에 속한 상태가 아니고, 화면을 옮겨도 듣기가 끊기면 안 된다.
  * [SessionViewModel][com.mist.medicalmate.auth.ui.SessionViewModel]과 같은 이유다.
  *
- * **두 단계로 듣는다.** 호출어는 Vosk가, 그 뒤의 명령은 받아쓰기(ML Kit)가 듣는다. Vosk의
- * 한국어 받아쓰기는 틀리는 말이 많아(WER 28%) 명령까지 맡기기 어렵다. 한 마이크를 둘이 나눠
- * 쓰므로 감지기를 완전히 거둔 뒤에 받아쓰기를 연다.
+ * **두 단계로 듣는다.** 호출어는 Vosk가, 그 뒤의 명령은 받아쓰기(ML Kit)가 듣는다. Vosk는
+ * 영어 모델을 "hey mate"와 그 밖의 말 둘로 좁혀 두어 한국어 명령을 받아쓸 수 없다. 한
+ * 마이크를 둘이 나눠 쓰므로 감지기를 완전히 거둔 뒤에 받아쓰기를 연다.
  *
  * 감지기는 다음이 모두 참일 때만 돈다. 하나라도 거짓이 되면 마이크를 놓는다.
  * - 설정에서 켰고 모델을 다 받았다

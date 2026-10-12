@@ -196,7 +196,7 @@ class MyProfileViewModelTest {
 
     @Test
     fun `음성 호출을 켜려고 누르면 확인 창부터 뜨고 아직 켜지지 않는다`() {
-        // 87MB를 받는 일이다. 모르고 켜면 안 된다.
+        // 41MB를 받는 일이다. 모르고 켜면 안 된다.
         val voiceWake = FakeVoiceWake(usable = true)
         val viewModel = viewModel(voiceWake = voiceWake)
 
@@ -277,7 +277,7 @@ class MyProfileViewModelTest {
 
     @Test
     fun `음성 호출을 끄면 바로 끄고 모델을 지운다`() {
-        // 264MB를 돌려준다. 끄는 데는 확인을 거치지 않는다 — 되돌리기 어려운 쪽이 아니다.
+        // 68MB를 돌려준다. 끄는 데는 확인을 거치지 않는다 — 되돌리기 어려운 쪽이 아니다.
         val voiceWake = FakeVoiceWake(usable = true, enabled = true, model = WakeWordModelState.Ready)
         val viewModel = viewModel(voiceWake = voiceWake)
 

@@ -23,7 +23,7 @@ import com.mist.medicalmate.voice.ui.VoiceCommandPanel
 import com.mist.medicalmate.voice.ui.VoiceCommandViewModel
 
 /**
- * "메이트야"로 부르고 말한 대로 화면을 옮긴다(#273).
+ * "헤이 메이트"로 부르고 말한 대로 화면을 옮긴다(#273).
  *
  * 그래프 밖의 층이라 [VoiceCommandViewModel]은 Activity 스코프다. 이 함수는 `NavHost`
  * 목적지 밖에서 불리므로 `hiltViewModel()`이 Activity의 스토어에서 꺼낸다.

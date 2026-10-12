@@ -55,7 +55,7 @@ class VoiceCommandViewModelTest {
 
     @Test
     fun `앱이 뒤로 가면 마이크를 놓는다`() {
-        // 뒤에서 마이크를 잡는 앱이 되지 않는다. 모델도 내려 480MB를 돌려준다.
+        // 뒤에서 마이크를 잡는 앱이 되지 않는다. 모델도 내려 메모리를 돌려준다.
         val viewModel = viewModel().ready()
 
         viewModel.setForeground(false)

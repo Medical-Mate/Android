@@ -24,8 +24,8 @@ import java.io.IOException
 /**
  * Vosk로 듣는 호출어 감지기.
  *
- * **모델은 들을 때 올리고 그만 들을 때 내린다.** 올리면 480MB를 쓴다. 앱이 뒤로 가도 들고
- * 있으면 시스템이 이 앱부터 죽인다. 다시 올리는 데 1초 남짓이라 화면으로 돌아올 때마다
+ * **모델은 들을 때 올리고 그만 들을 때 내린다.** 올리면 150~180MB를 쓴다(PC 측정). 앱이 뒤로 가도 들고
+ * 있으면 시스템이 이 앱부터 죽인다. 다시 올리는 데 0.5초 남짓이라 화면으로 돌아올 때마다
  * 올려도 된다.
  *
  * 마이크는 `AudioRecord`로 직접 잡는다. Vosk의 `SpeechService`도 같은 일을 하지만 자기
@@ -57,7 +57,7 @@ constructor(
             }
         trace.log { "감지기: 모델을 올렸다 (${(System.nanoTime() - started) / NANOS_PER_MILLI}ms)" }
         try {
-            Recognizer(model, SAMPLE_RATE.toFloat()).use { recognizer ->
+            Recognizer(model, SAMPLE_RATE.toFloat(), WAKE_GRAMMAR).use { recognizer ->
                 recognizer.setWords(true)
                 listen(recognizer) { emit(Unit) }
             }
@@ -70,7 +70,7 @@ constructor(
     /**
      * 발화가 끝날 때마다 판정한다.
      *
-     * 말하는 중의 부분 결과에는 신뢰도가 없어서 끝난 발화만 본다. 그래서 "메이트야" 뒤에 잠깐
+     * 말하는 중의 부분 결과에는 신뢰도가 없어서 끝난 발화만 본다. 그래서 "헤이 메이트" 뒤에 잠깐
      * 쉬어야 불린다(Vosk가 0.5초 쉼을 발화의 끝으로 본다). 빅스비처럼 부르고 기다렸다 말하는
      * 흐름이다.
      */

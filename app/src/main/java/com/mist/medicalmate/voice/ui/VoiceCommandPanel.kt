@@ -15,7 +15,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceInput
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
 
 /**
- * "메이트야"로 부르면 뜨는 패널(#273).
+ * "헤이 메이트"로 부르면 뜨는 패널(#273).
  *
  * 증상 문답과 같은 `Voice Input`을 `Bottom Sheet`에 얹었다. 말할 때 보는 모양이 앱 안에서
  * 하나여야 한다. **시안에 없는 화면이라 디자인 트랙 확인이 필요하다.**

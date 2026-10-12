@@ -8,73 +8,62 @@ import org.junit.Test
 /**
  * 호출어 판정.
  *
- * 결과 JSON은 PC에서 `vosk-model-small-ko-0.22`로 Windows TTS(Heami) 음성을 받아쓴 실제 값이다.
- * 모양을 손으로 지어내면 Vosk가 실제로 내놓는 것과 어긋나도 시험이 통과한다.
+ * 결과 JSON은 PC에서 `vosk-model-small-en-us-0.15`에 문법 `["hey mate", "[unk]"]`을 주고,
+ * Windows TTS(영어 Zira, 한국어 Heami)를 빠르기 셋으로 받아쓴 실제 값이다(#278). 모양을 손으로
+ * 지어내면 Vosk가 실제로 내놓는 것과 어긋나도 시험이 통과한다.
  */
 class WakeWordTest {
     @Test
-    fun `메이트야는 호출이다`() {
-        assertTrue(isWakeWord(parseVoskWords(result("메이트" to 1.0, "였다" to 1.0))))
+    fun `hey mate는 호출이다`() {
+        assertTrue(isWakeWord(parseVoskWords(result("hey" to 1.0, "mate" to 1.0))))
     }
 
     @Test
-    fun `진료메이트야도 호출이다`() {
-        // 앱 이름을 붙여 불러도 된다. `진료`와 `메이트`가 따로 선다.
-        assertTrue(isWakeWord(parseVoskWords(result("진료" to 1.0, "메이트" to 1.0, "였다" to 0.9))))
-    }
-
-    @Test
-    fun `사람 목소리로 신뢰도가 떨어진 메이트도 호출이다`() {
-        // 갤럭시에서 실제로 부른 것 가운데 놓쳤던 셋이다(#278). 선을 0.9에서 0.6으로 내린 이유다.
+    fun `한국어 억양의 헤이 메이트도 호출이다`() {
+        // 한국어 음성이 "헤이 메이트"·"헤이메이트"를 읽은 것. 끝에 약한 [unk]이 묻어 나왔다.
         listOf(
-            result("메이트" to 0.66, "양" to 0.48),
-            result("메이트" to 0.75, "야" to 0.82),
-            result("메이트" to 0.84, "냐" to 0.88),
+            result("hey" to 1.0, "mate" to 1.0, "[unk]" to 0.4),
+            result("hey" to 1.0, "mate" to 1.0, "[unk]" to 0.55),
         ).forEach { json -> assertTrue(json, isWakeWord(parseVoskWords(json))) }
     }
 
     @Test
-    fun `신뢰도가 0점6에 못 미치면 호출이 아니다`() {
-        assertFalse(isWakeWord(parseVoskWords(result("메이트" to 0.59, "야" to 0.82))))
+    fun `앞에 다른 말이 있어도 호출이다`() {
+        // "음, 헤이 메이트"처럼 부를 수 있다.
+        assertTrue(isWakeWord(parseVoskWords(result("[unk]" to 1.0, "hey" to 1.0, "mate" to 1.0))))
     }
 
     @Test
-    fun `메이트를 잘못 들은 네이트와 레이트도 호출이다`() {
-        // 갤럭시에서 "메이트야"를 가장 많이 이렇게 받아썼다(#278). 실제 로그의 값이다.
+    fun `mate 뒤에 확실한 다른 말이 붙으면 호출이 아니다`() {
+        // "헤어 메이크업 했어"가 이렇게 받아써져 세 번 모두 켜졌다. 일상 말이라 거른다.
         listOf(
-            result("네이트" to 0.61, "야" to 0.59),
-            result("레이트" to 0.67),
-            result("레이트" to 1.0),
-            result("네이트" to 1.0, "에" to 1.0, "요" to 1.0),
-        ).forEach { json -> assertTrue(json, isWakeWord(parseVoskWords(json))) }
-    }
-
-    @Test
-    fun `네이트와 레이트도 신뢰도가 모자라면 호출이 아니다`() {
-        listOf(
-            result("네이트" to 0.39, "야" to 0.66),
-            result("레이트" to 0.37),
+            result("hey" to 1.0, "mate" to 1.0, "[unk]" to 1.0, "[unk]" to 1.0),
+            result("hey" to 1.0, "mate" to 0.7, "[unk]" to 1.0),
         ).forEach { json -> assertFalse(json, isWakeWord(parseVoskWords(json))) }
     }
 
     @Test
-    fun `일상 말에 흔한 비슷한 낱말은 호출이 아니다`() {
-        // 메이플·메인도 "메이트야"를 잘못 들은 것이었지만 대화에 흔해 받지 않는다.
+    fun `hey 바로 뒤에 mate가 와야 한다`() {
+        // "Hey man", "메이트"만, "Make it eight", "네 이따 봐".
         listOf(
-            result("메이플" to 0.88, "양" to 0.27),
-            result("메인" to 0.78, "디야" to 1.0),
-            result("레이" to 0.92, "중형" to 0.52),
+            result("hey" to 1.0, "[unk]" to 1.0),
+            result("mate" to 1.0),
+            result("mate" to 0.54),
+            result("mate" to 0.82, "[unk]" to 1.0),
+            result("hey" to 1.0, "[unk]" to 1.0, "mate" to 1.0),
         ).forEach { json -> assertFalse(json, isWakeWord(parseVoskWords(json))) }
     }
 
     @Test
-    fun `비슷하게 들리는 말은 호출이 아니다`() {
-        // 데이트·마트·메이크업. 모두 같은 시험에서 받아쓴 그대로다.
-        listOf(
-            result("아재" to 1.0, "테이트" to 1.0, "했어" to 1.0),
-            result("마트" to 1.0, "타야" to 1.0, "지" to 1.0),
-            result("메이크업" to 0.54, "에" to 1.0, "있어" to 1.0),
-        ).forEach { json -> assertFalse(json, isWakeWord(parseVoskWords(json))) }
+    fun `mate의 신뢰도가 모자라면 호출이 아니다`() {
+        assertFalse(isWakeWord(parseVoskWords(result("hey" to 1.0, "mate" to 0.59))))
+        assertTrue(isWakeWord(parseVoskWords(result("hey" to 1.0, "mate" to 0.6))))
+    }
+
+    @Test
+    fun `그 밖의 말은 호출이 아니다`() {
+        // "배가 아파요", "오늘 진료 예약했어요" 같은 말은 [unk] 하나로 빠진다.
+        assertFalse(isWakeWord(parseVoskWords(result("[unk]" to 1.0))))
     }
 
     @Test
@@ -88,22 +77,22 @@ class WakeWordTest {
     fun `모양이 어긋난 결과는 못 들은 것으로 친다`() {
         // 판정 하나 때문에 듣기를 멈출 일이 아니다.
         assertEquals(emptyList<HeardWord>(), parseVoskWords("not json"))
-        assertEquals(emptyList<HeardWord>(), parseVoskWords("""{"result": "메이트"}"""))
+        assertEquals(emptyList<HeardWord>(), parseVoskWords("""{"result": "mate"}"""))
     }
 
     @Test
     fun `말하는 중의 글을 읽는다`() {
-        assertEquals("메이트 였", parseVoskPartial("""{"partial" : "메이트 였"}"""))
+        assertEquals("hey mate", parseVoskPartial("""{"partial" : "hey mate"}"""))
         assertEquals("", parseVoskPartial("""{"partial" : ""}"""))
         assertEquals("", parseVoskPartial("not json"))
     }
 
     @Test
     fun `로그에는 낱말과 신뢰도를 소수 둘째 자리까지 적는다`() {
-        // 0.9 선 근처에서 갈리는지 보려고 남기는 값이다.
-        val words = parseVoskWords(result("메이트" to 0.854, "였다" to 1.0))
+        // 선 근처에서 갈리는지 보려고 남기는 값이다.
+        val words = parseVoskWords(result("hey" to 1.0, "mate" to 0.674))
 
-        assertEquals("메이트 0.85 · 였다 1.00", words.describe())
+        assertEquals("hey 1.00 · mate 0.67", words.describe())
     }
 
     /** Vosk가 `setWords(true)`일 때 내놓는 모양. 시각은 판정에 쓰지 않아 아무 값이나 둔다. */
