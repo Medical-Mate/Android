@@ -60,6 +60,7 @@ constructor(
     @ApplicationContext private val context: Context,
     private val store: WakeWordModelStore,
     private val speech: SpeechToText,
+    private val trace: VoiceWakeTrace,
 ) : VoiceWake {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -72,7 +73,12 @@ constructor(
         }
     }
 
-    override suspend fun supported(): Boolean = enoughMemory() && speech.available()
+    override suspend fun supported(): Boolean {
+        val memory = enoughMemory()
+        val dictation = speech.available()
+        trace.log { "기기: 메모리 ${if (memory) "충분" else "부족"} · 받아쓰기 ${if (dictation) "됨" else "안 됨"}" }
+        return memory && dictation
+    }
 
     override val enabled: Flow<Boolean> = context.speechDataStore.data.map { it[enabledKey] ?: false }
 
@@ -97,6 +103,7 @@ constructor(
     private fun enoughMemory(): Boolean {
         val manager = context.getSystemService(ActivityManager::class.java) ?: return false
         val info = ActivityManager.MemoryInfo().also(manager::getMemoryInfo)
+        trace.log { "기기: totalMem ${info.totalMem / BYTES_PER_MB}MB · 저사양 ${manager.isLowRamDevice}" }
         return !manager.isLowRamDevice && info.totalMem >= MIN_TOTAL_MEMORY_BYTES
     }
 
@@ -104,5 +111,7 @@ constructor(
         val enabledKey = booleanPreferencesKey("voice_wake")
 
         const val MIN_TOTAL_MEMORY_BYTES = 5L * 1024 * 1024 * 1024
+
+        const val BYTES_PER_MB = 1024 * 1024
     }
 }

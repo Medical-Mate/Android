@@ -36,18 +36,26 @@ internal class VoskWakeWordDetector
 constructor(
     @ApplicationContext private val context: Context,
     private val store: WakeWordModelStore,
+    private val trace: VoiceWakeTrace,
 ) : WakeWordDetector {
     override fun detections(): Flow<Unit> = flow {
-        val dir = store.directory() ?: return@flow
+        val dir = store.directory()
+        if (dir == null) {
+            trace.log { "감지기: 모델이 없어 듣지 않는다 (${store.state.value})" }
+            return@flow
+        }
         LibVosk.setLogLevel(LogLevel.WARNINGS)
 
+        val started = System.nanoTime()
         val model =
             try {
                 Model(dir.path)
-            } catch (_: IOException) {
+            } catch (e: IOException) {
                 // 풀린 파일이 상했다. 토글을 다시 켜면 새로 받는다.
+                trace.log { "감지기: 모델을 못 올렸다 (${e.message})" }
                 return@flow
             }
+        trace.log { "감지기: 모델을 올렸다 (${(System.nanoTime() - started) / NANOS_PER_MILLI}ms)" }
         try {
             Recognizer(model, SAMPLE_RATE.toFloat()).use { recognizer ->
                 recognizer.setWords(true)
@@ -55,6 +63,7 @@ constructor(
             }
         } finally {
             model.close()
+            trace.log { "감지기: 멈추고 모델을 내렸다" }
         }
     }.flowOn(Dispatchers.IO)
 
@@ -69,20 +78,53 @@ constructor(
         val record = openMic() ?: return
         try {
             record.startRecording()
+            trace.log { "감지기: 듣는 중 (마이크 상태 ${record.recordingState})" }
             val frame = ShortArray(FRAME_SAMPLES)
-            while (true) {
+            var partial = ""
+            var read = 0
+            // 음수는 마이크를 빼앗겼거나 기기가 거절한 것이다. 다시 읽어도 같다.
+            while (read >= 0) {
                 currentCoroutineContext().ensureActive()
-                val read = record.read(frame, 0, frame.size)
-                // 음수는 마이크를 빼앗겼거나 기기가 거절한 것이다. 다시 읽어도 같다.
-                if (read < 0) break
-                if (recognizer.acceptWaveForm(frame, read) && isWakeWord(parseVoskWords(recognizer.result))) {
-                    onWake()
-                }
+                read = record.read(frame, 0, frame.size)
+                if (read >= 0) partial = consume(recognizer, frame, read, partial, onWake)
             }
+            trace.log { "감지기: 마이크를 읽지 못했다 (오류 $read)" }
         } finally {
             record.stop()
             record.release()
         }
+    }
+
+    /**
+     * 0.1초 조각 하나를 넘긴다. 발화가 끝났으면 판정하고, 아니면 말하는 중의 글을 남긴다.
+     *
+     * @return 지금까지 말하는 중의 글. 같은 글을 다시 찍지 않으려고 들고 다닌다.
+     */
+    private suspend fun consume(
+        recognizer: Recognizer,
+        frame: ShortArray,
+        read: Int,
+        partial: String,
+        onWake: suspend () -> Unit,
+    ): String {
+        if (!recognizer.acceptWaveForm(frame, read)) return tracePartial(recognizer.partialResult, partial)
+        if (judge(recognizer.result)) onWake()
+        return ""
+    }
+
+    /** 끝난 발화를 판정하고 무엇을 들었는지 남긴다. 아무 말도 없던 발화는 남기지 않는다. */
+    private fun judge(result: String): Boolean {
+        val words = parseVoskWords(result)
+        val wake = isWakeWord(words)
+        if (words.isNotEmpty()) trace.log { "감지기: 들음 [${words.describe()}] → ${if (wake) "호출" else "아님"}" }
+        return wake
+    }
+
+    /** 말하는 중의 글이 바뀌었을 때만 남긴다. 0.1초마다 같은 글을 찍으면 로그가 묻힌다. */
+    private fun tracePartial(json: String, last: String): String {
+        val text = parseVoskPartial(json)
+        if (text.isNotEmpty() && text != last) trace.log { "감지기: 말하는 중 \"$text\"" }
+        return text
     }
 
     /**
@@ -94,6 +136,7 @@ constructor(
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) !=
             PackageManager.PERMISSION_GRANTED
         ) {
+            trace.log { "감지기: 마이크 권한이 없다" }
             return null
         }
         val bufferSize =
@@ -108,6 +151,7 @@ constructor(
                 bufferSize,
             )
         return record.takeIf { it.state == AudioRecord.STATE_INITIALIZED } ?: run {
+            trace.log { "감지기: 마이크를 열지 못했다 (상태 ${record.state})" }
             record.release()
             null
         }
@@ -119,5 +163,7 @@ constructor(
 
         /** 0.1초. 이보다 잘게 넘기면 JNA 왕복이 늘고, 크게 넘기면 판정이 늦다. */
         const val FRAME_SAMPLES = SAMPLE_RATE / 10
+
+        const val NANOS_PER_MILLI = 1_000_000
     }
 }

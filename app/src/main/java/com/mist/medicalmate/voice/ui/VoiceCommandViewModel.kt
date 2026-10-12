@@ -6,6 +6,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
 import com.mist.medicalmate.core.speech.SpeechChunk
 import com.mist.medicalmate.core.speech.SpeechToText
 import com.mist.medicalmate.core.speech.VoiceWake
+import com.mist.medicalmate.core.speech.VoiceWakeTrace
 import com.mist.medicalmate.core.speech.WakeWordDetector
 import com.mist.medicalmate.core.speech.WakeWordModelState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -64,6 +65,7 @@ internal constructor(
     voiceWake: VoiceWake,
     private val detector: WakeWordDetector,
     private val speech: SpeechToText,
+    private val trace: VoiceWakeTrace,
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(VoiceCommandUiState())
     val uiState: StateFlow<VoiceCommandUiState> = mutableUiState.asStateFlow()
@@ -75,16 +77,18 @@ internal constructor(
     private var commandJob: Job? = null
 
     init {
-        val ready =
-            combine(voiceWake.enabled, voiceWake.model) { enabled, model ->
-                enabled && model == WakeWordModelState.Ready
-            }
-        val idle =
-            combine(speech.active, mutableUiState.map { it.panel == null }) { busy, closed -> !busy && closed }
+        val setting = combine(voiceWake.enabled, voiceWake.model, ::Pair)
+        val screen = combine(foreground, allowed, ::Pair)
+        val idle = combine(speech.active, mutableUiState.map { it.panel != null }, ::Pair)
         viewModelScope.launch {
-            combine(ready, foreground, allowed, idle) { a, b, c, d -> a && b && c && d }
+            combine(setting, screen, idle) { (enabled, model), (front, allow), (dictating, panel) ->
+                ListenGate(enabled, model, front, allow, dictating, panel)
+            }
                 .distinctUntilChanged()
-                .collect { listen -> if (listen) startDetector() else detectorJob?.cancel() }
+                .collect { gate ->
+                    trace.log { "듣기 조건: $gate" }
+                    if (gate.open) startDetector() else detectorJob?.cancel()
+                }
         }
     }
 
@@ -94,8 +98,13 @@ internal constructor(
         if (!value) dismiss()
     }
 
-    /** 홈에 갈 수 있는 세션이고 마이크 권한이 있는지. 로그아웃하면 듣던 명령도 거둔다. */
-    fun setAllowed(value: Boolean) {
+    /**
+     * 홈에 갈 수 있는 세션인지와 마이크 권한이 있는지. 둘 다 있어야 듣는다. 로그아웃하면 듣던
+     * 명령도 거둔다. 로그에서 어느 쪽이 빠졌는지 보이도록 따로 받는다.
+     */
+    fun setAllowed(signedIn: Boolean, micGranted: Boolean) {
+        trace.log { "세션: 홈에 갈 수 있음=$signedIn · 마이크 권한=$micGranted" }
+        val value = signedIn && micGranted
         allowed.value = value
         if (!value) dismiss()
     }
@@ -125,6 +134,7 @@ internal constructor(
      * 기다린 다음 받아쓰기를 연다.
      */
     private fun onWake() {
+        trace.log { "호출됨. 명령을 듣는다" }
         val detecting = detectorJob
         detecting?.cancel()
         mutableUiState.update { it.copy(panel = VoicePanel()) }
@@ -132,6 +142,7 @@ internal constructor(
             viewModelScope.launch {
                 detecting?.join()
                 val command = withTimeoutOrNull(LISTEN_TIMEOUT_MS) { awaitCommand() }
+                trace.log { "명령: ${command ?: "없음 (시간이 다 됐거나 받아쓰기가 실패했다)"}" }
                 speech.stop()
                 commandJob = null
                 mutableUiState.update { it.copy(panel = null, command = command ?: it.command) }
@@ -160,6 +171,7 @@ internal constructor(
 
                     is SpeechChunk.Final -> {
                         command = parseVoiceCommand(chunk.text)
+                        trace.log { "명령 받아쓰기: \"${chunk.text}\" → ${command ?: "모르는 말"}" }
                         if (command == null) {
                             updatePanel {
                                 it.copy(voice = MedicalMateVoiceState.IDLE, heard = chunk.text, missed = true)
@@ -168,11 +180,36 @@ internal constructor(
                         command == null
                     }
 
-                    SpeechChunk.Failed -> false
+                    SpeechChunk.Failed -> {
+                        trace.log { "명령 받아쓰기: 실패" }
+                        false
+                    }
                 }
             }
             .collect()
         return command
+    }
+
+    /**
+     * 감지기가 돌 조건 여섯. 로그에 무엇이 빠졌는지 그대로 찍히도록 값을 모두 든다.
+     *
+     * @param allowed 홈에 갈 수 있는 세션이고 마이크 권한이 있다.
+     * @param dictating 다른 화면(또는 명령 듣기)이 받아쓰는 중이다.
+     */
+    private data class ListenGate(
+        val enabled: Boolean,
+        val model: WakeWordModelState,
+        val foreground: Boolean,
+        val allowed: Boolean,
+        val dictating: Boolean,
+        val panel: Boolean,
+    ) {
+        val open: Boolean
+            get() = enabled && model == WakeWordModelState.Ready && foreground && allowed && !dictating && !panel
+
+        override fun toString(): String =
+            "켬=$enabled 모델=$model 화면=$foreground 세션·권한=$allowed 받아쓰기중=$dictating 패널=$panel" +
+                " → ${if (open) "듣는다" else "쉰다"}"
     }
 
     private fun updatePanel(change: (VoicePanel) -> VoicePanel) {

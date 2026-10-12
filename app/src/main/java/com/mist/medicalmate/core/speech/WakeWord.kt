@@ -5,6 +5,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import java.util.Locale
 
 /**
  * "메이트야"를 기다린다(#273).
@@ -27,7 +28,23 @@ internal data class HeardWord(val word: String, val conf: Double)
 @Serializable
 private data class VoskResult(@SerialName("result") val words: List<HeardWord> = emptyList())
 
+@Serializable
+private data class VoskPartial(val partial: String = "")
+
 private val voskJson = Json { ignoreUnknownKeys = true }
+
+/** 말하는 중의 부분 결과(`{"partial": "..."}`)에서 글만. 어긋나면 빈 글이다. */
+internal fun parseVoskPartial(json: String): String = try {
+    voskJson.decodeFromString<VoskPartial>(json).partial
+} catch (_: SerializationException) {
+    ""
+} catch (_: IllegalArgumentException) {
+    ""
+}
+
+/** 낱말과 신뢰도를 한 줄로. 로그에 쓴다. 예: `메이트 1.00 · 였다 0.93`. */
+internal fun List<HeardWord>.describe(): String =
+    joinToString(" · ") { "${it.word} ${"%.2f".format(Locale.ROOT, it.conf)}" }
 
 /**
  * Vosk 결과를 낱말 목록으로.

@@ -49,7 +49,10 @@ internal fun VoiceCommandSync(
         val micGranted =
             ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
                 PackageManager.PERMISSION_GRANTED
-        viewModel.setAllowed(micGranted && session.destination(onboardingCompleted) == HomeDestination)
+        viewModel.setAllowed(
+            signedIn = session.destination(onboardingCompleted) == HomeDestination,
+            micGranted = micGranted,
+        )
         viewModel.setForeground(true)
         onPauseOrDispose { viewModel.setForeground(false) }
     }

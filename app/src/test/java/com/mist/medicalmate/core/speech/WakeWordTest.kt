@@ -53,6 +53,21 @@ class WakeWordTest {
         assertEquals(emptyList<HeardWord>(), parseVoskWords("""{"result": "메이트"}"""))
     }
 
+    @Test
+    fun `말하는 중의 글을 읽는다`() {
+        assertEquals("메이트 였", parseVoskPartial("""{"partial" : "메이트 였"}"""))
+        assertEquals("", parseVoskPartial("""{"partial" : ""}"""))
+        assertEquals("", parseVoskPartial("not json"))
+    }
+
+    @Test
+    fun `로그에는 낱말과 신뢰도를 소수 둘째 자리까지 적는다`() {
+        // 0.9 선 근처에서 갈리는지 보려고 남기는 값이다.
+        val words = parseVoskWords(result("메이트" to 0.854, "였다" to 1.0))
+
+        assertEquals("메이트 0.85 · 였다 1.00", words.describe())
+    }
+
     /** Vosk가 `setWords(true)`일 때 내놓는 모양. 시각은 판정에 쓰지 않아 아무 값이나 둔다. */
     private fun result(vararg words: Pair<String, Double>): String {
         val items =

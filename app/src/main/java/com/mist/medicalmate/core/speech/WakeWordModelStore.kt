@@ -55,7 +55,10 @@ sealed interface WakeWordModelState {
 @Singleton
 internal class WakeWordModelStore
 @Inject
-constructor(@ApplicationContext context: Context) {
+constructor(
+    @ApplicationContext context: Context,
+    private val trace: VoiceWakeTrace,
+) {
     private val root = File(context.noBackupFilesDir, ROOT_DIR)
     private val modelDir = File(root, MODEL_NAME)
     private val cacheDir = context.cacheDir
@@ -75,12 +78,15 @@ constructor(@ApplicationContext context: Context) {
         val current = mutableState.value
         if (current == WakeWordModelState.Ready || current is WakeWordModelState.Downloading) return
         mutableState.value = WakeWordModelState.Downloading(0f)
+        trace.log { "모델: 받기 시작 ($MODEL_URL)" }
         job = scope.launch {
             mutableState.value =
                 try {
                     fetch()
+                    trace.log { "모델: 받아서 풀었다 (${modelDir.path})" }
                     WakeWordModelState.Ready
-                } catch (_: IOException) {
+                } catch (e: IOException) {
+                    trace.log { "모델: 받지 못했다 (${e.message})" }
                     WakeWordModelState.Failed
                 }
         }
@@ -93,6 +99,7 @@ constructor(@ApplicationContext context: Context) {
         job = null
         withContext(Dispatchers.IO) { root.deleteRecursively() }
         mutableState.value = WakeWordModelState.Absent
+        trace.log { "모델: 지웠다" }
     }
 
     private suspend fun fetch() {
@@ -149,6 +156,7 @@ constructor(@ApplicationContext context: Context) {
             if (now != percent) {
                 percent = now
                 mutableState.value = WakeWordModelState.Downloading(now / PERCENT.toFloat())
+                if (now % TRACE_EVERY_PERCENT == 0) trace.log { "모델: $now%" }
             }
         }
     }
@@ -196,5 +204,6 @@ constructor(@ApplicationContext context: Context) {
         const val TIMEOUT_MS = 30_000
         const val BUFFER_BYTES = 64 * 1024
         const val PERCENT = 100
+        const val TRACE_EVERY_PERCENT = 10
     }
 }
