@@ -99,7 +99,7 @@ constructor(
         }
     }
 
-    /** 받던 것을 멈추고 지운다. 토글을 끄면 68MB를 돌려준다. */
+    /** 받던 것을 멈추고 지운다. "음성 모델 지우기"를 누르면 68MB를 돌려준다. */
     suspend fun delete() {
         job?.cancel()
         job?.join()
