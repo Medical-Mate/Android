@@ -53,6 +53,11 @@ data class ScheduleAddUiState(
      * 고르고, 여럿이면 막대로 되묻는다. 예약 문자에서 온 것은 지금처럼 사람이 주소를 보고 고른다.
      */
     val hospitalSearchByVoice: Boolean = false,
+    /**
+     * 말로 바뀐 자리(#282). 화면이 그 자리를 보이게 옮기고 잠깐 테를 두른다. 말로 조작하는 동안 무엇이
+     * 바뀌었는지 눈으로 따라가게 하려는 것이다. 지우지 않고 [ScheduleAddFocus.seq]로 새 것인지 가린다.
+     */
+    val voiceFocus: ScheduleAddFocus? = null,
 ) {
     /** 고른 카드 수. 섹션 머리 오른쪽에 적는다. */
     val pickedCardCount: Int get() = cards.count { it.picked }
@@ -108,6 +113,34 @@ enum class ScheduleAddShareRead {
     /** 날짜를 못 찾았다. 병원은 찾았으면 채워져 있다. */
     MISSED,
 }
+
+/**
+ * 말로 바뀐 자리들(#282). 첫 자리로 화면을 옮기고 모두에 테를 두른다.
+ *
+ * [seq]는 같은 자리를 두 번 말해도 다시 보이게 하려고 둔다. 화면은 마지막으로 보인 [seq]를 저장해 두어
+ * 병원 찾기에서 돌아왔을 때 지난 것을 다시 띄우지 않는다.
+ */
+data class ScheduleAddFocus(val targets: List<ScheduleAddFocusTarget>, val seq: Long = System.nanoTime())
+
+/** 말로 바뀌어 보여 줄 자리. */
+sealed interface ScheduleAddFocusTarget {
+    data object Hospital : ScheduleAddFocusTarget
+
+    data object Date : ScheduleAddFocusTarget
+
+    data object Time : ScheduleAddFocusTarget
+
+    data class Card(val id: String) : ScheduleAddFocusTarget
+
+    data class Todo(val id: String) : ScheduleAddFocusTarget
+
+    /** 할 일 구역. 지운 줄은 남아 있지 않아 구역 머리를 보인다. */
+    data object Todos : ScheduleAddFocusTarget
+}
+
+/** 말로 바뀐 자리를 표시한다. 비어 있으면 그대로다. */
+internal fun ScheduleAddUiState.focusing(targets: List<ScheduleAddFocusTarget>): ScheduleAddUiState =
+    if (targets.isEmpty()) this else copy(voiceFocus = ScheduleAddFocus(targets))
 
 /** 떠 있는 시트. 날짜(1r-4-D)와 시간(1r-4-T)이 같은 자리를 쓴다. */
 @Keep

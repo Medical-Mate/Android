@@ -112,8 +112,12 @@ internal constructor(
      * 돌아왔을 때 같은 검색이 또 열린다.
      */
     fun onHospitalSearchOpened() {
+        hospitalSearchByVoice = mutableUiState.value.hospitalSearchByVoice
         mutableUiState.update { it.copy(hospitalSearch = null, hospitalSearchByVoice = false) }
     }
+
+    /** 말로 연 병원 찾기에서 돌아올 참인지(#282). 돌아온 병원 칸을 보여 준다. */
+    private var hospitalSearchByVoice = false
 
     private var nextTodo = 1
 
@@ -135,7 +139,12 @@ internal constructor(
     /** 병원 찾기에서 돌아왔다. 라우트가 이름을 실어 온다. */
     fun onHospitalPicked(name: String?) {
         if (name.isNullOrBlank()) return
-        mutableUiState.update { it.copy(hospital = name) }
+        val byVoice = hospitalSearchByVoice
+        hospitalSearchByVoice = false
+        mutableUiState.update {
+            val picked = it.copy(hospital = name)
+            if (byVoice) picked.focusing(listOf(ScheduleAddFocusTarget.Hospital)) else picked
+        }
     }
 
     /**

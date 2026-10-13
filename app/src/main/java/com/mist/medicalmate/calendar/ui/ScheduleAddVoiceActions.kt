@@ -98,7 +98,7 @@ internal class ScheduleAddVoiceActions(
         }
 
         ScheduleAddVoice.ClearTime -> {
-            update { it.copy(time = null, sheet = ScheduleAddSheet.NONE) }
+            update { it.copy(time = null, sheet = ScheduleAddSheet.NONE).focusing(listOf(ScheduleAddFocusTarget.Time)) }
             VoiceReply.Done(R.string.voice_schedule_time_cleared)
         }
 
@@ -115,7 +115,12 @@ internal class ScheduleAddVoiceActions(
     private fun save(save: () -> Unit): VoiceReply {
         val current = state()
         if (!current.canSave) {
-            update { it.copy(showErrors = true) }
+            val missing =
+                listOfNotNull(
+                    ScheduleAddFocusTarget.Hospital.takeIf { current.hospital == null },
+                    ScheduleAddFocusTarget.Date.takeIf { current.date == null },
+                )
+            update { it.copy(showErrors = true).focusing(missing) }
             return VoiceReply.Done(R.string.voice_schedule_missing)
         }
         return VoiceReply.Confirm(
@@ -127,6 +132,7 @@ internal class ScheduleAddVoiceActions(
 
     /** 맞는 카드가 없거나 여럿이면 하지 않고 되묻는다. 몇 번째인지로 답하면 된다. */
     private fun card(matches: List<ScheduleAddCard>, pick: Boolean): VoiceReply {
+        update { it.focusing(matches.map { card -> ScheduleAddFocusTarget.Card(card.id) }) }
         val card = matches.singleOrNull() ?: return whichOne(matches.map { it.title }, ScheduleAddTarget.CARD)
         update { it.withCardPicked(card.id, picked = pick) }
         val message = if (pick) R.string.voice_schedule_card_picked else R.string.voice_schedule_card_dropped
@@ -136,21 +142,31 @@ internal class ScheduleAddVoiceActions(
     /** 글이 비면 더하지 않고 무엇을 적을지 묻는다. 빈 줄이 남으면 저장할 때 걸러야 한다. */
     private fun addTodo(label: String): VoiceReply {
         if (label.isEmpty()) return VoiceReply.Done(R.string.voice_schedule_todo_ask)
-        update { it.copy(todos = it.todos + ScheduleAddTodo(id = nextTodoId(), label = label)) }
+        val id = nextTodoId()
+        update {
+            it.copy(todos = it.todos + ScheduleAddTodo(id = id, label = label))
+                .focusing(listOf(ScheduleAddFocusTarget.Todo(id)))
+        }
         return VoiceReply.Done(R.string.voice_schedule_todo_added, listOf(label))
     }
 
     private fun checkTodo(voice: ScheduleAddVoice.TodoCheck): VoiceReply {
         val matches = state().todos.matchVoice(voice.ordinal, voice.words)
+        update { it.focusing(matches.map { todo -> ScheduleAddFocusTarget.Todo(todo.id) }) }
         val todo = matches.singleOrNull() ?: return whichOne(matches.map { it.label }, ScheduleAddTarget.TODO)
         update { it.withTodo(todo.id) { found -> found.copy(done = voice.done) } }
         val message = if (voice.done) R.string.voice_schedule_todo_done else R.string.voice_schedule_todo_undone
         return VoiceReply.Done(message, listOf(todo.label))
     }
 
+    /** 지운 줄은 남지 않아 할 일 구역을 보인다. 여럿이 걸리면 그 줄들을 보이고 되묻는다. */
     private fun deleteTodo(matches: List<ScheduleAddTodo>): VoiceReply {
+        update { it.focusing(matches.map { todo -> ScheduleAddFocusTarget.Todo(todo.id) }) }
         val todo = matches.singleOrNull() ?: return whichOne(matches.map { it.label }, ScheduleAddTarget.TODO)
-        update { it.copy(todos = it.todos.filterNot { found -> found.id == todo.id }) }
+        update {
+            it.copy(todos = it.todos.filterNot { found -> found.id == todo.id })
+                .focusing(listOf(ScheduleAddFocusTarget.Todos))
+        }
         return VoiceReply.Done(R.string.voice_schedule_todo_deleted, listOf(todo.label))
     }
 
@@ -162,7 +178,10 @@ internal class ScheduleAddVoiceActions(
             voice.label.isEmpty() -> VoiceReply.Done(R.string.voice_schedule_todo_edit_ask)
             todo == null -> VoiceReply.Done(R.string.voice_schedule_todo_missing)
             else -> {
-                update { it.withTodo(todo.id) { found -> found.copy(label = voice.label, editing = false) } }
+                update {
+                    it.withTodo(todo.id) { found -> found.copy(label = voice.label, editing = false) }
+                        .focusing(listOf(ScheduleAddFocusTarget.Todo(todo.id)))
+                }
                 VoiceReply.Done(R.string.voice_schedule_todo_edited, listOf(voice.label))
             }
         }
@@ -184,6 +203,12 @@ internal class ScheduleAddVoiceActions(
                 // 말로 찾은 병원은 병원 찾기가 하나로 좁혀지면 알아서 고른다.
                 hospitalSearchByVoice = hospital != null || current.hospitalSearchByVoice,
                 sheet = ScheduleAddSheet.NONE,
+            ).focusing(
+                listOfNotNull(
+                    ScheduleAddFocusTarget.Hospital.takeIf { hospital != null },
+                    ScheduleAddFocusTarget.Date.takeIf { date != null },
+                    ScheduleAddFocusTarget.Time.takeIf { time != null },
+                ),
             )
         }
         val filled = listOfNotNull(date?.format(VOICE_DATE), time?.format(VOICE_TIME)).joinToString(" ")

@@ -17,6 +17,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -463,6 +464,85 @@ class ScheduleAddVoiceTest {
 
         assertEquals(R.string.voice_schedule_todo_which, reply.message)
         assertTrue(viewModel.uiState.value.todos.none { it.done })
+    }
+
+    // 말로 바뀐 자리 보이기
+
+    @Test
+    fun `말로 채운 칸을 보인다`() = runTest {
+        val viewModel = viewModel(SharedAppointment(date = OCT_20, time = THREE_PM))
+
+        viewModel.voice.handle("10월 20일 오후 3시", ScheduleAddVoiceRoutes())
+
+        assertEquals(
+            listOf(ScheduleAddFocusTarget.Date, ScheduleAddFocusTarget.Time),
+            viewModel.uiState.value.voiceFocus?.targets,
+        )
+    }
+
+    @Test
+    fun `할 일을 더하거나 고치면 그 줄을 지우면 할 일 구역을 보인다`() = runTest {
+        val viewModel = viewModel()
+        val routes = ScheduleAddVoiceRoutes()
+
+        viewModel.voice.handle("할 일 추가, 공복 유지", routes)
+        val added = viewModel.uiState.value.todos.single().id
+        assertEquals(listOf(ScheduleAddFocusTarget.Todo(added)), viewModel.uiState.value.voiceFocus?.targets)
+
+        viewModel.voice.handle("첫 번째 할 일 지워 줘", routes)
+        assertEquals(listOf(ScheduleAddFocusTarget.Todos), viewModel.uiState.value.voiceFocus?.targets)
+    }
+
+    @Test
+    fun `맞는 카드가 여럿이면 그 카드들을 보인다`() = runTest {
+        val viewModel =
+            viewModel(cards = listOf(card("1", "두통 · 어지러움"), card("2", "두통 · 메스꺼움"), card("3", "복통")))
+        viewModel.load()
+
+        viewModel.voice.handle("두통 카드 가져갈게", ScheduleAddVoiceRoutes())
+
+        assertEquals(
+            listOf(ScheduleAddFocusTarget.Card("1"), ScheduleAddFocusTarget.Card("2")),
+            viewModel.uiState.value.voiceFocus?.targets,
+        )
+    }
+
+    @Test
+    fun `빠진 칸이 있어 저장하지 못하면 그 칸을 보인다`() = runTest {
+        val viewModel = viewModel()
+        viewModel.onDateConfirm(OCT_20)
+
+        viewModel.voice.handle("저장해 줘", ScheduleAddVoiceRoutes())
+
+        assertEquals(listOf(ScheduleAddFocusTarget.Hospital), viewModel.uiState.value.voiceFocus?.targets)
+    }
+
+    @Test
+    fun `같은 칸을 다시 말하면 새로 보인다`() = runTest {
+        val viewModel = viewModel()
+        viewModel.voice.handle("시간 미정", ScheduleAddVoiceRoutes())
+        val first = viewModel.uiState.value.voiceFocus
+
+        viewModel.voice.handle("시간 미정", ScheduleAddVoiceRoutes())
+
+        assertNotEquals(first, viewModel.uiState.value.voiceFocus)
+    }
+
+    @Test
+    fun `말로 연 병원 찾기에서 돌아오면 병원 칸을 보이고 손으로 연 것은 보이지 않는다`() = runTest {
+        val viewModel = viewModel(SharedAppointment(hospital = "고려튼튼통증의학과"))
+        viewModel.voice.handle("고려튼튼통증의학과", ScheduleAddVoiceRoutes())
+        viewModel.onHospitalSearchOpened()
+        val before = viewModel.uiState.value.voiceFocus
+
+        viewModel.onHospitalPicked("고려튼튼통증의학과의원")
+        val after = viewModel.uiState.value.voiceFocus
+        assertNotEquals(before, after)
+        assertEquals(listOf(ScheduleAddFocusTarget.Hospital), after?.targets)
+
+        // 손으로 병원 칸을 눌러 다녀온 것은 사람이 이미 그 칸을 보고 있다.
+        viewModel.onHospitalPicked("다른병원")
+        assertEquals(after, viewModel.uiState.value.voiceFocus)
     }
 
     private fun viewModel(read: SharedAppointment = SharedAppointment(), cards: List<CardListItem> = emptyList()) =
