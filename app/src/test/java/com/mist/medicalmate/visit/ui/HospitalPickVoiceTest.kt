@@ -62,6 +62,22 @@ class HospitalPickVoiceTest {
     }
 
     @Test
+    fun `고르는 말과 찾는 말을 여러 말로 한다`() {
+        assertEquals(HospitalPickVoice.Pick(0), parseHospitalPickVoice("맨 위에 거"))
+        assertEquals(HospitalPickVoice.Pick(1), parseHospitalPickVoice("둘째 병원"))
+        assertEquals(HospitalPickVoice.Submit, parseHospitalPickVoice("여기로 할게"))
+        assertEquals(HospitalPickVoice.Submit, parseHospitalPickVoice("그걸로 해 줘"))
+        assertEquals(HospitalPickVoice.Search("고려튼튼"), parseHospitalPickVoice("고려튼튼 다시 찾아 볼래"))
+        assertEquals(HospitalPickVoice.Search("강남 세브란스"), parseHospitalPickVoice("강남 세브란스 보여 줘"))
+    }
+
+    @Test
+    fun `이거 말고는 고르는 말이 아니라 다시 찾는 말이다`() {
+        assertEquals(HospitalPickVoice.Search("서울대병원"), parseHospitalPickVoice("이거 말고 서울대병원"))
+        assertNull(parseHospitalPickVoice("이거 말고"))
+    }
+
+    @Test
     fun `몇 번째를 말하면 그 병원을 고르고 마친다`() = runTest(dispatcher) {
         val viewModel = searched()
         var submitted: Hospital? = null

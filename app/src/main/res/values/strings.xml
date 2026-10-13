@@ -619,6 +619,7 @@
     <string name="voice_schedule_todo_undone">완료를 풀었어요: %1$s</string>
     <string name="voice_schedule_todo_deleted">할 일을 지웠어요: %1$s</string>
     <string name="voice_schedule_todo_edited">할 일을 고쳤어요: %1$s</string>
+    <string name="voice_schedule_todo_edit_ask">"두 번째 할 일 고쳐, 신분증 챙기기"처럼 말씀해 주세요</string>
     <string name="voice_schedule_todo_missing">그 할 일을 찾지 못했어요. 몇 번째 할 일인지 말씀해 주세요</string>
     <string name="voice_schedule_confirm_exit">적은 내용을 버리고 나갈까요?</string>
     <!-- 병원 찾기(1m · 1m-B)를 말로(#282). 시안에 없는 문구다. -->

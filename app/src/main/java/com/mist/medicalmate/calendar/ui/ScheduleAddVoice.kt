@@ -54,34 +54,58 @@ internal sealed interface ScheduleAddVoice {
  *
  * 차례가 곧 우선순위다. 할 일과 카드는 그 낱말이 있을 때만이고 먼저 본다("할 일, 10시 전에
  * 금식"의 10시가 진료 시각이 되면 안 된다). 화면 조작(나가기·시트·병원 찾기·시간 비우기)은
- * 그 말로 시작할 때만이다. 저장은 날짜가 함께 없을 때만이다. "20일로 저장해 줘"는 날짜를 고치는
- * 말이 먼저다. 나머지는 날짜·시간·병원으로 읽어 본다.
+ * 그 말로 시작할 때만이다. 날짜나 시각이 들어 있으면 시트를 여는 말보다 채우는 말이 먼저다
+ * ("날짜 20일로 바꿔 줘"). 저장도 날짜가 함께 없을 때만이다. 나머지는 날짜·시간·병원으로 읽어 본다.
+ *
+ * **같은 일을 여러 말로 한다.** 할 일은 "할 일"·"준비물"·"챙길 거"·"체크리스트"로, 카드는
+ * "카드"·"브리핑"으로 가리킨다. 각 동작의 말도 여럿이다. 목록은 이 파일 아래에 있다.
  */
 internal fun parseScheduleAddVoice(text: String): ScheduleAddVoice? = when {
     text.isBlank() -> null
     TODO_WORD.containsMatchIn(text) -> parseTodo(text)
-    text.contains("카드") -> parseCard(text)
+    CARD_WORD.containsMatchIn(text) -> parseCard(text)
     else -> parseScreen(text)
 }
 
 /**
- * 할 일. 지우기·고치기·체크가 앞서고, 그 말이 없을 때 "할 일"로 시작하면 더하기다.
+ * 할 일. 더하라는 말("추가"·"넣어")이 있으면 더하기가 먼저다. 그래야 "할 일 추가, 약 빼먹지
+ * 않기"가 "빼"로 지우기가 되지 않는다. 그다음이 지우기·고치기·체크이고, 어느 말도 없는데 할 일을
+ * 가리키는 말로 시작하면 더하기다("할 일, 10시 전에 금식").
  *
- * "할 일 추가"처럼 글이 비면 [ScheduleAddVoice.TodoAdd]의 글이 빈 채로 간다. 무엇을 적을지 묻는다.
+ * 더할 글은 할 일을 가리키는 말과 더하라는 말을 걷어낸 나머지다. "준비물에 신분증 넣어 줘" →
+ * "신분증". 글이 비면("할 일 추가") [ScheduleAddVoice.TodoAdd]의 글이 빈 채로 가고, 무엇을 적을지
+ * 묻는다. 고치라는 말만 있고 새 글이 없으면 [ScheduleAddVoice.TodoEdit]의 글이 비고, 역시 묻는다.
  */
 private fun parseTodo(text: String): ScheduleAddVoice? {
     val ordinal = VoiceWords.ordinal(text)
     val compact = VoiceWords.compact(text)
-    val add = TODO_ADD.find(text)?.groupValues?.get(1)?.trim { it in TRIM }
-    val edit = EDIT.find(text)?.groupValues?.get(1)?.trim { it in TRIM }
+    val label = text.replace(TODO_WORD_WITH_PARTICLE, " ").replace(ADD_VERB, " ").trim { it in TRIM }
     return when {
-        DELETE.any { it in compact } -> ScheduleAddVoice.TodoDelete(ordinal, text)
-        edit != null -> ScheduleAddVoice.TodoEdit(ordinal, edit)
-        UNDONE.any { it in compact } -> ScheduleAddVoice.TodoCheck(ordinal, text, done = false)
-        DONE.any { it in compact } -> ScheduleAddVoice.TodoCheck(ordinal, text, done = true)
-        add != null -> ScheduleAddVoice.TodoAdd(add)
+        ADD_VERB.containsMatchIn(text) -> ScheduleAddVoice.TodoAdd(label)
+        TODO_DELETE.any { it in compact } -> ScheduleAddVoice.TodoDelete(ordinal, text)
+        EDIT_VERB.containsMatchIn(text) -> ScheduleAddVoice.TodoEdit(ordinal, editedLabel(text).orEmpty())
+        TODO_UNDONE.any { it in compact } -> ScheduleAddVoice.TodoCheck(ordinal, text, done = false)
+        TODO_DONE.any { it in compact } -> ScheduleAddVoice.TodoCheck(ordinal, text, done = true)
+        TODO_START.containsMatchIn(text) -> ScheduleAddVoice.TodoAdd(label)
         else -> null
     }
+}
+
+/**
+ * 고칠 할 일의 새 글. 고치라는 말이 없으면 null이다.
+ *
+ * 새 글이 고치라는 말 뒤에도("고쳐, 약 챙기기"), 앞에도("약 챙기기로 바꿔 줘") 온다. 뒤를 먼저 보고
+ * 비었으면 앞을 본다. 앞을 볼 때는 몇 번째와 할 일을 가리키는 말을 걷어낸다.
+ */
+private fun editedLabel(text: String): String? {
+    val verb = EDIT_VERB.find(text) ?: return null
+    val after = text.substring(verb.range.last + 1).replace(POLITE_TAIL, "").trim { it in TRIM }
+    val before =
+        VoiceWords.stripOrdinal(text.substring(0, verb.range.first))
+            .replace(TODO_WORD_WITH_PARTICLE, " ")
+            .replace(TARGET_PARTICLE, "")
+            .trim { it in TRIM }
+    return after.ifEmpty { before }.ifEmpty { null }
 }
 
 private fun parseCard(text: String): ScheduleAddVoice {
@@ -95,14 +119,18 @@ private fun parseCard(text: String): ScheduleAddVoice {
 }
 
 /** 화면 조작과 저장. 어느 것도 아니면 날짜·시간·병원으로 읽어 본다. */
-private fun parseScreen(text: String): ScheduleAddVoice = when {
-    EXIT.containsMatchIn(text) -> ScheduleAddVoice.Exit
-    OPEN_HOSPITAL.containsMatchIn(text) -> ScheduleAddVoice.OpenHospital
-    OPEN_DATE.containsMatchIn(text) -> ScheduleAddVoice.OpenSheet(ScheduleAddSheet.DATE)
-    OPEN_TIME.containsMatchIn(text) -> ScheduleAddVoice.OpenSheet(ScheduleAddSheet.TIME)
-    CLEAR_TIME.containsMatchIn(text) -> ScheduleAddVoice.ClearTime
-    VoiceWords.isSave(text) && !DIGIT.containsMatchIn(text) -> ScheduleAddVoice.Save
-    else -> ScheduleAddVoice.Fill(text)
+private fun parseScreen(text: String): ScheduleAddVoice {
+    val dated = DATE_TIME_HINT.containsMatchIn(text)
+    return when {
+        EXIT.containsMatchIn(text) -> ScheduleAddVoice.Exit
+        OPEN_HOSPITAL.containsMatchIn(text) -> ScheduleAddVoice.OpenHospital
+        dated -> ScheduleAddVoice.Fill(text)
+        CLEAR_TIME.containsMatchIn(text) -> ScheduleAddVoice.ClearTime
+        OPEN_DATE.containsMatchIn(text) -> ScheduleAddVoice.OpenSheet(ScheduleAddSheet.DATE)
+        OPEN_TIME.containsMatchIn(text) -> ScheduleAddVoice.OpenSheet(ScheduleAddSheet.TIME)
+        VoiceWords.isSave(text) -> ScheduleAddVoice.Save
+        else -> ScheduleAddVoice.Fill(text)
+    }
 }
 
 /**
@@ -130,33 +158,76 @@ private fun <T> List<T>.pickByVoice(ordinal: Int?, words: String, label: (T) -> 
 private fun String.meaningfulWords(): List<String> =
     split(' ', '·', ',', '/').map(VoiceWords::compact).filter { it.length >= 2 && !DIGIT.containsMatchIn(it) }
 
-private val TODO_WORD = Regex("""할\s*일""")
+/** 할 일을 가리키는 말. */
+private const val TODO_NOUN =
+    """할\s*일|해야\s*할\s*(?:것|거|일)|체크\s*리스트|준비물|챙길\s*(?:것|거|꺼)|챙겨야\s*할\s*(?:것|거)|투두"""
 
-private val TODO_ADD = Regex("""^\s*할\s*일\s*(?:추가|더해|적어)?\s*(?:해\s*줘|해\s*주세요)?\s*[,:]?\s*(.*)$""")
+private val TODO_WORD = Regex(TODO_NOUN)
 
-/** "첫 번째 할 일 고쳐, 약 챙기기" → "약 챙기기". */
-private val EDIT = Regex("""(?:고쳐|수정|바꿔)\s*(?:줘|주세요)?\s*[,:]?\s*(.+)$""")
+private val TODO_START = Regex("""^\s*(?:$TODO_NOUN)""")
 
-private val DELETE = listOf("지워", "삭제", "빼줘", "없애")
+/** 할 일을 가리키는 말과 그 뒤의 조사. "할 일에", "준비물로", "할 일을". */
+private val TODO_WORD_WITH_PARTICLE = Regex("""(?:$TODO_NOUN)\s*(?:에다가|에다|에|으로|로|을|를|은|는|이|가)?""")
 
-private val UNDONE = listOf("완료취소", "체크해제", "안했", "취소")
+/** 더하라는 말. 뒤에 붙는 "해 줘"·"할래"까지 함께 걷어낸다. */
+private val ADD_VERB =
+    Regex(
+        """(?:추가|넣어|넣을래|넣자|더해|더할래|적어|적을래|등록|써\s*줘|써\s*둬|메모)""" +
+            """\s*(?:해|하고|할래|할게|하자)?\s*(?:줘|주세요|줄래|둬|놔|놓아)?""",
+    )
 
-private val DONE = listOf("완료", "했어", "했다", "체크", "끝냈")
+/** 고치라는 말. */
+private val EDIT_VERB = Regex("""고쳐|고칠래|수정|바꿔|바꿀래|변경|바꾸자""")
 
-private val CARD_NEW = listOf("새카드", "새로만들", "카드만들")
+/** 고치라는 말 뒤의 "줘"·"해 주세요". 새 글이 아니다. */
+private val POLITE_TAIL = Regex("""^\s*(?:해)?\s*(?:줘|주세요|줄래|할래|하자)?""")
 
-private val CARD_DROP = listOf("빼", "안가져", "해제", "취소")
+/** "약 챙기기로", "8시간 공복으로"의 끝 조사. */
+private val TARGET_PARTICLE = Regex("""\s*(?:으로|로)\s*$""")
 
-private val EXIT = Regex("""^\s*(?:나가|나갈래|일정\s*추가\s*(?:취소|안\s*할래|그만))""")
+private val TODO_DELETE = listOf("지워", "지울래", "삭제", "빼", "없애", "제거", "날려")
 
-private val OPEN_HOSPITAL = Regex("""^\s*(?:다른\s*)?병원\s*(?:찾기|찾아|바꿔|바꿀래|바꾸기|고를래|고르기|선택)""")
+private val TODO_UNDONE = listOf("완료취소", "체크해제", "체크풀", "해제", "안했", "아직", "되돌려", "취소", "못했")
 
-private val OPEN_DATE = Regex("""^\s*날짜\s*(?:고를래|고르기|선택|열어)""")
+private val TODO_DONE = listOf("완료", "했어", "했다", "했음", "했습니다", "체크", "끝냈", "끝났", "다했", "챙겼", "마쳤", "처리")
 
-private val OPEN_TIME = Regex("""^\s*시간\s*(?:고를래|고르기|선택|열어)""")
+/** 카드를 가리키는 말. "두통 브리핑 가져갈게"처럼 "카드"를 빼고 말하기도 한다. */
+private val CARD_WORD = Regex("""카드|브리핑""")
 
-private val CLEAR_TIME = Regex("""시간\s*(?:미정|지워|빼|없음|몰라|모름|비워)""")
+private val CARD_NEW = listOf("새카드", "새로만들", "카드만들", "새로작성", "새로쓸", "새브리핑", "새로정리", "하나더만들")
+
+private val CARD_DROP = listOf("빼", "안가져", "해제", "취소", "제외", "필요없", "안쓸", "안챙겨", "두고갈", "놔두고")
+
+/** 나가기. 그 말로 시작할 때만이다. */
+private val EXIT =
+    Regex(
+        """^\s*(?:그냥\s*)?(?:나가|나갈|화면\s*닫|창\s*닫|안\s*할래|안\s*만들래|그만\s*쓸래|다음에\s*할래|""" +
+            """나중에\s*할래|(?:일정\s*(?:추가|등록)?|작성|예약)\s*(?:취소|안\s*할래|그만|안\s*해|접을래|접어))""",
+    )
+
+/** 지금 이름으로 병원 찾기를 연다. "병원 바꿀래", "병원 다시 고를래", "다른 병원으로 할래". */
+private val OPEN_HOSPITAL =
+    Regex(
+        """^\s*(?:다른\s*(?:병원|곳|데)|(?:병원)(?:을|은|도)?\s*(?:다시\s*)?""" +
+            """(?:찾|바꾸|바꿔|바꿀|고르|골라|고를|선택|변경|검색|정할|정하))""",
+    )
+
+/** 날짜 시트를 연다. "날짜 고를래", "언제 갈지 정할래". */
+private val OPEN_DATE =
+    Regex("""^\s*(?:날짜|일자|언제)(?:\s*(?:를|는|도|갈지|인지))?\s*(?:다시\s*)?(?:고르|골라|고를|선택|열어|바꾸|바꿔|바꿀|변경|정하|정할|보여)""")
+
+/** 시간 시트를 연다. "시간 고를래", "몇 시인지 정할래". */
+private val OPEN_TIME =
+    Regex("""^\s*(?:시간|시각|몇\s*시)(?:\s*(?:를|는|도|인지))?\s*(?:다시\s*)?(?:고르|골라|고를|선택|열어|바꾸|바꿔|바꿀|변경|정하|정할|보여)""")
+
+/** 시간을 비운다. "시간 미정", "몇 시인지 몰라", "시간은 아직 안 정했어". */
+private val CLEAR_TIME =
+    Regex("""(?:시간|시각|몇\s*시)(?:은|는|이|가|인지)?\s*(?:아직\s*)?(?:미정|지워|빼|없|몰라|모름|모르|비워|안\s*정|정해지지|나중에|상관없)""")
+
+/** 날짜나 시각이 들어 있는지. 시트를 여는 말보다 채우는 말이 먼저다. */
+private val DATE_TIME_HINT =
+    Regex("""\d|오늘|내일|모레|글피|다음\s*주|이번\s*주|다음\s*달|[월화수목금토일]요일|오전|오후|아침|점심|저녁|정오""")
 
 private val DIGIT = Regex("""\d""")
 
-private const val TRIM = " .,!?"
+private const val TRIM = " .,!?~"

@@ -6,6 +6,7 @@ import com.mist.medicalmate.card.data.CardListItem
 import com.mist.medicalmate.card.ui.FakeCardRepository
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.core.voice.VoiceReply
+import com.mist.medicalmate.core.voice.VoiceWords
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -80,6 +81,79 @@ class ScheduleAddVoiceTest {
         assertEquals(ScheduleAddVoice.Save, parseScheduleAddVoice("저장해 줘"))
         // 날짜가 섞이면 날짜를 고치는 말이 먼저다.
         assertEquals(ScheduleAddVoice.Fill("20일로 저장해 줘"), parseScheduleAddVoice("20일로 저장해 줘"))
+    }
+
+    @Test
+    fun `할 일을 다른 말로 가리켜도 알아듣는다`() {
+        // "할 일" 대신 준비물·챙길 거·체크리스트라고 한다.
+        assertEquals(ScheduleAddVoice.TodoAdd("신분증"), parseScheduleAddVoice("준비물에 신분증 넣어 줘"))
+        assertEquals(ScheduleAddVoice.TodoAdd("보험 카드 사본"), parseScheduleAddVoice("챙길 거 보험 카드 사본 추가"))
+        assertEquals(ScheduleAddVoice.TodoAdd("물 마시지 않기"), parseScheduleAddVoice("체크리스트에 물 마시지 않기 적어 줘"))
+        assertEquals(ScheduleAddVoice.TodoAdd("신분증 챙기기"), parseScheduleAddVoice("신분증 챙기기 할 일로 추가해 줘"))
+    }
+
+    @Test
+    fun `더하라는 말이 있으면 글 속의 빼기나 체크에 끌려가지 않는다`() {
+        assertEquals(ScheduleAddVoice.TodoAdd("약 빼먹지 않기"), parseScheduleAddVoice("할 일 추가, 약 빼먹지 않기"))
+        assertEquals(ScheduleAddVoice.TodoAdd("혈압 체크하기"), parseScheduleAddVoice("할 일에 혈압 체크하기 넣어 줘"))
+    }
+
+    @Test
+    fun `할 일 체크와 풀기와 지우기를 여러 말로 한다`() {
+        assertEquals(true, (parseScheduleAddVoice("첫째 할 일 다 했어") as ScheduleAddVoice.TodoCheck).done)
+        assertEquals(true, (parseScheduleAddVoice("준비물 신분증 챙겼어") as ScheduleAddVoice.TodoCheck).done)
+        assertEquals(false, (parseScheduleAddVoice("두 번째 할 일 아직 안 했어") as ScheduleAddVoice.TodoCheck).done)
+        assertEquals(false, (parseScheduleAddVoice("맨 위 할 일 체크 풀어 줘") as ScheduleAddVoice.TodoCheck).done)
+        assertEquals(
+            ScheduleAddVoice.TodoDelete(VoiceWords.LAST, "마지막 할 일 없애 줘"),
+            parseScheduleAddVoice("마지막 할 일 없애 줘"),
+        )
+        assertEquals(ScheduleAddVoice.TodoDelete(0, "첫째 준비물 삭제"), parseScheduleAddVoice("첫째 준비물 삭제"))
+    }
+
+    @Test
+    fun `고칠 글이 고치라는 말 앞에 와도 읽는다`() {
+        assertEquals(ScheduleAddVoice.TodoEdit(1, "8시간 공복"), parseScheduleAddVoice("두 번째 할 일을 8시간 공복으로 바꿔 줘"))
+        assertEquals(ScheduleAddVoice.TodoEdit(0, "신분증 챙기기"), parseScheduleAddVoice("첫 번째 할 일 신분증 챙기기로 수정해 줘"))
+        // 무엇으로 고칠지 없으면 글이 빈 채로 가고 화면이 묻는다.
+        assertEquals(ScheduleAddVoice.TodoEdit(0, ""), parseScheduleAddVoice("첫 번째 할 일 바꿔 줘"))
+    }
+
+    @Test
+    fun `카드를 다른 말로 가리켜도 알아듣는다`() {
+        assertEquals(ScheduleAddVoice.CardPick(null, "두통 브리핑 가져갈게"), parseScheduleAddVoice("두통 브리핑 가져갈게"))
+        assertEquals(ScheduleAddVoice.CardDrop(null, "카드는 필요 없어"), parseScheduleAddVoice("카드는 필요 없어"))
+        assertEquals(ScheduleAddVoice.CardDrop(0, "첫째 카드 제외해 줘"), parseScheduleAddVoice("첫째 카드 제외해 줘"))
+        assertEquals(ScheduleAddVoice.CardNew, parseScheduleAddVoice("브리핑 카드 새로 작성할래"))
+    }
+
+    @Test
+    fun `화면 조작을 여러 말로 한다`() {
+        listOf("그냥 나갈게", "작성 취소", "일정 등록 안 할래", "다음에 할래", "화면 닫아 줘").forEach {
+            assertEquals(it, ScheduleAddVoice.Exit, parseScheduleAddVoice(it))
+        }
+        listOf("병원 다시 고를래", "병원을 변경할래", "다른 병원으로 할래", "병원 검색").forEach {
+            assertEquals(it, ScheduleAddVoice.OpenHospital, parseScheduleAddVoice(it))
+        }
+        listOf("날짜 바꿀래", "날짜를 다시 정할래", "언제 갈지 고를래").forEach {
+            assertEquals(it, ScheduleAddVoice.OpenSheet(ScheduleAddSheet.DATE), parseScheduleAddVoice(it))
+        }
+        listOf("시간 바꿀래", "몇 시인지 정할래").forEach {
+            assertEquals(it, ScheduleAddVoice.OpenSheet(ScheduleAddSheet.TIME), parseScheduleAddVoice(it))
+        }
+        listOf("시간은 아직 몰라", "몇 시인지 모르겠어", "시간 안 정했어", "시간 지워 줘").forEach {
+            assertEquals(it, ScheduleAddVoice.ClearTime, parseScheduleAddVoice(it))
+        }
+        listOf("일정 잡아 줘", "이걸로 할게", "마무리해 줘", "등록할래").forEach {
+            assertEquals(it, ScheduleAddVoice.Save, parseScheduleAddVoice(it))
+        }
+    }
+
+    @Test
+    fun `날짜나 시각이 들어 있으면 시트를 여는 대신 채운다`() {
+        assertEquals(ScheduleAddVoice.Fill("날짜 20일로 바꿔 줘"), parseScheduleAddVoice("날짜 20일로 바꿔 줘"))
+        assertEquals(ScheduleAddVoice.Fill("시간은 오후 2시로 해 줘"), parseScheduleAddVoice("시간은 오후 2시로 해 줘"))
+        assertEquals(ScheduleAddVoice.Fill("내일로 할래"), parseScheduleAddVoice("내일로 할래"))
     }
 
     @Test

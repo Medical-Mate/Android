@@ -43,6 +43,24 @@ class VoiceCommandTest {
     }
 
     @Test
+    fun `같은 곳을 여러 말로 부른다`() {
+        assertEquals(VoiceCommand.SCHEDULE_ADD, parseVoiceCommand("병원 예약 잡아 줘"))
+        assertEquals(VoiceCommand.SCHEDULE_ADD, parseVoiceCommand("다음 주에 진료 잡을래"))
+        assertEquals(VoiceCommand.SCHEDULE_ADD, parseVoiceCommand("스케줄 추가"))
+        assertEquals(VoiceCommand.CALENDAR, parseVoiceCommand("스케줄 보여 줘"))
+        assertEquals(VoiceCommand.HOME, parseVoiceCommand("메인 화면"))
+        assertEquals(VoiceCommand.PROFILE, parseVoiceCommand("마이페이지"))
+        assertEquals(VoiceCommand.BACK, parseVoiceCommand("전 화면으로"))
+        assertEquals(VoiceCommand.RECORD, parseVoiceCommand("진료 내역 보여 줘"))
+        assertEquals(VoiceCommand.INTAKE, parseVoiceCommand("머리가 아프네"))
+    }
+
+    @Test
+    fun `카드는 증상보다 먼저다`() {
+        assertEquals(VoiceCommand.BRIEF_CARDS, parseVoiceCommand("복부 증상 브리핑 카드 보여 줘"))
+    }
+
+    @Test
     fun `모르는 말은 명령이 아니다`() {
         assertNull(parseVoiceCommand("오늘 날씨 어때"))
         assertNull(parseVoiceCommand(""))

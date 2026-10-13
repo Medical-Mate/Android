@@ -46,6 +46,41 @@ class VoiceWordsTest {
     }
 
     @Test
+    fun `네를 여러 말로 한다`() {
+        listOf("넵", "응 그렇게 해", "해 줘", "좋습니다", "오케이", "콜", "웅").forEach { assertTrue(it, VoiceWords.isYes(it)) }
+    }
+
+    @Test
+    fun `아니요를 여러 말로 한다`() {
+        listOf("노노", "하지 마", "음 그건 안 할래", "다시 생각해 볼게", "별로야").forEach { text ->
+            assertTrue(text, VoiceWords.isNo(text))
+            assertFalse(text, VoiceWords.isYes(text))
+        }
+    }
+
+    @Test
+    fun `몇 번째를 여러 말로 한다`() {
+        assertEquals(0, VoiceWords.ordinal("첫째 거"))
+        assertEquals(1, VoiceWords.ordinal("둘째"))
+        assertEquals(0, VoiceWords.ordinal("맨 위에 거"))
+        assertEquals(0, VoiceWords.ordinal("제일 처음"))
+        assertEquals(VoiceWords.LAST, VoiceWords.ordinal("맨 아래 거"))
+        assertEquals(VoiceWords.LAST, VoiceWords.ordinal("끝에 거"))
+        assertEquals(1, VoiceWords.ordinal("2번째"))
+    }
+
+    @Test
+    fun `몇 번째를 가리키는 말을 걷어낸다`() {
+        assertEquals("할 일", VoiceWords.stripOrdinal("두 번째 할 일").trim())
+        assertEquals("지워", VoiceWords.stripOrdinal("맨 위에 거 지워").trim())
+    }
+
+    @Test
+    fun `저장을 여러 말로 한다`() {
+        listOf("일정 잡아 줘", "이걸로 할게", "다 됐어 저장", "마무리해 줘", "확정할게").forEach { assertTrue(it, VoiceWords.isSave(it)) }
+    }
+
+    @Test
     fun `저장하라는 말을 알아듣는다`() {
         listOf("저장해 줘", "등록해", "이대로 완료").forEach { assertTrue(it, VoiceWords.isSave(it)) }
         assertFalse(VoiceWords.isSave("10월 20일"))

@@ -141,9 +141,14 @@ internal class ScheduleAddVoiceActions(
     private fun editTodo(voice: ScheduleAddVoice.TodoEdit): VoiceReply {
         val todos = state().todos
         val todo = todos.byVoice(voice.ordinal, "") ?: todos.singleOrNull()
-        if (todo == null || voice.label.isEmpty()) return VoiceReply.Done(R.string.voice_schedule_todo_missing)
-        update { it.withTodo(todo.id) { found -> found.copy(label = voice.label, editing = false) } }
-        return VoiceReply.Done(R.string.voice_schedule_todo_edited, listOf(voice.label))
+        return when {
+            voice.label.isEmpty() -> VoiceReply.Done(R.string.voice_schedule_todo_edit_ask)
+            todo == null -> VoiceReply.Done(R.string.voice_schedule_todo_missing)
+            else -> {
+                update { it.withTodo(todo.id) { found -> found.copy(label = voice.label, editing = false) } }
+                VoiceReply.Done(R.string.voice_schedule_todo_edited, listOf(voice.label))
+            }
+        }
     }
 
     private suspend fun fill(text: String, save: () -> Unit): VoiceReply {
