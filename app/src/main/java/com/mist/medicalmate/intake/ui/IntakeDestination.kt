@@ -10,7 +10,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.mist.medicalmate.R
+import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
+import com.mist.medicalmate.core.model.IntakeStep
 import com.mist.medicalmate.core.speech.rememberMicPermission
+import com.mist.medicalmate.core.voice.VoicePrompt
+import com.mist.medicalmate.core.voice.VoiceReply
+import com.mist.medicalmate.core.voice.VoiceTargetEffect
+import com.mist.medicalmate.core.voice.VoiceText
+import com.mist.medicalmate.core.voice.rememberVoicePrompt
 import kotlinx.serialization.Serializable
 
 /**
@@ -20,9 +28,10 @@ import kotlinx.serialization.Serializable
  *
  * @param sessionId 이어서 할 문답. 홈의 `inProgressSession`에서 온다. `null`이면 새로
  *   시작하는 것이고, 부위를 고르고 다음을 누를 때 세션이 만들어진다.
+ * @param spoken "오른쪽 어깨가 아파"처럼 증상 정리를 연 말(#284). 그 속의 부위를 바로 고른다.
  */
 @Serializable
-internal data class IntakeDestination(val sessionId: Long? = null)
+internal data class IntakeDestination(val sessionId: Long? = null, val spoken: String? = null)
 
 /**
  * 와이어프레임 1c-5. 문답을 마친 뒤의 갈림길.
@@ -42,8 +51,10 @@ internal data class IntakeDoneDestination(val sessionId: Long? = null)
  */
 internal fun NavGraphBuilder.intakeDestination(onCompleted: (Long?) -> Unit, onExit: () -> Unit) {
     composable<IntakeDestination> { entry ->
+        val route = entry.toRoute<IntakeDestination>()
         IntakeRoute(
-            sessionId = entry.toRoute<IntakeDestination>().sessionId,
+            sessionId = route.sessionId,
+            spoken = route.spoken,
             onCompleted = onCompleted,
             onExit = onExit,
         )
@@ -64,6 +75,7 @@ internal fun NavGraphBuilder.intakeDoneDestination(
         // 문답 없이 이 화면에 올 길이 없다. 세션이 없으면 만들 카드도 고를 병원도 없어서
         // 두 버튼이 아무 일도 하지 않는다.
         val sessionId = entry.toRoute<IntakeDoneDestination>().sessionId ?: return@composable
+        IntakeDoneVoice(onCard = { onCardRequested(sessionId) }, onHospital = { onHospitalClick(sessionId) })
         IntakeDoneScreen(
             onCardClick = { onCardRequested(sessionId) },
             onHospitalClick = { onHospitalClick(sessionId) },
@@ -81,6 +93,7 @@ internal fun NavGraphBuilder.intakeDoneDestination(
 @Composable
 private fun IntakeRoute(
     sessionId: Long?,
+    spoken: String?,
     onCompleted: (Long?) -> Unit,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
@@ -99,6 +112,8 @@ private fun IntakeRoute(
     LaunchedEffect(state.completed) {
         if (state.completed) onCompleted(state.sessionId)
     }
+
+    IntakeVoice(state = state, spoken = spoken.takeIf { sessionId == null }, viewModel = viewModel)
 
     // 이 기기에서 음성을 쓸 수 있는지. 쓸 수 없으면 마이크를 그리지 않는다.
     LaunchedEffect(Unit) { viewModel.voice.check() }
@@ -136,4 +151,71 @@ private fun IntakeRoute(
         ),
         modifier = modifier,
     )
+}
+
+/**
+ * "헤이 메이트" 다음의 말을 이 화면이 받는다(#284).
+ *
+ * 단계에 들어설 때 그 단계에서 할 말을 막대에 묻는다. 문답에서는 AI의 질문이 막대 윗줄에 선다 —
+ * 막대가 문답을 맡아서, 화면을 내려다보지 않아도 무엇을 묻는지 알 수 있어야 한다. 막대가 닫혀
+ * 있으면 묻는 말은 버려진다.
+ *
+ * [spoken]은 증상 정리를 연 말이다. 그 속에 부위가 있으면 바로 고른다.
+ */
+@Composable
+private fun IntakeVoice(state: IntakeUiState, spoken: String?, viewModel: IntakeViewModel) {
+    val labels = MedicalMateSeverity.entries.associateWith { stringResource(it.labelRes) }
+    val routes =
+        IntakeVoiceRoutes(
+            next = { viewModel.onNext(labels.getValue(viewModel.uiState.value.severity)) },
+            severityLabel = { labels.getValue(it) },
+        )
+    VoiceTargetEffect { text -> viewModel.voiceCommands.handle(text, routes) }
+
+    val prompt = rememberVoicePrompt()
+    // 손으로 큰 부위를 짚어 들어가도 그 안에 고를 수 있는 곳을 읽어 준다.
+    LaunchedEffect(state.step, state.bodyMap.focus) {
+        state.voiceQuestion { labels.getValue(it) }?.let { prompt(VoicePrompt(question = it)) }
+    }
+
+    val asked = state.messages.lastOrNull()?.takeIf { it.sender == IntakeMessage.Sender.AI }
+    val chatting = state.step == IntakeStep.SYMPTOM_CHAT && !state.awaitingReply
+    LaunchedEffect(asked?.id, chatting, state.chatFinished) {
+        if (asked == null || !chatting) return@LaunchedEffect
+        val next = if (state.chatFinished) R.string.voice_intake_ask_chat_next else R.string.voice_intake_ask_answer
+        prompt(
+            VoicePrompt(
+                message = VoiceText(R.string.voice_intake_ai_says, listOf(asked.text)),
+                question = VoiceText(next),
+            ),
+        )
+    }
+
+    LaunchedEffect(Unit) {
+        val reply =
+            spoken?.let { viewModel.voiceCommands.handle(it, routes) } as? VoiceReply.Done ?: return@LaunchedEffect
+        prompt(VoicePrompt(message = VoiceText(reply.message, reply.args), question = reply.question))
+    }
+}
+
+/** 1c-5를 말로 고른다(#284). "카드 만들어 줘", "병원부터 찾을래". */
+@Composable
+private fun IntakeDoneVoice(onCard: () -> Unit, onHospital: () -> Unit) {
+    VoiceTargetEffect { text ->
+        when (parseDoneVoice(text)) {
+            IntakeDoneChoice.CARD -> {
+                onCard()
+                VoiceReply.Done(R.string.voice_intake_done_card)
+            }
+
+            IntakeDoneChoice.HOSPITAL -> {
+                onHospital()
+                VoiceReply.Done(R.string.voice_intake_done_hospital)
+            }
+
+            null -> VoiceReply.NotMine
+        }
+    }
+    val prompt = rememberVoicePrompt()
+    LaunchedEffect(Unit) { prompt(VoicePrompt(question = VoiceText(R.string.voice_intake_done_ask))) }
 }

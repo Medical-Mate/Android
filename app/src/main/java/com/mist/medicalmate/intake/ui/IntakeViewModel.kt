@@ -65,12 +65,15 @@ internal constructor(private val repository: SessionRepository, speech: SpeechTo
      * 세션이 없으면 보내지 않는다. 세션 만들기가 실패했다는 뜻이고, 보낼 곳이 없다.
      */
     fun onSend() {
+        send(byVoice = mutableUiState.value.inputMode == IntakeInputMode.VOICE)
+    }
+
+    private fun send(byVoice: Boolean) {
         val state = mutableUiState.value
         val sessionId = state.sessionId
         if (!state.canSend || sessionId == null) return
 
         val text = state.draft.trim()
-        val byVoice = state.inputMode == IntakeInputMode.VOICE
         mutableUiState.update {
             it.copy(
                 messages = it.messages + it.newMessage(IntakeMessage.Sender.PATIENT, text),
@@ -112,6 +115,21 @@ internal constructor(private val repository: SessionRepository, speech: SpeechTo
             state = { mutableUiState.value },
             update = { transform -> mutableUiState.update(transform) },
             onCommand = ::onVoiceCommand,
+        )
+
+    /**
+     * "헤이 메이트" 다음의 말(#284). 네 단계를 말로 한다. 문답에서 한 말은 답으로 보낸다 — 말로 한
+     * 답이라 서버에 음성으로 적는다.
+     */
+    internal val voiceCommands =
+        IntakeVoiceCommands(
+            state = { mutableUiState.value },
+            update = { transform -> mutableUiState.update(transform) },
+            send = { text ->
+                onDraftChange(text)
+                send(byVoice = true)
+            },
+            back = ::onBack,
         )
 
     /** 말로 한 조작. 보내거나 다음으로 간다. */

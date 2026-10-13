@@ -28,12 +28,22 @@ enum class VoiceCommand {
  * 먼저다. "복부 증상 브리핑 카드 보여 줘"는 증상 정리가 아니라 카드다.
  *
  * 한 뜻에 여러 말을 받는다(#282). 사람은 정해 둔 말로 말하지 않는다.
+ *
+ * **카드를 새로 만들자는 말은 증상 정리다**(#284). "브리핑 카드 만들어 줘", "카드 만들자"가 카드
+ * 목록으로 가면 만들 길이 없다. 카드는 증상 정리를 마쳐야 생긴다.
  */
 fun parseVoiceCommand(text: String): VoiceCommand? {
     val heard = text.filterNot { it.isWhitespace() || it in PUNCTUATION }
-    if (heard.isEmpty()) return null
-    return KEYWORDS.firstOrNull { (_, words) -> words.any { it in heard } }?.first
+    val keyword = KEYWORDS.firstOrNull { (_, words) -> words.any { it in heard } }?.first
+    return when {
+        heard.isEmpty() -> null
+        keyword != VoiceCommand.SCHEDULE_ADD && CREATE_CARD.containsMatchIn(heard) -> VoiceCommand.INTAKE
+        else -> keyword
+    }
 }
+
+/** 카드를 새로 만들자는 말. "브리핑 카드를 만들자", "카드 작성할래", "새 카드". */
+private val CREATE_CARD = Regex("""(?:카드|브리핑).{0,3}(?:만들|작성|쓰자|쓸래|써줘|새로)|새(?:로운)?(?:브리핑)?카드""")
 
 private const val PUNCTUATION = ".,?!~"
 

@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,6 +37,10 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateSeveritySlide
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTextField
 import com.mist.medicalmate.core.model.IntakeStep
 import com.mist.medicalmate.core.model.MAX_BRIEF_CARD_QUESTIONS
+import com.mist.medicalmate.core.voice.VoiceFocusFrame
+import com.mist.medicalmate.core.voice.rememberVoiceFocus
+import com.mist.medicalmate.core.voice.rememberVoiceScrollState
+import com.mist.medicalmate.core.voice.voicePanelSpace
 
 /**
  * 단계별 본문. [IntakeScreen]에서만 쓴다.
@@ -63,7 +66,7 @@ internal fun StepContent(
         modifier =
         modifier
             .fillMaxWidth()
-            .verticalScroll(key(scrollKey) { rememberScrollState() })
+            .verticalScroll(key(scrollKey) { rememberVoiceScrollState() }).voicePanelSpace()
             .padding(
                 start = MedicalMateSize.gutter,
                 end = MedicalMateSize.gutter,
@@ -94,6 +97,7 @@ internal fun SeverityStep(
     onSeverityChange: (MedicalMateSeverity) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val focus = rememberVoiceFocus(state.voiceFocus)
     StepContent(step = state.step, modifier = modifier) {
         Text(
             text = stringResource(R.string.intake_severity_question, state.bodyPartSubject),
@@ -105,7 +109,9 @@ internal fun SeverityStep(
             style = MedicalMateTheme.typography.bodyM,
             color = MedicalMateTheme.colors.fgSubtle,
         )
-        MedicalMateSeveritySlider(severity = state.severity, onSeverityChange = onSeverityChange)
+        VoiceFocusFrame(focus, IntakeFocusTarget.Severity, MedicalMateRadius.md) {
+            MedicalMateSeveritySlider(severity = state.severity, onSeverityChange = onSeverityChange)
+        }
         MedicalMateNotice(
             title = stringResource(R.string.intake_severity_notice_title),
             body = stringResource(R.string.intake_severity_notice_body),
@@ -181,22 +187,28 @@ internal fun QuestionsStep(state: IntakeUiState, callbacks: IntakeCallbacks, mod
 private fun SavedQuestions(state: IntakeUiState, callbacks: IntakeCallbacks, last: BringIntoViewRequester) {
     if (state.questions.isEmpty()) return
 
-    MedicalMateSectionHeader(
-        title = stringResource(R.string.intake_questions_saved),
-        caption = stringResource(R.string.intake_questions_count, state.questions.size, MAX_BRIEF_CARD_QUESTIONS),
-    )
+    // 말로 넣거나 고친 질문, 지운 뒤의 목록으로 화면이 옮겨 가고 잠깐 테를 두른다(#284).
+    val focus = rememberVoiceFocus(state.voiceFocus)
+    VoiceFocusFrame(focus, IntakeFocusTarget.Questions, MedicalMateRadius.sm) {
+        MedicalMateSectionHeader(
+            title = stringResource(R.string.intake_questions_saved),
+            caption = stringResource(R.string.intake_questions_count, state.questions.size, MAX_BRIEF_CARD_QUESTIONS),
+        )
+    }
     Text(
         text = stringResource(R.string.intake_questions_ai_hint),
         style = MedicalMateTheme.typography.bodyS,
         color = MedicalMateTheme.colors.fgSubtle,
     )
     state.questions.forEachIndexed { index, question ->
-        QuestionRow(
-            number = index + 1,
-            question = question,
-            onRemoveClick = { callbacks.onRemoveQuestionClick(index) },
-            modifier = if (index == state.questions.lastIndex) Modifier.bringIntoViewRequester(last) else Modifier,
-        )
+        VoiceFocusFrame(focus, IntakeFocusTarget.Question(index), MedicalMateRadius.sm) {
+            QuestionRow(
+                number = index + 1,
+                question = question,
+                onRemoveClick = { callbacks.onRemoveQuestionClick(index) },
+                modifier = if (index == state.questions.lastIndex) Modifier.bringIntoViewRequester(last) else Modifier,
+            )
+        }
     }
 }
 

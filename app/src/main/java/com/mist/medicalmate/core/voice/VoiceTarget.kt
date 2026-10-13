@@ -79,9 +79,14 @@ data class VoicePrompt(val message: VoiceText? = null, val question: VoiceText? 
 class VoiceTargets {
     private val stack = mutableListOf<VoiceTarget>()
 
+    private val scrollers = mutableListOf<VoiceScroller>()
+
     private val asked = MutableSharedFlow<VoicePrompt>(extraBufferCapacity = PROMPT_BUFFER)
 
     val current: VoiceTarget? get() = synchronized(stack) { stack.lastOrNull() }
+
+    /** 지금 화면에서 말로 굴릴 것(#284). 시트처럼 화면 위에 뜬 것이 나중에 등록해 맨 위가 된다. */
+    val currentScroller: VoiceScroller? get() = synchronized(scrollers) { scrollers.lastOrNull() }
 
     /** 화면이 먼저 건 말. 대화가 이어지는 동안만 받는다. */
     val prompts: SharedFlow<VoicePrompt> = asked.asSharedFlow()
@@ -92,6 +97,14 @@ class VoiceTargets {
 
     fun unregister(target: VoiceTarget) {
         synchronized(stack) { stack.remove(target) }
+    }
+
+    fun registerScroller(scroller: VoiceScroller) {
+        synchronized(scrollers) { scrollers += scroller }
+    }
+
+    fun unregisterScroller(scroller: VoiceScroller) {
+        synchronized(scrollers) { scrollers.remove(scroller) }
     }
 
     /** 막대에 말을 건다. 대화 중이 아니면 아무도 받지 않아 사라진다. */

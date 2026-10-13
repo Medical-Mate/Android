@@ -6,6 +6,16 @@ import org.junit.Test
 
 class VoiceCommandTest {
     @Test
+    fun `카드를 새로 만들자는 말은 증상 정리다`() {
+        assertEquals(VoiceCommand.INTAKE, parseVoiceCommand("브리핑 카드 만들어 줘"))
+        assertEquals(VoiceCommand.INTAKE, parseVoiceCommand("브리핑 카드를 만들자"))
+        assertEquals(VoiceCommand.INTAKE, parseVoiceCommand("새 카드 작성할래"))
+        // 보거나 여는 말은 그대로 카드 목록이다.
+        assertEquals(VoiceCommand.BRIEF_CARDS, parseVoiceCommand("브리핑 카드 보여 줘"))
+        assertEquals(VoiceCommand.BRIEF_CARDS, parseVoiceCommand("카드 목록"))
+    }
+
+    @Test
     fun `탭 셋으로 간다`() {
         assertEquals(VoiceCommand.HOME, parseVoiceCommand("홈으로 가줘"))
         assertEquals(VoiceCommand.CALENDAR, parseVoiceCommand("캘린더 열어줘"))

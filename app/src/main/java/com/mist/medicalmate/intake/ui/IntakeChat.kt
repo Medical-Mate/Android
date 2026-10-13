@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,6 +46,8 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButtonStyle
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTextField
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceInput
+import com.mist.medicalmate.core.voice.rememberVoiceLazyListState
+import com.mist.medicalmate.core.voice.voicePanelInset
 
 /**
  * 2단계 증상 문답. Figma 1c-1 `402:1629`, 1c-2 `402:1506`.
@@ -67,7 +68,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceInput
  */
 @Composable
 internal fun ChatStep(state: IntakeUiState, modifier: Modifier = Modifier) {
-    val listState = rememberLazyListState()
+    val listState = rememberVoiceLazyListState()
     val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
 
     LaunchedEffect(state.messages.size, state.awaitingReply, state.speaking, state.inputMode, imeBottom) {
@@ -83,7 +84,7 @@ internal fun ChatStep(state: IntakeUiState, modifier: Modifier = Modifier) {
             start = MedicalMateSize.gutter,
             end = MedicalMateSize.gutter,
             top = MedicalMateSpace.s12,
-            bottom = MedicalMateSpace.s16,
+            bottom = MedicalMateSpace.s16 + voicePanelInset(),
         ),
         verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s14),
     ) {

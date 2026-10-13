@@ -72,19 +72,25 @@ internal fun VoiceCommandPanel(panel: VoicePanel, onDismiss: () -> Unit, modifie
                 color = if (panel.confirming) colors.fgPrimary else colors.fgDefault,
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
             )
-            // 말하는 중이면 들리는 글, 아니면 화면이 되묻는 것, 그것도 없으면 듣는 상태다.
+            // 화면이 되묻는 것. 고를 것을 한 줄에 하나씩 적을 수 있어(#284) 자르지 않는다. 말하는 동안에도
+            // 남긴다 — 목록을 보며 답하는 중에 목록이 사라지면 안 된다.
             val question = panel.question
-            Text(
-                text =
-                when {
-                    panel.heard.isNotBlank() -> panel.heard
-                    question != null -> question.resolve()
-                    else -> stringResource(panel.voice.titleRes)
-                },
-                style = MedicalMateTheme.typography.bodyS,
-                color = if (panel.heard.isBlank() && question != null) colors.fgPrimary else colors.fgSubtle,
-                maxLines = 3,
-            )
+            if (question != null) {
+                Text(
+                    text = question.resolve().sentencePerLine(),
+                    style = MedicalMateTheme.typography.bodyS,
+                    color = colors.fgPrimary,
+                )
+            }
+            // 말하는 중이면 들리는 글을 물음 아래에 따로 적는다. 물음도 들리는 글도 없으면 듣는 상태다.
+            if (panel.heard.isNotBlank() || question == null) {
+                Text(
+                    text = panel.heard.ifBlank { stringResource(panel.voice.titleRes) },
+                    style = MedicalMateTheme.typography.bodyS,
+                    color = colors.fgSubtle,
+                    maxLines = HEARD_MAX_LINES,
+                )
+            }
         }
         MedicalMateIconButton(
             onClick = onDismiss,
@@ -122,6 +128,18 @@ private fun MicBadge(listening: Boolean) {
         )
     }
 }
+
+/**
+ * 막대가 묻는 말을 문장마다 줄을 바꾼다(#284). "어디가 아프세요? 이 중에서 말씀해 주세요"가 한 줄에
+ * 이어지면 무엇을 묻고 무엇을 하라는지가 섞여 읽힌다. 마침표·물음표·느낌표 뒤의 띄어쓰기를 줄바꿈으로
+ * 바꾼다. 폭을 넘는 문장은 글꼴의 어절 단위 줄바꿈이 맡는다.
+ */
+internal fun String.sentencePerLine(): String = replace(SENTENCE_GAP, "\n")
+
+/** 문장 끝 뒤의 띄어쓰기. 닫는 따옴표가 붙어 있어도 본다. "…해 주세요." 다음 줄. */
+private val SENTENCE_GAP = Regex("""(?<=[.?!]["”']?)[ \t]+""")
+
+private const val HEARD_MAX_LINES = 3
 
 private val MicBadgeSize = 40.dp
 

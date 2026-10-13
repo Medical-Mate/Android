@@ -9,6 +9,7 @@ import com.mist.medicalmate.core.speech.SpeechChunk
 import com.mist.medicalmate.core.speech.WakeWordModelState
 import com.mist.medicalmate.core.voice.VoicePrompt
 import com.mist.medicalmate.core.voice.VoiceReply
+import com.mist.medicalmate.core.voice.VoiceScroll
 import com.mist.medicalmate.core.voice.VoiceTarget
 import com.mist.medicalmate.core.voice.VoiceText
 import kotlinx.coroutines.Dispatchers
@@ -432,6 +433,103 @@ class VoiceCommandViewModelTest {
         detector.wake()
 
         assertEquals(VoiceText(R.string.voice_command_yes_no), viewModel.uiState.value.panel?.question)
+    }
+
+    @Test
+    fun `못 알아들어도 묻던 것은 남긴다`() = runTest {
+        // 목록을 보며 답하다 잘못 들렸는데 목록이 사라지면 다시 볼 수 없다(#284).
+        val list = VoiceText(R.string.voice_intake_ask_part, listOf("· 머리 · 목"))
+        val speech =
+            FakeSpeechToText(
+                usable = true,
+                chunks = listOf(SpeechChunk.Final("팔"), SpeechChunk.Final("음 그게")),
+                keepOpen = true,
+            )
+        val viewModel = viewModel(speech = speech).ready()
+        var heard = 0
+        viewModel.targets.register(
+            VoiceTarget {
+                heard++
+                if (heard ==
+                    1
+                ) {
+                    VoiceReply.Done(R.string.voice_intake_part_list, question = list)
+                } else {
+                    VoiceReply.NotMine
+                }
+            },
+        )
+
+        detector.wake()
+
+        val panel = viewModel.uiState.value.panel
+        assertEquals(VoiceMessage(R.string.voice_command_missed, listOf("음 그게")), panel?.message)
+        assertEquals(list, panel?.question)
+    }
+
+    @Test
+    fun `다시 보여 달라고 하면 화면에 넘기지 않고 띄운 것을 그대로 둔다`() = runTest {
+        // 목록을 미처 못 보고 말이 먼저 나갔다(#284). 문답이었다면 그 말이 답으로 나가면 안 된다.
+        val list = VoiceText(R.string.voice_intake_ask_part, listOf("· 머리 · 목"))
+        val speech =
+            FakeSpeechToText(
+                usable = true,
+                chunks = listOf(SpeechChunk.Final("팔"), SpeechChunk.Final("못 봤어 다시 보여 줘")),
+                keepOpen = true,
+            )
+        val viewModel = viewModel(speech = speech).ready()
+        var screen = 0
+        viewModel.targets.register(
+            VoiceTarget {
+                screen++
+                VoiceReply.Done(R.string.voice_intake_part_list, question = list)
+            },
+        )
+
+        detector.wake()
+
+        assertEquals(1, screen)
+        assertEquals(list, viewModel.uiState.value.panel?.question)
+        assertEquals(VoiceText(R.string.voice_intake_part_list), viewModel.uiState.value.panel?.message)
+    }
+
+    @Test
+    fun `굴리라고 하면 지금 화면을 굴리고 묻던 것은 남긴다`() = runTest {
+        val speech =
+            FakeSpeechToText(
+                usable = true,
+                chunks = listOf(SpeechChunk.Final("팔"), SpeechChunk.Final("아래로 내려 줘")),
+                keepOpen = true,
+            )
+        val viewModel = viewModel(speech = speech).ready()
+        val list = VoiceText(R.string.voice_intake_ask_part, listOf("· 머리"))
+        var screen = 0
+        viewModel.targets.register(
+            VoiceTarget {
+                screen++
+                VoiceReply.Done(R.string.voice_intake_part_list, question = list)
+            },
+        )
+        val scrolled = mutableListOf<VoiceScroll>()
+        viewModel.targets.registerScroller { direction -> scrolled.add(direction) }
+
+        detector.wake()
+
+        assertEquals(listOf(VoiceScroll.DOWN), scrolled)
+        assertEquals(1, screen)
+        assertEquals(VoiceText(R.string.voice_scroll_down), viewModel.uiState.value.panel?.message)
+        assertEquals(list, viewModel.uiState.value.panel?.question)
+    }
+
+    @Test
+    fun `더 굴릴 곳이 없으면 그렇다고 한다`() = runTest {
+        val speech = FakeSpeechToText(usable = true, chunks = listOf(SpeechChunk.Final("맨 위로")), keepOpen = true)
+        val viewModel = viewModel(speech = speech).ready()
+        viewModel.targets.registerScroller { false }
+
+        detector.wake()
+
+        assertEquals(VoiceText(R.string.voice_scroll_end_up), viewModel.uiState.value.panel?.message)
     }
 
     private fun viewModel(

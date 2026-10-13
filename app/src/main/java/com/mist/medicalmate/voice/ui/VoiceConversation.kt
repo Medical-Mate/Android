@@ -3,8 +3,10 @@ package com.mist.medicalmate.voice.ui
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.speech.VoiceWakeTrace
 import com.mist.medicalmate.core.voice.VoiceReply
+import com.mist.medicalmate.core.voice.VoiceScroll
 import com.mist.medicalmate.core.voice.VoiceTargets
 import com.mist.medicalmate.core.voice.VoiceWords
+import com.mist.medicalmate.core.voice.parseVoiceScroll
 
 /**
  * 대화의 한 마디에 답한다(#282).
@@ -16,12 +18,15 @@ import com.mist.medicalmate.core.voice.VoiceWords
  * @param say 막대에 적는다. `confirming`이면 "네"를 기다리는 물음이다. `question`은 화면이 되묻는
  *   것이다. 비우면 지난 물음을 지운다.
  * @param command 전역 명령을 그래프에 넘긴다.
+ * @param shown 지금 막대에 떠 있는 것. 못 알아들었을 때 물음을 남기고, "다시 보여 줘"에 그대로 다시
+ *   띄운다(#284).
  */
 internal class VoiceConversation(
     private val targets: VoiceTargets,
     private val trace: VoiceWakeTrace,
     private val say: (message: VoiceMessage, confirming: Boolean, question: VoiceMessage?) -> Unit,
     private val command: (VoiceCommandRequest) -> Unit,
+    private val shown: () -> VoicePanel? = { null },
 ) {
     /** 아직 "네"를 기다리는 일. */
     private var pending: VoiceReply.Confirm? = null
@@ -29,15 +34,53 @@ internal class VoiceConversation(
     /** 말 하나에 답한다. 다음 말을 계속 들을지 돌려준다. */
     suspend fun respond(text: String): Boolean {
         val asking = pending
+        val panel = shown()
+        val scroll = parseVoiceScroll(text)
         return when {
             VoiceWords.isStop(text) -> {
                 trace.log { "대화: \"$text\" → 그만" }
                 false
             }
 
+            // "아래로", "맨 위로". 어느 화면이든 같은 말로 굴린다. 문답에서 이 말이 답으로 나가지 않는다.
+            scroll != null -> scroll(text, scroll, panel)
+
+            // 막대에 띄운 목록을 미처 못 봤다. 화면에 넘기지 않고 그대로 다시 띄운다. 문답에서는 이
+            // 말이 답으로 나가면 안 된다.
+            panel?.question != null && VoiceWords.isRepeat(text) -> {
+                trace.log { "대화: \"$text\" → 다시 보여 주기" }
+                say(panel.message, panel.confirming, panel.question)
+                true
+            }
+
             asking != null -> answer(text, asking)
             else -> reply(text)
         }
+    }
+
+    /**
+     * 지금 화면을 굴린다. 막대에 띄운 물음은 그대로 둔다 — 굴린 것은 무엇을 할지 바꾸지 않는다. "네"를
+     * 기다리는 중이면 그 물음도 남긴다.
+     */
+    private fun scroll(text: String, direction: VoiceScroll, panel: VoicePanel?): Boolean {
+        val scroller = targets.currentScroller
+        val moved = scroller?.scroll(direction) == true
+        trace.log { "대화: \"$text\" → 굴리기 $direction ${if (moved) "함" else "못 함"}" }
+        val message =
+            when {
+                scroller == null -> R.string.voice_scroll_none
+                !moved && (direction == VoiceScroll.DOWN || direction == VoiceScroll.BOTTOM) ->
+                    R.string.voice_scroll_end_down
+
+                !moved -> R.string.voice_scroll_end_up
+                direction == VoiceScroll.DOWN -> R.string.voice_scroll_down
+                direction == VoiceScroll.UP -> R.string.voice_scroll_up
+                direction == VoiceScroll.BOTTOM -> R.string.voice_scroll_bottom
+                else -> R.string.voice_scroll_top
+            }
+        val confirming = panel?.confirming == true
+        say(if (confirming && panel != null) panel.message else VoiceMessage(message), confirming, panel?.question)
+        return true
     }
 
     private suspend fun reply(text: String): Boolean {
@@ -83,10 +126,11 @@ internal class VoiceConversation(
         val parsed = parseVoiceCommand(text)
         trace.log { "대화: 전역 명령 ${parsed ?: "모르는 말"}" }
         if (parsed == null) {
+            // 묻던 것이 있으면 남긴다. 목록을 보며 답하다 잘못 들렸는데 목록이 사라지면 다시 볼 수 없다.
             say(
                 VoiceMessage(R.string.voice_command_missed, listOf(text)),
                 false,
-                VoiceMessage(R.string.voice_command_hint),
+                shown()?.question ?: VoiceMessage(R.string.voice_command_hint),
             )
         } else {
             command(VoiceCommandRequest(parsed, text))

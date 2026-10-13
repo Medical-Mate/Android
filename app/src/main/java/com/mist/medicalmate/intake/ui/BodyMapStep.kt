@@ -39,7 +39,7 @@ internal fun BodyPartStep(state: IntakeUiState, callbacks: IntakeCallbacks, modi
     StepContent(step = state.step, scrollKey = bodyMap.screen, modifier = modifier) {
         when (bodyMap.screen) {
             BodyMapScreen.LIST -> BodyMapPartList(state = bodyMap, callbacks = callbacks)
-            BodyMapScreen.MAP_3D -> BodyMap3dStep(state = bodyMap, callbacks = callbacks)
+            BodyMapScreen.MAP_3D -> BodyMap3dStep(state = bodyMap, callbacks = callbacks, voiceFocus = state.voiceFocus)
             else -> ImagePicker(state = bodyMap, callbacks = callbacks)
         }
     }
