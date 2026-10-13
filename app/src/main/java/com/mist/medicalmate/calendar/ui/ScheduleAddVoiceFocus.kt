@@ -49,8 +49,8 @@ internal fun rememberVoiceFocus(focus: ScheduleAddFocus?): ScheduleAddFocus? {
 /**
  * 말로 바뀐 자리를 감싼다(#282). [focus]의 첫 자리면 화면을 옮겨 보이게 하고, 들어 있으면 테를 두른다.
  *
- * **옮길 때 아래를 넉넉히 둔다.** 음성 막대가 화면 아래에 떠서 하단 버튼 위까지 덮는다. 딱 맞춰 들이면
- * 그 자리가 막대 뒤에 들어간다.
+ * 옮길 때 위아래를 조금 둔다. 화면 끝에 딱 붙으면 테가 잘려 보인다. 음성 막대는 화면을 덮지 않고
+ * 화면이 그만큼 줄어든다(#284).
  *
  * 테는 내용 위에 그린다. 칸마다 면색이 달라 뒤에 깐 면은 가려진다. 색이 나타났다 사라지는 것이라
  * 기기에서 애니메이션을 꺼도 테는 선다. 막대의 윗줄이 무엇을 했는지 함께 적으므로 색만으로 알리지 않는다.
@@ -67,7 +67,7 @@ internal fun VoiceFocusFrame(
     var size by remember { mutableStateOf(IntSize.Zero) }
     val density = LocalDensity.current
     val above = with(density) { MedicalMateSpace.s16.toPx() }
-    val below = with(density) { VoiceBarClearance.toPx() }
+    val below = with(density) { MedicalMateSpace.s16.toPx() }
     val stroke = with(density) { MedicalMateSpace.s2.toPx() }
 
     LaunchedEffect(focus) {
@@ -104,9 +104,6 @@ internal fun VoiceFocusFrame(
         content()
     }
 }
-
-/** 화면 아래에 뜬 음성 막대가 덮는 높이에 여유를 더한 것. 막대는 두 줄 글에 위아래 여백이다. */
-private val VoiceBarClearance = MedicalMateSpace.s40 + MedicalMateSpace.s40 + MedicalMateSpace.s32
 
 /** 테를 두르고 있는 시간. 막대의 윗줄을 읽고 칸을 찾아볼 만큼이다. */
 private const val VOICE_FOCUS_HOLD_MS = 1_800L
