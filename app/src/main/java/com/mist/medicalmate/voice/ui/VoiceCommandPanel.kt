@@ -72,11 +72,18 @@ internal fun VoiceCommandPanel(panel: VoicePanel, onDismiss: () -> Unit, modifie
                 color = if (panel.confirming) colors.fgPrimary else colors.fgDefault,
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
             )
+            // 말하는 중이면 들리는 글, 아니면 화면이 되묻는 것, 그것도 없으면 듣는 상태다.
+            val question = panel.question
             Text(
-                text = panel.heard.ifBlank { stringResource(panel.voice.titleRes) },
+                text =
+                when {
+                    panel.heard.isNotBlank() -> panel.heard
+                    question != null -> question.resolve()
+                    else -> stringResource(panel.voice.titleRes)
+                },
                 style = MedicalMateTheme.typography.bodyS,
-                color = colors.fgSubtle,
-                maxLines = 2,
+                color = if (panel.heard.isBlank() && question != null) colors.fgPrimary else colors.fgSubtle,
+                maxLines = 3,
             )
         }
         MedicalMateIconButton(

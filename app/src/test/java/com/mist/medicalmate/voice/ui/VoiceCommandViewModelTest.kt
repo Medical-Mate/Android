@@ -7,8 +7,10 @@ import com.mist.medicalmate.core.speech.FakeVoiceWake
 import com.mist.medicalmate.core.speech.FakeWakeWordDetector
 import com.mist.medicalmate.core.speech.SpeechChunk
 import com.mist.medicalmate.core.speech.WakeWordModelState
+import com.mist.medicalmate.core.voice.VoicePrompt
 import com.mist.medicalmate.core.voice.VoiceReply
 import com.mist.medicalmate.core.voice.VoiceTarget
+import com.mist.medicalmate.core.voice.VoiceText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -358,6 +360,78 @@ class VoiceCommandViewModelTest {
         advanceTimeBy(2)
 
         assertNull(viewModel.uiState.value.panel)
+    }
+
+    @Test
+    fun `화면의 답에 붙은 물음을 막대에 적는다`() = runTest {
+        val speech = FakeSpeechToText(usable = true, chunks = listOf(SpeechChunk.Final("20일")), keepOpen = true)
+        val viewModel = viewModel(speech = speech).ready()
+        viewModel.targets.register(
+            VoiceTarget {
+                VoiceReply.Done(
+                    R.string.voice_schedule_filled,
+                    listOf("10월 20일"),
+                    question = VoiceText(R.string.voice_ask_hospital),
+                )
+            },
+        )
+
+        detector.wake()
+
+        assertEquals(VoiceText(R.string.voice_ask_hospital), viewModel.uiState.value.panel?.question)
+    }
+
+    @Test
+    fun `화면이 먼저 건 말을 막대에 적는다`() = runTest {
+        // 병원 찾기가 결과를 받아 "같은 이름이 2곳 있어요"라고 묻는 길이다.
+        val viewModel = viewModel(speech = FakeSpeechToText(usable = true, keepOpen = true)).ready()
+        detector.wake()
+
+        viewModel.targets.ask(
+            VoicePrompt(
+                message = VoiceText(R.string.voice_hospital_found_same, listOf("2")),
+                question = VoiceText(R.string.voice_hospital_ask_which),
+            ),
+        )
+
+        val panel = viewModel.uiState.value.panel
+        assertEquals(VoiceText(R.string.voice_hospital_found_same, listOf("2")), panel?.message)
+        assertEquals(VoiceText(R.string.voice_hospital_ask_which), panel?.question)
+    }
+
+    @Test
+    fun `화면이 말을 걸면 12초를 다시 센다`() = runTest {
+        // 물어 놓고 바로 닫히면 답할 틈이 없다.
+        val viewModel = viewModel(speech = FakeSpeechToText(usable = true, keepOpen = true)).ready()
+        detector.wake()
+
+        advanceTimeBy(10_000)
+        viewModel.targets.ask(VoicePrompt(question = VoiceText(R.string.voice_ask_date)))
+        advanceTimeBy(10_000)
+
+        assertNotNull(viewModel.uiState.value.panel)
+        advanceTimeBy(2_001)
+        assertNull(viewModel.uiState.value.panel)
+    }
+
+    @Test
+    fun `막대가 닫혀 있을 때 건 말은 버려진다`() = runTest {
+        val viewModel = viewModel().ready()
+
+        viewModel.targets.ask(VoicePrompt(question = VoiceText(R.string.voice_ask_date)))
+
+        assertNull(viewModel.uiState.value.panel)
+    }
+
+    @Test
+    fun `저장을 물을 때는 네나 아니요로 답하라고 적는다`() = runTest {
+        val speech = FakeSpeechToText(usable = true, chunks = listOf(SpeechChunk.Final("저장해 줘")), keepOpen = true)
+        val viewModel = viewModel(speech = speech).ready()
+        viewModel.targets.register(VoiceTarget { VoiceReply.Confirm(R.string.voice_schedule_confirm_save) {} })
+
+        detector.wake()
+
+        assertEquals(VoiceText(R.string.voice_command_yes_no), viewModel.uiState.value.panel?.question)
     }
 
     private fun viewModel(

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.core.voice.VoiceReply
+import com.mist.medicalmate.core.voice.VoiceText
 import com.mist.medicalmate.core.voice.VoiceWords
 import com.mist.medicalmate.visit.data.HospitalRepository
 import com.mist.medicalmate.visit.data.HospitalSearchResult
@@ -45,6 +46,12 @@ internal constructor(private val repository: HospitalRepository) : ViewModel() {
 
     private var searchJob: Job? = null
 
+    /**
+     * 말로 찾는 중인지(#282). 그러면 결과가 오는 대로 [decideVoicePick]으로 고를지 되물을지 정한다.
+     * 예약 문자에서 온 이름이나 손으로 친 검색어는 사람이 보고 고른다.
+     */
+    private var voicePick = false
+
     /** 이번 화면에서 받아 둔 결과. 같은 검색어를 다시 치면 그대로 쓴다. */
     private val cache = mutableMapOf<String, HospitalSearchResult>()
 
@@ -59,9 +66,11 @@ internal constructor(private val repository: HospitalRepository) : ViewModel() {
         purpose: HospitalPickPurpose = HospitalPickPurpose.AFTER_VISIT,
         forExistingCard: Boolean = false,
         initialQuery: String? = null,
+        voicePick: Boolean = false,
     ) {
         searchJob?.cancel()
         cache.clear()
+        this.voicePick = voicePick
         mutableUiState.value = HospitalPickUiState(purpose = purpose, forExistingCard = forExistingCard)
         initialQuery?.trim()?.takeIf { it.isNotEmpty() }?.let(::searchFirst)
     }
@@ -95,6 +104,15 @@ internal constructor(private val repository: HospitalRepository) : ViewModel() {
                 val found = candidates[index - 1]
                 mutableUiState.update { it.copy(query = if (result.isHit()) found else query) }
                 apply(result)
+                if (voicePick && result !is ApiResult.Success) {
+                    mutableUiState.update {
+                        it.copy(voiceDecision = HospitalVoiceDecision.Ask(HospitalAskReason.NONE, emptyList()))
+                    }
+                } else if (voicePick && result is ApiResult.Success) {
+                    val decision = decideVoicePick(query, result.value.hospitals)
+                    val candidates = (decision as? HospitalVoiceDecision.Ask)?.candidates.orEmpty()
+                    mutableUiState.update { it.copy(voiceDecision = decision, voiceCandidates = candidates) }
+                }
             }
     }
 
@@ -192,7 +210,7 @@ internal constructor(private val repository: HospitalRepository) : ViewModel() {
      */
     fun onVoice(text: String, submit: (Hospital?) -> Unit): VoiceReply =
         when (val voice = parseHospitalPickVoice(text)) {
-            null -> VoiceReply.NotMine
+            null -> byArea(text, submit)
             is HospitalPickVoice.Pick -> {
                 val results = mutableUiState.value.results
                 val hospital = if (voice.ordinal ==
@@ -221,11 +239,56 @@ internal constructor(private val repository: HospitalRepository) : ViewModel() {
                 }
             }
 
+            // 말로 다시 찾으면 결과가 오는 대로 고르거나 되묻는다. 입력 대기 없이 바로 찾는다.
             is HospitalPickVoice.Search -> {
-                onQueryChange(voice.query)
+                searchJob?.cancel()
+                voicePick = true
+                searchFirst(voice.query)
                 VoiceReply.Done(R.string.voice_hospital_searching, listOf(voice.query))
             }
         }
+
+    /** 막대가 결과를 알렸다. 다시 알리지 않게 지운다. 화면이 고르거나 묻기 전에 부른다. */
+    fun onVoiceDecisionHandled() {
+        mutableUiState.update { it.copy(voiceDecision = null) }
+    }
+
+    /**
+     * 동네나 지점 이름으로 고른다(#282). "강남에 있는 거", "역삼동", "강남점".
+     *
+     * 이름이 같은 여러 지점을 가리는 중이면 그곳들만, 아니면 보이는 목록 전체에서 찾는다. 하나면 고르고
+     * 마친다. 여럿이면 그곳들로 좁혀 두고 다시 묻는다. 못 찾았는데 동네를 말한 것 같으면 없다고
+     * 알리고, 아니면 이 화면의 말이 아니다. "뒤로" 같은 전역 명령이 그 길로 간다.
+     */
+    private fun byArea(text: String, submit: (Hospital?) -> Unit): VoiceReply {
+        val state = mutableUiState.value
+        val candidates = state.voiceCandidates.ifEmpty { state.results }
+        val matched = candidates.byArea(text)
+        return when {
+            matched.size == 1 -> {
+                onHospitalClick(matched.single())
+                submit(matched.single())
+                VoiceReply.Done(R.string.voice_hospital_picked, listOf(matched.single().name))
+            }
+
+            matched.size > 1 -> {
+                mutableUiState.update { it.copy(voiceCandidates = matched) }
+                VoiceReply.Done(
+                    R.string.voice_hospital_narrowed,
+                    listOf(matched.size.toString()),
+                    question = VoiceText(R.string.voice_hospital_ask_which),
+                )
+            }
+
+            candidates.isNotEmpty() && looksLikeArea(text) ->
+                VoiceReply.Done(
+                    R.string.voice_hospital_no_area,
+                    question = VoiceText(R.string.voice_hospital_ask_which),
+                )
+
+            else -> VoiceReply.NotMine
+        }
+    }
 
     private fun ApiResult<HospitalSearchResult>.isHit(): Boolean =
         this is ApiResult.Success && value.hospitals.isNotEmpty()

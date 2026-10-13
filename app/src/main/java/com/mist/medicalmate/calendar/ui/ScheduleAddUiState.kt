@@ -48,6 +48,11 @@ data class ScheduleAddUiState(
      * 화면이 병원 찾기를 열면서 지운다.
      */
     val hospitalSearch: String? = null,
+    /**
+     * [hospitalSearch]가 말에서 온 것인지(#282). 그러면 병원 찾기가 하나로 좁혀지는 경우 알아서
+     * 고르고, 여럿이면 막대로 되묻는다. 예약 문자에서 온 것은 지금처럼 사람이 주소를 보고 고른다.
+     */
+    val hospitalSearchByVoice: Boolean = false,
 ) {
     /** 고른 카드 수. 섹션 머리 오른쪽에 적는다. */
     val pickedCardCount: Int get() = cards.count { it.picked }

@@ -3,6 +3,7 @@ package com.mist.medicalmate.calendar.ui
 import com.mist.medicalmate.R
 import com.mist.medicalmate.calendar.share.AppointmentTextReader
 import com.mist.medicalmate.core.voice.VoiceReply
+import com.mist.medicalmate.core.voice.VoiceText
 import com.mist.medicalmate.core.voice.VoiceWords
 
 /**
@@ -38,15 +39,29 @@ internal class ScheduleAddVoiceActions(
     private val update: ((ScheduleAddUiState) -> ScheduleAddUiState) -> Unit,
     private val nextTodoId: () -> String,
 ) {
-    suspend fun handle(text: String, routes: ScheduleAddVoiceRoutes): VoiceReply =
-        when (val voice = parseScheduleAddVoice(text)) {
-            null -> VoiceReply.NotMine
-            is ScheduleAddVoice.Fill -> fill(voice.text, routes.save)
-            ScheduleAddVoice.Save, ScheduleAddVoice.Exit, ScheduleAddVoice.OpenHospital, ScheduleAddVoice.CardNew ->
-                route(voice, routes)
+    /**
+     * 말 하나를 처리한다. **이 화면에 머무는 일이면 빠진 칸을 이어서 묻는다**(#282). 병원이 없으면
+     * 병원을, 날짜가 없으면 날짜를, 다 찼으면 저장하라고 한다. 사용자는 막대를 보고 다음 말을 한다.
+     * 병원 찾기·새 카드처럼 화면을 떠나는 일이면 묻지 않는다. 옮겨 간 화면이 묻는다.
+     */
+    suspend fun handle(text: String, routes: ScheduleAddVoiceRoutes): VoiceReply {
+        val voice = parseScheduleAddVoice(text)
+        val reply =
+            when (voice) {
+                null -> VoiceReply.NotMine
+                is ScheduleAddVoice.Fill -> fill(voice.text, routes.save)
+                ScheduleAddVoice.Save, ScheduleAddVoice.Exit, ScheduleAddVoice.OpenHospital, ScheduleAddVoice.CardNew ->
+                    route(voice, routes)
 
-            else -> form(voice)
+                else -> form(voice)
+            }
+        val staying = voice?.let { it !in LEAVING } == true && state().hospitalSearch == null
+        return if (reply is VoiceReply.Done && reply.question == null && staying) {
+            reply.copy(question = state().nextQuestion())
+        } else {
+            reply
         }
+    }
 
     /** 화면을 떠나거나 서버에 남기는 일. 저장과, 적은 것을 버리고 나가기는 확인을 받는다. */
     private fun route(voice: ScheduleAddVoice, routes: ScheduleAddVoiceRoutes): VoiceReply = when (voice) {
@@ -85,11 +100,11 @@ internal class ScheduleAddVoiceActions(
             VoiceReply.Done(R.string.voice_schedule_time_cleared)
         }
 
-        is ScheduleAddVoice.CardPick -> card(state().cards.byVoice(voice.ordinal, voice.words), pick = true)
+        is ScheduleAddVoice.CardPick -> card(state().cards.matchVoice(voice.ordinal, voice.words), pick = true)
         is ScheduleAddVoice.CardDrop -> card(state().cards.toDrop(voice), pick = false)
         is ScheduleAddVoice.TodoAdd -> addTodo(voice.label)
         is ScheduleAddVoice.TodoCheck -> checkTodo(voice)
-        is ScheduleAddVoice.TodoDelete -> deleteTodo(state().todos.byVoice(voice.ordinal, voice.words))
+        is ScheduleAddVoice.TodoDelete -> deleteTodo(state().todos.matchVoice(voice.ordinal, voice.words))
         is ScheduleAddVoice.TodoEdit -> editTodo(voice)
         else -> VoiceReply.NotMine
     }
@@ -108,8 +123,9 @@ internal class ScheduleAddVoiceActions(
         )
     }
 
-    private fun card(card: ScheduleAddCard?, pick: Boolean): VoiceReply {
-        if (card == null) return VoiceReply.Done(R.string.voice_schedule_card_missing)
+    /** 맞는 카드가 없거나 여럿이면 하지 않고 되묻는다. 몇 번째인지로 답하면 된다. */
+    private fun card(matches: List<ScheduleAddCard>, pick: Boolean): VoiceReply {
+        val card = matches.singleOrNull() ?: return whichOne(matches.map { it.title }, ScheduleAddTarget.CARD)
         update { it.withCardPicked(card.id, picked = pick) }
         val message = if (pick) R.string.voice_schedule_card_picked else R.string.voice_schedule_card_dropped
         return VoiceReply.Done(message, listOf(card.title))
@@ -123,16 +139,15 @@ internal class ScheduleAddVoiceActions(
     }
 
     private fun checkTodo(voice: ScheduleAddVoice.TodoCheck): VoiceReply {
-        val todo =
-            state().todos.byVoice(voice.ordinal, voice.words)
-                ?: return VoiceReply.Done(R.string.voice_schedule_todo_missing)
+        val matches = state().todos.matchVoice(voice.ordinal, voice.words)
+        val todo = matches.singleOrNull() ?: return whichOne(matches.map { it.label }, ScheduleAddTarget.TODO)
         update { it.withTodo(todo.id) { found -> found.copy(done = voice.done) } }
         val message = if (voice.done) R.string.voice_schedule_todo_done else R.string.voice_schedule_todo_undone
         return VoiceReply.Done(message, listOf(todo.label))
     }
 
-    private fun deleteTodo(todo: ScheduleAddTodo?): VoiceReply {
-        if (todo == null) return VoiceReply.Done(R.string.voice_schedule_todo_missing)
+    private fun deleteTodo(matches: List<ScheduleAddTodo>): VoiceReply {
+        val todo = matches.singleOrNull() ?: return whichOne(matches.map { it.label }, ScheduleAddTarget.TODO)
         update { it.copy(todos = it.todos.filterNot { found -> found.id == todo.id }) }
         return VoiceReply.Done(R.string.voice_schedule_todo_deleted, listOf(todo.label))
     }
@@ -163,6 +178,8 @@ internal class ScheduleAddVoiceActions(
                 time = read.time ?: current.time,
                 hospital = read.hospital ?: current.hospital,
                 hospitalSearch = read.hospital ?: current.hospitalSearch,
+                // 말로 찾은 병원은 병원 찾기가 하나로 좁혀지면 알아서 고른다.
+                hospitalSearchByVoice = read.hospital != null || current.hospitalSearchByVoice,
                 sheet = ScheduleAddSheet.NONE,
             )
         }
@@ -183,8 +200,38 @@ private val ScheduleAddUiState.hasInput: Boolean
     get() = hospital != null || date != null || time != null || cards.any { it.picked } || todos.isNotEmpty()
 
 /** 뺄 카드. 말한 카드를 먼저 찾고, 못 찾았는데 골라 둔 카드가 한 장이면 그 카드다. */
-private fun List<ScheduleAddCard>.toDrop(voice: ScheduleAddVoice.CardDrop): ScheduleAddCard? =
-    byVoice(voice.ordinal, voice.words) ?: filter { it.picked }.singleOrNull()
+private fun List<ScheduleAddCard>.toDrop(voice: ScheduleAddVoice.CardDrop): List<ScheduleAddCard> =
+    matchVoice(voice.ordinal, voice.words).ifEmpty { listOfNotNull(filter { it.picked }.singleOrNull()) }
+
+/** 화면을 떠나는 일. 옮겨 간 화면이 물으므로 이 화면은 다음 칸을 묻지 않는다. */
+private val LEAVING = setOf(ScheduleAddVoice.Exit, ScheduleAddVoice.OpenHospital, ScheduleAddVoice.CardNew)
+
+/** 어느 것을 가리키는지 되물을 대상. */
+private enum class ScheduleAddTarget { CARD, TODO }
+
+/**
+ * 맞는 것이 없거나 여럿일 때의 되물음. 여럿이면 후보를 적고 몇 번째인지 묻는다.
+ */
+private fun whichOne(candidates: List<String>, target: ScheduleAddTarget): VoiceReply {
+    val card = target == ScheduleAddTarget.CARD
+    if (candidates.isEmpty()) {
+        val missing = if (card) R.string.voice_schedule_card_missing else R.string.voice_schedule_todo_missing
+        return VoiceReply.Done(missing)
+    }
+    val which = if (card) R.string.voice_schedule_card_which else R.string.voice_schedule_todo_which
+    val ask = if (card) R.string.voice_schedule_card_ask_ordinal else R.string.voice_schedule_todo_ask_ordinal
+    return VoiceReply.Done(which, listOf(candidates.joinToString(" · ")), question = VoiceText(ask))
+}
+
+/**
+ * 이어서 물을 것. 일정에 꼭 있어야 하는 병원과 날짜를 차례로 묻고, 다 찼으면 저장하라고 한다.
+ * 시간·카드·할 일은 없어도 저장되므로 묻지 않고 마지막 안내에 함께 적는다.
+ */
+internal fun ScheduleAddUiState.nextQuestion(): VoiceText = when {
+    hospital == null -> VoiceText(R.string.voice_ask_hospital)
+    date == null -> VoiceText(R.string.voice_ask_date)
+    else -> VoiceText(R.string.voice_ask_done)
+}
 
 private fun ScheduleAddUiState.withTodo(id: String, change: (ScheduleAddTodo) -> ScheduleAddTodo) =
     copy(todos = todos.map { if (it.id == id) change(it) else it })

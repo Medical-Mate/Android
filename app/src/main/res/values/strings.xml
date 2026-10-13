@@ -596,8 +596,9 @@
     <string name="voice_command_hint">"캘린더 열어줘"처럼 말씀해 주세요</string>
     <string name="voice_command_missed">알아듣지 못했어요(“%1$s”). 다시 말씀해 주세요</string>
     <string name="voice_command_close">닫기</string>
+    <string name="voice_command_yes_no">"네"나 "아니요"로 답해 주세요</string>
     <string name="voice_command_cancelled">하지 않았어요. 이어서 말씀해 주세요</string>
-    <string name="voice_command_confirm_again">"네"나 "아니요"로 답해 주세요</string>
+    <string name="voice_command_confirm_again">잘 듣지 못했어요. 이대로 할까요?</string>
     <string name="voice_command_moved">옮겼어요. 이어서 말씀해 주세요</string>
     <!-- 일정 추가(1r-4)를 말로(#282). 시안에 없는 문구다. -->
     <string name="voice_schedule_filled">%1$s 적었어요</string>
@@ -608,6 +609,13 @@
     <string name="voice_schedule_todo_added">할 일을 더했어요: %1$s</string>
     <string name="voice_schedule_card_picked">가져갈 카드로 골랐어요: %1$s</string>
     <string name="voice_schedule_card_missing">그 카드를 찾지 못했어요. 몇 번째 카드인지 말씀해 주세요</string>
+    <string name="voice_schedule_card_which">맞는 카드가 여럿이에요: %1$s</string>
+    <string name="voice_schedule_card_ask_ordinal">몇 번째 카드인지 말씀해 주세요</string>
+    <string name="voice_schedule_todo_which">맞는 할 일이 여럿이에요: %1$s</string>
+    <string name="voice_schedule_todo_ask_ordinal">몇 번째 할 일인지 말씀해 주세요</string>
+    <string name="voice_ask_hospital">어느 병원에 가세요? 병원 이름을 말씀해 주세요</string>
+    <string name="voice_ask_date">언제 가세요? "10월 20일 오후 3시"처럼 말씀해 주세요</string>
+    <string name="voice_ask_done">다 됐으면 "저장"이라고 해 주세요. 시간·카드·할 일도 말로 바꿀 수 있어요</string>
     <string name="voice_schedule_card_dropped">가져갈 카드에서 뺐어요: %1$s</string>
     <string name="voice_schedule_card_new">새 브리핑 카드를 만들러 가요</string>
     <string name="voice_schedule_hospital_open">병원 찾기를 열었어요. 병원 이름이나 몇 번째인지 말씀해 주세요</string>
@@ -625,6 +633,15 @@
     <!-- 병원 찾기(1m · 1m-B)를 말로(#282). 시안에 없는 문구다. -->
     <string name="voice_hospital_picked">골랐어요: %1$s</string>
     <string name="voice_hospital_no_row">목록에 그 병원이 없어요. 몇 번째인지 다시 말씀해 주세요</string>
+    <string name="voice_hospital_auto_picked">병원을 정했어요: %1$s</string>
+    <string name="voice_hospital_found_same">같은 이름의 병원이 %1$s곳 있어요</string>
+    <string name="voice_hospital_found_many">병원을 %1$s곳 찾았어요</string>
+    <string name="voice_hospital_not_found">그 이름으로 찾은 병원이 없어요</string>
+    <string name="voice_hospital_ask_which">몇 번째인지, 아니면 동네나 지점 이름을 말씀해 주세요</string>
+    <string name="voice_hospital_ask_which_or_name">몇 번째인지, 아니면 병원 이름을 더 자세히 말씀해 주세요</string>
+    <string name="voice_hospital_ask_name">병원 이름을 다시 말씀해 주세요</string>
+    <string name="voice_hospital_narrowed">아직 %1$s곳이 맞아요</string>
+    <string name="voice_hospital_no_area">목록에서 그 동네의 병원을 찾지 못했어요</string>
     <string name="voice_hospital_searching">다시 찾아요: %1$s</string>
 
     <!-- 통증 슬라이더 양끝 라벨. Figma Severity Slider 마스터에서 읽었다. -->

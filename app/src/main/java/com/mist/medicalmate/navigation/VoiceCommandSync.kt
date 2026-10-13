@@ -93,9 +93,10 @@ internal fun VoiceCommandHost(
  * 탭 셋은 탭을 누른 것과 같다. 뒤로는 시작 화면에서 멈춘다. 그 아래로 pop하면 그래프가
  * 빈다.
  *
- * 일정 추가는 말에 날짜가 들어 있으면 그 말을 예약 문자처럼 들고 간다. "10월 20일 오후 3시
- * 고려튼튼통증의학과 일정 추가해 줘"가 칸이 채워진 일정 추가가 된다(#282). 날짜가 없는 "일정
- * 추가해 줘"에 넘기면 "날짜를 찾지 못했어요"가 떠서 넘기지 않는다.
+ * 일정 추가는 말에 날짜나 병원이 들어 있으면 그 말을 예약 문자처럼 들고 간다. "10월 20일 오후
+ * 3시 고려튼튼통증의학과 일정 추가해 줘"가 칸이 채워진 일정 추가가 된다(#282). 아무것도 없는 "일정
+ * 추가해 줘"에 넘기면 "날짜를 찾지 못했어요"가 떠서 넘기지 않는다. 말로 연 것이라는 표시(`voice`)를
+ * 함께 실어, 병원을 말했으면 병원 찾기가 하나로 좁혀질 때 알아서 고른다.
  */
 private fun NavHostController.perform(request: VoiceCommandRequest) {
     when (request.command) {
@@ -107,11 +108,17 @@ private fun NavHostController.perform(request: VoiceCommandRequest) {
         VoiceCommand.INTAKE -> navigate(IntakeDestination(null))
         VoiceCommand.BRIEF_CARDS -> navigate(BriefCardListDestination) { launchSingleTop = true }
         VoiceCommand.SCHEDULE_ADD ->
-            navigate(ScheduleAddDestination(sharedText = request.text.takeIf(::mentionsDate)))
+            navigate(ScheduleAddDestination(sharedText = request.text.takeIf(::mentionsSchedule), voice = true))
     }
 }
 
-/** 말에 날짜가 들어 있는지. 숫자나 "내일"·"다음 주"·요일 같은 말을 본다. 읽는 것은 일정 추가가 한다. */
-private fun mentionsDate(text: String): Boolean = DATE_HINT.containsMatchIn(text)
+/**
+ * 말에 일정 칸으로 읽을 것이 있는지. 날짜("내일"·"다음 주"·요일·숫자)나 병원 이름의 끝("병원"·"의원"·
+ * "○○과")을 본다. 읽는 것은 일정 추가가 한다. "OO병원 일정 추가해 줘"도 병원을 들고 가야 한다.
+ */
+private fun mentionsSchedule(text: String): Boolean =
+    DATE_HINT.containsMatchIn(text) || HOSPITAL_HINT.containsMatchIn(text)
+
+private val HOSPITAL_HINT = Regex("""병원|의원|치과|한의원|클리닉|과\s""")
 
 private val DATE_HINT = Regex("""\d|오늘|내일|모레|글피|다음\s?주|이번\s?주|다음\s?달|[월화수목금토일]요일""")

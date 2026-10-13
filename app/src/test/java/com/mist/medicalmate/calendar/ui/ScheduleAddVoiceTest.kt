@@ -6,6 +6,7 @@ import com.mist.medicalmate.card.data.CardListItem
 import com.mist.medicalmate.card.ui.FakeCardRepository
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.core.voice.VoiceReply
+import com.mist.medicalmate.core.voice.VoiceText
 import com.mist.medicalmate.core.voice.VoiceWords
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -226,7 +227,11 @@ class ScheduleAddVoiceTest {
 
         val reply = viewModel.voice.handle("저장해 줘", ScheduleAddVoiceRoutes())
 
-        assertEquals(VoiceReply.Done(R.string.voice_schedule_missing), reply)
+        // 빠진 칸을 알리고 이어서 그 칸을 묻는다(#282).
+        assertEquals(
+            VoiceReply.Done(R.string.voice_schedule_missing, question = VoiceText(R.string.voice_ask_hospital)),
+            reply,
+        )
         assertTrue(viewModel.uiState.value.showErrors)
     }
 
@@ -302,7 +307,7 @@ class ScheduleAddVoiceTest {
 
         val reply = viewModel.voice.handle("할 일 추가", ScheduleAddVoiceRoutes())
 
-        assertEquals(VoiceReply.Done(R.string.voice_schedule_todo_ask), reply)
+        assertEquals(R.string.voice_schedule_todo_ask, (reply as VoiceReply.Done).message)
         assertTrue(viewModel.uiState.value.todos.isEmpty())
     }
 
@@ -318,6 +323,94 @@ class ScheduleAddVoiceTest {
         // 골라 둔 카드가 한 장이면 무엇을 뺄지 말하지 않아도 된다.
         viewModel.voice.handle("카드 빼 줘", ScheduleAddVoiceRoutes())
         assertFalse(viewModel.uiState.value.cards.single().picked)
+    }
+
+    // 되묻기(#282)
+
+    @Test
+    fun `처리하고 나면 빠진 칸을 이어서 묻는다`() = runTest {
+        val viewModel = viewModel(SharedAppointment(date = OCT_20))
+        val routes = ScheduleAddVoiceRoutes()
+
+        // 날짜만 채우면 병원을 묻는다.
+        val first = viewModel.voice.handle("20일", routes) as VoiceReply.Done
+        assertEquals(VoiceText(R.string.voice_ask_hospital), first.question)
+
+        // 병원까지 차면 저장하라고 한다.
+        viewModel.onHospitalPicked("고려튼튼통증의학과의원")
+        val second = viewModel.voice.handle("할 일 추가, 신분증", routes) as VoiceReply.Done
+        assertEquals(VoiceText(R.string.voice_ask_done), second.question)
+    }
+
+    @Test
+    fun `병원이 있고 날짜가 없으면 날짜를 묻는다`() {
+        assertEquals(
+            VoiceText(R.string.voice_ask_date),
+            ScheduleAddUiState(hospital = "고려튼튼통증의학과의원").nextQuestion(),
+        )
+    }
+
+    @Test
+    fun `병원 찾기로 떠나는 말에는 묻지 않는다`() = runTest {
+        // 옮겨 간 병원 찾기가 묻는다. 여기서 "어느 병원인가요?"를 붙이면 두 물음이 겹친다.
+        val viewModel = viewModel(SharedAppointment(hospital = "고려튼튼통증의학과"))
+
+        val reply = viewModel.voice.handle("고려튼튼통증의학과", ScheduleAddVoiceRoutes()) as VoiceReply.Done
+
+        assertNull(reply.question)
+        assertTrue(viewModel.uiState.value.hospitalSearchByVoice)
+    }
+
+    @Test
+    fun `말로 연 일정 추가에서 읽은 병원은 말로 찾은 것으로 표시한다`() = runTest {
+        val viewModel = viewModel(SharedAppointment(hospital = "고려튼튼통증의학과", date = OCT_20))
+
+        viewModel.openedByVoice = true
+        viewModel.load(sharedText = "10월 20일 고려튼튼통증의학과 일정 추가해 줘")
+
+        assertTrue(viewModel.uiState.value.hospitalSearchByVoice)
+        viewModel.onHospitalSearchOpened()
+        assertFalse(viewModel.uiState.value.hospitalSearchByVoice)
+    }
+
+    @Test
+    fun `예약 문자에서 읽은 병원은 말로 찾은 것이 아니다`() = runTest {
+        // 예약 문자는 지금처럼 사람이 주소를 보고 고른다(#270).
+        val viewModel = viewModel(SharedAppointment(hospital = "고려튼튼통증의학과", date = OCT_20))
+
+        viewModel.load(sharedText = "[고려튼튼통증의학과] 10월 20일 예약")
+
+        assertFalse(viewModel.uiState.value.hospitalSearchByVoice)
+    }
+
+    @Test
+    fun `맞는 카드가 여럿이면 고르지 않고 후보를 적어 되묻는다`() = runTest {
+        val viewModel =
+            viewModel(cards = listOf(card("1", "두통 · 어지러움"), card("2", "두통 · 메스꺼움")))
+        viewModel.load()
+
+        val reply = viewModel.voice.handle("두통 카드 가져갈게", ScheduleAddVoiceRoutes()) as VoiceReply.Done
+
+        assertEquals(R.string.voice_schedule_card_which, reply.message)
+        assertEquals(listOf("두통 · 어지러움 · 두통 · 메스꺼움"), reply.args)
+        assertEquals(VoiceText(R.string.voice_schedule_card_ask_ordinal), reply.question)
+        assertTrue(viewModel.uiState.value.cards.none { it.picked })
+
+        // 몇 번째로 답하면 고른다.
+        viewModel.voice.handle("두 번째 카드", ScheduleAddVoiceRoutes())
+        assertTrue(viewModel.uiState.value.cards[1].picked)
+    }
+
+    @Test
+    fun `맞는 할 일이 여럿이면 되묻는다`() = runTest {
+        val viewModel = viewModel()
+        viewModel.voice.handle("할 일 추가, 약 챙기기", ScheduleAddVoiceRoutes())
+        viewModel.voice.handle("할 일 추가, 약 봉투 챙기기", ScheduleAddVoiceRoutes())
+
+        val reply = viewModel.voice.handle("챙기기 할 일 완료", ScheduleAddVoiceRoutes()) as VoiceReply.Done
+
+        assertEquals(R.string.voice_schedule_todo_which, reply.message)
+        assertTrue(viewModel.uiState.value.todos.none { it.done })
     }
 
     private fun viewModel(read: SharedAppointment = SharedAppointment(), cards: List<CardListItem> = emptyList()) =

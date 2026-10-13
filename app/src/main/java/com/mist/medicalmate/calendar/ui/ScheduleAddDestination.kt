@@ -11,7 +11,9 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.mist.medicalmate.core.notification.rememberNotificationPermission
+import com.mist.medicalmate.core.voice.VoicePrompt
 import com.mist.medicalmate.core.voice.VoiceTargetEffect
+import com.mist.medicalmate.core.voice.rememberVoicePrompt
 import com.mist.medicalmate.navigation.ConsumeResult
 import com.mist.medicalmate.navigation.NavResult
 import kotlinx.serialization.Serializable
@@ -71,10 +73,15 @@ internal data class ScheduleAddDestination(
      * 채운다.
      */
     val time: String? = null,
+    /**
+     * "헤이 메이트"로 연 것인지(#282). [sharedText]가 예약 문자가 아니라 사람이 한 말이다. 병원을
+     * 말했으면 병원 찾기가 하나로 좁혀질 때 알아서 고른다.
+     */
+    val voice: Boolean = false,
 )
 
 internal fun NavGraphBuilder.scheduleAddDestination(
-    onHospitalPick: (query: String?) -> Unit,
+    onHospitalPick: (query: String?, voice: Boolean) -> Unit,
     onCardNew: () -> Unit,
     onSaved: () -> Unit,
     onExit: () -> Unit,
@@ -90,6 +97,7 @@ internal fun NavGraphBuilder.scheduleAddDestination(
             followUp = route.followUp,
             sharedText = route.sharedText,
             time = route.time?.let(LocalTime::parse),
+            voice = route.voice,
             onHospitalPick = onHospitalPick,
             onCardNew = onCardNew,
             onSaved = onSaved,
@@ -114,7 +122,8 @@ private fun ScheduleAddRoute(
     followUp: Boolean,
     sharedText: String?,
     time: LocalTime?,
-    onHospitalPick: (query: String?) -> Unit,
+    voice: Boolean,
+    onHospitalPick: (query: String?, voice: Boolean) -> Unit,
     onCardNew: () -> Unit,
     onSaved: () -> Unit,
     onExit: () -> Unit,
@@ -130,7 +139,10 @@ private fun ScheduleAddRoute(
     LaunchedEffect(date, time) { viewModel.onDatePrefilled(date, time) }
 
     // 문자 앱에서 공유받았으면 그 글로 빈 칸을 채운다(#270).
-    LaunchedEffect(Unit) { viewModel.load(appointmentId, date, cardId, followUp, sharedText) }
+    LaunchedEffect(Unit) {
+        viewModel.openedByVoice = voice
+        viewModel.load(appointmentId, date, cardId, followUp, sharedText)
+    }
 
     // 병원 찾기에서 골라 돌아온 값. 엔트리가 그대로 살아 있어서 적어 둔 날짜·시간·할 일이
     // 남는다. 라우트 인자는 처음부터 병원이 정해진 채로 열리는 경우(1r-4-B)에 쓴다.
@@ -142,8 +154,16 @@ private fun ScheduleAddRoute(
     // 지점이 있을 수 있어 사람이 주소를 보고 고른다. 옮기기 전에 소비 표시를 남긴다.
     LaunchedEffect(state.hospitalSearch) {
         val query = state.hospitalSearch ?: return@LaunchedEffect
+        val byVoice = state.hospitalSearchByVoice
         viewModel.onHospitalSearchOpened()
-        onHospitalPick(query)
+        onHospitalPick(query, byVoice)
+    }
+
+    // 말로 하는 중이면 빠진 칸을 묻는다(#282). 들어올 때, 병원 찾기에서 돌아올 때, 병원이나 날짜가
+    // 채워질 때마다다. 병원 찾기를 열려는 참이면 그쪽이 묻는다. 막대가 닫혀 있으면 버려진다.
+    val prompt = rememberVoicePrompt()
+    LaunchedEffect(state.hospital == null, state.date == null) {
+        if (state.hospitalSearch == null) prompt(VoicePrompt(question = state.nextQuestion()))
     }
 
     val save = {
@@ -159,7 +179,7 @@ private fun ScheduleAddRoute(
             ScheduleAddVoiceRoutes(
                 save = save,
                 exit = onExit,
-                openHospital = { onHospitalPick(state.hospital) },
+                openHospital = { onHospitalPick(state.hospital, false) },
                 newCard = onCardNew,
             ),
         )
@@ -171,7 +191,7 @@ private fun ScheduleAddRoute(
         ScheduleAddCallbacks(
             todo = viewModel.todo,
             onCloseClick = onExit,
-            onHospitalClick = { onHospitalPick(state.hospital) },
+            onHospitalClick = { onHospitalPick(state.hospital, false) },
             onSheetOpen = viewModel::onSheetOpen,
             onSheetDismiss = viewModel::onSheetDismiss,
             onDateConfirm = viewModel::onDateConfirm,

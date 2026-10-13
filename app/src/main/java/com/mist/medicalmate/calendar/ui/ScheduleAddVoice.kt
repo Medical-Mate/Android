@@ -133,31 +133,6 @@ private fun parseScreen(text: String): ScheduleAddVoice {
     }
 }
 
-/**
- * 말로 고른 카드. 몇 번째로 말했으면 그 차례, 아니면 제목의 낱말이 말에 든 카드다.
- *
- * 제목 낱말은 두 글자 이상만 본다. "복부 통증 · 3주"의 "3주"나 "·"로 엉뚱한 카드를 고르지 않는다.
- * 여러 장이 걸리면 가장 많이 겹친 카드다. 하나도 안 걸리면 null이다.
- */
-internal fun List<ScheduleAddCard>.byVoice(ordinal: Int?, words: String): ScheduleAddCard? =
-    pickByVoice(ordinal, words) { it.title }
-
-/** 말로 고른 할 일. 카드와 같은 규칙으로 할 일의 글에서 낱말을 찾는다. */
-internal fun List<ScheduleAddTodo>.byVoice(ordinal: Int?, words: String): ScheduleAddTodo? =
-    pickByVoice(ordinal, words) { it.label }
-
-private fun <T> List<T>.pickByVoice(ordinal: Int?, words: String, label: (T) -> String): T? {
-    if (ordinal != null) return if (ordinal == VoiceWords.LAST) lastOrNull() else getOrNull(ordinal)
-    val heard = VoiceWords.compact(words)
-    return map { item -> item to label(item).meaningfulWords().count { it in heard } }
-        .filter { (_, hits) -> hits > 0 }
-        .maxByOrNull { (_, hits) -> hits }
-        ?.first
-}
-
-private fun String.meaningfulWords(): List<String> =
-    split(' ', '·', ',', '/').map(VoiceWords::compact).filter { it.length >= 2 && !DIGIT.containsMatchIn(it) }
-
 /** 할 일을 가리키는 말. */
 private const val TODO_NOUN =
     """할\s*일|해야\s*할\s*(?:것|거|일)|체크\s*리스트|준비물|챙길\s*(?:것|거|꺼)|챙겨야\s*할\s*(?:것|거)|투두"""
@@ -227,7 +202,5 @@ private val CLEAR_TIME =
 /** 날짜나 시각이 들어 있는지. 시트를 여는 말보다 채우는 말이 먼저다. */
 private val DATE_TIME_HINT =
     Regex("""\d|오늘|내일|모레|글피|다음\s*주|이번\s*주|다음\s*달|[월화수목금토일]요일|오전|오후|아침|점심|저녁|정오""")
-
-private val DIGIT = Regex("""\d""")
 
 private const val TRIM = " .,!?~"

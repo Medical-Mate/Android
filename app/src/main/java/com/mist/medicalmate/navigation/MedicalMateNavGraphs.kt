@@ -196,8 +196,10 @@ internal fun NavGraphBuilder.calendarDestinations(navController: NavHostControll
     )
     scheduleAddDestination(
         // 병원 칸에 적힌 이름(예약 문자에서 읽은 것 포함)으로 검색된 채 연다(#270).
-        onHospitalPick = { query ->
-            navController.navigate(HospitalPickDestination(purpose = HospitalPickPurpose.SCHEDULE, query = query))
+        onHospitalPick = { query, voice ->
+            navController.navigate(
+                HospitalPickDestination(purpose = HospitalPickPurpose.SCHEDULE, query = query, voicePick = voice),
+            )
         },
         // 새 카드는 증상 문답부터다. 만들고 나면 그 카드가 목록에 들어온다.
         onCardNew = { navController.navigate(IntakeDestination()) },

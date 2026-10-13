@@ -13,13 +13,14 @@ import com.mist.medicalmate.core.voice.VoiceWords
  * 저장처럼 묻는 일은 다음 말이 "네"일 때만 한다. [VoiceCommandViewModel]이 마이크와 패널을 들고,
  * 여기는 말에 무엇으로 답할지만 정한다.
  *
- * @param say 패널에 적는다. [confirming]이면 "네"를 기다리는 물음이다.
+ * @param say 막대에 적는다. `confirming`이면 "네"를 기다리는 물음이다. `question`은 화면이 되묻는
+ *   것이다. 비우면 지난 물음을 지운다.
  * @param command 전역 명령을 그래프에 넘긴다.
  */
 internal class VoiceConversation(
     private val targets: VoiceTargets,
     private val trace: VoiceWakeTrace,
-    private val say: (message: VoiceMessage, confirming: Boolean) -> Unit,
+    private val say: (message: VoiceMessage, confirming: Boolean, question: VoiceMessage?) -> Unit,
     private val command: (VoiceCommandRequest) -> Unit,
 ) {
     /** 아직 "네"를 기다리는 일. */
@@ -43,10 +44,10 @@ internal class VoiceConversation(
         val reply = targets.current?.handle(text) ?: VoiceReply.NotMine
         trace.log { "대화: \"$text\" → 화면 ${reply::class.simpleName}" }
         when (reply) {
-            is VoiceReply.Done -> say(VoiceMessage(reply.message, reply.args), false)
+            is VoiceReply.Done -> say(VoiceMessage(reply.message, reply.args), false, reply.question)
             is VoiceReply.Confirm -> {
                 pending = reply
-                say(VoiceMessage(reply.prompt, reply.args), true)
+                say(VoiceMessage(reply.prompt, reply.args), true, VoiceMessage(R.string.voice_command_yes_no))
             }
 
             VoiceReply.NotMine -> global(text)
@@ -66,13 +67,13 @@ internal class VoiceConversation(
         VoiceWords.isNo(text) -> {
             trace.log { "대화: \"$text\" → 취소" }
             pending = null
-            say(VoiceMessage(R.string.voice_command_cancelled), false)
+            say(VoiceMessage(R.string.voice_command_cancelled), false, null)
             true
         }
 
         // 네도 아니요도 아니면 다시 묻는다. 묻던 것을 놓으면 다음 "네"가 엉뚱한 데 간다.
         else -> {
-            say(VoiceMessage(R.string.voice_command_confirm_again), true)
+            say(VoiceMessage(R.string.voice_command_confirm_again), true, VoiceMessage(R.string.voice_command_yes_no))
             true
         }
     }
@@ -82,10 +83,14 @@ internal class VoiceConversation(
         val parsed = parseVoiceCommand(text)
         trace.log { "대화: 전역 명령 ${parsed ?: "모르는 말"}" }
         if (parsed == null) {
-            say(VoiceMessage(R.string.voice_command_missed, listOf(text)), false)
+            say(
+                VoiceMessage(R.string.voice_command_missed, listOf(text)),
+                false,
+                VoiceMessage(R.string.voice_command_hint),
+            )
         } else {
             command(VoiceCommandRequest(parsed, text))
-            say(VoiceMessage(R.string.voice_command_moved), false)
+            say(VoiceMessage(R.string.voice_command_moved), false, null)
         }
     }
 }

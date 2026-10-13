@@ -1,6 +1,5 @@
 package com.mist.medicalmate.voice.ui
 
-import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mist.medicalmate.R
@@ -11,7 +10,9 @@ import com.mist.medicalmate.core.speech.VoiceWake
 import com.mist.medicalmate.core.speech.VoiceWakeTrace
 import com.mist.medicalmate.core.speech.WakeWordDetector
 import com.mist.medicalmate.core.speech.WakeWordModelState
+import com.mist.medicalmate.core.voice.VoicePrompt
 import com.mist.medicalmate.core.voice.VoiceTargets
+import com.mist.medicalmate.core.voice.VoiceText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.FlowPreview
@@ -25,14 +26,16 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.flow.timeout
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
-/** 패널에 적을 한 줄. 문구는 리소스이고 [args]가 그 안에 들어간다. */
-data class VoiceMessage(@StringRes val text: Int, val args: List<String> = emptyList())
+/** 막대에 적을 한 줄. 화면이 돌려주는 [VoiceText]와 같은 것이다. */
+typealias VoiceMessage = VoiceText
 
 /**
  * 음성 명령 패널.
@@ -40,12 +43,15 @@ data class VoiceMessage(@StringRes val text: Int, val args: List<String> = empty
  * @param heard 지금 말하고 있는 글. 말하는 중에 계속 바뀌고, 말이 끝나면 비운다.
  * @param message 방금 한 일이나 물을 것. 처음에는 말할 수 있는 예다.
  * @param confirming [message]가 "할까요?"이고 "네"를 기다린다.
+ * @param question 화면이 되묻는 것(#282). 빠진 칸이나 골라야 할 것이 있을 때 사용자가 무엇을
+ *   말하면 되는지 적는다. 말하는 중에는 들리는 글이 이 자리를 잠깐 쓴다.
  */
 data class VoicePanel(
     val voice: MedicalMateVoiceState = MedicalMateVoiceState.IDLE,
     val heard: String = "",
     val message: VoiceMessage = VoiceMessage(R.string.voice_command_hint),
     val confirming: Boolean = false,
+    val question: VoiceMessage? = null,
 )
 
 /** 알아들은 전역 명령과 그 말 전체. 일정 추가는 말 속의 날짜·병원까지 들고 간다. */
@@ -178,6 +184,10 @@ internal constructor(
      *
      * 받아쓰기가 실패하거나, [IDLE_TIMEOUT_MS] 동안 아무것도 안 들리거나, 그만하라고 하거나,
      * 확인한 일을 마치면 끝난다.
+     *
+     * **화면이 먼저 건 말도 함께 받는다**(#282). 병원 찾기가 결과를 받아 "같은 이름이 3곳 있어요"라고
+     * 묻는 것처럼, 사용자가 말하지 않았는데 막대에 적을 것이 생긴다. 그것도 들린 것처럼 쳐서
+     * 12초를 다시 센다. 물어 놓고 바로 닫히면 답할 틈이 없다.
      */
     @OptIn(FlowPreview::class)
     private suspend fun converse() {
@@ -185,39 +195,62 @@ internal constructor(
             VoiceConversation(
                 targets = targets,
                 trace = trace,
-                say = { message, confirming -> updatePanel { it.copy(message = message, confirming = confirming) } },
+                say = { message, confirming, question ->
+                    updatePanel { it.copy(message = message, confirming = confirming, question = question) }
+                },
                 command = { request -> mutableUiState.update { it.copy(command = request) } },
             )
-        speech.listen()
+        val heard = speech.listen().map<SpeechChunk, Heard>(Heard::Spoken).onCompletion { emit(Heard.Ended) }
+        merge(heard, targets.prompts.map(Heard::Asked))
             .timeout(IDLE_TIMEOUT_MS.milliseconds)
             .catch { error ->
                 if (error !is TimeoutCancellationException) throw error
                 trace.log { "대화: ${IDLE_TIMEOUT_MS}ms 동안 들린 것이 없어 닫는다" }
             }
-            .takeWhile { chunk ->
-                when (chunk) {
-                    SpeechChunk.Preparing -> {
-                        updatePanel { it.copy(voice = MedicalMateVoiceState.PROCESSING) }
-                        true
-                    }
+            .takeWhile { event -> hear(event, conversation) }
+            .collect()
+    }
 
-                    is SpeechChunk.Partial -> {
-                        updatePanel { it.copy(voice = MedicalMateVoiceState.LISTENING, heard = chunk.text) }
-                        true
-                    }
+    /** 들린 것 하나를 막대에 옮기고 답한다. 대화를 이어 갈지 돌려준다. */
+    private suspend fun hear(event: Heard, conversation: VoiceConversation): Boolean = when (event) {
+        is Heard.Asked -> {
+            val prompt = event.prompt
+            updatePanel { it.copy(message = prompt.message ?: it.message, question = prompt.question) }
+            true
+        }
 
-                    is SpeechChunk.Final -> {
-                        updatePanel { it.copy(voice = MedicalMateVoiceState.LISTENING, heard = "") }
-                        conversation.respond(chunk.text)
-                    }
+        Heard.Ended -> false
+        is Heard.Spoken ->
+            when (val chunk = event.chunk) {
+                SpeechChunk.Preparing -> {
+                    updatePanel { it.copy(voice = MedicalMateVoiceState.PROCESSING) }
+                    true
+                }
 
-                    SpeechChunk.Failed -> {
-                        trace.log { "대화: 받아쓰기 실패" }
-                        false
-                    }
+                is SpeechChunk.Partial -> {
+                    updatePanel { it.copy(voice = MedicalMateVoiceState.LISTENING, heard = chunk.text) }
+                    true
+                }
+
+                is SpeechChunk.Final -> {
+                    updatePanel { it.copy(voice = MedicalMateVoiceState.LISTENING, heard = "") }
+                    conversation.respond(chunk.text)
+                }
+
+                SpeechChunk.Failed -> {
+                    trace.log { "대화: 받아쓰기 실패" }
+                    false
                 }
             }
-            .collect()
+    }
+
+    /** 대화가 듣는 것. 받아쓴 말, 화면이 건 말, 받아쓰기가 끝난 것. */
+    private sealed interface Heard {
+        data class Spoken(val chunk: SpeechChunk) : Heard
+
+        data class Asked(val prompt: VoicePrompt) : Heard
+
+        data object Ended : Heard
     }
 
     /**

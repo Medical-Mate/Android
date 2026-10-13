@@ -4,8 +4,12 @@ import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.staticCompositionLocalOf
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 
 /**
  * 지금 화면이 알아듣는 말(#282).
@@ -24,17 +28,26 @@ fun interface VoiceTarget {
     suspend fun handle(text: String): VoiceReply
 }
 
-/** 화면이 받아쓴 말을 어떻게 처리했는지. 문구는 리소스 id로 돌려주고 패널이 그린다. */
+/** 막대에 적을 한 줄. 문구는 리소스이고 [args]가 그 안에 들어간다. */
+data class VoiceText(@StringRes val text: Int, val args: List<String> = emptyList())
+
+/** 화면이 받아쓴 말을 어떻게 처리했는지. 문구는 리소스 id로 돌려주고 막대가 그린다. */
 sealed interface VoiceReply {
     /** 이 화면이 모르는 말. 전역 명령으로 넘긴다. */
     data object NotMine : VoiceReply
 
     /**
-     * 처리했다. 패널은 닫지 않고 다음 말을 기다린다.
+     * 처리했다. 막대는 닫지 않고 다음 말을 기다린다.
      *
      * @param args 문구에 끼울 값. 날짜·병원처럼 화면이 이미 글로 만든 것이다.
+     * @param question 이어서 물을 것. 빠진 칸이나 골라야 할 것이 있으면 화면이 되묻는다.
+     *   사용자는 막대를 보고 다시 말한다.
      */
-    data class Done(@StringRes val message: Int, val args: List<String> = emptyList()) : VoiceReply
+    data class Done(
+        @StringRes val message: Int,
+        val args: List<String> = emptyList(),
+        val question: VoiceText? = null,
+    ) : VoiceReply
 
     /**
      * 되돌리기 어려운 일이라 한 번 더 묻는다. 다음 말이 "네"면 [onConfirm]을 부른다.
@@ -46,6 +59,18 @@ sealed interface VoiceReply {
 }
 
 /**
+ * 화면이 먼저 막대에 거는 말. 사용자가 말하지 않았는데 알릴 것이나 물을 것이 생겼을 때다.
+ *
+ * 병원 찾기가 결과를 받아 "같은 이름이 3곳 있어요"라고 묻거나, 일정 추가가 열리면서 "어느
+ * 병원인가요?"라고 묻는 것이 여기다. 막대가 닫혀 있으면 버려진다. 말로 하는 중이 아니면 물을
+ * 이유가 없다.
+ *
+ * @param message 막대 윗줄. 비우면 지금 줄을 그대로 둔다.
+ * @param question 막대 아랫줄의 물음.
+ */
+data class VoicePrompt(val message: VoiceText? = null, val question: VoiceText? = null)
+
+/**
  * 등록된 화면들. 맨 나중에 등록한 것이 지금 화면이다.
  *
  * 화면이 바뀌는 동안에는 나가는 화면과 들어오는 화면이 잠깐 함께 조합된다. 들어오는 쪽이 나중에
@@ -54,7 +79,12 @@ sealed interface VoiceReply {
 class VoiceTargets {
     private val stack = mutableListOf<VoiceTarget>()
 
+    private val asked = MutableSharedFlow<VoicePrompt>(extraBufferCapacity = PROMPT_BUFFER)
+
     val current: VoiceTarget? get() = synchronized(stack) { stack.lastOrNull() }
+
+    /** 화면이 먼저 건 말. 대화가 이어지는 동안만 받는다. */
+    val prompts: SharedFlow<VoicePrompt> = asked.asSharedFlow()
 
     fun register(target: VoiceTarget) {
         synchronized(stack) { stack += target }
@@ -62,6 +92,15 @@ class VoiceTargets {
 
     fun unregister(target: VoiceTarget) {
         synchronized(stack) { stack.remove(target) }
+    }
+
+    /** 막대에 말을 건다. 대화 중이 아니면 아무도 받지 않아 사라진다. */
+    fun ask(prompt: VoicePrompt) {
+        asked.tryEmit(prompt)
+    }
+
+    private companion object {
+        const val PROMPT_BUFFER = 4
     }
 }
 
@@ -82,4 +121,11 @@ fun VoiceTargetEffect(target: VoiceTarget) {
         targets.register(registered)
         onDispose { targets.unregister(registered) }
     }
+}
+
+/** 화면이 막대에 먼저 말을 거는 길. 그래프 밖(미리보기 등)에서는 아무 일도 하지 않는다. */
+@Composable
+fun rememberVoicePrompt(): (VoicePrompt) -> Unit {
+    val targets = LocalVoiceTargets.current
+    return remember(targets) { { prompt -> targets?.ask(prompt) } }
 }

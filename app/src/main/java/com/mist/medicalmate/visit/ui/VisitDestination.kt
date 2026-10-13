@@ -9,8 +9,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.mist.medicalmate.R
 import com.mist.medicalmate.core.speech.rememberMicPermission
+import com.mist.medicalmate.core.voice.VoicePrompt
 import com.mist.medicalmate.core.voice.VoiceTargetEffect
+import com.mist.medicalmate.core.voice.VoiceText
+import com.mist.medicalmate.core.voice.rememberVoicePrompt
 import kotlinx.serialization.Serializable
 import java.time.LocalDate
 
@@ -58,6 +62,11 @@ internal data class HospitalPickDestination(
      * 찾은 목록에서 같은 이름의 여러 지점을 주소로 가려 고르게 한다.
      */
     val query: String? = null,
+    /**
+     * [query]가 사람이 말한 병원인지(#282). 그러면 하나로 좁혀질 때 알아서 고르고, 여럿이면 막대로
+     * 몇 번째인지나 동네를 되묻는다. 예약 문자에서 온 이름은 지금처럼 사람이 주소를 보고 고른다.
+     */
+    val voicePick: Boolean = false,
 )
 
 /**
@@ -150,6 +159,7 @@ internal fun NavGraphBuilder.hospitalPickDestination(
             sessionId = route.sessionId,
             visitedOn = route.visitedOn,
             query = route.query,
+            voicePick = route.voicePick,
             onPicked = onPicked,
             onCardRequested = onCardRequested,
             onScheduleRequested = onScheduleRequested,
@@ -193,6 +203,7 @@ private fun HospitalPickRoute(
     sessionId: Long?,
     visitedOn: String?,
     query: String?,
+    voicePick: Boolean,
     onPicked: (cardId: String?, cardTitle: String?, visitedOn: String?, hospital: Hospital) -> Unit,
     onCardRequested: (cardId: String?, sessionId: Long?, hospital: Hospital?) -> Unit,
     onScheduleRequested: (Hospital?) -> Unit,
@@ -203,7 +214,7 @@ private fun HospitalPickRoute(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(purpose, cardId, query) {
-        viewModel.load(purpose, forExistingCard = cardId != null, initialQuery = query)
+        viewModel.load(purpose, forExistingCard = cardId != null, initialQuery = query, voicePick = voicePick)
     }
 
     // 목적마다 돌아가는 자리가 다르다. 진료 후에는 고른 병원의 id만 다음 화면으로 가고,
@@ -218,6 +229,26 @@ private fun HospitalPickRoute(
     }
 
     VoiceTargetEffect { text -> viewModel.onVoice(text, submit) }
+
+    // 말로 찾은 결과(#282). 하나로 좁혀졌으면 고르고 마치며 무엇을 골랐는지 알린다. 여럿이거나 없으면
+    // 막대로 되묻는다. 사용자는 몇 번째인지, 동네나 지점 이름, 다른 병원 이름으로 답한다.
+    val prompt = rememberVoicePrompt()
+    LaunchedEffect(state.voiceDecision) {
+        val decision = state.voiceDecision ?: return@LaunchedEffect
+        viewModel.onVoiceDecisionHandled()
+        when (decision) {
+            is HospitalVoiceDecision.Pick -> {
+                prompt(
+                    VoicePrompt(
+                        message = VoiceText(R.string.voice_hospital_auto_picked, listOf(decision.hospital.name)),
+                    ),
+                )
+                submit(decision.hospital)
+            }
+
+            is HospitalVoiceDecision.Ask -> prompt(decision.toPrompt())
+        }
+    }
 
     HospitalPickScreen(
         state = state,
