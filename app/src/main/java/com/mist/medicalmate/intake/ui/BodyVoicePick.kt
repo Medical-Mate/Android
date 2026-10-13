@@ -97,6 +97,33 @@ private fun zonePick(anchorId: String, zoneId: String, side: BodyMapSide?): Body
     }
 }
 
+/**
+ * 좌우를 반대로(#284). "반대", "다른 쪽". 고른 부위가 있으면 그 부위의 반대쪽을 고르고 보는 쪽도 함께
+ * 옮긴다. 고르기 전이면 보고 있는 팔·다리만 반대쪽으로 옮긴다. 옮길 쪽이 없으면 null이다.
+ *
+ * @return 바뀐 상태와 막대에 부를 이름.
+ */
+internal fun BodyMapUiState.flippedSide(): Pair<BodyMapUiState, BodyMapSelection>? {
+    val picked = selection?.mirrored()
+    val looking = focus?.mirrored()
+    return when {
+        picked != null -> copy(selection = picked, focus = looking ?: focus) to picked
+        looking != null -> copy(focus = looking) to looking
+        else -> null
+    }
+}
+
+/** 반대쪽 같은 자리. 좌우가 없거나 반대쪽에 그 자리가 없으면 null이다. */
+private fun BodyMapSelection.mirrored(): BodyMapSelection? {
+    val other = copy(side = if (side == BodyMapSide.LEFT) BodyMapSide.RIGHT else BodyMapSide.LEFT)
+    val zone = zoneId
+    return when {
+        side != BodyMapSide.LEFT && side != BodyMapSide.RIGHT -> null
+        zone == null -> other
+        else -> other.takeIf { it in bodyMapChoicesForZone(anchorId, zone) }
+    }
+}
+
 /** 말한 좌우. 없으면 null이다. */
 internal fun sideOf(text: String): BodyMapSide? {
     val heard = VoiceWords.compact(text)

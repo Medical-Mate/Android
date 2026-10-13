@@ -166,6 +166,48 @@ class IntakeVoiceTest {
     }
 
     @Test
+    fun `반대라고 하면 좌우를 바꾼다`() {
+        val viewModel = IntakeViewModel(VoiceSessionRepository(), FakeSpeechToText())
+        viewModel.handle("왼쪽 팔이 아파요")
+
+        viewModel.handle("반대쪽")
+        assertEquals(BodyMapSelection("ANC:013", side = BodyMapSide.RIGHT), viewModel.uiState.value.bodyMap.focus)
+
+        // 고른 부위가 있으면 그 반대쪽을 고른다.
+        viewModel.handle("손목")
+        val reply = viewModel.handle("반대편이요") as VoiceReply.Done
+        assertEquals(
+            BodyMapSelection("ANC:013", "SUR:071", BodyMapSide.LEFT),
+            viewModel.uiState.value.bodyMap.selection,
+        )
+        assertEquals(listOf("왼쪽 손목"), reply.args)
+    }
+
+    @Test
+    fun `좌우가 없는 곳에서 반대라고 하면 바꾸지 않는다`() {
+        val viewModel = IntakeViewModel(VoiceSessionRepository(), FakeSpeechToText())
+        viewModel.handle("머리가 아파요")
+
+        val reply = viewModel.handle("반대") as VoiceReply.Done
+
+        assertEquals(R.string.voice_intake_flip_none, reply.message)
+    }
+
+    @Test
+    fun `아픈 정도를 물을 때 고를 말을 읽어 준다`() {
+        val viewModel = IntakeViewModel(VoiceSessionRepository(ends = true), FakeSpeechToText()).inChat()
+        viewModel.handle("어제부터요")
+
+        val reply = viewModel.handle("다음") as VoiceReply.Done
+
+        assertEquals(R.string.voice_intake_ask_severity, reply.question?.text)
+        assertEquals("· LEVEL_1" + "\n· LEVEL_2\n· LEVEL_3\n· LEVEL_4\n· LEVEL_5", reply.question?.args?.get(1))
+        val again = viewModel.handle("어떻게 말해야 할지 모르겠어요") as VoiceReply.Done
+        assertEquals(R.string.voice_intake_severity_list, again.message)
+        assertEquals(reply.question, again.question)
+    }
+
+    @Test
     fun `어느 쪽인지 물은 뒤에는 좌우만 말해도 고른다`() {
         val viewModel = IntakeViewModel(VoiceSessionRepository(), FakeSpeechToText())
 

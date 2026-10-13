@@ -639,7 +639,10 @@
     <string name="voice_intake_chat_over">물어볼 건 다 물어봤어요</string>
     <string name="voice_intake_ask_chat_next">"다음"이라고 하면 아픈 정도로 넘어가요</string>
     <string name="voice_intake_moved_on">다음으로 넘어갈게요</string>
-    <string name="voice_intake_ask_severity">%1$s 얼마나 아프세요? "많이 아파요"나 "7점"처럼요</string>
+    <string name="voice_intake_ask_severity">%1$s 얼마나 아프세요? 이 중에서 말씀해 주세요\n%2$s\n0점부터 10점까지 점수로 말해도 돼요</string>
+    <string name="voice_intake_severity_list">이 중에서 가장 가까운 걸 골라 주세요</string>
+    <string name="voice_intake_flipped">%1$s, 바꿨어요</string>
+    <string name="voice_intake_flip_none">지금은 바꿀 쪽이 없어요</string>
     <string name="voice_intake_ask_next_severity">맞으면 "다음"이라고 해 주세요. 다시 말하면 바꿔요</string>
     <string name="voice_intake_ask_questions">의사에게 물어볼 게 있으면 그대로 말씀해 주세요. 없으면 "다음"이요</string>
     <string name="voice_intake_ask_more_questions">더 있으면 말씀해 주세요. 다 됐으면 "다음"이요</string>

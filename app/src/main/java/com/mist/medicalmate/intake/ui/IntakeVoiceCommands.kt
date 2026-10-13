@@ -40,22 +40,28 @@ internal class IntakeVoiceCommands(
     /** 좌우를 물어 둔 부위. 다음 말이 "오른쪽"이면 그중에서 고른다. */
     private var askingSide: List<BodyMapSelection> = emptyList()
 
-    fun handle(text: String, routes: IntakeVoiceRoutes): VoiceReply = when {
-        isBackVoice(text) -> goBack()
-        else ->
-            when (state().step) {
-                IntakeStep.BODY_PART -> body(text, routes)
-                IntakeStep.SYMPTOM_CHAT -> chat(text, routes)
-                IntakeStep.SEVERITY -> severity(text, routes)
-                IntakeStep.QUESTIONS -> questions(text, routes)
-            }
+    /** 강도의 표시 문구. 리소스라 화면이 말마다 넘긴다. 아픈 정도를 물을 때 고를 말로 읽어 준다. */
+    private var labels: (MedicalMateSeverity) -> String = { it.name }
+
+    fun handle(text: String, routes: IntakeVoiceRoutes): VoiceReply {
+        labels = routes.severityLabel
+        return when {
+            isBackVoice(text) -> goBack()
+            else ->
+                when (state().step) {
+                    IntakeStep.BODY_PART -> body(text, routes)
+                    IntakeStep.SYMPTOM_CHAT -> chat(text, routes)
+                    IntakeStep.SEVERITY -> severity(text, routes)
+                    IntakeStep.QUESTIONS -> questions(text, routes)
+                }
+        }
     }
 
     /** 앞 단계로. 첫 화면에서는 전역 "뒤로"가 증상 정리를 나간다. */
     private fun goBack(): VoiceReply {
         if (!state().canGoBack) return VoiceReply.NotMine
         back()
-        return VoiceReply.Done(R.string.voice_intake_back, question = state().voiceQuestion())
+        return VoiceReply.Done(R.string.voice_intake_back, question = state().voiceQuestion(labels))
     }
 
     private fun body(text: String, routes: IntakeVoiceRoutes): VoiceReply {
@@ -66,15 +72,41 @@ internal class IntakeVoiceCommands(
                 VoiceReply.Done(R.string.voice_intake_chat_start)
             }
 
-            isNextVoice(text) -> VoiceReply.Done(R.string.voice_intake_part_first, question = current.voiceQuestion())
+            isNextVoice(
+                text,
+            ) -> VoiceReply.Done(R.string.voice_intake_part_first, question = current.voiceQuestion(labels))
             isResetVoice(text) -> {
                 askingSide = emptyList()
                 update { it.copy(bodyMap = it.bodyMap.copy(focus = null, selection = null)) }
-                VoiceReply.Done(R.string.voice_intake_part_reset, question = state().voiceQuestion())
+                VoiceReply.Done(R.string.voice_intake_part_reset, question = state().voiceQuestion(labels))
             }
 
             // 부위 이름을 몰라 말하지 못하는 사람에게 고를 수 있는 곳을 다시 읽어 준다.
-            isUnsureVoice(text) -> VoiceReply.Done(R.string.voice_intake_part_list, question = current.voiceQuestion())
+            isUnsureVoice(
+                text,
+            ) -> VoiceReply.Done(R.string.voice_intake_part_list, question = current.voiceQuestion(labels))
+
+            // 왼쪽 팔을 보다가 "반대"면 오른쪽 팔로. 고른 부위가 있으면 그 반대쪽을 고른다.
+            isOppositeVoice(text) -> {
+                val flipped = current.bodyMap.flippedSide()
+                if (flipped == null) {
+                    VoiceReply.Done(R.string.voice_intake_flip_none, question = current.voiceQuestion(labels))
+                } else {
+                    update { it.copy(bodyMap = flipped.first) }
+                    val picked = flipped.first.selection == flipped.second
+                    VoiceReply.Done(
+                        R.string.voice_intake_flipped,
+                        listOf(flipped.second.title()),
+                        question = if (picked) {
+                            VoiceText(
+                                R.string.voice_intake_ask_next_part,
+                            )
+                        } else {
+                            state().voiceQuestion(labels)
+                        },
+                    )
+                }
+            }
 
             else -> pick(text, current.bodyMap.focus)
         }
@@ -93,7 +125,7 @@ internal class IntakeVoiceCommands(
                 VoiceReply.Done(
                     R.string.voice_intake_part_focus,
                     listOf(found.anchor.title()),
-                    question = state().voiceQuestion(),
+                    question = state().voiceQuestion(labels),
                 )
             }
 
@@ -145,7 +177,7 @@ internal class IntakeVoiceCommands(
         return when {
             current.chatFinished && isNextVoice(text) -> {
                 routes.next()
-                VoiceReply.Done(R.string.voice_intake_moved_on, question = state().voiceQuestion())
+                VoiceReply.Done(R.string.voice_intake_moved_on, question = state().voiceQuestion(labels))
             }
 
             current.chatFinished ->
@@ -172,8 +204,12 @@ internal class IntakeVoiceCommands(
         return when {
             isNextVoice(text) -> {
                 routes.next()
-                VoiceReply.Done(R.string.voice_intake_moved_on, question = state().voiceQuestion())
+                VoiceReply.Done(R.string.voice_intake_moved_on, question = state().voiceQuestion(labels))
             }
+
+            // 어떻게 말해야 할지 모르면 고를 말을 다시 읽어 준다.
+            severity == null && isUnsureVoice(text) ->
+                VoiceReply.Done(R.string.voice_intake_severity_list, question = state().voiceQuestion(labels))
 
             severity == null -> VoiceReply.NotMine
             else -> {
@@ -245,12 +281,19 @@ internal class IntakeVoiceCommands(
  * 이 단계에서 말로 할 일을 묻는 말. 단계에 들어설 때 막대에 건다. 문답은 AI의 질문이 그 자리라
  * 따로 묻지 않는다.
  */
-internal fun IntakeUiState.voiceQuestion(): VoiceText? = when (step) {
-    IntakeStep.BODY_PART -> bodyMap.focus.bodyVoiceQuestion()
-    IntakeStep.SYMPTOM_CHAT -> null
-    IntakeStep.SEVERITY -> VoiceText(R.string.voice_intake_ask_severity, listOf(bodyPartSubject))
-    IntakeStep.QUESTIONS -> VoiceText(R.string.voice_intake_ask_questions)
-}
+internal fun IntakeUiState.voiceQuestion(labels: (MedicalMateSeverity) -> String = { it.name }): VoiceText? =
+    when (step) {
+        IntakeStep.BODY_PART -> bodyMap.focus.bodyVoiceQuestion()
+        IntakeStep.SYMPTOM_CHAT -> null
+        // 어떻게 말해야 할지 모르는 사람에게 화면의 다섯 낱말을 고를 말로 읽어 준다.
+        IntakeStep.SEVERITY ->
+            VoiceText(
+                R.string.voice_intake_ask_severity,
+                listOf(bodyPartSubject, MedicalMateSeverity.entries.map { it.name to labels(it) }.voiceList()),
+            )
+
+        IntakeStep.QUESTIONS -> VoiceText(R.string.voice_intake_ask_questions)
+    }
 
 /**
  * 부위를 물을 때 고를 수 있는 곳을 함께 읽어 준다(#284). 큰 부위로 들어가 있으면 그 안의 상세

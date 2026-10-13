@@ -31,6 +31,16 @@ internal fun isUnsureVoice(text: String): Boolean {
     return UNSURE.any { heard.contains(it) }
 }
 
+/** 반대쪽으로 옮기라는 말. "반대", "반대편", "다른 쪽". */
+internal fun isOppositeVoice(text: String): Boolean {
+    val heard = VoiceWords.compact(text)
+    return heard.length <= OPPOSITE_MAX && OPPOSITE.any { heard.contains(it) }
+}
+
+private val OPPOSITE = listOf("반대", "다른쪽", "다른편", "건너편", "맞은편")
+
+private const val OPPOSITE_MAX = 14
+
 private val UNSURE = listOf("모르겠", "잘몰라", "몰라요", "모르겠어", "뭐가있", "어디가있", "뭐있", "다시말해", "다시알려")
 
 private val NEXT = listOf("다음", "넘어가", "넘겨", "다됐", "다했", "없어", "없습니다", "됐어요", "계속")
