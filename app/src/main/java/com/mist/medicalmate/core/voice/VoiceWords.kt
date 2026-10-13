@@ -32,6 +32,15 @@ object VoiceWords {
         return STOP.any { heard.startsWith(it) } && heard.length <= STOP_MAX_LENGTH
     }
 
+    /**
+     * 막대에 띄운 것을 다시 보여 달라는 말(#284). "다시 보여 줘", "뭐였지", "못 봤어". 목록을 미처 못
+     * 보고 말이 먼저 나간 사람이 다시 볼 길이다.
+     */
+    fun isRepeat(text: String): Boolean {
+        val heard = compact(text)
+        return heard.length <= REPEAT_MAX_LENGTH && REPEAT.any { it in heard }
+    }
+
     /** 저장하라는 말. "저장해 줘", "등록해", "이대로 완료", "일정 잡아 줘", "다 됐어". */
     fun isSave(text: String): Boolean {
         val heard = compact(text)
@@ -68,6 +77,11 @@ object VoiceWords {
     private const val PUNCTUATION = ".,?!~"
 
     private const val STOP_MAX_LENGTH = 8
+
+    private const val REPEAT_MAX_LENGTH = 14
+
+    private val REPEAT =
+        listOf("다시보여", "다시알려", "다시말해", "다시읽어", "한번더보여", "한번더알려", "뭐였", "못봤", "목록보여", "안보여")
 
     /** "어"는 받지 않는다. "어제", "어디"가 확인으로 읽힌다. */
     private val YES =

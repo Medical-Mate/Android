@@ -199,6 +199,7 @@ internal constructor(
                     updatePanel { it.copy(message = message, confirming = confirming, question = question) }
                 },
                 command = { request -> mutableUiState.update { it.copy(command = request) } },
+                shown = { mutableUiState.value.panel },
             )
         val heard = speech.listen().map<SpeechChunk, Heard>(Heard::Spoken).onCompletion { emit(Heard.Ended) }
         merge(heard, targets.prompts.map(Heard::Asked))

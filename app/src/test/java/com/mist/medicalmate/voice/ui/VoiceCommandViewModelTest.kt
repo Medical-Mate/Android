@@ -434,6 +434,64 @@ class VoiceCommandViewModelTest {
         assertEquals(VoiceText(R.string.voice_command_yes_no), viewModel.uiState.value.panel?.question)
     }
 
+    @Test
+    fun `못 알아들어도 묻던 것은 남긴다`() = runTest {
+        // 목록을 보며 답하다 잘못 들렸는데 목록이 사라지면 다시 볼 수 없다(#284).
+        val list = VoiceText(R.string.voice_intake_ask_part, listOf("· 머리 · 목"))
+        val speech =
+            FakeSpeechToText(
+                usable = true,
+                chunks = listOf(SpeechChunk.Final("팔"), SpeechChunk.Final("음 그게")),
+                keepOpen = true,
+            )
+        val viewModel = viewModel(speech = speech).ready()
+        var heard = 0
+        viewModel.targets.register(
+            VoiceTarget {
+                heard++
+                if (heard ==
+                    1
+                ) {
+                    VoiceReply.Done(R.string.voice_intake_part_list, question = list)
+                } else {
+                    VoiceReply.NotMine
+                }
+            },
+        )
+
+        detector.wake()
+
+        val panel = viewModel.uiState.value.panel
+        assertEquals(VoiceMessage(R.string.voice_command_missed, listOf("음 그게")), panel?.message)
+        assertEquals(list, panel?.question)
+    }
+
+    @Test
+    fun `다시 보여 달라고 하면 화면에 넘기지 않고 띄운 것을 그대로 둔다`() = runTest {
+        // 목록을 미처 못 보고 말이 먼저 나갔다(#284). 문답이었다면 그 말이 답으로 나가면 안 된다.
+        val list = VoiceText(R.string.voice_intake_ask_part, listOf("· 머리 · 목"))
+        val speech =
+            FakeSpeechToText(
+                usable = true,
+                chunks = listOf(SpeechChunk.Final("팔"), SpeechChunk.Final("못 봤어 다시 보여 줘")),
+                keepOpen = true,
+            )
+        val viewModel = viewModel(speech = speech).ready()
+        var screen = 0
+        viewModel.targets.register(
+            VoiceTarget {
+                screen++
+                VoiceReply.Done(R.string.voice_intake_part_list, question = list)
+            },
+        )
+
+        detector.wake()
+
+        assertEquals(1, screen)
+        assertEquals(list, viewModel.uiState.value.panel?.question)
+        assertEquals(VoiceText(R.string.voice_intake_part_list), viewModel.uiState.value.panel?.message)
+    }
+
     private fun viewModel(
         wake: FakeVoiceWake = FakeVoiceWake(usable = true, enabled = true, model = WakeWordModelState.Ready),
         speech: FakeSpeechToText = FakeSpeechToText(usable = true),
