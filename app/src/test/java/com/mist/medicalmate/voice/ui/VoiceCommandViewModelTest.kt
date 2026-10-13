@@ -9,6 +9,7 @@ import com.mist.medicalmate.core.speech.SpeechChunk
 import com.mist.medicalmate.core.speech.WakeWordModelState
 import com.mist.medicalmate.core.voice.VoicePrompt
 import com.mist.medicalmate.core.voice.VoiceReply
+import com.mist.medicalmate.core.voice.VoiceScroll
 import com.mist.medicalmate.core.voice.VoiceTarget
 import com.mist.medicalmate.core.voice.VoiceText
 import kotlinx.coroutines.Dispatchers
@@ -490,6 +491,45 @@ class VoiceCommandViewModelTest {
         assertEquals(1, screen)
         assertEquals(list, viewModel.uiState.value.panel?.question)
         assertEquals(VoiceText(R.string.voice_intake_part_list), viewModel.uiState.value.panel?.message)
+    }
+
+    @Test
+    fun `굴리라고 하면 지금 화면을 굴리고 묻던 것은 남긴다`() = runTest {
+        val speech =
+            FakeSpeechToText(
+                usable = true,
+                chunks = listOf(SpeechChunk.Final("팔"), SpeechChunk.Final("아래로 내려 줘")),
+                keepOpen = true,
+            )
+        val viewModel = viewModel(speech = speech).ready()
+        val list = VoiceText(R.string.voice_intake_ask_part, listOf("· 머리"))
+        var screen = 0
+        viewModel.targets.register(
+            VoiceTarget {
+                screen++
+                VoiceReply.Done(R.string.voice_intake_part_list, question = list)
+            },
+        )
+        val scrolled = mutableListOf<VoiceScroll>()
+        viewModel.targets.registerScroller { direction -> scrolled.add(direction) }
+
+        detector.wake()
+
+        assertEquals(listOf(VoiceScroll.DOWN), scrolled)
+        assertEquals(1, screen)
+        assertEquals(VoiceText(R.string.voice_scroll_down), viewModel.uiState.value.panel?.message)
+        assertEquals(list, viewModel.uiState.value.panel?.question)
+    }
+
+    @Test
+    fun `더 굴릴 곳이 없으면 그렇다고 한다`() = runTest {
+        val speech = FakeSpeechToText(usable = true, chunks = listOf(SpeechChunk.Final("맨 위로")), keepOpen = true)
+        val viewModel = viewModel(speech = speech).ready()
+        viewModel.targets.registerScroller { false }
+
+        detector.wake()
+
+        assertEquals(VoiceText(R.string.voice_scroll_end_up), viewModel.uiState.value.panel?.message)
     }
 
     private fun viewModel(

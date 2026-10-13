@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,6 +43,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMatePickerField
 import com.mist.medicalmate.core.designsystem.component.MedicalMateRowDelete
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTodoRow
+import com.mist.medicalmate.core.voice.rememberVoiceScrollState
 import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.time.LocalTime
@@ -114,7 +114,7 @@ private fun ColumnScope.FormContent(state: ScheduleAddUiState, callbacks: Schedu
         Modifier
             .fillMaxWidth()
             .weight(1f)
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(rememberVoiceScrollState())
             .padding(horizontal = MedicalMateSize.gutter, vertical = MedicalMateSpace.s8),
     ) {
         ShareReadNotice(state.shareRead)

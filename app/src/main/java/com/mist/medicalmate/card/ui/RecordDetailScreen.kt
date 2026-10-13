@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,6 +34,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateEmptyStateTyp
 import com.mist.medicalmate.core.designsystem.component.MedicalMateLoadingSpinner
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
+import com.mist.medicalmate.core.voice.rememberVoiceScrollState
 
 /**
  * 와이어프레임 1j-3. Figma `735:3829`.
@@ -89,7 +89,7 @@ private fun ColumnScope.DetailContent(detail: RecordDetail, expandedSteps: Set<I
         Modifier
             .fillMaxWidth()
             .weight(1f)
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(rememberVoiceScrollState())
             .padding(
                 start = MedicalMateSize.gutter,
                 end = MedicalMateSize.gutter,

@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,6 +37,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateSeveritySlide
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTextField
 import com.mist.medicalmate.core.model.IntakeStep
 import com.mist.medicalmate.core.model.MAX_BRIEF_CARD_QUESTIONS
+import com.mist.medicalmate.core.voice.rememberVoiceScrollState
 
 /**
  * 단계별 본문. [IntakeScreen]에서만 쓴다.
@@ -63,7 +63,7 @@ internal fun StepContent(
         modifier =
         modifier
             .fillMaxWidth()
-            .verticalScroll(key(scrollKey) { rememberScrollState() })
+            .verticalScroll(key(scrollKey) { rememberVoiceScrollState() })
             .padding(
                 start = MedicalMateSize.gutter,
                 end = MedicalMateSize.gutter,

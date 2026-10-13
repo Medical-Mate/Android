@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,6 +38,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
 import com.mist.medicalmate.core.model.MAX_BRIEF_CARD_QUESTIONS
+import com.mist.medicalmate.core.voice.rememberVoiceScrollState
 import kotlinx.coroutines.launch
 
 /**
@@ -147,7 +147,7 @@ private fun ColumnScope.CardContent(
         Modifier
             .fillMaxWidth()
             .weight(1f)
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(rememberVoiceScrollState())
             // 스크롤 안쪽에 둔다. 바깥에 두면 화면에 보이는 높이만 찍힌다.
             .recordInto(cardLayer, MedicalMateTheme.colors.bgSurface)
             .padding(

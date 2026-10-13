@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,6 +27,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateProgressIndic
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTextField
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTooltip
+import com.mist.medicalmate.core.voice.rememberVoiceScrollState
 
 /**
  * 와이어프레임 1b-1·1b-2·1b-3. Figma `398:1225`, `398:1285`, `398:1341`.
@@ -65,7 +65,7 @@ fun ProfileSetupScreen(
             Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(rememberVoiceScrollState())
                 .padding(
                     start = MedicalMateSize.gutter,
                     end = MedicalMateSize.gutter,

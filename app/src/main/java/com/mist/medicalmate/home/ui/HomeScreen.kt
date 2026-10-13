@@ -22,6 +22,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateEmptyStateTyp
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTabBar
+import com.mist.medicalmate.core.voice.rememberVoiceLazyListState
 import java.time.LocalDate
 
 /**
@@ -138,6 +139,7 @@ private fun HomeContent(
         return
     }
     LazyColumn(
+        state = rememberVoiceLazyListState(),
         modifier = modifier.fillMaxSize(),
         contentPadding =
         PaddingValues(

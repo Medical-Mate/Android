@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
@@ -45,6 +44,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateNavLeading
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTabBar
+import com.mist.medicalmate.core.voice.rememberVoiceScrollState
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -202,7 +202,7 @@ private fun MonthContent(
         modifier =
         Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(rememberVoiceScrollState())
             .padding(horizontal = MedicalMateSize.gutter, vertical = MedicalMateSpace.s12),
         verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s14),
     ) {

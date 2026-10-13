@@ -3,8 +3,10 @@ package com.mist.medicalmate.voice.ui
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.speech.VoiceWakeTrace
 import com.mist.medicalmate.core.voice.VoiceReply
+import com.mist.medicalmate.core.voice.VoiceScroll
 import com.mist.medicalmate.core.voice.VoiceTargets
 import com.mist.medicalmate.core.voice.VoiceWords
+import com.mist.medicalmate.core.voice.parseVoiceScroll
 
 /**
  * 대화의 한 마디에 답한다(#282).
@@ -33,11 +35,15 @@ internal class VoiceConversation(
     suspend fun respond(text: String): Boolean {
         val asking = pending
         val panel = shown()
+        val scroll = parseVoiceScroll(text)
         return when {
             VoiceWords.isStop(text) -> {
                 trace.log { "대화: \"$text\" → 그만" }
                 false
             }
+
+            // "아래로", "맨 위로". 어느 화면이든 같은 말로 굴린다. 문답에서 이 말이 답으로 나가지 않는다.
+            scroll != null -> scroll(text, scroll, panel)
 
             // 막대에 띄운 목록을 미처 못 봤다. 화면에 넘기지 않고 그대로 다시 띄운다. 문답에서는 이
             // 말이 답으로 나가면 안 된다.
@@ -50,6 +56,31 @@ internal class VoiceConversation(
             asking != null -> answer(text, asking)
             else -> reply(text)
         }
+    }
+
+    /**
+     * 지금 화면을 굴린다. 막대에 띄운 물음은 그대로 둔다 — 굴린 것은 무엇을 할지 바꾸지 않는다. "네"를
+     * 기다리는 중이면 그 물음도 남긴다.
+     */
+    private fun scroll(text: String, direction: VoiceScroll, panel: VoicePanel?): Boolean {
+        val scroller = targets.currentScroller
+        val moved = scroller?.scroll(direction) == true
+        trace.log { "대화: \"$text\" → 굴리기 $direction ${if (moved) "함" else "못 함"}" }
+        val message =
+            when {
+                scroller == null -> R.string.voice_scroll_none
+                !moved && (direction == VoiceScroll.DOWN || direction == VoiceScroll.BOTTOM) ->
+                    R.string.voice_scroll_end_down
+
+                !moved -> R.string.voice_scroll_end_up
+                direction == VoiceScroll.DOWN -> R.string.voice_scroll_down
+                direction == VoiceScroll.UP -> R.string.voice_scroll_up
+                direction == VoiceScroll.BOTTOM -> R.string.voice_scroll_bottom
+                else -> R.string.voice_scroll_top
+            }
+        val confirming = panel?.confirming == true
+        say(if (confirming && panel != null) panel.message else VoiceMessage(message), confirming, panel?.question)
+        return true
     }
 
     private suspend fun reply(text: String): Boolean {

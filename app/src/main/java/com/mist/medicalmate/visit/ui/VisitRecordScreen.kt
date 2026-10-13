@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,6 +28,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateEmptyStateTyp
 import com.mist.medicalmate.core.designsystem.component.MedicalMateLoadingSpinner
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
+import com.mist.medicalmate.core.voice.rememberVoiceScrollState
 
 /**
  * 와이어프레임 1q-1과 1q-1-E. Figma `405:2193`, `636:3675`.
@@ -121,7 +121,7 @@ private fun ColumnScope.RecordContent(state: VisitRecordUiState.Content, callbac
         Modifier
             .fillMaxWidth()
             .weight(1f)
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(rememberVoiceScrollState())
             .padding(horizontal = MedicalMateSize.gutter, vertical = MedicalMateSpace.s12),
     ) {
         VisitRecordCard(state = state, callbacks = callbacks)

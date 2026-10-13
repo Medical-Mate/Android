@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
@@ -34,6 +33,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateEmptyStateTyp
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSearchField
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
+import com.mist.medicalmate.core.voice.rememberVoiceScrollState
 
 /**
  * 와이어프레임 1m과 1m-B. Figma `489:5447`, `1041:3687`.
@@ -110,7 +110,7 @@ private fun ColumnScope.PickContent(
             .weight(1f)
             // 찾은 것이 없으면 스크롤하지 않는다. 빈 상태가 남은 높이를 받으려면 높이가
             // 정해져 있어야 하고, 그 화면에는 넘칠 것도 없다.
-            .let { if (empty) it else it.verticalScroll(rememberScrollState()) }
+            .let { if (empty) it else it.verticalScroll(rememberVoiceScrollState()) }
             .padding(horizontal = MedicalMateSize.gutter, vertical = MedicalMateSpace.s12),
         verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s20),
     ) {

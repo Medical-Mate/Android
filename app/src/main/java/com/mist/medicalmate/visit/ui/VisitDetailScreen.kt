@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -22,6 +21,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateEmptyStateTyp
 import com.mist.medicalmate.core.designsystem.component.MedicalMateLoadingSpinner
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
+import com.mist.medicalmate.core.voice.rememberVoiceScrollState
 
 /**
  * 저장한 진료 후 기록 하나. 캘린더 일자의 "이 날 기록" 줄에서 들어온다(#256).
@@ -57,7 +57,7 @@ fun VisitDetailScreen(
                     Modifier
                         .fillMaxWidth()
                         .weight(1f)
-                        .verticalScroll(rememberScrollState())
+                        .verticalScroll(rememberVoiceScrollState())
                         .padding(horizontal = MedicalMateSize.gutter, vertical = MedicalMateSpace.s12),
                 ) {
                     // 조작을 하나도 넘기지 않는다. 사본이 없어 편집 줄이 열리지 않고, ×도 붙지 않는다.
