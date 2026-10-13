@@ -32,6 +32,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateNotice
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTextField
 import com.mist.medicalmate.core.voice.rememberVoiceScrollState
+import com.mist.medicalmate.core.voice.voicePanelSpace
 
 /**
  * 와이어프레임 1s-2. Figma `407:2650`.
@@ -105,7 +106,7 @@ private fun ColumnScope.EditContent(state: HealthEditUiState, callbacks: HealthE
         Modifier
             .fillMaxWidth()
             .weight(1f)
-            .verticalScroll(rememberVoiceScrollState())
+            .verticalScroll(rememberVoiceScrollState()).voicePanelSpace()
             .padding(horizontal = MedicalMateSize.gutter, vertical = MedicalMateSpace.s12),
         verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s24),
     ) {

@@ -45,6 +45,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTabBar
 import com.mist.medicalmate.core.voice.rememberVoiceScrollState
+import com.mist.medicalmate.core.voice.voicePanelSpace
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -202,7 +203,7 @@ private fun MonthContent(
         modifier =
         Modifier
             .fillMaxSize()
-            .verticalScroll(rememberVoiceScrollState())
+            .verticalScroll(rememberVoiceScrollState()).voicePanelSpace()
             .padding(horizontal = MedicalMateSize.gutter, vertical = MedicalMateSpace.s12),
         verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s14),
     ) {

@@ -35,6 +35,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateRowDelete
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTodoRow
 import com.mist.medicalmate.core.voice.rememberVoiceScrollState
+import com.mist.medicalmate.core.voice.voicePanelSpace
 import java.time.format.DateTimeFormatter
 
 /**
@@ -67,7 +68,7 @@ fun CalendarDayScreen(state: CalendarDayUiState, callbacks: CalendarDayCallbacks
             Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .verticalScroll(rememberVoiceScrollState())
+                .verticalScroll(rememberVoiceScrollState()).voicePanelSpace()
                 .padding(horizontal = MedicalMateSize.gutter, vertical = MedicalMateSpace.s12),
             verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8),
         ) {

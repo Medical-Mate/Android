@@ -35,6 +35,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateBadge
 import com.mist.medicalmate.core.designsystem.component.MedicalMateCheckbox
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 import com.mist.medicalmate.core.voice.rememberVoiceLazyListState
+import com.mist.medicalmate.core.voice.voicePanelInset
 
 /**
  * 기록 목록의 묶음 머리와 줄. Figma 1j-1 `406:2569`, 1j-1-D `1121:4527`.
@@ -79,7 +80,7 @@ internal fun ColumnScope.GroupList(
             start = MedicalMateSize.gutter,
             end = MedicalMateSize.gutter,
             top = MedicalMateSpace.s12,
-            bottom = MedicalMateSpace.s16,
+            bottom = MedicalMateSpace.s16 + voicePanelInset(),
         ),
         verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s10),
     ) {

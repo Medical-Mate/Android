@@ -29,6 +29,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateLoadingSpinne
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
 import com.mist.medicalmate.core.voice.rememberVoiceScrollState
+import com.mist.medicalmate.core.voice.voicePanelSpace
 
 /**
  * 와이어프레임 1q-1과 1q-1-E. Figma `405:2193`, `636:3675`.
@@ -121,7 +122,7 @@ private fun ColumnScope.RecordContent(state: VisitRecordUiState.Content, callbac
         Modifier
             .fillMaxWidth()
             .weight(1f)
-            .verticalScroll(rememberVoiceScrollState())
+            .verticalScroll(rememberVoiceScrollState()).voicePanelSpace()
             .padding(horizontal = MedicalMateSize.gutter, vertical = MedicalMateSpace.s12),
     ) {
         VisitRecordCard(state = state, callbacks = callbacks)

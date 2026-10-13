@@ -23,6 +23,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTabBar
 import com.mist.medicalmate.core.voice.rememberVoiceLazyListState
+import com.mist.medicalmate.core.voice.voicePanelInset
 import java.time.LocalDate
 
 /**
@@ -146,7 +147,7 @@ private fun HomeContent(
             start = MedicalMateSize.gutter,
             end = MedicalMateSize.gutter,
             top = MedicalMateSpace.s8,
-            bottom = MedicalMateSize.gutter,
+            bottom = MedicalMateSize.gutter + voicePanelInset(),
         ),
         verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s16),
     ) {

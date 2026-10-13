@@ -38,6 +38,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateTextField
 import com.mist.medicalmate.core.model.IntakeStep
 import com.mist.medicalmate.core.model.MAX_BRIEF_CARD_QUESTIONS
 import com.mist.medicalmate.core.voice.rememberVoiceScrollState
+import com.mist.medicalmate.core.voice.voicePanelSpace
 
 /**
  * 단계별 본문. [IntakeScreen]에서만 쓴다.
@@ -63,7 +64,7 @@ internal fun StepContent(
         modifier =
         modifier
             .fillMaxWidth()
-            .verticalScroll(key(scrollKey) { rememberVoiceScrollState() })
+            .verticalScroll(key(scrollKey) { rememberVoiceScrollState() }).voicePanelSpace()
             .padding(
                 start = MedicalMateSize.gutter,
                 end = MedicalMateSize.gutter,

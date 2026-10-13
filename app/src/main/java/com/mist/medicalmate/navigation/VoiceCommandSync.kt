@@ -7,9 +7,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -19,6 +25,7 @@ import com.mist.medicalmate.auth.ui.SessionUiState
 import com.mist.medicalmate.calendar.ui.ScheduleAddDestination
 import com.mist.medicalmate.card.ui.BriefCardListDestination
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
+import com.mist.medicalmate.core.voice.LocalVoicePanelInset
 import com.mist.medicalmate.core.voice.LocalVoiceTargets
 import com.mist.medicalmate.home.ui.HomeDestination
 import com.mist.medicalmate.intake.ui.IntakeDestination
@@ -75,13 +82,20 @@ internal fun VoiceCommandHost(
         navController.perform(request)
     }
 
+    // 막대는 화면 위에 겹쳐 뜬다. 화면을 줄이지 않고 그 높이만 내려 주어 스크롤 끝에 빈자리를 붙인다(#284).
+    var panelHeight by remember { mutableIntStateOf(0) }
+    val inset = with(LocalDensity.current) { if (state.panel != null) panelHeight.toDp() else 0.dp }
     Box(modifier = modifier) {
-        CompositionLocalProvider(LocalVoiceTargets provides viewModel.targets, content = content)
+        CompositionLocalProvider(
+            LocalVoiceTargets provides viewModel.targets,
+            LocalVoicePanelInset provides inset,
+            content = content,
+        )
         state.panel?.let { panel ->
             VoiceCommandPanel(
                 panel = panel,
                 onDismiss = viewModel::dismiss,
-                modifier = Modifier.align(Alignment.BottomCenter),
+                modifier = Modifier.align(Alignment.BottomCenter).onSizeChanged { panelHeight = it.height },
             )
         }
     }

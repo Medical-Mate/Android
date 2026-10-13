@@ -44,6 +44,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateRowDelete
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTodoRow
 import com.mist.medicalmate.core.voice.rememberVoiceScrollState
+import com.mist.medicalmate.core.voice.voicePanelSpace
 import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.time.LocalTime
@@ -114,7 +115,7 @@ private fun ColumnScope.FormContent(state: ScheduleAddUiState, callbacks: Schedu
         Modifier
             .fillMaxWidth()
             .weight(1f)
-            .verticalScroll(rememberVoiceScrollState())
+            .verticalScroll(rememberVoiceScrollState()).voicePanelSpace()
             .padding(horizontal = MedicalMateSize.gutter, vertical = MedicalMateSpace.s8),
     ) {
         ShareReadNotice(state.shareRead)

@@ -26,6 +26,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateDivider
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
 import com.mist.medicalmate.core.voice.rememberVoiceScrollState
+import com.mist.medicalmate.core.voice.voicePanelSpace
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -93,7 +94,7 @@ private fun ColumnScope.ConfirmContent(
         Modifier
             .fillMaxWidth()
             .weight(1f)
-            .verticalScroll(rememberVoiceScrollState())
+            .verticalScroll(rememberVoiceScrollState()).voicePanelSpace()
             .padding(horizontal = MedicalMateSize.gutter, vertical = MedicalMateSpace.s12),
         verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s20),
     ) {

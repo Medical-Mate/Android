@@ -33,6 +33,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
 import com.mist.medicalmate.core.designsystem.component.MedicalMateToggle
 import com.mist.medicalmate.core.voice.rememberVoiceScrollState
+import com.mist.medicalmate.core.voice.voicePanelSpace
 import com.mist.medicalmate.profile.data.HealthField
 import com.mist.medicalmate.profile.data.HealthStatus
 
@@ -93,7 +94,7 @@ private fun ColumnScope.ProfileContent(
         Modifier
             .fillMaxWidth()
             .weight(1f)
-            .verticalScroll(rememberVoiceScrollState())
+            .verticalScroll(rememberVoiceScrollState()).voicePanelSpace()
             .padding(
                 start = MedicalMateSize.gutter,
                 end = MedicalMateSize.gutter,

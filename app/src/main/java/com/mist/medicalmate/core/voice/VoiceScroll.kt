@@ -2,12 +2,18 @@ package com.mist.medicalmate.core.voice
 
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -117,3 +123,21 @@ private val SCROLL_WORDS =
         VoiceScroll.DOWN to listOf("아래로", "밑으로", "내려", "다음내용"),
         VoiceScroll.UP to listOf("위로", "올려"),
     )
+
+/**
+ * 화면 아래에 뜬 음성 막대의 높이(#284). 막대가 닫혀 있으면 0이다.
+ *
+ * 막대는 화면 위에 겹쳐 뜬다. 화면을 그만큼 줄이면 막대가 뜰 때마다 화면 전체가 들썩여서, 화면은 그대로
+ * 두고 스크롤 끝에만 이만큼 빈자리를 붙인다. 맨 아래 내용도 막대 위로 올려 볼 수 있다.
+ */
+val LocalVoicePanelInset = compositionLocalOf { 0.dp }
+
+/**
+ * 스크롤 끝에 막대 높이만큼 빈자리를 둔다. `verticalScroll(...)` 바로 뒤에 붙인다. 그 뒤의 여백은 내용
+ * 안쪽이라 스크롤 길이가 늘어난다.
+ */
+fun Modifier.voicePanelSpace(): Modifier = composed { padding(bottom = LocalVoicePanelInset.current) }
+
+/** 지금 막대 높이. 목록의 `contentPadding` 아래 값에 더한다. */
+@Composable
+fun voicePanelInset(): Dp = LocalVoicePanelInset.current

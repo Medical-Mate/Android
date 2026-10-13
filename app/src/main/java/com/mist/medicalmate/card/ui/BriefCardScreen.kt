@@ -39,6 +39,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
 import com.mist.medicalmate.core.model.MAX_BRIEF_CARD_QUESTIONS
 import com.mist.medicalmate.core.voice.rememberVoiceScrollState
+import com.mist.medicalmate.core.voice.voicePanelSpace
 import kotlinx.coroutines.launch
 
 /**
@@ -147,7 +148,7 @@ private fun ColumnScope.CardContent(
         Modifier
             .fillMaxWidth()
             .weight(1f)
-            .verticalScroll(rememberVoiceScrollState())
+            .verticalScroll(rememberVoiceScrollState()).voicePanelSpace()
             // 스크롤 안쪽에 둔다. 바깥에 두면 화면에 보이는 높이만 찍힌다.
             .recordInto(cardLayer, MedicalMateTheme.colors.bgSurface)
             .padding(

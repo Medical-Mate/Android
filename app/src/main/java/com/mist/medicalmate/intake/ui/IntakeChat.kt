@@ -47,6 +47,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButtonSty
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTextField
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceInput
 import com.mist.medicalmate.core.voice.rememberVoiceLazyListState
+import com.mist.medicalmate.core.voice.voicePanelInset
 
 /**
  * 2단계 증상 문답. Figma 1c-1 `402:1629`, 1c-2 `402:1506`.
@@ -83,7 +84,7 @@ internal fun ChatStep(state: IntakeUiState, modifier: Modifier = Modifier) {
             start = MedicalMateSize.gutter,
             end = MedicalMateSize.gutter,
             top = MedicalMateSpace.s12,
-            bottom = MedicalMateSpace.s16,
+            bottom = MedicalMateSpace.s16 + voicePanelInset(),
         ),
         verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s14),
     ) {

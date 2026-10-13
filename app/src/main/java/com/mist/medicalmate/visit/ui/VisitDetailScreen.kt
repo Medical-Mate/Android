@@ -22,6 +22,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateLoadingSpinne
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
 import com.mist.medicalmate.core.voice.rememberVoiceScrollState
+import com.mist.medicalmate.core.voice.voicePanelSpace
 
 /**
  * 저장한 진료 후 기록 하나. 캘린더 일자의 "이 날 기록" 줄에서 들어온다(#256).
@@ -57,7 +58,7 @@ fun VisitDetailScreen(
                     Modifier
                         .fillMaxWidth()
                         .weight(1f)
-                        .verticalScroll(rememberVoiceScrollState())
+                        .verticalScroll(rememberVoiceScrollState()).voicePanelSpace()
                         .padding(horizontal = MedicalMateSize.gutter, vertical = MedicalMateSpace.s12),
                 ) {
                     // 조작을 하나도 넘기지 않는다. 사본이 없어 편집 줄이 열리지 않고, ×도 붙지 않는다.

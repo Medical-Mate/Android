@@ -35,6 +35,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateLoadingSpinne
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
 import com.mist.medicalmate.core.voice.rememberVoiceScrollState
+import com.mist.medicalmate.core.voice.voicePanelSpace
 
 /**
  * 와이어프레임 1j-3. Figma `735:3829`.
@@ -89,7 +90,7 @@ private fun ColumnScope.DetailContent(detail: RecordDetail, expandedSteps: Set<I
         Modifier
             .fillMaxWidth()
             .weight(1f)
-            .verticalScroll(rememberVoiceScrollState())
+            .verticalScroll(rememberVoiceScrollState()).voicePanelSpace()
             .padding(
                 start = MedicalMateSize.gutter,
                 end = MedicalMateSize.gutter,

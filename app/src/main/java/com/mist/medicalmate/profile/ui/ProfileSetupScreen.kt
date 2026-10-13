@@ -28,6 +28,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTextField
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTooltip
 import com.mist.medicalmate.core.voice.rememberVoiceScrollState
+import com.mist.medicalmate.core.voice.voicePanelSpace
 
 /**
  * 와이어프레임 1b-1·1b-2·1b-3. Figma `398:1225`, `398:1285`, `398:1341`.
@@ -65,7 +66,7 @@ fun ProfileSetupScreen(
             Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .verticalScroll(rememberVoiceScrollState())
+                .verticalScroll(rememberVoiceScrollState()).voicePanelSpace()
                 .padding(
                     start = MedicalMateSize.gutter,
                     end = MedicalMateSize.gutter,
