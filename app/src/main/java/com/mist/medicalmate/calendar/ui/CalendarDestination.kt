@@ -9,10 +9,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
+import com.mist.medicalmate.core.voice.VoiceReply
+import com.mist.medicalmate.core.voice.VoiceTargetEffect
+import com.mist.medicalmate.core.voice.VoiceText
 import kotlinx.serialization.Serializable
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /** 와이어프레임 1r-1. 하단 탭의 캘린더다. */
 @Serializable
@@ -101,6 +107,28 @@ private fun CalendarMonthRoute(
     // 일정을 넣거나 지우고 돌아오면 달라져 있다. 화면으로 올 때마다 다시 읽는다.
     LaunchedEffect(Unit) { viewModel.load() }
 
+    // "20일", "내일", "다음 주 화요일"이면 그 날을, "12월", "다음 달"이면 그 달로(#286). 다른 화면에서
+    // "10월 20일 일정 보여줘"로 들어오면 그 말도 여기서 받는다.
+    VoiceTargetEffect { text ->
+        when (val voice = parseCalendarVoice(text, state.today, state.month)) {
+            is CalendarVoice.Day -> {
+                onDayOpen(voice.date, null)
+                VoiceReply.Done(R.string.voice_calendar_day, listOf(voice.date.format(VOICE_DATE)))
+            }
+
+            is CalendarVoice.Month -> {
+                viewModel.onMonthPick(voice.month)
+                VoiceReply.Done(
+                    R.string.voice_calendar_month,
+                    listOf(voice.month.format(VOICE_MONTH)),
+                    question = VoiceText(R.string.voice_calendar_ask),
+                )
+            }
+
+            null -> VoiceReply.NotMine
+        }
+    }
+
     CalendarMonthScreen(
         state = state,
         onPreviousMonthClick = viewModel::onPreviousMonth,
@@ -181,3 +209,6 @@ private fun CalendarDayRoute(
         modifier = modifier,
     )
 }
+
+/** 막대에 적는 달. "2026년 12월". */
+private val VOICE_MONTH: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy년 M월", Locale.KOREAN)

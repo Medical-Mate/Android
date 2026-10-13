@@ -60,6 +60,11 @@ internal constructor(
         loadMonth(mutableUiState.value.month.plusMonths(1))
     }
 
+    /** 말한 달로 넘긴다(#286). "12월", "다음 달". */
+    fun onMonthPick(month: YearMonth) {
+        loadMonth(month)
+    }
+
     /**
      * 날을 골랐다. 그 날의 일정만 남긴다.
      *
