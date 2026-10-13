@@ -2,15 +2,21 @@ package com.mist.medicalmate.card.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mist.medicalmate.R
 import com.mist.medicalmate.card.data.CardListItem
 import com.mist.medicalmate.card.data.CardRepository
 import com.mist.medicalmate.core.network.ApiResult
+import com.mist.medicalmate.core.voice.VoiceReply
+import com.mist.medicalmate.core.voice.VoiceText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -30,12 +36,22 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
     private val mutableUiState = MutableStateFlow<BriefCardListUiState>(BriefCardListUiState.Loading)
     val uiState: StateFlow<BriefCardListUiState> = mutableUiState.asStateFlow()
 
+    /** 받아 온 카드. 말로 찾을 때 작성일과 병원이 필요한데 화면 줄에는 글로만 남는다(#286). */
+    private var cards: List<CardListItem> = emptyList()
+
+    /** 여럿이 걸려 되물은 후보. 다음 말이 "두 번째"면 이 안에서 센다. */
+    private var candidates: List<CardListItem> = emptyList()
+
     fun load() {
         mutableUiState.value = BriefCardListUiState.Loading
         viewModelScope.launch {
             mutableUiState.value =
                 when (val result = repository.cards()) {
-                    is ApiResult.Success -> BriefCardListUiState.Content(groups = result.value.toGroups())
+                    is ApiResult.Success -> {
+                        cards = result.value
+                        BriefCardListUiState.Content(groups = result.value.toGroups())
+                    }
+
                     is ApiResult.Rejected, is ApiResult.NetworkUnavailable -> BriefCardListUiState.Failed
                 }
         }
@@ -77,6 +93,43 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
         viewModelScope.launch {
             val gone = repository.deleteAll(ids)
             updateContent { content -> content.without(gone).copy(selectedIds = null) }
+        }
+    }
+
+    /**
+     * 말로 카드를 찾아 연다(#286). 하나면 열고, 여럿이면 후보를 적어 몇 번째인지 묻고, 없으면 알린다.
+     *
+     * 화면을 연 말이 넘어오면 목록을 받기 전일 수 있어 받을 때까지 기다린다. 고르는 중(편집)이면 받지 않는다.
+     */
+    internal suspend fun onVoice(text: String, today: LocalDate, open: (String) -> Unit): VoiceReply {
+        val state = withTimeoutOrNull(VOICE_WAIT_MS) { uiState.first { it !is BriefCardListUiState.Loading } }
+        val pool = candidates.ifEmpty { cards }
+        val found = pool.findByVoice(text, today)?.ifEmpty { cards.findByVoice(text, today).orEmpty() }
+        val card = found?.singleOrNull()
+        return when {
+            state !is BriefCardListUiState.Content || state.editing || found == null -> VoiceReply.NotMine
+            card != null -> {
+                candidates = emptyList()
+                open(card.id)
+                VoiceReply.Done(R.string.voice_card_opened, listOf(card.title))
+            }
+
+            found.isEmpty() -> VoiceReply.Done(R.string.voice_card_none, question = VoiceText(R.string.voice_card_ask))
+            else -> {
+                candidates = found
+                VoiceReply.Done(
+                    R.string.voice_card_which,
+                    listOf(found.size.toString()),
+                    question = VoiceText(
+                        R.string.voice_card_ask_which,
+                        listOf(
+                            found.joinToString("\n") {
+                                it.voiceLine()
+                            },
+                        ),
+                    ),
+                )
+            }
         }
     }
 
@@ -177,3 +230,6 @@ internal val previewBriefCardGroups =
             ),
         ),
     )
+
+/** 화면을 연 말이 넘어왔을 때 목록을 받기를 기다리는 한도. */
+private const val VOICE_WAIT_MS = 5_000L

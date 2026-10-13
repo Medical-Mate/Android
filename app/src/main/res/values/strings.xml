@@ -617,6 +617,14 @@
     <string name="voice_ask_date">언제 가세요? "10월 20일 오후 3시"처럼요</string>
     <string name="voice_ask_done">다 됐으면 "저장"이라고 해 주세요</string>
     <string name="voice_schedule_card_dropped">%1$s 카드는 빼 둘게요</string>
+    <string name="voice_card_ask">어떤 카드를 열까요? 몇 번째인지나 제목, 쓴 날로 말씀해 주세요</string>
+    <string name="voice_card_opened">%1$s, 열었어요</string>
+    <string name="voice_card_which">맞는 카드가 %1$s장이에요</string>
+    <string name="voice_card_ask_which">몇 번째인지 말씀해 주세요\n%1$s</string>
+    <string name="voice_card_none">그런 카드를 찾지 못했어요</string>
+    <string name="voice_calendar_day">%1$s 일정을 열었어요</string>
+    <string name="voice_calendar_month">%1$s로 넘겼어요</string>
+    <string name="voice_calendar_ask">날짜를 말하면 그 날을 열어요. "20일"처럼요</string>
     <string name="voice_scroll_down">내렸어요</string>
     <string name="voice_scroll_up">올렸어요</string>
     <string name="voice_scroll_bottom">맨 아래예요</string>

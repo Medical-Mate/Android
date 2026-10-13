@@ -27,6 +27,7 @@ import com.mist.medicalmate.card.ui.BriefCardListDestination
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
 import com.mist.medicalmate.core.voice.LocalVoicePanelInset
 import com.mist.medicalmate.core.voice.LocalVoiceTargets
+import com.mist.medicalmate.core.voice.VoiceTargets
 import com.mist.medicalmate.home.ui.HomeDestination
 import com.mist.medicalmate.intake.ui.IntakeDestination
 import com.mist.medicalmate.profile.ui.MyProfileDestination
@@ -79,7 +80,7 @@ internal fun VoiceCommandHost(
     LaunchedEffect(state.command) {
         val request = state.command ?: return@LaunchedEffect
         viewModel.onCommandHandled()
-        navController.perform(request)
+        navController.perform(request, viewModel.targets)
     }
 
     // 막대는 화면 위에 겹쳐 뜬다. 화면을 줄이지 않고 그 높이만 내려 주어 스크롤 끝에 빈자리를 붙인다(#284).
@@ -112,7 +113,11 @@ internal fun VoiceCommandHost(
  * 추가해 줘"에 넘기면 "날짜를 찾지 못했어요"가 떠서 넘기지 않는다. 말로 연 것이라는 표시(`voice`)를
  * 함께 실어, 병원을 말했으면 병원 찾기가 하나로 좁혀질 때 알아서 고른다.
  */
-private fun NavHostController.perform(request: VoiceCommandRequest) {
+private fun NavHostController.perform(request: VoiceCommandRequest, targets: VoiceTargets) {
+    // 캘린더와 카드 목록은 옮겨 간 화면이 그 말을 받아 날짜나 카드를 연다(#286).
+    if (request.command == VoiceCommand.CALENDAR || request.command == VoiceCommand.BRIEF_CARDS) {
+        targets.handOff(request.text)
+    }
     when (request.command) {
         VoiceCommand.HOME -> selectTab(MedicalMateTab.HOME)
         VoiceCommand.CALENDAR -> selectTab(MedicalMateTab.CALENDAR)

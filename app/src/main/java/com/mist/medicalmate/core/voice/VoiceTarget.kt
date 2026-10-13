@@ -3,6 +3,7 @@ package com.mist.medicalmate.core.voice
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -81,6 +82,8 @@ class VoiceTargets {
 
     private val scrollers = mutableListOf<VoiceScroller>()
 
+    private var handoff: Pair<String, Long>? = null
+
     private val asked = MutableSharedFlow<VoicePrompt>(extraBufferCapacity = PROMPT_BUFFER)
 
     val current: VoiceTarget? get() = synchronized(stack) { stack.lastOrNull() }
@@ -99,6 +102,22 @@ class VoiceTargets {
         synchronized(stack) { stack.remove(target) }
     }
 
+    /**
+     * 화면을 옮긴 말을 옮겨 간 화면에 넘긴다(#286). "10월 20일 일정 보여줘"가 캘린더를 열고, 열린 캘린더가 그
+     * 말로 그 날을 연다. 다음에 등록하는 화면 하나가 받는다. 그 사이가 길면 버린다 — 옮겨 가지 않았으면
+     * 엉뚱한 화면이 나중에 받게 된다.
+     */
+    fun handOff(text: String) {
+        synchronized(stack) { handoff = text to System.currentTimeMillis() }
+    }
+
+    /** 넘겨받은 말. 한 번만 준다. */
+    fun takeHandoff(): String? = synchronized(stack) {
+        val taken = handoff
+        handoff = null
+        taken?.takeIf { System.currentTimeMillis() - it.second <= HANDOFF_MS }?.first
+    }
+
     fun registerScroller(scroller: VoiceScroller) {
         synchronized(scrollers) { scrollers += scroller }
     }
@@ -114,6 +133,8 @@ class VoiceTargets {
 
     private companion object {
         const val PROMPT_BUFFER = 4
+
+        const val HANDOFF_MS = 3_000L
     }
 }
 
@@ -133,6 +154,12 @@ fun VoiceTargetEffect(target: VoiceTarget) {
         val registered = VoiceTarget { text -> latest.handle(text) }
         targets.register(registered)
         onDispose { targets.unregister(registered) }
+    }
+    // 이 화면을 연 말이 넘어왔으면 받아 처리하고 그 답을 막대에 건다(#286).
+    LaunchedEffect(targets) {
+        val text = targets.takeHandoff() ?: return@LaunchedEffect
+        val reply = latest.handle(text) as? VoiceReply.Done ?: return@LaunchedEffect
+        targets.ask(VoicePrompt(message = VoiceText(reply.message, reply.args), question = reply.question))
     }
 }
 
