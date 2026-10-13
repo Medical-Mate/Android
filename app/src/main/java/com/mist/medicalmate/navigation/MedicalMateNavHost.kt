@@ -1,5 +1,6 @@
 package com.mist.medicalmate.navigation
 
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -67,50 +68,53 @@ internal fun MedicalMateNavHost(
 ) {
     val navController = rememberNavController()
 
-    NavHost(
-        navController = navController,
-        startDestination = session.destination(onboardingCompleted),
-        modifier = modifier,
-        enterTransition = MedicalMateNavTransitions.enter,
-        exitTransition = MedicalMateNavTransitions.exit,
-        popEnterTransition = MedicalMateNavTransitions.popEnter,
-        popExitTransition = MedicalMateNavTransitions.popExit,
-        predictivePopEnterTransition = MedicalMateNavTransitions.predictivePopEnter,
-        predictivePopExitTransition = MedicalMateNavTransitions.predictivePopExit,
-    ) {
-        entryDestinations(
+    // "헤이 메이트"의 화면별 명령과 막대가 그래프를 감싼다(#282).
+    VoiceCommandHost(navController, session, onboardingCompleted, modifier) {
+        NavHost(
             navController = navController,
-            session = session,
-            onAuthenticated = onAuthenticated,
-            onOnboardingCompleted = onOnboardingCompleted,
-        )
-        intakeDestinations(navController)
-        briefCardDestination(
-            onSaved = { navController.resetTo(HomeDestination) },
-            // 카드의 `변경`. 어느 카드로 돌아갈지 들고 간다.
-            onHospitalChange = { cardId ->
-                navController.navigate(
-                    HospitalPickDestination(purpose = HospitalPickPurpose.BEFORE_VISIT, cardId = cardId),
-                )
-            },
-            // 지운 카드의 화면에 남을 수 없다. 시안이 카드 목록으로 보낸다(1e-1-DC). 홈까지만
-            // 걷어내고 목록을 얹어서, 뒤로 가면 홈이 나오고 목록이 두 장 쌓이지 않게 한다.
-            onDeleted = {
-                navController.navigate(BriefCardListDestination) {
-                    popUpTo<HomeDestination> { inclusive = false }
-                    launchSingleTop = true
-                }
-            },
-            onExit = { navController.popBackStack() },
-        )
-        homeDestination(
-            callbacks = navController.homeCallbacks(),
-            onTabSelect = navController::selectTab,
-        )
-        recordDestinations(navController)
-        profileDestinations(navController = navController, accountActions = accountActions)
-        calendarDestinations(navController)
-        visitDestinations(navController)
+            startDestination = session.destination(onboardingCompleted),
+            modifier = Modifier.fillMaxSize(),
+            enterTransition = MedicalMateNavTransitions.enter,
+            exitTransition = MedicalMateNavTransitions.exit,
+            popEnterTransition = MedicalMateNavTransitions.popEnter,
+            popExitTransition = MedicalMateNavTransitions.popExit,
+            predictivePopEnterTransition = MedicalMateNavTransitions.predictivePopEnter,
+            predictivePopExitTransition = MedicalMateNavTransitions.predictivePopExit,
+        ) {
+            entryDestinations(
+                navController = navController,
+                session = session,
+                onAuthenticated = onAuthenticated,
+                onOnboardingCompleted = onOnboardingCompleted,
+            )
+            intakeDestinations(navController)
+            briefCardDestination(
+                onSaved = { navController.resetTo(HomeDestination) },
+                // 카드의 `변경`. 어느 카드로 돌아갈지 들고 간다.
+                onHospitalChange = { cardId ->
+                    navController.navigate(
+                        HospitalPickDestination(purpose = HospitalPickPurpose.BEFORE_VISIT, cardId = cardId),
+                    )
+                },
+                // 지운 카드의 화면에 남을 수 없다. 시안이 카드 목록으로 보낸다(1e-1-DC). 홈까지만
+                // 걷어내고 목록을 얹어서, 뒤로 가면 홈이 나오고 목록이 두 장 쌓이지 않게 한다.
+                onDeleted = {
+                    navController.navigate(BriefCardListDestination) {
+                        popUpTo<HomeDestination> { inclusive = false }
+                        launchSingleTop = true
+                    }
+                },
+                onExit = { navController.popBackStack() },
+            )
+            homeDestination(
+                callbacks = navController.homeCallbacks(),
+                onTabSelect = navController::selectTab,
+            )
+            recordDestinations(navController)
+            profileDestinations(navController = navController, accountActions = accountActions)
+            calendarDestinations(navController)
+            visitDestinations(navController)
+        }
     }
 
     SessionBoundarySync(navController = navController, session = session, onboardingCompleted = onboardingCompleted)
@@ -124,8 +128,6 @@ internal fun MedicalMateNavHost(
         sharedText = sharedText,
         onSharedTextHandled = onSharedTextHandled,
     )
-
-    VoiceCommandSync(navController = navController, session = session, onboardingCompleted = onboardingCompleted)
 }
 
 /** 앱 밖에서 들어온 길들. 알림과 공유가 같은 규칙으로 화면을 연다. */

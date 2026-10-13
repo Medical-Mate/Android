@@ -62,6 +62,12 @@ data class HospitalPickUiState(
     val total: Int = 0,
     /** 서버에 닿지 못했는지. 못 찾은 것과 다르다. */
     val failed: Boolean = false,
+    /**
+     * 말로 찾은 결과를 어떻게 할지(#282). 화면이 고르거나 막대로 되묻고 나서 비운다.
+     */
+    val voiceDecision: HospitalVoiceDecision? = null,
+    /** 동네나 지점 이름으로 좁힐 곳들. 이름이 같은 여러 지점을 가리는 중이면 그곳들만이다. */
+    val voiceCandidates: List<Hospital> = emptyList(),
 ) {
     /**
      * 하단 CTA를 누를 수 있는지.

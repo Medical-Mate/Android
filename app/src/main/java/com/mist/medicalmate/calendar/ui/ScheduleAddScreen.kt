@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
+import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateScreenPreviews
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
@@ -106,6 +107,8 @@ data class ScheduleAddCallbacks(
 
 @Composable
 private fun ColumnScope.FormContent(state: ScheduleAddUiState, callbacks: ScheduleAddCallbacks) {
+    // 말로 바뀐 자리(#282). 그 칸으로 화면을 옮기고 잠깐 테를 두른다.
+    val focus = rememberVoiceFocus(state.voiceFocus)
     Column(
         modifier =
         Modifier
@@ -116,16 +119,18 @@ private fun ColumnScope.FormContent(state: ScheduleAddUiState, callbacks: Schedu
     ) {
         ShareReadNotice(state.shareRead)
         FieldLabel(stringResource(R.string.schedule_add_hospital))
-        MedicalMatePickerField(
-            value = state.hospital,
-            placeholder = stringResource(R.string.schedule_add_hospital_placeholder),
-            onClick = callbacks.onHospitalClick,
-            errorText = stringResource(R.string.schedule_add_hospital_required).takeIf { state.hospitalMissing },
-        )
+        VoiceFocusFrame(focus, ScheduleAddFocusTarget.Hospital, MedicalMateRadius.md) {
+            MedicalMatePickerField(
+                value = state.hospital,
+                placeholder = stringResource(R.string.schedule_add_hospital_placeholder),
+                onClick = callbacks.onHospitalClick,
+                errorText = stringResource(R.string.schedule_add_hospital_required).takeIf { state.hospitalMissing },
+            )
+        }
         FieldLabel(stringResource(R.string.schedule_add_datetime))
-        DateTimeFields(state = state, onSheetOpen = callbacks.onSheetOpen)
-        CardSection(state = state, callbacks = callbacks)
-        TodoSection(state = state, todo = callbacks.todo)
+        DateTimeFields(state = state, focus = focus, onSheetOpen = callbacks.onSheetOpen)
+        CardSection(state = state, focus = focus, callbacks = callbacks)
+        TodoSection(state = state, focus = focus, todo = callbacks.todo)
     }
 }
 
@@ -172,23 +177,29 @@ private fun FieldLabel(text: String) {
  * 어느 쪽이 무엇인지 아이콘으로 먼저 읽힌다.
  */
 @Composable
-private fun DateTimeFields(state: ScheduleAddUiState, onSheetOpen: (ScheduleAddSheet) -> Unit) {
+private fun DateTimeFields(
+    state: ScheduleAddUiState,
+    focus: ScheduleAddFocus?,
+    onSheetOpen: (ScheduleAddSheet) -> Unit,
+) {
     Row(horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s10)) {
-        MedicalMatePickerField(
-            value = state.date?.format(dateFormat),
-            placeholder = stringResource(R.string.schedule_add_date_placeholder),
-            onClick = { onSheetOpen(ScheduleAddSheet.DATE) },
-            trailingIcon = MedicalMateIcons.Calendar,
-            modifier = Modifier.weight(1f),
-            errorText = stringResource(R.string.schedule_add_date_required).takeIf { state.dateMissing },
-        )
-        MedicalMatePickerField(
-            value = state.time?.let { timeLabel(it) },
-            placeholder = stringResource(R.string.schedule_add_time_placeholder),
-            onClick = { onSheetOpen(ScheduleAddSheet.TIME) },
-            trailingIcon = MedicalMateIcons.Clock,
-            modifier = Modifier.weight(1f),
-        )
+        VoiceFocusFrame(focus, ScheduleAddFocusTarget.Date, MedicalMateRadius.md, Modifier.weight(1f)) {
+            MedicalMatePickerField(
+                value = state.date?.format(dateFormat),
+                placeholder = stringResource(R.string.schedule_add_date_placeholder),
+                onClick = { onSheetOpen(ScheduleAddSheet.DATE) },
+                trailingIcon = MedicalMateIcons.Calendar,
+                errorText = stringResource(R.string.schedule_add_date_required).takeIf { state.dateMissing },
+            )
+        }
+        VoiceFocusFrame(focus, ScheduleAddFocusTarget.Time, MedicalMateRadius.md, Modifier.weight(1f)) {
+            MedicalMatePickerField(
+                value = state.time?.let { timeLabel(it) },
+                placeholder = stringResource(R.string.schedule_add_time_placeholder),
+                onClick = { onSheetOpen(ScheduleAddSheet.TIME) },
+                trailingIcon = MedicalMateIcons.Clock,
+            )
+        }
     }
 }
 
@@ -198,7 +209,11 @@ private fun DateTimeFields(state: ScheduleAddUiState, onSheetOpen: (ScheduleAddS
  * 머리 오른쪽은 고른 수다. 누르는 링크가 아니라 읽기만 하는 표시라 `caption`으로 준다.
  */
 @Composable
-private fun ColumnScope.CardSection(state: ScheduleAddUiState, callbacks: ScheduleAddCallbacks) {
+private fun ColumnScope.CardSection(
+    state: ScheduleAddUiState,
+    focus: ScheduleAddFocus?,
+    callbacks: ScheduleAddCallbacks,
+) {
     val picked = state.pickedCardCount
     MedicalMateSectionHeader(
         title = stringResource(R.string.schedule_add_cards),
@@ -211,12 +226,14 @@ private fun ColumnScope.CardSection(state: ScheduleAddUiState, callbacks: Schedu
     )
     Column(verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s10)) {
         state.cards.forEach { card ->
-            MedicalMateCardPick(
-                selected = card.picked,
-                onSelectedChange = { callbacks.onCardPickChange(card.id, it) },
-                title = card.title,
-                meta = card.meta,
-            )
+            VoiceFocusFrame(focus, ScheduleAddFocusTarget.Card(card.id), MedicalMateRadius.lg) {
+                MedicalMateCardPick(
+                    selected = card.picked,
+                    onSelectedChange = { callbacks.onCardPickChange(card.id, it) },
+                    title = card.title,
+                    meta = card.meta,
+                )
+            }
         }
         MedicalMateAddRow(
             label = stringResource(R.string.schedule_add_card_new),
@@ -240,7 +257,7 @@ private fun ColumnScope.CardSection(state: ScheduleAddUiState, callbacks: Schedu
  * 바뀌는 동안은 기다리고 멎은 뒤에 옮긴다.
  */
 @Composable
-private fun ColumnScope.TodoSection(state: ScheduleAddUiState, todo: ScheduleAddTodoActions) {
+private fun ColumnScope.TodoSection(state: ScheduleAddUiState, focus: ScheduleAddFocus?, todo: ScheduleAddTodoActions) {
     val addRow = remember { BringIntoViewRequester() }
     var shown by remember { mutableIntStateOf(state.todos.size) }
     var pending by remember { mutableStateOf(false) }
@@ -260,27 +277,36 @@ private fun ColumnScope.TodoSection(state: ScheduleAddUiState, todo: ScheduleAdd
         if (imeBottom > 0) pending = false
     }
 
-    MedicalMateSectionHeader(title = stringResource(R.string.schedule_add_todo))
+    VoiceFocusFrame(focus, ScheduleAddFocusTarget.Todos, MedicalMateRadius.sm) {
+        MedicalMateSectionHeader(title = stringResource(R.string.schedule_add_todo))
+    }
     state.todos.forEach { item ->
-        val label = item.label.ifBlank { stringResource(R.string.schedule_add_todo_placeholder) }
-        MedicalMateTodoRow(
-            checked = item.done,
-            onCheckedChange = { todo.onToggle(item.id, it) },
-            label = item.label,
-            delete =
-            MedicalMateRowDelete(
-                contentDescription = stringResource(R.string.schedule_add_todo_delete, label),
-                onClick = { todo.onDeleteClick(item.id) },
-            ),
-            onLabelChange = if (item.editing) ({ value: String -> todo.onLabelChange(item.id, value) }) else null,
-            onEditDone = { todo.onEditDone(item.id) },
-            labelPlaceholder = stringResource(R.string.schedule_add_todo_placeholder),
-        )
+        VoiceFocusFrame(focus, ScheduleAddFocusTarget.Todo(item.id), MedicalMateRadius.sm) {
+            TodoRow(item = item, todo = todo)
+        }
     }
     MedicalMateAddRow(
         label = stringResource(R.string.schedule_add_todo_add),
         onClick = todo::onAddClick,
         modifier = Modifier.bringIntoViewRequester(addRow),
+    )
+}
+
+@Composable
+private fun TodoRow(item: ScheduleAddTodo, todo: ScheduleAddTodoActions) {
+    val label = item.label.ifBlank { stringResource(R.string.schedule_add_todo_placeholder) }
+    MedicalMateTodoRow(
+        checked = item.done,
+        onCheckedChange = { todo.onToggle(item.id, it) },
+        label = item.label,
+        delete =
+        MedicalMateRowDelete(
+            contentDescription = stringResource(R.string.schedule_add_todo_delete, label),
+            onClick = { todo.onDeleteClick(item.id) },
+        ),
+        onLabelChange = if (item.editing) ({ value: String -> todo.onLabelChange(item.id, value) }) else null,
+        onEditDone = { todo.onEditDone(item.id) },
+        labelPlaceholder = stringResource(R.string.schedule_add_todo_placeholder),
     )
 }
 

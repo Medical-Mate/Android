@@ -2,7 +2,11 @@ package com.mist.medicalmate.visit.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mist.medicalmate.R
 import com.mist.medicalmate.core.network.ApiResult
+import com.mist.medicalmate.core.voice.VoiceReply
+import com.mist.medicalmate.core.voice.VoiceText
+import com.mist.medicalmate.core.voice.VoiceWords
 import com.mist.medicalmate.visit.data.HospitalRepository
 import com.mist.medicalmate.visit.data.HospitalSearchResult
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -42,6 +46,12 @@ internal constructor(private val repository: HospitalRepository) : ViewModel() {
 
     private var searchJob: Job? = null
 
+    /**
+     * 말로 찾는 중인지(#282). 그러면 결과가 오는 대로 [decideVoicePick]으로 고를지 되물을지 정한다.
+     * 예약 문자에서 온 이름이나 손으로 친 검색어는 사람이 보고 고른다.
+     */
+    private var voicePick = false
+
     /** 이번 화면에서 받아 둔 결과. 같은 검색어를 다시 치면 그대로 쓴다. */
     private val cache = mutableMapOf<String, HospitalSearchResult>()
 
@@ -56,9 +66,11 @@ internal constructor(private val repository: HospitalRepository) : ViewModel() {
         purpose: HospitalPickPurpose = HospitalPickPurpose.AFTER_VISIT,
         forExistingCard: Boolean = false,
         initialQuery: String? = null,
+        voicePick: Boolean = false,
     ) {
         searchJob?.cancel()
         cache.clear()
+        this.voicePick = voicePick
         mutableUiState.value = HospitalPickUiState(purpose = purpose, forExistingCard = forExistingCard)
         initialQuery?.trim()?.takeIf { it.isNotEmpty() }?.let(::searchFirst)
     }
@@ -92,6 +104,15 @@ internal constructor(private val repository: HospitalRepository) : ViewModel() {
                 val found = candidates[index - 1]
                 mutableUiState.update { it.copy(query = if (result.isHit()) found else query) }
                 apply(result)
+                if (voicePick && result !is ApiResult.Success) {
+                    mutableUiState.update {
+                        it.copy(voiceDecision = HospitalVoiceDecision.Ask(HospitalAskReason.NONE, emptyList()))
+                    }
+                } else if (voicePick && result is ApiResult.Success) {
+                    val decision = decideVoicePick(query, result.value.hospitals)
+                    val candidates = (decision as? HospitalVoiceDecision.Ask)?.candidates.orEmpty()
+                    mutableUiState.update { it.copy(voiceDecision = decision, voiceCandidates = candidates) }
+                }
             }
     }
 
@@ -178,6 +199,94 @@ internal constructor(private val repository: HospitalRepository) : ViewModel() {
                 is ApiResult.Rejected, is ApiResult.NetworkUnavailable ->
                     state.copy(searching = false, failed = true)
             }
+        }
+    }
+
+    /**
+     * 받아쓴 말(#282). "첫 번째"면 그 줄을 고르고 바로 마친다. 다시 고르려면 뒤로 와서 고른다.
+     * 화면 이동이라 확인은 받지 않는다. 병원 이름이면 그것으로 다시 찾는다.
+     *
+     * @param submit 고른 병원으로 마친다. 목적마다 돌아가는 곳이 달라 라우트가 넘긴다.
+     */
+    fun onVoice(text: String, submit: (Hospital?) -> Unit): VoiceReply =
+        when (val voice = parseHospitalPickVoice(text)) {
+            null -> byArea(text, submit)
+            is HospitalPickVoice.Pick -> {
+                val results = mutableUiState.value.results
+                val hospital = if (voice.ordinal ==
+                    VoiceWords.LAST
+                ) {
+                    results.lastOrNull()
+                } else {
+                    results.getOrNull(voice.ordinal)
+                }
+                if (hospital == null) {
+                    VoiceReply.Done(R.string.voice_hospital_no_row)
+                } else {
+                    onHospitalClick(hospital)
+                    submit(hospital)
+                    VoiceReply.Done(R.string.voice_hospital_picked, listOf(hospital.name))
+                }
+            }
+
+            HospitalPickVoice.Submit -> {
+                val selected = mutableUiState.value.selected
+                if (selected == null) {
+                    VoiceReply.Done(R.string.voice_hospital_no_row)
+                } else {
+                    submit(selected)
+                    VoiceReply.Done(R.string.voice_hospital_picked, listOf(selected.name))
+                }
+            }
+
+            // 말로 다시 찾으면 결과가 오는 대로 고르거나 되묻는다. 입력 대기 없이 바로 찾는다.
+            is HospitalPickVoice.Search -> {
+                searchJob?.cancel()
+                voicePick = true
+                searchFirst(voice.query)
+                VoiceReply.Done(R.string.voice_hospital_searching, listOf(voice.query))
+            }
+        }
+
+    /** 막대가 결과를 알렸다. 다시 알리지 않게 지운다. 화면이 고르거나 묻기 전에 부른다. */
+    fun onVoiceDecisionHandled() {
+        mutableUiState.update { it.copy(voiceDecision = null) }
+    }
+
+    /**
+     * 동네나 지점 이름으로 고른다(#282). "강남에 있는 거", "역삼동", "강남점".
+     *
+     * 이름이 같은 여러 지점을 가리는 중이면 그곳들만, 아니면 보이는 목록 전체에서 찾는다. 하나면 고르고
+     * 마친다. 여럿이면 그곳들로 좁혀 두고 다시 묻는다. 못 찾았는데 동네를 말한 것 같으면 없다고
+     * 알리고, 아니면 이 화면의 말이 아니다. "뒤로" 같은 전역 명령이 그 길로 간다.
+     */
+    private fun byArea(text: String, submit: (Hospital?) -> Unit): VoiceReply {
+        val state = mutableUiState.value
+        val candidates = state.voiceCandidates.ifEmpty { state.results }
+        val matched = candidates.byArea(text)
+        return when {
+            matched.size == 1 -> {
+                onHospitalClick(matched.single())
+                submit(matched.single())
+                VoiceReply.Done(R.string.voice_hospital_picked, listOf(matched.single().name))
+            }
+
+            matched.size > 1 -> {
+                mutableUiState.update { it.copy(voiceCandidates = matched) }
+                VoiceReply.Done(
+                    R.string.voice_hospital_narrowed,
+                    listOf(matched.size.toString()),
+                    question = VoiceText(R.string.voice_hospital_ask_which),
+                )
+            }
+
+            candidates.isNotEmpty() && looksLikeArea(text) ->
+                VoiceReply.Done(
+                    R.string.voice_hospital_no_area,
+                    question = VoiceText(R.string.voice_hospital_ask_which),
+                )
+
+            else -> VoiceReply.NotMine
         }
     }
 

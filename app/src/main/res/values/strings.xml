@@ -377,13 +377,13 @@
     <!-- 음성 호출(#273). 시안에 없는 줄과 문구다. -->
     <string name="my_profile_setting_voice_wake">"헤이 메이트"로 부르기</string>
     <string name="my_profile_voice_wake_confirm_title">음성 호출을 켤까요?</string>
-    <string name="my_profile_voice_wake_confirm_message">앱을 쓰는 동안 "헤이 메이트"라고 부르면 말로 화면을 옮길 수 있어요. 음성 모델 41MB를 내려받고 저장 공간을 68MB 써요. 소리는 휴대폰 밖으로 나가지 않아요.</string>
+    <string name="my_profile_voice_wake_confirm_message">앱을 쓰다가 "헤이 메이트" 하고 부르면 말로 일정을 잡고 화면을 옮길 수 있어요. 처음 한 번 음성 모델(41MB)을 받고, 휴대폰에서 68MB를 차지해요. 목소리는 휴대폰 밖으로 나가지 않아요.</string>
     <string name="my_profile_voice_wake_confirm">켜기</string>
     <string name="my_profile_voice_wake_cancel">취소</string>
-    <string name="my_profile_voice_wake_downloading">음성 모델을 받는 중이에요 (%1$d%%)</string>
-    <string name="my_profile_voice_wake_failed">음성 모델을 받지 못했어요. 연결을 확인하고 다시 켜 주세요</string>
-    <string name="my_profile_voice_wake_denied">마이크 권한이 있어야 켤 수 있어요</string>
-    <string name="my_profile_voice_wake_confirm_message_ready">앱을 쓰는 동안 "헤이 메이트"라고 부르면 말로 화면을 옮길 수 있어요. 받아 둔 음성 모델을 그대로 써요. 소리는 휴대폰 밖으로 나가지 않아요.</string>
+    <string name="my_profile_voice_wake_downloading">음성 모델을 받고 있어요 (%1$d%%)</string>
+    <string name="my_profile_voice_wake_failed">음성 모델을 못 받았어요. 인터넷 연결을 확인하고 다시 켜 주세요</string>
+    <string name="my_profile_voice_wake_denied">마이크를 허용해야 켤 수 있어요</string>
+    <string name="my_profile_voice_wake_confirm_message_ready">앱을 쓰다가 "헤이 메이트" 하고 부르면 말로 일정을 잡고 화면을 옮길 수 있어요. 받아 둔 음성 모델이 있어서 바로 켜져요. 목소리는 휴대폰 밖으로 나가지 않아요.</string>
     <string name="my_profile_voice_wake_delete_model">음성 모델 지우기 (68MB)</string>
 
     <!-- 진료 하루 전 알림(#268). 시안에 없어 정한 문구다. -->
@@ -592,10 +592,57 @@
     <string name="voice_type_instead">직접 입력할게요</string>
     <string name="voice_mic_start">말하기 시작</string>
     <string name="voice_mic_stop">말하기 끝내기</string>
-    <!-- "헤이 메이트"로 부르면 뜨는 음성 명령 패널(#273). 시안에 없는 문구다. -->
-    <string name="voice_command_hint">"캘린더 열어줘"처럼 말씀해 주세요</string>
-    <string name="voice_command_missed">알아듣지 못했어요(“%1$s”). 다시 말씀해 주세요</string>
+    <!-- "헤이 메이트"로 부르면 뜨는 음성 명령 막대(#273·#282). 시안에 없는 문구다. -->
+    <string name="voice_command_hint">무엇을 할까요? "캘린더 열어 줘"처럼 말씀하시면 돼요</string>
+    <string name="voice_command_missed">“%1$s”, 잘 못 알아들었어요</string>
     <string name="voice_command_close">닫기</string>
+    <string name="voice_command_yes_no">"네"나 "아니요"로 답해 주세요</string>
+    <string name="voice_command_cancelled">알겠어요, 안 할게요</string>
+    <string name="voice_command_confirm_again">잘 못 들었어요. 이대로 할까요?</string>
+    <string name="voice_command_moved">열었어요</string>
+    <!-- 일정 추가(1r-4)를 말로(#282). 시안에 없는 문구다. -->
+    <string name="voice_schedule_filled">%1$s, 적어 뒀어요</string>
+    <string name="voice_schedule_filled_hospital">%1$s, 적어 뒀어요. %2$s 찾아볼게요</string>
+    <string name="voice_schedule_hospital_search">%1$s 찾아볼게요</string>
+    <string name="voice_schedule_confirm_save">%1$s, 이대로 저장할까요?</string>
+    <string name="voice_schedule_missing">병원이랑 날짜가 아직 비어 있어요</string>
+    <string name="voice_schedule_todo_added">%1$s, 할 일에 넣었어요</string>
+    <string name="voice_schedule_card_picked">%1$s 카드를 챙겨 갈게요</string>
+    <string name="voice_schedule_card_missing">그런 카드는 못 찾았어요</string>
+    <string name="voice_schedule_card_which">카드가 여러 장 걸려요. %1$s</string>
+    <string name="voice_schedule_card_ask_ordinal">몇 번째 카드인가요?</string>
+    <string name="voice_schedule_todo_which">할 일이 여러 개 걸려요. %1$s</string>
+    <string name="voice_schedule_todo_ask_ordinal">몇 번째 할 일인가요?</string>
+    <string name="voice_ask_hospital">어느 병원에 가세요?</string>
+    <string name="voice_ask_date">언제 가세요? "10월 20일 오후 3시"처럼요</string>
+    <string name="voice_ask_done">다 됐으면 "저장"이라고 해 주세요</string>
+    <string name="voice_schedule_card_dropped">%1$s 카드는 빼 둘게요</string>
+    <string name="voice_schedule_card_new">새 브리핑 카드를 만들러 갈게요</string>
+    <string name="voice_schedule_hospital_open">병원을 다시 골라 주세요. 이름이나 몇 번째인지 말씀하셔도 돼요</string>
+    <string name="voice_schedule_sheet_date">날짜를 골라 주세요. 말로 하셔도 돼요</string>
+    <string name="voice_schedule_sheet_time">시간을 골라 주세요. 말로 하셔도 돼요</string>
+    <string name="voice_schedule_time_cleared">시간은 비워 둘게요. 시간 미정으로 저장돼요</string>
+    <string name="voice_schedule_todo_ask">어떤 할 일을 넣을까요? "할 일 추가, 약 챙기기"처럼요</string>
+    <string name="voice_schedule_todo_done">%1$s, 했다고 표시했어요</string>
+    <string name="voice_schedule_todo_undone">%1$s, 아직 안 한 걸로 돌렸어요</string>
+    <string name="voice_schedule_todo_deleted">%1$s, 지웠어요</string>
+    <string name="voice_schedule_todo_edited">%1$s, 이렇게 고쳤어요</string>
+    <string name="voice_schedule_todo_edit_ask">무엇으로 고칠까요? "두 번째 할 일 고쳐, 신분증 챙기기"처럼요</string>
+    <string name="voice_schedule_todo_missing">그런 할 일은 못 찾았어요</string>
+    <string name="voice_schedule_confirm_exit">적은 걸 버리고 나갈까요?</string>
+    <!-- 병원 찾기(1m · 1m-B)를 말로(#282). 시안에 없는 문구다. -->
+    <string name="voice_hospital_picked">%1$s 골랐어요</string>
+    <string name="voice_hospital_no_row">목록에 그 번호가 없어요</string>
+    <string name="voice_hospital_auto_picked">%1$s, 여기로 정했어요</string>
+    <string name="voice_hospital_found_same">이름이 같은 병원이 %1$s곳이에요</string>
+    <string name="voice_hospital_found_many">%1$s곳이 나왔어요</string>
+    <string name="voice_hospital_not_found">그 이름으로는 병원이 안 나와요</string>
+    <string name="voice_hospital_ask_which">몇 번째인가요? 동네나 지점 이름으로 말씀하셔도 돼요</string>
+    <string name="voice_hospital_ask_which_or_name">몇 번째인가요? 이름을 더 자세히 말씀하셔도 돼요</string>
+    <string name="voice_hospital_ask_name">병원 이름을 한 번 더 말씀해 주세요</string>
+    <string name="voice_hospital_narrowed">아직 %1$s곳이 남았어요</string>
+    <string name="voice_hospital_no_area">그 동네에 있는 곳은 목록에 없어요</string>
+    <string name="voice_hospital_searching">%1$s 찾아볼게요</string>
 
     <!-- 통증 슬라이더 양끝 라벨. Figma Severity Slider 마스터에서 읽었다. -->
     <string name="severity_scale_low">가벼운 불편</string>
