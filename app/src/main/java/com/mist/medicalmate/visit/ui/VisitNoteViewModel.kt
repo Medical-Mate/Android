@@ -2,9 +2,12 @@ package com.mist.medicalmate.visit.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
 import com.mist.medicalmate.core.speech.Dictation
 import com.mist.medicalmate.core.speech.SpeechToText
+import com.mist.medicalmate.core.voice.VoiceReply
+import com.mist.medicalmate.core.voice.VoiceText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -60,6 +63,54 @@ constructor(private val clock: Clock, private val speech: SpeechToText) : ViewMo
 
     fun onNoteChange(note: String) {
         mutableUiState.update { it.copy(note = note) }
+    }
+
+    /** 말로 적은 것이 시작한 자리. "방금 거 지워"가 여기까지 되돌린다. */
+    private var spokenFrom: Int? = null
+
+    /**
+     * "헤이 메이트" 다음의 말(#288). **막대가 메모를 받아 적는다.** 짧은 명령("다 했어", "방금 거 지워",
+     * "다 지워", "뒤로") 말고는 모두 메모 뒤에 이어 붙인다. 다 했으면 적은 원문을 들고 1q-1로 간다.
+     */
+    internal fun onVoiceNote(text: String, save: (String) -> Unit): VoiceReply {
+        val note = mutableUiState.value.note
+        val more = VoiceText(R.string.voice_note_ask_more)
+        val from = spokenFrom
+        return when (parseNoteVoice(text)) {
+            NoteVoice.BACK -> VoiceReply.NotMine
+            NoteVoice.DONE ->
+                if (note.isBlank()) {
+                    VoiceReply.Done(R.string.voice_note_empty, question = VoiceText(R.string.voice_note_ask))
+                } else {
+                    save(note)
+                    VoiceReply.Done(R.string.voice_note_done)
+                }
+
+            NoteVoice.UNDO ->
+                if (from == null) {
+                    VoiceReply.Done(R.string.voice_note_nothing, question = more)
+                } else {
+                    spokenFrom = null
+                    onNoteChange(note.take(from).trimEnd())
+                    VoiceReply.Done(R.string.voice_note_undone, question = more)
+                }
+
+            NoteVoice.CLEAR ->
+                if (note.isBlank()) {
+                    VoiceReply.Done(R.string.voice_note_nothing, question = more)
+                } else {
+                    VoiceReply.Confirm(R.string.voice_note_confirm_clear) {
+                        spokenFrom = null
+                        onNoteChange("")
+                    }
+                }
+
+            null -> {
+                spokenFrom = note.length
+                onNoteChange(if (note.isBlank()) text.trim() else note.trimEnd() + " " + text.trim())
+                VoiceReply.Done(R.string.voice_note_written, question = more)
+            }
+        }
     }
 
     /**

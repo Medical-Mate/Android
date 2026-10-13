@@ -15,6 +15,9 @@ enum class VoiceCommand {
     PROFILE,
     BACK,
     INTAKE,
+
+    /** 진료 후 기록을 남긴다(#288). 말한 날, 없으면 오늘의 일자 화면에서 시작한다. */
+    VISIT_RECORD,
     BRIEF_CARDS,
     SCHEDULE_ADD,
 }
@@ -56,6 +59,8 @@ private val KEYWORDS: List<Pair<VoiceCommand, List<String>>> =
             ),
         VoiceCommand.BRIEF_CARDS to listOf("브리핑", "카드"),
         VoiceCommand.INTAKE to listOf("증상", "아파", "아픈", "아프", "문진", "불편해"),
+        VoiceCommand.VISIT_RECORD to
+            listOf("진료후기록", "기록할", "기록하기", "기록남", "기록쓸", "기록써", "기록적", "기록해"),
         VoiceCommand.PROFILE to listOf("내정보", "설정", "프로필", "마이페이지", "내계정", "건강정보"),
         VoiceCommand.BACK to listOf("뒤로", "이전", "돌아가", "전화면", "앞화면", "되돌아"),
         VoiceCommand.CALENDAR to listOf("캘린더", "달력", "일정", "예약", "스케줄"),

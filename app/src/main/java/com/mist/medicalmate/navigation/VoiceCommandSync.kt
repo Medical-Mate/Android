@@ -22,12 +22,15 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.mist.medicalmate.auth.ui.SessionUiState
+import com.mist.medicalmate.calendar.ui.CalendarDayDestination
 import com.mist.medicalmate.calendar.ui.ScheduleAddDestination
 import com.mist.medicalmate.card.ui.BriefCardListDestination
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
 import com.mist.medicalmate.core.voice.LocalVoicePanelInset
 import com.mist.medicalmate.core.voice.LocalVoiceTargets
+import com.mist.medicalmate.core.voice.VoiceDate
 import com.mist.medicalmate.core.voice.VoiceTargets
+import com.mist.medicalmate.core.voice.parseVoiceDate
 import com.mist.medicalmate.home.ui.HomeDestination
 import com.mist.medicalmate.intake.ui.IntakeDestination
 import com.mist.medicalmate.profile.ui.MyProfileDestination
@@ -35,6 +38,7 @@ import com.mist.medicalmate.voice.ui.VoiceCommand
 import com.mist.medicalmate.voice.ui.VoiceCommandPanel
 import com.mist.medicalmate.voice.ui.VoiceCommandRequest
 import com.mist.medicalmate.voice.ui.VoiceCommandViewModel
+import java.time.LocalDate
 
 /**
  * "헤이 메이트"로 부르고 말한 대로 화면을 옮긴다(#273·#282).
@@ -126,6 +130,13 @@ private fun NavHostController.perform(request: VoiceCommandRequest, targets: Voi
         VoiceCommand.BACK -> if (previousBackStackEntry != null) popBackStack()
         // "오른쪽 어깨가 아파"의 부위를 증상 정리가 바로 고른다(#284).
         VoiceCommand.INTAKE -> navigate(IntakeDestination(null, spoken = request.text))
+        // 말한 날, 없으면 오늘의 일자 화면을 열고 그 말을 넘긴다. 그 화면이 기록을 시작한다(#288).
+        VoiceCommand.VISIT_RECORD -> {
+            val today = LocalDate.now()
+            val day = (parseVoiceDate(request.text, today) as? VoiceDate.Day)?.date ?: today
+            targets.handOff(request.text)
+            navigate(CalendarDayDestination(date = day.toString()))
+        }
         VoiceCommand.BRIEF_CARDS -> navigate(BriefCardListDestination) { launchSingleTop = true }
         VoiceCommand.SCHEDULE_ADD ->
             navigate(ScheduleAddDestination(sharedText = request.text.takeIf(::mentionsSchedule), voice = true))
