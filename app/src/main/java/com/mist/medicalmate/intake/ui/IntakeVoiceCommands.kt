@@ -70,8 +70,11 @@ internal class IntakeVoiceCommands(
             isResetVoice(text) -> {
                 askingSide = emptyList()
                 update { it.copy(bodyMap = it.bodyMap.copy(focus = null, selection = null)) }
-                VoiceReply.Done(R.string.voice_intake_part_reset, question = current.voiceQuestion())
+                VoiceReply.Done(R.string.voice_intake_part_reset, question = state().voiceQuestion())
             }
+
+            // 부위 이름을 몰라 말하지 못하는 사람에게 고를 수 있는 곳을 다시 읽어 준다.
+            isUnsureVoice(text) -> VoiceReply.Done(R.string.voice_intake_part_list, question = current.voiceQuestion())
 
             else -> pick(text, current.bodyMap.focus)
         }
@@ -87,11 +90,10 @@ internal class IntakeVoiceCommands(
             found is BodyVoicePick.Focus -> {
                 askingSide = emptyList()
                 update { it.copy(bodyMap = it.bodyMap.copy(focus = found.anchor)) }
-                val name = found.anchor.title()
                 VoiceReply.Done(
                     R.string.voice_intake_part_focus,
-                    listOf(name),
-                    question = VoiceText(R.string.voice_intake_ask_zone, listOf(name)),
+                    listOf(found.anchor.title()),
+                    question = state().voiceQuestion(),
                 )
             }
 
@@ -244,10 +246,25 @@ internal class IntakeVoiceCommands(
  * 따로 묻지 않는다.
  */
 internal fun IntakeUiState.voiceQuestion(): VoiceText? = when (step) {
-    IntakeStep.BODY_PART -> VoiceText(R.string.voice_intake_ask_part)
+    IntakeStep.BODY_PART -> bodyMap.focus.bodyVoiceQuestion()
     IntakeStep.SYMPTOM_CHAT -> null
     IntakeStep.SEVERITY -> VoiceText(R.string.voice_intake_ask_severity, listOf(bodyPartSubject))
     IntakeStep.QUESTIONS -> VoiceText(R.string.voice_intake_ask_questions)
+}
+
+/**
+ * 부위를 물을 때 고를 수 있는 곳을 함께 읽어 준다(#284). 큰 부위로 들어가 있으면 그 안의 상세
+ * 부위를, 아니면 큰 부위를 읽는다.
+ *
+ * 인체도만 봐서는 팔 안에 어디를 짚을 수 있는지 알 수 없고, 사람은 부위 이름을 모를 수 있다. 목록을
+ * 들으면 이름으로도 "세 번째"로도 고를 수 있다.
+ */
+private fun BodyMapSelection?.bodyVoiceQuestion(): VoiceText {
+    if (this == null) {
+        return VoiceText(R.string.voice_intake_ask_part, listOf(bodyVoiceAnchors().joinToString(", ") { it.second }))
+    }
+    val zones = bodyVoiceZones(anchorId).joinToString(", ") { it.second }
+    return VoiceText(R.string.voice_intake_ask_zone, listOf(title(), zones))
 }
 
 /** 문답에서 "다음"은 이 말로 시작할 때만이다. "없어요"는 AI 질문에 대한 답일 수 있다. */

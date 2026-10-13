@@ -80,6 +80,19 @@ class IntakeVoiceTest {
     }
 
     @Test
+    fun `읽어 준 목록에서 몇 번째로 고른다`() {
+        // 큰 부위 목록의 다섯 번째는 팔이다. 좌우를 말하지 않아 어느 쪽인지 묻는다.
+        assertEquals(listOf("머리", "목", "가슴", "배", "팔"), bodyVoiceAnchors().take(5).map { it.second })
+        assertTrue(pickBodyPartByVoice("다섯 번째", null) is BodyVoicePick.AskSide)
+
+        val arm = BodyMapSelection("ANC:013", side = BodyMapSide.RIGHT)
+        assertEquals(listOf("어깨", "위팔", "팔꿈치", "아래팔", "손목", "손"), bodyVoiceZones("ANC:013").map { it.second })
+        val elbow = pickBodyPartByVoice("세 번째요", arm) as BodyVoicePick.Picked
+        assertEquals(BodyMapSelection("ANC:013", "SUR:061", BodyMapSide.RIGHT), elbow.selection)
+        assertEquals("SUR:072", (pickBodyPartByVoice("마지막 거", arm) as BodyVoicePick.Picked).selection.zoneId)
+    }
+
+    @Test
     fun `아픈 정도를 낱말과 점수와 단계로 고른다`() {
         assertEquals(MedicalMateSeverity.LEVEL_4, parseSeverityVoice("많이 아파요"))
         assertEquals(MedicalMateSeverity.LEVEL_5, parseSeverityVoice("견디기 힘들어요"))
@@ -132,6 +145,24 @@ class IntakeVoiceTest {
         viewModel.handle("다음")
         assertEquals(IntakeStep.SYMPTOM_CHAT, viewModel.uiState.value.step)
         assertEquals(listOf("SUR:051"), repository.startedCodes)
+    }
+
+    @Test
+    fun `큰 부위로 들어가면 그 안에 고를 수 있는 곳을 읽어 준다`() {
+        val viewModel = IntakeViewModel(VoiceSessionRepository(), FakeSpeechToText())
+        assertEquals(R.string.voice_intake_ask_part, viewModel.uiState.value.voiceQuestion()?.text)
+
+        val reply = viewModel.handle("오른쪽 팔이 아파요") as VoiceReply.Done
+
+        assertEquals(R.string.voice_intake_part_focus, reply.message)
+        assertEquals(R.string.voice_intake_ask_zone, reply.question?.text)
+        assertEquals(listOf("오른쪽 팔", "어깨, 위팔, 팔꿈치, 아래팔, 손목, 손"), reply.question?.args)
+
+        // 모르겠다고 하면 다시 읽어 준다.
+        val again = viewModel.handle("잘 모르겠어요") as VoiceReply.Done
+        assertEquals(reply.question, again.question)
+        viewModel.handle("두 번째")
+        assertEquals("SUR:055", viewModel.uiState.value.bodyMap.selection?.zoneId)
     }
 
     @Test

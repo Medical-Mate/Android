@@ -1,11 +1,36 @@
 package com.mist.medicalmate.intake.ui
 
+import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
 import com.mist.medicalmate.core.voice.VoiceWords
 
 /*
- * 증상 정리의 마지막 단계(1i)와 정리 완료(1c-5)에서 한 말의 풀이(#284). 부위·강도 풀이는
- * IntakeVoice.kt에 있다.
+ * 증상 정리의 3단계(1d)·4단계(1i)와 정리 완료(1c-5)에서 한 말의 풀이(#284). 부위 풀이는
+ * BodyVoicePick.kt에 있다.
  */
+
+/**
+ * 말로 고른 아픈 정도(1d). 숫자와 낱말을 모두 받는다.
+ *
+ * - "7점", "10점 중에 7점" → 0~10점(NRS)을 다섯 단계로. 카드가 NRS로도 적는 값이라 사람이 점수로
+ *   말할 수 있다.
+ * - "4단계" → 그 단계.
+ * - "많이 아파요", "견디기 힘들어요", "조금 불편해요" → 화면의 다섯 낱말과 그 비슷한 말.
+ *
+ * 낱말은 센 것부터 본다. "많이"가 "조금 많이"에도 들어 있다.
+ */
+internal fun parseSeverityVoice(text: String): MedicalMateSeverity? {
+    val heard = VoiceWords.compact(text)
+    val score = NRS.findAll(heard).lastOrNull()?.groupValues?.get(1)?.toIntOrNull()?.takeIf { it in 0..NRS_MAX }
+    val step = STEP.find(heard)?.groupValues?.get(1)?.toIntOrNull()
+    return when {
+        // 0점은 단계 밖이라 가장 낮은 단계로 둔다.
+        score != null ->
+            MedicalMateSeverity.entries.firstOrNull { score in it.nrsFirst..it.nrsLast } ?: MedicalMateSeverity.LEVEL_1
+
+        step != null -> MedicalMateSeverity.entries.firstOrNull { it.level == step }
+        else -> SEVERITY_WORDS.firstOrNull { (_, words) -> words.any { heard.contains(it) } }?.first
+    }
+}
 
 /** 4단계(1i)에서 한 말. */
 internal sealed interface QuestionVoice {
@@ -101,3 +126,19 @@ private val ASKING = Regex("""(?:나요|까요|가요|는지|은지|인지|래�
 private fun String.clean(): String = trim { it.isWhitespace() || it in TRIM }
 
 private const val TRIM = ".,!?~"
+
+private val NRS = Regex("""(\d{1,2})점""")
+
+private val STEP = Regex("""([1-5])(?:단계|번)""")
+
+private const val NRS_MAX = 10
+
+private val SEVERITY_WORDS =
+    listOf(
+        MedicalMateSeverity.LEVEL_5 to
+            listOf("견디기힘들", "참을수없", "못참", "죽겠", "너무아파", "엄청아파", "극심", "최악", "제일아파"),
+        MedicalMateSeverity.LEVEL_4 to listOf("많이아파", "많이", "심해", "심하게", "힘들어"),
+        MedicalMateSeverity.LEVEL_3 to listOf("꽤", "보통", "중간", "적당히", "그럭저럭"),
+        MedicalMateSeverity.LEVEL_2 to listOf("은근", "좀아파", "자꾸", "신경쓰"),
+        MedicalMateSeverity.LEVEL_1 to listOf("조금", "살짝", "약간", "불편"),
+    )

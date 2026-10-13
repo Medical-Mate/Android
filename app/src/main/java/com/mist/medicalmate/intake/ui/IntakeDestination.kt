@@ -173,7 +173,10 @@ private fun IntakeVoice(state: IntakeUiState, spoken: String?, viewModel: Intake
     VoiceTargetEffect { text -> viewModel.voiceCommands.handle(text, routes) }
 
     val prompt = rememberVoicePrompt()
-    LaunchedEffect(state.step) { state.voiceQuestion()?.let { prompt(VoicePrompt(question = it)) } }
+    // 손으로 큰 부위를 짚어 들어가도 그 안에 고를 수 있는 곳을 읽어 준다.
+    LaunchedEffect(state.step, state.bodyMap.focus) {
+        state.voiceQuestion()?.let { prompt(VoicePrompt(question = it)) }
+    }
 
     val asked = state.messages.lastOrNull()?.takeIf { it.sender == IntakeMessage.Sender.AI }
     val chatting = state.step == IntakeStep.SYMPTOM_CHAT && !state.awaitingReply
