@@ -158,6 +158,34 @@ class ScheduleAddVoiceTest {
     }
 
     @Test
+    fun `받아쓴 시각의 우리말 수를 숫자로 바꾼다`() {
+        assertEquals("오후 3시로 해 줘", spokenNumbers("오후 세 시로 해 줘"))
+        assertEquals("2시 반", spokenNumbers("두 시 반"))
+        assertEquals("오전 11시", spokenNumbers("오전 열한 시"))
+        assertEquals("오후3시", spokenNumbers("오후세시"))
+        assertEquals("12시에", spokenNumbers("정오에"))
+        // 시각이 아닌 말은 그대로 둔다.
+        assertEquals("한 시간 뒤", spokenNumbers("한 시간 뒤"))
+        assertEquals("적어 두시면 돼", spokenNumbers("적어 두시면 돼"))
+    }
+
+    @Test
+    fun `말에 날짜가 있는지 본다`() {
+        assertTrue(mentionsDay("10월 20일 오후 3시"))
+        assertTrue(mentionsDay("20일로"))
+        assertTrue(mentionsDay("다음 주 화요일"))
+        assertTrue(mentionsDay("10/20"))
+        assertFalse(mentionsDay("오후 3시로 해 줘"))
+        assertFalse(mentionsDay("3시 반"))
+    }
+
+    @Test
+    fun `우리말 수로 받아쓴 시각도 시트를 여는 대신 채운다`() {
+        assertEquals(ScheduleAddVoice.Fill("시간 세 시로 바꿔 줘"), parseScheduleAddVoice("시간 세 시로 바꿔 줘"))
+        assertEquals(ScheduleAddVoice.Fill("두 시 반으로 해 줘"), parseScheduleAddVoice("두 시 반으로 해 줘"))
+    }
+
+    @Test
     fun `카드는 몇 번째로도 제목의 낱말로도 고른다`() {
         val cards = listOf(pick("1", "복부 통증 · 3주"), pick("2", "두통 · 잦은 어지러움"))
 
@@ -196,6 +224,30 @@ class ScheduleAddVoiceTest {
 
         assertEquals(OCT_20, viewModel.uiState.value.date)
         assertEquals(ScheduleAddSheet.NONE, viewModel.uiState.value.sheet)
+    }
+
+    @Test
+    fun `시각만 말하면 적어 둔 날짜는 그대로 두고 시간만 바꾼다`() = runTest {
+        // 추출기는 날짜 없는 시각을 오늘로 읽어 돌려줄 수 있다.
+        val viewModel = viewModel(SharedAppointment(date = LocalDate.of(2026, 10, 13), time = THREE_PM))
+        viewModel.onDateConfirm(OCT_20)
+
+        val reply = viewModel.voice.handle("오후 3시로 해 줘", ScheduleAddVoiceRoutes())
+
+        assertEquals(OCT_20, viewModel.uiState.value.date)
+        assertEquals(THREE_PM, viewModel.uiState.value.time)
+        assertEquals(R.string.voice_schedule_filled, (reply as VoiceReply.Done).message)
+    }
+
+    @Test
+    fun `추출기가 시각을 못 읽어도 말에서 읽는다`() = runTest {
+        val viewModel = viewModel()
+        viewModel.onDateConfirm(OCT_20)
+
+        viewModel.voice.handle("두 시 반으로 바꿔 줘", ScheduleAddVoiceRoutes())
+
+        assertEquals(OCT_20, viewModel.uiState.value.date)
+        assertEquals(LocalTime.of(14, 30), viewModel.uiState.value.time)
     }
 
     @Test

@@ -104,6 +104,14 @@ internal fun timeNear(text: String, start: Int, end: Int): LocalTime? {
     return (inside ?: after)?.let(::toLocalTime)
 }
 
+/**
+ * 글에서 처음 나온 시각. 날짜와 붙어 있는지 보지 않는다.
+ *
+ * 예약 문자에는 쓰지 않는다. "변경은 오후 6시까지"의 6시가 진료 시각이 된다. 말로 "오후 3시로 해
+ * 줘"라고 시간만 고치는 자리(#282)에서 쓴다. 그때는 날짜가 따로 없다.
+ */
+internal fun timeIn(text: String): LocalTime? = TIME.find(text)?.let(::toLocalTime)
+
 private fun toLocalTime(match: MatchResult): LocalTime? {
     fun group(name: String): String = match.groups[name]?.value.orEmpty()
     val meridiem = group("meridiem")

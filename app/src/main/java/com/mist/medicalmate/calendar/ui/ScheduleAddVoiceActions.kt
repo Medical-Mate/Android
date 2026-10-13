@@ -2,6 +2,8 @@ package com.mist.medicalmate.calendar.ui
 
 import com.mist.medicalmate.R
 import com.mist.medicalmate.calendar.share.AppointmentTextReader
+import com.mist.medicalmate.calendar.share.SharedAppointment
+import com.mist.medicalmate.calendar.share.timeIn
 import com.mist.medicalmate.core.voice.VoiceReply
 import com.mist.medicalmate.core.voice.VoiceText
 import com.mist.medicalmate.core.voice.VoiceWords
@@ -166,25 +168,25 @@ internal class ScheduleAddVoiceActions(
         }
     }
 
+    /** 날짜·시간·병원을 읽어 칸을 채운다. 말로 고친 값은 이미 있던 값을 덮는다. */
     private suspend fun fill(text: String, save: () -> Unit): VoiceReply {
-        val read = reader.read(text)
-        if (read.hospital == null && read.date == null && read.time == null) {
+        val (hospital, date, time) = reader.readSpoken(text)
+        if (hospital == null && date == null && time == null) {
             // "저장해 줘 20일"처럼 숫자가 섞여 저장으로 못 읽은 말이 여기 온다. 날짜를 못 찾았으면 저장이다.
             return if (VoiceWords.isSave(text)) save(save) else VoiceReply.NotMine
         }
         update { current ->
             current.copy(
-                date = read.date ?: current.date,
-                time = read.time ?: current.time,
-                hospital = read.hospital ?: current.hospital,
-                hospitalSearch = read.hospital ?: current.hospitalSearch,
+                date = date ?: current.date,
+                time = time ?: current.time,
+                hospital = hospital ?: current.hospital,
+                hospitalSearch = hospital ?: current.hospitalSearch,
                 // 말로 찾은 병원은 병원 찾기가 하나로 좁혀지면 알아서 고른다.
-                hospitalSearchByVoice = read.hospital != null || current.hospitalSearchByVoice,
+                hospitalSearchByVoice = hospital != null || current.hospitalSearchByVoice,
                 sheet = ScheduleAddSheet.NONE,
             )
         }
-        val filled = listOfNotNull(read.date?.format(VOICE_DATE), read.time?.format(VOICE_TIME)).joinToString(" ")
-        val hospital = read.hospital
+        val filled = listOfNotNull(date?.format(VOICE_DATE), time?.format(VOICE_TIME)).joinToString(" ")
         return when {
             hospital != null && filled.isNotEmpty() ->
                 VoiceReply.Done(R.string.voice_schedule_filled_hospital, listOf(filled, hospital))
@@ -193,6 +195,20 @@ internal class ScheduleAddVoiceActions(
             else -> VoiceReply.Done(R.string.voice_schedule_filled, listOf(filled))
         }
     }
+}
+
+/**
+ * 말을 읽는다. 예약 문자와 같은 추출기를 쓰되 말에 맞게 고친다.
+ *
+ * 우리말 수로 받아쓴 시각("세 시")을 숫자로 바꿔 읽는다. **말에 날짜가 없으면 날짜를 버린다.**
+ * 추출기가 "오후 3시"를 오늘 오후 3시로 돌려줄 수 있어서 그대로 쓰면 적어 둔 날짜가 오늘로 바뀐다.
+ * 시각은 추출기가 못 읽어도 말에서 바로 읽는다. 예약 문자는 날짜에 붙은 시각만 받지만, 말로
+ * "오후 3시로 해 줘"라고 할 때는 날짜가 따로 없다.
+ */
+private suspend fun AppointmentTextReader.readSpoken(text: String): SharedAppointment {
+    val spoken = spokenNumbers(text)
+    val read = read(spoken)
+    return read.copy(date = read.date?.takeIf { mentionsDay(spoken) }, time = read.time ?: timeIn(spoken))
 }
 
 /** 적은 것이 있는지. 말로 나갈 때 버려도 되는지 물을지 정한다. */

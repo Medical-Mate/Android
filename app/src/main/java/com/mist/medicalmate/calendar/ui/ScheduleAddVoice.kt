@@ -133,6 +133,45 @@ private fun parseScreen(text: String): ScheduleAddVoice {
     }
 }
 
+/**
+ * 받아쓴 시각의 우리말 수를 숫자로. "세 시" → "3시", "두 시 반" → "2시 반", "열한 시" → "11시",
+ * "정오" → "12시".
+ *
+ * 받아쓰기가 시각을 숫자로 적을 때가 많지만 우리말 수로 적을 때도 있다. 시각을 읽는 규칙은 숫자만
+ * 본다. "한 시간 뒤"의 "한 시"는 시각이 아니라서 "시간"·"시각" 앞에서는 바꾸지 않는다. 말 중간의
+ * "두시"도 바꾸지 않는다. "적어 두시면"이 2시가 된다.
+ */
+internal fun spokenNumbers(text: String): String = text.replace("정오", "12시").replace(NATIVE_HOUR) { match ->
+    "${NATIVE_NUMBERS.getValue(match.groupValues[1])}시"
+}
+
+/**
+ * 말에 날짜가 들어 있는지. "10월 20일", "20일", "내일", "다음 주 화요일", "10/20".
+ *
+ * 시각만 말했으면("오후 3시로 해 줘") 날짜 칸은 건드리지 않는다. 추출기가 날짜 없는 시각을 오늘로
+ * 읽어 돌려줄 수 있어서, 그 값을 그대로 쓰면 적어 둔 날짜가 오늘로 바뀐다.
+ */
+internal fun mentionsDay(text: String): Boolean = DAY_HINT.containsMatchIn(text)
+
+/** 우리말 수. 긴 것을 먼저 둔다. "열한"이 "열"과 "한"으로 갈라지지 않는다. */
+private val NATIVE_NUMBERS =
+    linkedMapOf(
+        "열한" to 11, "열두" to 12, "한" to 1, "두" to 2, "세" to 3, "네" to 4, "다섯" to 5, "여섯" to 6,
+        "일곱" to 7, "여덟" to 8, "아홉" to 9, "열" to 10,
+    )
+
+/**
+ * 우리말 수의 시각. 말 머리나 띄어쓰기 뒤, 또는 "오후" 같은 말 바로 뒤에서만 본다. "시" 뒤에는
+ * 끝이나 띄어쓰기, "반"·"에"·"로"·"쯤" 같은 말만 온다. "시간"·"두시면"은 시각이 아니다.
+ */
+private val NATIVE_HOUR_PATTERN =
+    """(?<=^|[^가-힣]|오전|오후|낮|밤|저녁|아침)(${NATIVE_NUMBERS.keys.joinToString("|")})\s*시(?=$|[\s\d반에로으쯤까부경정이가.,!?~])"""
+
+private val NATIVE_HOUR = Regex(NATIVE_HOUR_PATTERN)
+
+private val DAY_HINT =
+    Regex("""\d{1,2}\s*월|\d{1,2}\s*일|\d{1,2}\s*[./]\s*\d{1,2}|오늘|내일|모레|글피|다음\s*주|이번\s*주|다음\s*달|[월화수목금토일]요일""")
+
 /** 할 일을 가리키는 말. */
 private const val TODO_NOUN =
     """할\s*일|해야\s*할\s*(?:것|거|일)|체크\s*리스트|준비물|챙길\s*(?:것|거|꺼)|챙겨야\s*할\s*(?:것|거)|투두"""
@@ -201,6 +240,9 @@ private val CLEAR_TIME =
 
 /** 날짜나 시각이 들어 있는지. 시트를 여는 말보다 채우는 말이 먼저다. */
 private val DATE_TIME_HINT =
-    Regex("""\d|오늘|내일|모레|글피|다음\s*주|이번\s*주|다음\s*달|[월화수목금토일]요일|오전|오후|아침|점심|저녁|정오""")
+    Regex(
+        """\d|오늘|내일|모레|글피|다음\s*주|이번\s*주|다음\s*달|[월화수목금토일]요일|오전|오후|아침|점심|저녁|정오|""" +
+            NATIVE_HOUR_PATTERN,
+    )
 
 private const val TRIM = " .,!?~"
