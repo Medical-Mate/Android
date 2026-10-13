@@ -77,7 +77,7 @@ internal fun VoiceCommandPanel(panel: VoicePanel, onDismiss: () -> Unit, modifie
             val question = panel.question
             if (question != null) {
                 Text(
-                    text = question.resolve(),
+                    text = question.resolve().sentencePerLine(),
                     style = MedicalMateTheme.typography.bodyS,
                     color = colors.fgPrimary,
                 )
@@ -128,6 +128,16 @@ private fun MicBadge(listening: Boolean) {
         )
     }
 }
+
+/**
+ * 막대가 묻는 말을 문장마다 줄을 바꾼다(#284). "어디가 아프세요? 이 중에서 말씀해 주세요"가 한 줄에
+ * 이어지면 무엇을 묻고 무엇을 하라는지가 섞여 읽힌다. 마침표·물음표·느낌표 뒤의 띄어쓰기를 줄바꿈으로
+ * 바꾼다. 폭을 넘는 문장은 글꼴의 어절 단위 줄바꿈이 맡는다.
+ */
+internal fun String.sentencePerLine(): String = replace(SENTENCE_GAP, "\n")
+
+/** 문장 끝 뒤의 띄어쓰기. 닫는 따옴표가 붙어 있어도 본다. "…해 주세요." 다음 줄. */
+private val SENTENCE_GAP = Regex("""(?<=[.?!]["”']?)[ \t]+""")
 
 private const val HEARD_MAX_LINES = 3
 
