@@ -12,6 +12,13 @@ import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.mist.medicalmate.R
+import com.mist.medicalmate.core.voice.VoicePrompt
+import com.mist.medicalmate.core.voice.VoiceReply
+import com.mist.medicalmate.core.voice.VoiceTargetEffect
+import com.mist.medicalmate.core.voice.VoiceText
+import com.mist.medicalmate.core.voice.VoiceWords
+import com.mist.medicalmate.core.voice.rememberVoicePrompt
 import com.mist.medicalmate.navigation.ConsumeResult
 import com.mist.medicalmate.navigation.NavResult
 import kotlinx.coroutines.launch
@@ -95,6 +102,7 @@ private fun BriefCardRoute(
     entry.ConsumeResult(NavResult.HOSPITAL_NAME, NavResult.HOSPITAL_ADDRESS, viewModel::onHospitalPicked)
 
     val content = state as? BriefCardUiState.Content
+    BriefCardVoice(content = content, onSave = { viewModel.onSaveClick(onSaved) })
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -128,4 +136,26 @@ private fun BriefCardRoute(
 private fun briefCardHospital(route: BriefCardDestination): BriefCardHospital? {
     val name = route.hospitalName ?: return null
     return BriefCardHospital(name = name, address = route.hospitalAddress)
+}
+
+/**
+ * 말로 저장한다(#284). 증상 정리를 말로 마치고 만든 카드를 말로 저장하는 자리다.
+ *
+ * 저장이 곧 확정이라 한 번 묻는다. 고치는 중이면 저장할 자리가 아니어서 받지 않는다. 아직 저장하지
+ * 않은 카드가 열리면 저장하라고 막대에 묻는다.
+ */
+@Composable
+private fun BriefCardVoice(content: BriefCardUiState.Content?, onSave: () -> Unit) {
+    val saved = content?.card?.status == BriefCard.Status.CONFIRMED
+    VoiceTargetEffect { text ->
+        when {
+            content == null || content.editing || !VoiceWords.isSave(text) -> VoiceReply.NotMine
+            saved -> VoiceReply.Done(R.string.voice_card_already_saved)
+            else -> VoiceReply.Confirm(R.string.voice_card_confirm_save, onConfirm = onSave)
+        }
+    }
+    val prompt = rememberVoicePrompt()
+    LaunchedEffect(content?.card?.id, saved) {
+        if (content != null && !saved) prompt(VoicePrompt(question = VoiceText(R.string.voice_card_ask_save)))
+    }
 }

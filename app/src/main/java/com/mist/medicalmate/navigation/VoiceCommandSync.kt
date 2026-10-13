@@ -105,7 +105,8 @@ private fun NavHostController.perform(request: VoiceCommandRequest) {
         VoiceCommand.RECORD -> selectTab(MedicalMateTab.RECORD)
         VoiceCommand.PROFILE -> navigate(MyProfileDestination) { launchSingleTop = true }
         VoiceCommand.BACK -> if (previousBackStackEntry != null) popBackStack()
-        VoiceCommand.INTAKE -> navigate(IntakeDestination(null))
+        // "오른쪽 어깨가 아파"의 부위를 증상 정리가 바로 고른다(#284).
+        VoiceCommand.INTAKE -> navigate(IntakeDestination(null, spoken = request.text))
         VoiceCommand.BRIEF_CARDS -> navigate(BriefCardListDestination) { launchSingleTop = true }
         VoiceCommand.SCHEDULE_ADD ->
             navigate(ScheduleAddDestination(sharedText = request.text.takeIf(::mentionsSchedule), voice = true))
