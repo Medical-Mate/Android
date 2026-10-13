@@ -43,6 +43,8 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMatePickerField
 import com.mist.medicalmate.core.designsystem.component.MedicalMateRowDelete
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTodoRow
+import com.mist.medicalmate.core.voice.VoiceFocusFrame
+import com.mist.medicalmate.core.voice.rememberVoiceFocus
 import com.mist.medicalmate.core.voice.rememberVoiceScrollState
 import com.mist.medicalmate.core.voice.voicePanelSpace
 import kotlinx.coroutines.delay

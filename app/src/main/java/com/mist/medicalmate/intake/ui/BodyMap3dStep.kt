@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
+import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
@@ -30,6 +31,9 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButtonSize
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButtonStyle
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSegmentedControl
+import com.mist.medicalmate.core.voice.VoiceFocus
+import com.mist.medicalmate.core.voice.VoiceFocusFrame
+import com.mist.medicalmate.core.voice.rememberVoiceFocus
 import kotlinx.coroutines.launch
 
 /**
@@ -47,7 +51,13 @@ import kotlinx.coroutines.launch
  * 단계와 브리핑 카드가 달라지지 않는다.
  */
 @Composable
-internal fun BodyMap3dStep(state: BodyMapUiState, callbacks: IntakeCallbacks) {
+internal fun BodyMap3dStep(
+    state: BodyMapUiState,
+    callbacks: IntakeCallbacks,
+    voiceFocus: VoiceFocus<IntakeFocusTarget>? = null,
+) {
+    // 말로 부위를 고르거나 옮기면 판으로 화면이 옮겨 가고 잠깐 테를 두른다(#284).
+    val shown = rememberVoiceFocus(voiceFocus)
     val camera = rememberBodyMap3dCamera()
     var notice by remember { mutableStateOf<Int?>(null) }
     var resets by remember { mutableIntStateOf(0) }
@@ -76,6 +86,7 @@ internal fun BodyMap3dStep(state: BodyMapUiState, callbacks: IntakeCallbacks) {
     }
     Board(
         state = state,
+        voiceFocus = shown,
         camera = camera,
         onPick = { pick ->
             notice = noticeOf(pick)
@@ -115,32 +126,35 @@ internal fun BodyMap3dStep(state: BodyMapUiState, callbacks: IntakeCallbacks) {
 @Composable
 private fun Board(
     state: BodyMapUiState,
+    voiceFocus: VoiceFocus<IntakeFocusTarget>?,
     camera: BodyMap3dCameraState,
     onPick: (BodyMap3dPick?) -> Unit,
     onReset: () -> Unit,
 ) {
-    BodyMapCard(
-        height = bodyMapBodyHeight(),
-        orientationLabels = false,
-        caption = state.selection?.label(),
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            BodyMap3dBoard(
-                camera = camera,
-                focus = state.focus,
-                selection = state.selection,
-                onPick = onPick,
-                modifier = Modifier.fillMaxSize(),
-            )
-            if (state.selection != null) {
-                MedicalMateIconButton(
-                    onClick = onReset,
-                    icon = MedicalMateIcons.Close,
-                    contentDescription = stringResource(R.string.body_map_3d_reset),
-                    style = MedicalMateIconButtonStyle.TONAL,
-                    size = MedicalMateIconButtonSize.M,
-                    modifier = Modifier.align(Alignment.TopEnd).padding(ResetInset),
+    VoiceFocusFrame(voiceFocus, IntakeFocusTarget.Board, MedicalMateRadius.md) {
+        BodyMapCard(
+            height = bodyMapBodyHeight(),
+            orientationLabels = false,
+            caption = state.selection?.label(),
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                BodyMap3dBoard(
+                    camera = camera,
+                    focus = state.focus,
+                    selection = state.selection,
+                    onPick = onPick,
+                    modifier = Modifier.fillMaxSize(),
                 )
+                if (state.selection != null) {
+                    MedicalMateIconButton(
+                        onClick = onReset,
+                        icon = MedicalMateIcons.Close,
+                        contentDescription = stringResource(R.string.body_map_3d_reset),
+                        style = MedicalMateIconButtonStyle.TONAL,
+                        size = MedicalMateIconButtonSize.M,
+                        modifier = Modifier.align(Alignment.TopEnd).padding(ResetInset),
+                    )
+                }
             }
         }
     }

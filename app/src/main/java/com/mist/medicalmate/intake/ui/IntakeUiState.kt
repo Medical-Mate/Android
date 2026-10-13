@@ -4,6 +4,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
 import com.mist.medicalmate.core.model.IntakeStep
 import com.mist.medicalmate.core.model.MAX_BRIEF_CARD_QUESTIONS
+import com.mist.medicalmate.core.voice.VoiceFocus
 
 /**
  * 문답의 한 마디. Figma `313:999` Bubble.
@@ -64,6 +65,8 @@ data class IntakeUiState(
      * 보낸 말은 화면에 남긴다. 지우면 다시 적어야 한다. 다시 보내는 조작은 아직 없다.
      */
     val sendFailed: Boolean = false,
+    /** 말로 바뀐 자리(#284). 화면이 그 자리로 옮겨 가고 잠깐 테를 두른다. */
+    val voiceFocus: VoiceFocus<IntakeFocusTarget>? = null,
 ) {
     /**
      * 첫 단계에서 뒤로 가면 흐름을 벗어난다. 그 판단은 호출자가 한다.
@@ -111,6 +114,25 @@ data class IntakeUiState(
     internal fun newMessage(sender: IntakeMessage.Sender, text: String): IntakeMessage =
         IntakeMessage(id = (messages.maxOfOrNull { it.id } ?: 0L) + 1, sender = sender, text = text)
 }
+
+/** 증상 정리에서 말로 바뀌어 보여 줄 자리(#284). */
+sealed interface IntakeFocusTarget {
+    /** 인체도 판. 부위를 고르거나 큰 부위로 들어가거나 좌우를 바꿨다. */
+    data object Board : IntakeFocusTarget
+
+    /** 아픈 정도 슬라이더. */
+    data object Severity : IntakeFocusTarget
+
+    /** 넣거나 고친 질문 한 줄. */
+    data class Question(val index: Int) : IntakeFocusTarget
+
+    /** 질문 목록. 지운 줄은 남지 않아 목록 머리를 보인다. */
+    data object Questions : IntakeFocusTarget
+}
+
+/** 말로 바뀐 자리를 표시한다. */
+internal fun IntakeUiState.focusing(target: IntakeFocusTarget): IntakeUiState =
+    copy(voiceFocus = VoiceFocus(listOf(target)))
 
 /**
  * 주격 조사를 붙인 낱말. 받침이 있으면 "이", 없으면 "가"다.

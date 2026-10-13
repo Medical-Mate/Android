@@ -1,6 +1,7 @@
 package com.mist.medicalmate.calendar.ui
 
 import androidx.annotation.Keep
+import com.mist.medicalmate.core.voice.VoiceFocus
 import java.time.LocalDate
 import java.time.LocalTime
 
@@ -114,13 +115,8 @@ enum class ScheduleAddShareRead {
     MISSED,
 }
 
-/**
- * 말로 바뀐 자리들(#282). 첫 자리로 화면을 옮기고 모두에 테를 두른다.
- *
- * [seq]는 같은 자리를 두 번 말해도 다시 보이게 하려고 둔다. 화면은 마지막으로 보인 [seq]를 저장해 두어
- * 병원 찾기에서 돌아왔을 때 지난 것을 다시 띄우지 않는다.
- */
-data class ScheduleAddFocus(val targets: List<ScheduleAddFocusTarget>, val seq: Long = System.nanoTime())
+/** 일정 추가에서 말로 바뀐 자리들(#282). 화면이 그 자리로 옮겨 가고 테를 두른다. */
+typealias ScheduleAddFocus = VoiceFocus<ScheduleAddFocusTarget>
 
 /** 말로 바뀌어 보여 줄 자리. */
 sealed interface ScheduleAddFocusTarget {

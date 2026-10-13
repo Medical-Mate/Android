@@ -20,6 +20,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -295,6 +296,47 @@ class IntakeVoiceTest {
 
         assertEquals(R.string.voice_intake_question_full, reply.message)
         assertEquals(MAX_BRIEF_CARD_QUESTIONS, viewModel.uiState.value.questions.size)
+    }
+
+    // 말로 바뀐 자리 보이기
+
+    @Test
+    fun `부위를 고르거나 옮기면 인체도를 보인다`() {
+        val viewModel = IntakeViewModel(VoiceSessionRepository(), FakeSpeechToText())
+
+        viewModel.handle("왼쪽 무릎이 아파요")
+        val picked = viewModel.uiState.value.voiceFocus
+        assertEquals(listOf(IntakeFocusTarget.Board), picked?.targets)
+
+        viewModel.handle("반대")
+        assertNotEquals(picked, viewModel.uiState.value.voiceFocus)
+        assertEquals(listOf(IntakeFocusTarget.Board), viewModel.uiState.value.voiceFocus?.targets)
+    }
+
+    @Test
+    fun `아픈 정도를 고르면 슬라이더를 보인다`() {
+        val viewModel = IntakeViewModel(VoiceSessionRepository(ends = true), FakeSpeechToText()).inChat()
+        viewModel.handle("어제부터요")
+        viewModel.handle("다음")
+
+        viewModel.handle("7점")
+
+        assertEquals(listOf(IntakeFocusTarget.Severity), viewModel.uiState.value.voiceFocus?.targets)
+    }
+
+    @Test
+    fun `질문을 넣거나 고치면 그 줄을 지우면 목록 머리를 보인다`() {
+        val viewModel = IntakeViewModel(VoiceSessionRepository(ends = true), FakeSpeechToText()).inQuestions()
+
+        viewModel.handle("약을 계속 먹어도 되나요")
+        viewModel.handle("운동해도 될까요")
+        assertEquals(listOf(IntakeFocusTarget.Question(1)), viewModel.uiState.value.voiceFocus?.targets)
+
+        viewModel.handle("첫 번째 질문 고쳐, 술 마셔도 되나요")
+        assertEquals(listOf(IntakeFocusTarget.Question(0)), viewModel.uiState.value.voiceFocus?.targets)
+
+        viewModel.handle("두 번째 질문 지워 줘")
+        assertEquals(listOf(IntakeFocusTarget.Questions), viewModel.uiState.value.voiceFocus?.targets)
     }
 
     private fun IntakeViewModel.handle(text: String): VoiceReply = voiceCommands.handle(

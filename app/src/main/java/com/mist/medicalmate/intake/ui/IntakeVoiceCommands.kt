@@ -92,7 +92,7 @@ internal class IntakeVoiceCommands(
                 if (flipped == null) {
                     VoiceReply.Done(R.string.voice_intake_flip_none, question = current.voiceQuestion(labels))
                 } else {
-                    update { it.copy(bodyMap = flipped.first) }
+                    update { it.copy(bodyMap = flipped.first).focusing(IntakeFocusTarget.Board) }
                     val picked = flipped.first.selection == flipped.second
                     VoiceReply.Done(
                         R.string.voice_intake_flipped,
@@ -121,7 +121,7 @@ internal class IntakeVoiceCommands(
             found is BodyVoicePick.Picked -> picked(found.selection)
             found is BodyVoicePick.Focus -> {
                 askingSide = emptyList()
-                update { it.copy(bodyMap = it.bodyMap.copy(focus = found.anchor)) }
+                update { it.copy(bodyMap = it.bodyMap.copy(focus = found.anchor)).focusing(IntakeFocusTarget.Board) }
                 VoiceReply.Done(
                     R.string.voice_intake_part_focus,
                     listOf(found.anchor.title()),
@@ -131,6 +131,7 @@ internal class IntakeVoiceCommands(
 
             found is BodyVoicePick.AskSide -> {
                 askingSide = found.choices
+                update { it.focusing(IntakeFocusTarget.Board) }
                 val choice = found.choices.first()
                 VoiceReply.Done(
                     R.string.voice_intake_part_side,
@@ -159,7 +160,9 @@ internal class IntakeVoiceCommands(
             selection.takeIf { it.zoneId != null }?.let {
                 BodyMapSelection(it.anchorId, side = if (mirrored) it.side else BodyMapSide.CENTER)
             }
-        update { it.copy(bodyMap = it.bodyMap.copy(focus = focus, selection = selection)) }
+        update {
+            it.copy(bodyMap = it.bodyMap.copy(focus = focus, selection = selection)).focusing(IntakeFocusTarget.Board)
+        }
         return VoiceReply.Done(
             R.string.voice_intake_picked,
             listOf(selection.title()),
@@ -213,7 +216,7 @@ internal class IntakeVoiceCommands(
 
             severity == null -> VoiceReply.NotMine
             else -> {
-                update { it.copy(severity = severity) }
+                update { it.copy(severity = severity).focusing(IntakeFocusTarget.Severity) }
                 VoiceReply.Done(
                     R.string.voice_intake_picked,
                     listOf(routes.severityLabel(severity)),
@@ -239,7 +242,10 @@ internal class IntakeVoiceCommands(
                 if (index == null) {
                     VoiceReply.Done(R.string.voice_intake_question_which, question = more)
                 } else {
-                    update { it.copy(questions = it.questions.filterIndexed { i, _ -> i != index }) }
+                    update {
+                        it.copy(questions = it.questions.filterIndexed { i, _ -> i != index })
+                            .focusing(IntakeFocusTarget.Questions)
+                    }
                     VoiceReply.Done(R.string.voice_intake_question_removed, listOf(list[index]), question = more)
                 }
             }
@@ -253,7 +259,7 @@ internal class IntakeVoiceCommands(
             VoiceReply.Done(R.string.voice_intake_question_full, listOf(MAX_BRIEF_CARD_QUESTIONS.toString()))
 
         else -> {
-            update { it.copy(questions = it.questions + text) }
+            update { it.copy(questions = it.questions + text).focusing(IntakeFocusTarget.Question(it.questions.size)) }
             VoiceReply.Done(R.string.voice_intake_question_added, listOf(text), question = more)
         }
     }
@@ -270,7 +276,10 @@ internal class IntakeVoiceCommands(
                 question = more,
             )
             else -> {
-                update { it.copy(questions = it.questions.mapIndexed { i, q -> if (i == index) voice.text else q }) }
+                update {
+                    it.copy(questions = it.questions.mapIndexed { i, q -> if (i == index) voice.text else q })
+                        .focusing(IntakeFocusTarget.Question(index))
+                }
                 VoiceReply.Done(R.string.voice_intake_question_edited, listOf(voice.text), question = more)
             }
         }
