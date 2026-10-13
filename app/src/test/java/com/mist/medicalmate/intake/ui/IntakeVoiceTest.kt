@@ -156,7 +156,7 @@ class IntakeVoiceTest {
 
         assertEquals(R.string.voice_intake_part_focus, reply.message)
         assertEquals(R.string.voice_intake_ask_zone, reply.question?.text)
-        assertEquals(listOf("오른쪽 팔", "어깨, 위팔, 팔꿈치, 아래팔, 손목, 손"), reply.question?.args)
+        assertEquals(listOf("오른쪽 팔", "· 어깨\n· 위팔\n· 팔꿈치\n· 아래팔\n· 손목\n· 손"), reply.question?.args)
 
         // 모르겠다고 하면 다시 읽어 준다.
         val again = viewModel.handle("잘 모르겠어요") as VoiceReply.Done

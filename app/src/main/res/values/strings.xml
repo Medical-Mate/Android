@@ -617,11 +617,11 @@
     <string name="voice_ask_date">언제 가세요? "10월 20일 오후 3시"처럼요</string>
     <string name="voice_ask_done">다 됐으면 "저장"이라고 해 주세요</string>
     <string name="voice_schedule_card_dropped">%1$s 카드는 빼 둘게요</string>
-    <string name="voice_intake_ask_part">어디가 아프세요? %1$s 중에 말씀해 주세요</string>
+    <string name="voice_intake_ask_part">어디가 아프세요? 이 중에서 말씀해 주세요\n%1$s</string>
     <string name="voice_intake_picked">%1$s, 골랐어요</string>
     <string name="voice_intake_ask_next_part">맞으면 "다음"이라고 해 주세요</string>
     <string name="voice_intake_part_focus">%1$s 쪽을 볼게요</string>
-    <string name="voice_intake_ask_zone">%1$s 어디가 아프세요? %2$s 중에 말씀해 주세요</string>
+    <string name="voice_intake_ask_zone">%1$s 어디가 아프세요? 이 중에서 말씀해 주세요\n%2$s</string>
     <string name="voice_intake_part_list">이 중에서 가장 가까운 곳을 골라 주세요</string>
     <string name="voice_intake_part_side">%1$s, 어느 쪽이에요?</string>
     <string name="voice_intake_ask_side">"왼쪽"이나 "오른쪽"으로 말씀해 주세요</string>

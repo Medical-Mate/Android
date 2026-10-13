@@ -83,7 +83,8 @@ internal fun VoiceCommandPanel(panel: VoicePanel, onDismiss: () -> Unit, modifie
                 },
                 style = MedicalMateTheme.typography.bodyS,
                 color = if (panel.heard.isBlank() && question != null) colors.fgPrimary else colors.fgSubtle,
-                maxLines = 3,
+                // 물음은 고를 것을 한 줄에 하나씩 적을 수 있어(#284) 자르지 않는다. 말하는 글만 세 줄까지다.
+                maxLines = if (panel.heard.isBlank()) Int.MAX_VALUE else HEARD_MAX_LINES,
             )
         }
         MedicalMateIconButton(
@@ -122,6 +123,8 @@ private fun MicBadge(listening: Boolean) {
         )
     }
 }
+
+private const val HEARD_MAX_LINES = 3
 
 private val MicBadgeSize = 40.dp
 

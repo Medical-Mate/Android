@@ -261,11 +261,14 @@ internal fun IntakeUiState.voiceQuestion(): VoiceText? = when (step) {
  */
 private fun BodyMapSelection?.bodyVoiceQuestion(): VoiceText {
     if (this == null) {
-        return VoiceText(R.string.voice_intake_ask_part, listOf(bodyVoiceAnchors().joinToString(", ") { it.second }))
+        return VoiceText(R.string.voice_intake_ask_part, listOf(bodyVoiceAnchors().voiceList()))
     }
-    val zones = bodyVoiceZones(anchorId).joinToString(", ") { it.second }
+    val zones = bodyVoiceZones(anchorId).voiceList()
     return VoiceText(R.string.voice_intake_ask_zone, listOf(title(), zones))
 }
+
+/** 막대에 한 줄에 하나씩 적는다. 한 줄에 늘어놓으면 아홉 개가 이어져 읽기 어렵다. */
+private fun List<Pair<String, String>>.voiceList(): String = joinToString("\n") { "· ${it.second}" }
 
 /** 문답에서 "다음"은 이 말로 시작할 때만이다. "없어요"는 AI 질문에 대한 답일 수 있다. */
 private const val NEXT_WORD = "다음"
