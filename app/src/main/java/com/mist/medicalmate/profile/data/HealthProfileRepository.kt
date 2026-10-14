@@ -1,6 +1,8 @@
 package com.mist.medicalmate.profile.data
 
 import com.mist.medicalmate.core.model.CurrentUserProvider
+import com.mist.medicalmate.core.model.PatientHealth
+import com.mist.medicalmate.core.model.PatientHealthProvider
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.core.network.apiCall
 import com.mist.medicalmate.core.network.map
@@ -37,9 +39,19 @@ internal class DefaultHealthProfileRepository
 constructor(
     private val api: HealthProfileApi,
     private val json: Json,
-) : HealthProfileRepository {
+) : HealthProfileRepository,
+    PatientHealthProvider {
     override suspend fun displayName(): ApiResult<String?> =
         profile().map { it.name?.trim()?.takeIf(String::isNotEmpty) }
+
+    /** 증상 정리가 폰에서 질문 후보를 만들 때 쓴다(#300). 같은 응답이라 호출을 두 벌로 두지 않는다. */
+    override suspend fun patientHealth(): PatientHealth? = (profile() as? ApiResult.Success)?.value?.health?.let {
+        PatientHealth(
+            medications = it.medications.items,
+            conditions = it.conditions.items,
+            allergies = it.allergies.items,
+        )
+    }
 
     override suspend fun profile(): ApiResult<HealthProfile> =
         apiCall(json) { api.healthProfile() }.map { it.toProfile() }

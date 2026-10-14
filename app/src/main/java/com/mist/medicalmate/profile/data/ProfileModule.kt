@@ -1,6 +1,7 @@
 package com.mist.medicalmate.profile.data
 
 import com.mist.medicalmate.core.model.CurrentUserProvider
+import com.mist.medicalmate.core.model.PatientHealthProvider
 import com.mist.medicalmate.core.model.VisitReminderSetting
 import dagger.Binds
 import dagger.Module
@@ -31,6 +32,10 @@ internal abstract class ProfileRepositoryModule {
     /** 홈이 `profile`을 직접 참조하지 않도록 `core`의 인터페이스로 연결한다. */
     @Binds
     abstract fun bindCurrentUserProvider(impl: DefaultHealthProfileRepository): CurrentUserProvider
+
+    /** 증상 정리(`intake`)가 질문 후보 재료로 읽는다. `core`의 인터페이스로 연결한다. */
+    @Binds
+    abstract fun bindPatientHealthProvider(impl: DefaultHealthProfileRepository): PatientHealthProvider
 
     @Binds
     abstract fun bindSettingsRepository(impl: DefaultSettingsRepository): SettingsRepository

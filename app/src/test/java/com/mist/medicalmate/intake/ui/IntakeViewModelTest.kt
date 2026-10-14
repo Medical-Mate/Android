@@ -9,6 +9,7 @@ import com.mist.medicalmate.core.speech.SpeechChunk
 import com.mist.medicalmate.intake.data.IntakeSession
 import com.mist.medicalmate.intake.data.IntakeSessionMessage
 import com.mist.medicalmate.intake.data.IntakeSessionStatus
+import com.mist.medicalmate.intake.data.IntakeSide
 import com.mist.medicalmate.intake.data.IntakeTurn
 import com.mist.medicalmate.intake.data.SessionRepository
 import kotlinx.coroutines.Dispatchers
@@ -47,8 +48,8 @@ private class FakeSessionRepository(
     var startedCodes: List<String>? = null
     var startedText: String? = null
 
-    override suspend fun start(siteCodes: List<String>, siteText: String?): ApiResult<IntakeSession> {
-        startedCodes = siteCodes
+    override suspend fun start(siteCode: String, side: IntakeSide?, siteText: String?): ApiResult<IntakeSession> {
+        startedCodes = listOf(siteCode)
         startedText = siteText
         return if (startFails) ApiResult.NetworkUnavailable(java.io.IOException()) else ApiResult.Success(started)
     }

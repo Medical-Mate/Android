@@ -5,6 +5,7 @@ import com.mist.medicalmate.core.model.IntakeStep
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.intake.data.IntakeSession
 import com.mist.medicalmate.intake.data.IntakeSessionStatus
+import com.mist.medicalmate.intake.data.IntakeSide
 import com.mist.medicalmate.intake.data.SessionRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -37,7 +38,7 @@ internal class IntakeSessionActions(
      */
     fun start(selection: BodyMapSelection, siteText: String) {
         scope.launch {
-            val result = repository.start(siteCodes = listOf(selection.siteCode), siteText = siteText)
+            val result = repository.start(selection.siteCode, selection.side.toIntakeSide(), siteText)
             update { state ->
                 when (result) {
                     is ApiResult.Success ->
@@ -175,3 +176,10 @@ private fun IntakeUiState.openingFor(siteText: String?): List<IntakeMessage> =
  * 구역까지 골랐으면 그것이 더 자세하다. 앵커까지만 고른 경우는 구역이 없는 부위다.
  */
 private val BodyMapSelection.siteCode: String get() = zoneId ?: anchorId
+
+/** 서버에 보낼 좌우. 좌우가 없는 점(`CENTER`)과 팔·다리 기준점(`BASE`)은 보내지 않는다. */
+private fun BodyMapSide.toIntakeSide(): IntakeSide? = when (this) {
+    BodyMapSide.LEFT -> IntakeSide.LEFT
+    BodyMapSide.RIGHT -> IntakeSide.RIGHT
+    BodyMapSide.CENTER, BodyMapSide.BASE -> null
+}
