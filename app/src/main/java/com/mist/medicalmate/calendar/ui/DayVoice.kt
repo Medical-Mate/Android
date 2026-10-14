@@ -57,7 +57,10 @@ internal fun CalendarDayVoice(
         val voice = parseDayVoice(text)
         val state = voice?.let { withTimeoutOrNull(DAY_WAIT_MS) { uiState.first { it != null } } }
         val card = state?.card
-        val record = state?.records?.firstOrNull()
+        // 이 일정의 기록이다(#302). 같은 날 지운 일정의 기록이 남아 있어도 새 일정의 기록을 막지 않는다.
+        val record = state?.records?.firstOrNull { it.id in state.ownRecordIds }
+        // 보여 달라는 말에는 그 날 기록 무엇이든 연다.
+        val shown = record ?: state?.records?.firstOrNull()
         when {
             state == null -> VoiceReply.NotMine
             voice == DayVoice.CARD && card != null -> {
@@ -65,8 +68,8 @@ internal fun CalendarDayVoice(
                 VoiceReply.Done(R.string.voice_card_opened, listOf(card.title))
             }
 
-            voice == DayVoice.RECORD_OPEN && record != null -> {
-                onRecordOpen(record.id)
+            voice == DayVoice.RECORD_OPEN && shown != null -> {
+                onRecordOpen(shown.id)
                 VoiceReply.Done(R.string.voice_day_record_opened)
             }
 

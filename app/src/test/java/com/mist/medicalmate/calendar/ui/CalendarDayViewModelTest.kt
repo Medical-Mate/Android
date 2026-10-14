@@ -281,6 +281,43 @@ class CalendarDayViewModelTest {
     }
 
     @Test
+    fun `지운 일정의 기록이 남은 날에도 새 일정으로 기록할 수 있다`() {
+        // 15일 일정을 지우고 다른 카드로 15일 일정을 다시 잡은 경우다(#302). 남은 기록은 다른 카드의 것이다.
+        val today = LocalDate.of(2026, 9, 11)
+        val left = testVisit.copy(id = "7", cardId = 9L, visitedOn = today)
+        val viewModel = dayViewModel(listOf(testAppointment.copy(on = today)), visits = listOf(left))
+
+        viewModel.load(today)
+
+        assertEquals(listOf("7"), viewModel.state().records.map { it.id })
+        assertFalse(viewModel.state().visited)
+        assertTrue(viewModel.state().canRecord)
+        assertTrue(viewModel.state().todos.isNotEmpty())
+    }
+
+    @Test
+    fun `카드를 고쳐 id가 바뀐 기록도 이 일정의 기록이다`() {
+        // 일정은 고치기 전 카드(1)를, 기록 목록은 고친 뒤 카드(5)를 든다(Backend#114). 모아 주는 목록이 둘을 묶는다.
+        val today = LocalDate.of(2026, 9, 11)
+        val recorded = testVisit.copy(id = "8", cardId = 5L, visitedOn = today)
+        val visits = FakeVisitRepository(list = ApiResult.Success(listOf(recorded)))
+        visits.cardVisits = ApiResult.Success(listOf(recorded))
+        val viewModel =
+            CalendarDayViewModel(
+                FakeAppointmentRepository(listOf(testAppointment.copy(on = today))),
+                visits,
+                FakeCardRepository(),
+                fixedClock,
+            )
+
+        viewModel.load(today)
+
+        assertEquals(1L, visits.cardVisitsOf)
+        assertTrue(viewModel.state().visited)
+        assertFalse(viewModel.state().canRecord)
+    }
+
+    @Test
     fun `삭제를 확정하면 그 일정을 서버에서 지운다`() {
         val repository = FakeAppointmentRepository(listOf(testAppointment))
         val viewModel = CalendarDayViewModel(repository, FakeVisitRepository(), FakeCardRepository(), fixedClock)

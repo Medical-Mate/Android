@@ -98,12 +98,18 @@ data class CalendarDayUiState(
      * 진료가 기록으로 남고 캘린더가 그 날을 "기록 있음"으로 찍는다. 일정을 지워도 그 점은 남는다.
      */
     val upcoming: Boolean = false,
+    /**
+     * [records] 가운데 이 날 일정의 것(#302). 일정이 없는 날이면 그 날 기록 전부다.
+     *
+     * 지운 일정의 기록이 같은 날 남아 있을 수 있어 [records]만 보면 새 일정이 다녀온 것으로 읽힌다.
+     */
+    val ownRecordIds: Set<String> = emptySet(),
 ) {
-    /** 다녀온 날인지. 기록이 있으면 진료가 끝난 것이다. */
-    val visited: Boolean get() = records.isNotEmpty()
+    /** 이 날 일정을 다녀왔는지. 이 일정의 기록이 있으면 진료가 끝난 것이다. */
+    val visited: Boolean get() = ownRecordIds.isNotEmpty()
 
-    /** 진료 후 기록을 시작할 수 있는지. 카드가 걸린 일정이 있고, 아직 적지 않았고, 지난 날이거나 오늘이다. */
-    val canRecord: Boolean get() = card != null && records.isEmpty() && !upcoming
+    /** 진료 후 기록을 시작할 수 있는지. 카드가 걸린 일정이 있고, 그 일정으로 아직 적지 않았고, 지난 날이거나 오늘이다. */
+    val canRecord: Boolean get() = card != null && !visited && !upcoming
 
     /** 편집 중인지(1r-2-E). 사본이 있으면 편집이다. */
     val editing: Boolean get() = todoDraft != null

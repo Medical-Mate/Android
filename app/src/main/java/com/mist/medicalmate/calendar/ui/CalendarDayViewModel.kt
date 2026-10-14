@@ -81,6 +81,7 @@ internal constructor(
             val appointment = live.firstOrNull { it.id == appointmentId } ?: live.firstOrNull()
             val records = (visitRepository.visits() as? ApiResult.Success)?.value.orEmpty()
                 .filter { it.visitedOn == date }
+            val own = appointment?.let { ownRecords(it, records) }.orEmpty()
             val today = LocalDate.now(clock)
             mutableUiState.value =
                 dayState(date).copy(
@@ -88,13 +89,32 @@ internal constructor(
                     schedule = appointment?.toDaySchedule(today),
                     card = appointment?.toDayCard()?.filled(),
                     records = records.map { it.toDayRecord().filled() },
+                    // 일정이 있으면 그 일정의 기록만, 일정 없이 기록만 있는 날이면 그 기록이 진료를 마친 표시다.
+                    ownRecordIds = (if (appointment == null) records else own).map { it.id }.toSet(),
                     // 진료가 끝난 날에는 진료 전 할 일을 두지 않는다. 시안 1r-2-A도 그렇다.
-                    todos = if (records.isEmpty()) appointment?.todos.toDayTodos() else emptyList(),
-                    // 다음 일정은 그 날의 첫 기록에서 찾는다. 같은 날 둘이면 재방문 날짜도
+                    todos = if (own.isEmpty()) appointment?.todos.toDayTodos() else emptyList(),
+                    // 다음 일정은 이 일정의 첫 기록에서 찾는다. 같은 날 둘이면 재방문 날짜도
                     // 둘일 수 있는데, 이 자리는 "다음이 언제인지" 하나를 알리는 곳이다.
-                    nextEvent = records.firstOrNull()?.let { nextEvent(date, it) },
+                    nextEvent = own.firstOrNull()?.let { nextEvent(date, it) },
                 )
         }
+    }
+
+    /**
+     * 그 날 기록 가운데 이 일정의 카드로 남긴 것(#302).
+     *
+     * **그 날 기록이 모두 이 일정의 것은 아니다.** 일정을 지우고 같은 날 다른 카드로 새 일정을 잡으면, 지운 일정의
+     * 기록이 그 날에 남아 있다. 그 날 기록이 하나라도 있으면 다녀온 것으로 보던 때는 새 일정이 "진료 완료"로
+     * 서고 그 카드로는 기록을 남길 수 없었다.
+     *
+     * 카드를 고치면 id가 바뀌어(Backend#114) 일정이 든 옛 id와 기록 목록의 최신 id가 다를 수 있다. 버전을 묶어
+     * 주는 `GET /api/cards/{cardId}/visits`의 기록과, id가 그대로 같은 기록을 함께 본다. 모아 주는 목록을 못
+     * 읽으면 id가 같은 것만 남는다.
+     */
+    private suspend fun ownRecords(appointment: Appointment, records: List<VisitListItem>): List<VisitListItem> {
+        val cardId = appointment.cards.firstOrNull()?.id ?: return emptyList()
+        val linked = (visitRepository.cardVisits(cardId) as? ApiResult.Success)?.value.orEmpty().map { it.id }.toSet()
+        return records.filter { it.id in linked || it.cardId == cardId }
     }
 
     /**

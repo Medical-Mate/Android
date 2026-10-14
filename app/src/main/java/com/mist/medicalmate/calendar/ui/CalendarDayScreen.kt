@@ -347,6 +347,16 @@ private fun ColumnScope.RecordSection(state: CalendarDayUiState, callbacks: Cale
             onClick = { callbacks.onRecordOpenClick(record.id) },
         )
     }
+    // 그 날 기록이 다른 일정(지운 일정)의 것이면 이 일정으로는 아직 적지 않았다(#302). 빈 상태가 아니라서
+    // 그 안의 행동 자리를 쓸 수 없어 목록 아래에 같은 이름의 버튼을 둔다. 시안에 없는 자리다.
+    val card = state.card?.takeIf { state.canRecord } ?: return
+    MedicalMateButton(
+        onClick = { callbacks.onRecordAddClick(card.id, card.title, state.schedule?.title, card.clinicAddress) },
+        label = stringResource(R.string.calendar_day_record_empty_action),
+        modifier = Modifier.fillMaxWidth(),
+        type = MedicalMateButtonType.TONAL,
+        size = MedicalMateButtonSize.M,
+    )
 }
 
 /**
