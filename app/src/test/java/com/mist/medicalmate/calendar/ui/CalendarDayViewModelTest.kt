@@ -260,6 +260,27 @@ class CalendarDayViewModelTest {
     }
 
     @Test
+    fun `앞날에는 진료 후 기록을 시작하지 않는다`() {
+        // 기록 날짜가 그 일자라서, 앞날에 적으면 다녀오지 않은 진료가 기록으로 남는다(#302).
+        val viewModel = dayViewModel()
+
+        viewModel.load(LocalDate.of(2026, 9, 12))
+
+        assertTrue(viewModel.state().upcoming)
+        assertFalse(viewModel.state().canRecord)
+    }
+
+    @Test
+    fun `오늘 진료는 바로 기록할 수 있다`() {
+        val viewModel = dayViewModel(listOf(testAppointment.copy(on = LocalDate.of(2026, 9, 11))))
+
+        viewModel.load(LocalDate.of(2026, 9, 11))
+
+        assertFalse(viewModel.state().upcoming)
+        assertTrue(viewModel.state().canRecord)
+    }
+
+    @Test
     fun `삭제를 확정하면 그 일정을 서버에서 지운다`() {
         val repository = FakeAppointmentRepository(listOf(testAppointment))
         val viewModel = CalendarDayViewModel(repository, FakeVisitRepository(), FakeCardRepository(), fixedClock)

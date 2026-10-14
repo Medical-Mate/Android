@@ -81,9 +81,11 @@ internal constructor(
             val appointment = live.firstOrNull { it.id == appointmentId } ?: live.firstOrNull()
             val records = (visitRepository.visits() as? ApiResult.Success)?.value.orEmpty()
                 .filter { it.visitedOn == date }
+            val today = LocalDate.now(clock)
             mutableUiState.value =
                 dayState(date).copy(
-                    schedule = appointment?.toDaySchedule(LocalDate.now(clock)),
+                    upcoming = date > today,
+                    schedule = appointment?.toDaySchedule(today),
                     card = appointment?.toDayCard()?.filled(),
                     records = records.map { it.toDayRecord().filled() },
                     // 진료가 끝난 날에는 진료 전 할 일을 두지 않는다. 시안 1r-2-A도 그렇다.

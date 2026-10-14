@@ -41,7 +41,8 @@ internal fun parseDayVoice(text: String): DayVoice? {
  * 일자 화면이 알아듣는 말(#288). 버튼과 같은 일을 한다.
  *
  * 진료 후 기록은 그 날 일정에 카드가 걸려 있을 때만 남긴다. 버튼도 그때만 선다 — 카드 없이 들어가면 끝에서
- * 저장할 곳이 없다. 이미 남긴 기록이 있으면 새로 쓰지 않고 그 기록을 보라고 한다.
+ * 저장할 곳이 없다. 이미 남긴 기록이 있으면 새로 쓰지 않고 그 기록을 보라고 한다. 아직 오지 않은 날이면
+ * 진료가 끝난 뒤에 하라고 한다(#302) — 버튼도 그 날에는 서지 않는다.
  *
  * 다른 화면에서 "진료 후 기록할래"로 들어오면 아직 그 날을 읽기 전이라 읽을 때까지 기다린다.
  */
@@ -74,6 +75,7 @@ internal fun CalendarDayVoice(
                 question = VoiceText(R.string.voice_day_ask_open),
             )
             card == null -> VoiceReply.Done(R.string.voice_day_no_card)
+            state.upcoming -> VoiceReply.Done(R.string.voice_day_upcoming)
             else -> {
                 onRecordAdd(card.id, card.title, state.schedule?.title, card.clinicAddress)
                 VoiceReply.Done(R.string.voice_day_record_start)
@@ -83,8 +85,7 @@ internal fun CalendarDayVoice(
     val prompt = rememberVoicePrompt()
     LaunchedEffect(Unit) {
         val state = withTimeoutOrNull(DAY_WAIT_MS) { uiState.first { it != null } } ?: return@LaunchedEffect
-        val canRecord = state.card != null && state.records.isEmpty()
-        if (canRecord) prompt(VoicePrompt(question = VoiceText(R.string.voice_day_ask)))
+        if (state.canRecord) prompt(VoicePrompt(question = VoiceText(R.string.voice_day_ask)))
     }
 }
 

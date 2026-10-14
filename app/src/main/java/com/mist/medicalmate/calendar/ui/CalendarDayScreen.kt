@@ -321,7 +321,8 @@ private fun ColumnScope.RecordSection(state: CalendarDayUiState, callbacks: Cale
     MedicalMateSectionHeader(title = stringResource(R.string.calendar_day_record))
     val records = state.records
     if (records.isEmpty()) {
-        val card = state.card
+        // 앞날에는 기록하러 가는 버튼을 두지 않는다. 빈 상태의 "진료가 끝나면 … 기록할 수 있어요"가 그 이유다.
+        val card = state.card?.takeIf { state.canRecord }
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
