@@ -9,6 +9,7 @@ import com.mist.medicalmate.calendar.data.AppointmentRepository
 import com.mist.medicalmate.calendar.data.AppointmentStatus
 import com.mist.medicalmate.calendar.data.AppointmentTodo
 import com.mist.medicalmate.card.data.CardRepository
+import com.mist.medicalmate.core.designsystem.ddayLabel
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.visit.data.AXIS_FINDINGS
 import com.mist.medicalmate.visit.data.AXIS_FOLLOW_UP
@@ -251,7 +252,7 @@ private fun VisitListItem.toDayRecord() = DayRecord(
  * 시각이 필수라 늘 정해진 쪽(1r-2-A2)이었고 그 상태는 Preview에만 있었다.
  */
 private fun Appointment.toNextEvent(today: LocalDate) = DayNextEvent(
-    chip = "D-${on.toEpochDay() - today.toEpochDay()}",
+    chip = ddayLabel(on.toEpochDay() - today.toEpochDay()),
     title = title,
     on = on,
     at = time?.let { on.atTime(it).format(NEXT_EVENT_FORMAT) },

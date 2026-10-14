@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.core.designsystem.MedicalMateElevation
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
@@ -231,7 +232,17 @@ fun MedicalMateListRow(
                 ) {
                     // 마스터가 `Heading/S`다. `Body/L`은 같은 17이지만 Regular라 제목이 메타와
                     // 같은 무게로 읽힌다.
-                    Text(text = title, style = typography.headingS, color = colors.fgDefault)
+                    // 제목은 한 줄까지이고 넘치면 줄인다(#294). 배지는 늘 제 크기로 제목 바로 옆에 선다 —
+                    // 제목이 폭을 먼저 가져가면 긴 병원 이름에 배지가 눌려 글자가 꺾였다. `fill = false`라
+                    // 짧은 제목은 제 폭만 쓰고 배지가 바로 붙는다.
+                    Text(
+                        text = title,
+                        style = typography.headingS,
+                        color = colors.fgDefault,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
                     if (type == MedicalMateListRowType.BADGE && badge != null) {
                         MedicalMateBadge(label = badge, tone = badgeTone)
                     }

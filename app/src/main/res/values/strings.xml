@@ -163,7 +163,6 @@
     <string name="calendar_card_sheet_schedule">이 카드로 일정 만들기</string>
 
     <string name="calendar_day_schedule">이 날 일정</string>
-    <string name="calendar_day_dday">D-%1$d</string>
     <string name="calendar_day_card">가져갈 브리핑 카드</string>
     <string name="calendar_day_todo">진료 전 할 일</string>
     <string name="calendar_day_record">이 날 기록</string>
@@ -525,7 +524,6 @@
     <string name="home_upcoming">다가오는 일정</string>
     <string name="home_calendar">캘린더</string>
     <string name="home_schedule_meta">%1$s %2$s</string>
-    <string name="home_schedule_dday">D-%1$d</string>
     <!-- 병원 이름 뒤에 초진인지 재진인지를 붙인다. 시안 1n-1의 "서울OO병원 내과 재진"이다. -->
     <string name="home_schedule_title">%1$s %2$s</string>
     <string name="home_schedule_first">초진</string>
