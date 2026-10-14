@@ -1,8 +1,15 @@
 package com.mist.medicalmate.intake.data
 
+import com.mist.medicalmate.core.model.PatientHealthProvider
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.core.network.apiCall
 import com.mist.medicalmate.core.network.map
+import com.mist.medicalmate.core.ondevice.ExtractedTurn
+import com.mist.medicalmate.core.ondevice.OnDeviceBundle
+import com.mist.medicalmate.core.ondevice.OnDeviceExtractor
+import com.mist.medicalmate.core.ondevice.OnDeviceResult
+import com.mist.medicalmate.core.ondevice.QuestionCard
+import com.mist.medicalmate.core.ondevice.extractUserMessage
 import jakarta.inject.Inject
 import kotlinx.serialization.json.Json
 
@@ -11,16 +18,19 @@ import kotlinx.serialization.json.Json
  *
  * 임시저장이 여기 있다. [start]가 만든 세션을 서버가 들고 있고 [load]가 대화와 진행도를
  * 돌려준다. 홈의 "이어서 하기"가 [load]로 들어온다.
+ *
+ * **폰 모델이 있으면 뽑는 일을 폰이 한다**(#300). 부르는 쪽은 그 사실을 몰라도 된다. 아래
+ * [DefaultSessionRepository]에 갈래가 있다.
  */
 interface SessionRepository {
     /**
      * 짚은 부위로 문답을 시작한다.
      *
-     * @param siteCodes 구역까지 골랐으면 `SUR:*` 하나, 앵커까지면 `ANC:*` 하나다. 서버가
-     *   목록으로 받는 것은 다중 선택을 열어두려는 것이고 우리는 한 곳만 고른다.
+     * @param siteCode 구역까지 골랐으면 `SUR:*`, 앵커까지면 `ANC:*`. 한 곳만 고른다.
+     * @param side 고른 점의 좌우. 좌우가 없는 부위면 보내지 않는다 — 저장소가 가린다.
      * @param siteText 사람이 읽는 이름. 문답 첫 문장에 그대로 들어간다.
      */
-    suspend fun start(siteCodes: List<String>, siteText: String?): ApiResult<IntakeSession>
+    suspend fun start(siteCode: String, side: IntakeSide?, siteText: String?): ApiResult<IntakeSession>
 
     suspend fun load(sessionId: Long): ApiResult<IntakeSession>
 
@@ -38,24 +48,109 @@ interface SessionRepository {
     suspend fun setQuestions(sessionId: Long, questions: List<String>): ApiResult<IntakeSession>
 }
 
+/** 고른 점의 좌우. 서버는 대문자로 받는다. */
+enum class IntakeSide { LEFT, RIGHT }
+
+/**
+ * 세션 저장소.
+ *
+ * **폰 모델이 있으면 세 군데가 달라진다**(#300, Backend#157). 하나라도 막히면 서버가 하던 대로 간다.
+ * 1. 세션을 `ONDEVICE`로 연다. 첫 자유 발화 없이 첫 축 질문부터 시작한다.
+ * 2. 답할 때마다 응답의 [AskingAxisResponse]로 폰 프롬프트를 만들어 뽑은 것을 함께 보낸다. 폰이
+ *    못 뽑은 턴은 그것 없이 보내고, 그 턴은 서버가 뽑는다.
+ * 3. 문답이 끝나 강도를 저장했는데 후보가 비어 있으면 폰이 후보를 만들어 보낸다. 온디바이스
+ *    세션은 서버가 후보를 만들지 않는다. 폰이 못 만들면 빈 배열을 보내고 AI가 템플릿으로 채운다.
+ *
+ * 묻는 축은 세션마다 마지막 응답 것을 들고 있는다. 화면에 내보낼 값이 아니고, 서버가 저장해
+ * 두어서 [load]로 다시 받을 수 있다.
+ */
 internal class DefaultSessionRepository
 @Inject
-constructor(private val api: SessionApi, private val json: Json) :
-    SessionRepository {
-    override suspend fun start(siteCodes: List<String>, siteText: String?): ApiResult<IntakeSession> =
-        apiCall(json) { api.start(StartSessionRequest(siteCodes = siteCodes, siteText = siteText)) }
-            .map { it.toSession() }
+constructor(
+    private val api: SessionApi,
+    private val json: Json,
+    private val onDevice: OnDeviceExtractor,
+    private val health: PatientHealthProvider,
+) : SessionRepository {
+    private val askingAxes = mutableMapOf<Long, AskingAxisResponse?>()
+
+    override suspend fun start(siteCode: String, side: IntakeSide?, siteText: String?): ApiResult<IntakeSession> {
+        val request =
+            StartSessionRequest(
+                siteNodeId = siteCode,
+                side = side?.name?.takeIf { siteCode in LATERAL_SITES },
+                siteText = siteText,
+                profile = PROFILE_ON_DEVICE.takeIf { onDevice.available() },
+            )
+        return apiCall(json) { api.start(request) }.map { it.remembered().toSession() }
+    }
 
     override suspend fun load(sessionId: Long): ApiResult<IntakeSession> =
-        apiCall(json) { api.session(sessionId) }.map { it.toSession() }
+        apiCall(json) { api.session(sessionId) }.map { it.remembered().toSession() }
 
-    override suspend fun send(sessionId: Long, text: String, byVoice: Boolean): ApiResult<IntakeTurn> = apiCall(json) {
-        api.sendMessage(sessionId, SendMessageRequest(text = text, inputMethod = if (byVoice) "STT" else "TEXT"))
-    }.map { it.toTurn() }
+    override suspend fun send(sessionId: Long, text: String, byVoice: Boolean): ApiResult<IntakeTurn> {
+        val extracted = askingAxes[sessionId]?.let { extractOnDevice(it, text) }
+        val request =
+            SendMessageRequest(
+                text = text,
+                inputMethod = if (byVoice) "STT" else "TEXT",
+                extraction = extracted?.json,
+                extractionMeta = extracted?.let { OnDeviceBundle.meta(OnDeviceBundle.EXTRACT_PROMPT_VERSION) },
+            )
+        return apiCall(json) { api.sendMessage(sessionId, request) }
+            .map { turn -> turn.also { askingAxes[sessionId] = it.askingAxis }.toTurn() }
+    }
 
-    override suspend fun setSeverity(sessionId: Long, level: Int, label: String): ApiResult<IntakeSession> =
-        apiCall(json) { api.putSeverity(sessionId, SeverityRequest(level = level, label = label)) }
-            .map { it.toSession() }
+    override suspend fun setSeverity(sessionId: Long, level: Int, label: String): ApiResult<IntakeSession> {
+        val saved = apiCall(json) { api.putSeverity(sessionId, SeverityRequest(level = level, label = label)) }
+        val response = (saved as? ApiResult.Success)?.value
+        val withPhoneCandidates = response?.takeIf { it.needsCandidates() }?.let { suggestOnDevice(it) }
+        return withPhoneCandidates ?: saved.map { it.toSession() }
+    }
+
+    /** 폰이 이 답을 뽑는다. 폰 모델이 없거나 못 뽑으면 null이고 그 턴은 서버가 뽑는다. */
+    private suspend fun extractOnDevice(axis: AskingAxisResponse, text: String): ExtractedTurn? {
+        if (!onDevice.available()) return null
+        val result = onDevice.extractTurn(extractUserMessage(axis.key, axis.label, text))
+        return (result as? OnDeviceResult.Success)?.value
+    }
+
+    /**
+     * 폰이 만든 후보를 보내 검증·보충된 후보를 받는다. 보내지 못하면 null이고 강도 저장 결과를 쓴다.
+     *
+     * 폰 모델이 없어도 보낸다(빈 배열). 그 세션이 온디바이스로 시작했다면 서버가 후보를 만들지 않아,
+     * 보내지 않으면 4단계가 빈 채로 열린다.
+     */
+    private suspend fun suggestOnDevice(session: SessionResponse): ApiResult<IntakeSession>? {
+        val suggested =
+            if (onDevice.available()) {
+                (onDevice.suggestQuestions(session.toQuestionCard()) as? OnDeviceResult.Success)?.value.orEmpty()
+            } else {
+                emptyList()
+            }
+        val request =
+            PhoneQuestionCandidatesRequest(
+                candidates = suggested.map { PhoneQuestionCandidate(it.text, it.source) },
+                candidatesMeta = OnDeviceBundle.meta(OnDeviceBundle.QUESTIONS_PROMPT_VERSION),
+            )
+        val posted = apiCall(json) { api.postQuestionCandidates(session.sessionId, request) }
+        return (posted as? ApiResult.Success)?.map { it.toSession() }
+    }
+
+    private suspend fun SessionResponse.toQuestionCard(): QuestionCard {
+        val profile = health.patientHealth()
+        return QuestionCard(
+            axes = cardAxes.mapNotNull { axis -> axis.value?.let { axis.key to it } }.toMap(),
+            severity = severity?.let {
+                listOfNotNull(it.level.toString(), it.label?.let { label -> "($label)" }).joinToString(" ")
+            },
+            medications = profile?.medications.orEmpty(),
+            conditions = profile?.conditions.orEmpty(),
+            allergies = profile?.allergies.orEmpty(),
+        )
+    }
+
+    private fun SessionResponse.remembered(): SessionResponse = also { askingAxes[sessionId] = askingAxis }
 
     override suspend fun setQuestions(sessionId: Long, questions: List<String>): ApiResult<IntakeSession> =
         apiCall(json) { api.putQuestions(sessionId, QuestionsRequest(questions)) }.map { it.toSession() }
@@ -108,7 +203,7 @@ private fun MessageResponse.toMessage() = IntakeSessionMessage(seq = seq, fromPa
 private fun SessionResponse.toSession() = IntakeSession(
     id = sessionId,
     status = statusOf(status),
-    siteCodes = siteCodes,
+    siteCodes = listOfNotNull(siteNodeId),
     siteText = siteText,
     answered = progress?.current ?: 0,
     total = progress?.total ?: 0,
@@ -133,3 +228,28 @@ private fun statusOf(value: String?): IntakeSessionStatus = when (value) {
 }
 
 private const val ROLE_USER = "USER"
+
+private const val PROFILE_ON_DEVICE = "ONDEVICE"
+
+/**
+ * 문답이 끝났는데 후보도 적어 둔 질문도 없다. 온디바이스 세션이면 서버가 후보를 만들지 않아
+ * 늘 이렇다. 서버 세션에서 서버 후보 생성이 실패한 경우도 여기 들어오고, 그때도 폰 후보를
+ * 보내면 빈 4단계를 면한다.
+ */
+private fun SessionResponse.needsCandidates(): Boolean =
+    status == STATUS_COMPLETED && questionCandidates.isEmpty() && questions.isEmpty()
+
+private const val STATUS_COMPLETED = "COMPLETED"
+
+/**
+ * 좌우를 붙여 보낼 수 있는 부위. 나머지(머리·배 등 13곳)에 좌우를 보내면 400이다.
+ *
+ * AI 트랙 `docs/examples/body-map.json`(스냅샷 `f848848baea4`)에서 `laterality`가 `left_right`인
+ * 21곳이다. 명치·아랫배도 여기 든다. 온톨로지가 바뀌면 `BodyMapOntology.kt`와 함께 다시 뽑는다.
+ */
+private val LATERAL_SITES =
+    setOf(
+        "SUR:002", "SUR:003", "SUR:012", "SUR:022", "SUR:031", "SUR:032", "SUR:042",
+        "ANC:013", "SUR:051", "SUR:055", "SUR:061", "SUR:065", "SUR:071", "SUR:072",
+        "ANC:014", "SUR:081", "SUR:090", "SUR:091", "SUR:097", "SUR:101", "SUR:102",
+    )

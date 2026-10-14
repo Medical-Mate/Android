@@ -3,7 +3,9 @@ package com.mist.medicalmate.core.ondevice
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
@@ -12,11 +14,8 @@ import kotlinx.serialization.json.jsonPrimitive
  * 부르는 쪽은 결과가 폰에서 왔는지 몰라도 된다. [OnDeviceResult.Unavailable]이면 지금처럼
  * 서버로 보내면 된다.
  *
- * 발화 원문은 폰을 떠나지 않는다. 이 인터페이스가 그 경계다. 여기로 들어간 말은 밖으로
- * 나가지 않고 뽑은 결과만 서버로 간다.
- *
- * 진료 전 문답([extractTurn])은 아직 화면에 붙지 않았다. 프롬프트에 "지금 묻는 축"이 들어가야
- * 하는데 백엔드 응답에 그 값이 없다(#289).
+ * 발화 원문은 폰 밖의 AI 업체로 가지 않는다. 뽑은 결과와 함께 원문도 우리 서버에는 간다 — AI
+ * 서버가 근거가 실제 발화에 있는지 가드로 확인한다(AI `api-previsit.md`).
  */
 interface OnDeviceExtractor {
     /** 이 기기에서 쓸 수 있는지. 모델이 없거나 엔진이 없으면 false다. */
@@ -25,9 +24,12 @@ interface OnDeviceExtractor {
     /**
      * 진료 전 한 턴.
      *
-     * @param user 벡터의 `user` 형식 그대로. 질문 맥락과 환자 답을 합친 한 덩어리다.
+     * @param user 벡터의 `user` 형식 그대로. [extractUserMessage]가 만든다.
      */
-    suspend fun extractTurn(user: String): OnDeviceResult<TurnExtraction>
+    suspend fun extractTurn(user: String): OnDeviceResult<ExtractedTurn>
+
+    /** 문답이 끝난 카드로 질문 후보를 만든다. 서버가 검증하고 모자라면 템플릿으로 채운다. */
+    suspend fun suggestQuestions(card: QuestionCard): OnDeviceResult<List<SuggestedQuestion>>
 
     /**
      * 진료 후 메모 분류.
@@ -81,11 +83,18 @@ constructor(
     private val extractPrompt by lazy { asset(OnDeviceBundle.EXTRACT_PROMPT_ASSET) }
     private val extractGrammar by lazy { asset(OnDeviceBundle.EXTRACT_GRAMMAR_ASSET) }
     private val memoPrompt by lazy { asset(OnDeviceBundle.MEMO_PROMPT_ASSET) }
+    private val questionsHistory by lazy {
+        onDeviceJson.decodeFromString<List<ChatMessage>>(asset(OnDeviceBundle.QUESTIONS_HISTORY_ASSET))
+    }
+    private val questionsGrammar by lazy { asset(OnDeviceBundle.QUESTIONS_GRAMMAR_ASSET) }
 
     override suspend fun available(): Boolean = model.readyFile() != null
 
-    override suspend fun extractTurn(user: String): OnDeviceResult<TurnExtraction> =
+    override suspend fun extractTurn(user: String): OnDeviceResult<ExtractedTurn> =
         run(ChatPrompt.of(extractPrompt, user), extractGrammar) { parseTurnExtraction(it) }
+
+    override suspend fun suggestQuestions(card: QuestionCard): OnDeviceResult<List<SuggestedQuestion>> =
+        run(ChatPrompt.of(questionsHistory, questionsUserMessage(card)), questionsGrammar) { parseQuestions(it) }
 
     override suspend fun labelMemo(sentences: List<String>): OnDeviceResult<Map<Int, MemoLabel>> {
         if (sentences.isEmpty()) return OnDeviceResult.Success(emptyMap())
@@ -107,13 +116,37 @@ constructor(
 }
 
 /**
+ * 한 턴에서 뽑은 것.
+ *
+ * [json]이 서버로 가는 값이다. AI 계약의 모양 그대로 보내야 해서 모델이 낸 객체를 손대지 않고
+ * 들고 있는다. 우리 타입([value])으로 다시 쓰면 기본값인 필드가 빠진다. [value]는 읽혀야 보낸다는
+ * 확인에 쓴다.
+ */
+data class ExtractedTurn(val value: TurnExtraction, val json: JsonObject)
+
+/** 폰이 만든 질문 후보 하나. [source]는 무엇을 보고 만들었는지(`exacerbating` · `medications`). */
+@Serializable
+data class SuggestedQuestion(val text: String, val source: String)
+
+@Serializable
+private data class SuggestedQuestions(val items: List<SuggestedQuestion>)
+
+/**
  * 모델이 뱉은 글을 [TurnExtraction]으로 읽는다.
  *
  * 스키마를 강제해도 파싱은 해야 한다. 강제가 걸리는 것은 모양이고, 그것을 우리 타입으로
  * 옮기다 어긋나면 여기서 잡힌다.
  */
-internal fun parseTurnExtraction(raw: String): OnDeviceResult<TurnExtraction> = runCatching {
-    onDeviceJson.decodeFromString<TurnExtraction>(raw)
+internal fun parseTurnExtraction(raw: String): OnDeviceResult<ExtractedTurn> = runCatching {
+    ExtractedTurn(onDeviceJson.decodeFromString<TurnExtraction>(raw), onDeviceJson.parseToJsonElement(raw).jsonObject)
+}.fold(
+    onSuccess = { OnDeviceResult.Success(it) },
+    onFailure = { OnDeviceResult.Malformed(raw, it) },
+)
+
+/** 질문 후보를 읽는다. 모르는 키가 있으면 계약 위반이다. */
+internal fun parseQuestions(raw: String): OnDeviceResult<List<SuggestedQuestion>> = runCatching {
+    onDeviceJson.decodeFromString<SuggestedQuestions>(raw).items
 }.fold(
     onSuccess = { OnDeviceResult.Success(it) },
     onFailure = { OnDeviceResult.Malformed(raw, it) },

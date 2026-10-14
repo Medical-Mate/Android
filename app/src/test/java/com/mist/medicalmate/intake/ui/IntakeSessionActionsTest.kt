@@ -7,6 +7,7 @@ import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.intake.data.IntakeSession
 import com.mist.medicalmate.intake.data.IntakeSessionMessage
 import com.mist.medicalmate.intake.data.IntakeSessionStatus
+import com.mist.medicalmate.intake.data.IntakeSide
 import com.mist.medicalmate.intake.data.IntakeTurn
 import com.mist.medicalmate.intake.data.SessionRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -219,8 +220,8 @@ class IntakeSessionActionsTest {
         var startedCodes: List<String>? = null
         var startedText: String? = null
 
-        override suspend fun start(siteCodes: List<String>, siteText: String?): ApiResult<IntakeSession> {
-            startedCodes = siteCodes
+        override suspend fun start(siteCode: String, side: IntakeSide?, siteText: String?): ApiResult<IntakeSession> {
+            startedCodes = listOf(siteCode)
             startedText = siteText
             return ApiResult.Success(savedSession)
         }
@@ -236,7 +237,7 @@ class IntakeSessionActionsTest {
     }
 
     private class FixedRepository(private val result: ApiResult<IntakeSession>) : SessionRepository {
-        override suspend fun start(siteCodes: List<String>, siteText: String?) = result
+        override suspend fun start(siteCode: String, side: IntakeSide?, siteText: String?) = result
 
         override suspend fun load(sessionId: Long) = result
 

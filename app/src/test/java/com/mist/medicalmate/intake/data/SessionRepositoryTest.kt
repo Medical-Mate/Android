@@ -89,8 +89,15 @@ class SessionRepositoryTest {
                     override suspend fun putSeverity(sessionId: Long, request: SeverityRequest) = response
 
                     override suspend fun putQuestions(sessionId: Long, request: QuestionsRequest) = response
+
+                    override suspend fun postQuestionCandidates(
+                        sessionId: Long,
+                        request: PhoneQuestionCandidatesRequest,
+                    ) = response
                 },
                 json = Json,
+                onDevice = FakeSessionOnDevice(available = false),
+                health = { null },
             )
         return (repository.load(1) as ApiResult.Success).value
     }

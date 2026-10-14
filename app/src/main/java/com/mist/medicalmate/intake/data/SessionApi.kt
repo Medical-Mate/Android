@@ -1,6 +1,7 @@
 package com.mist.medicalmate.intake.data
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -48,6 +49,17 @@ internal interface SessionApi {
     /** 4단계(1i)의 질문. 목록을 통째로 보낸다. 추가·편집·삭제·순서가 한 번에 처리된다. */
     @PUT("api/sessions/{sessionId}/questions")
     suspend fun putQuestions(@Path("sessionId") sessionId: Long, @Body request: QuestionsRequest): SessionResponse
+
+    /**
+     * 폰이 만든 질문 후보를 보낸다(Backend#157). 문답이 끝난 뒤에만 된다.
+     *
+     * 서버는 만들지 않고 검증·보충만 한다. 응답의 `questionCandidates`가 그 결과로 바뀌어 온다.
+     */
+    @POST("api/sessions/{sessionId}/question-candidates")
+    suspend fun postQuestionCandidates(
+        @Path("sessionId") sessionId: Long,
+        @Body request: PhoneQuestionCandidatesRequest,
+    ): SessionResponse
 }
 
 /**
@@ -55,7 +67,26 @@ internal interface SessionApi {
  *   `STT`는 음성이었다는 사실만 남기고 녹음은 저장되지 않는다.
  */
 @Serializable
-internal data class SendMessageRequest(val text: String, val inputMethod: String)
+internal data class SendMessageRequest(
+    val text: String,
+    val inputMethod: String,
+    /** 폰이 뽑은 것. 있으면 서버가 AI 모델을 부르지 않고 가드만 지난다. 없으면 서버가 뽑는다. */
+    val extraction: JsonObject? = null,
+    val extractionMeta: JsonObject? = null,
+)
+
+/**
+ * @param candidates 폰이 하나도 못 만들었으면 빈 배열을 보낸다. 필드를 빼면 400이다 — 서버가
+ *   "못 만들었다"와 "안 보냈다"를 가른다. 빈 배열이면 AI가 카드 값으로 템플릿을 채운다.
+ */
+@Serializable
+internal data class PhoneQuestionCandidatesRequest(
+    val candidates: List<PhoneQuestionCandidate>,
+    val candidatesMeta: JsonObject,
+)
+
+@Serializable
+internal data class PhoneQuestionCandidate(val text: String, val source: String)
 
 /**
  * @param level 1~5 서열척도다. NRS 0~10이 아니다.
@@ -68,9 +99,30 @@ internal data class SeverityRequest(val level: Int, val label: String)
 @Serializable
 internal data class QuestionsRequest(val questions: List<String>)
 
-/** @param rank 낮을수록 먼저 보여줄 것. 서버가 정렬해 주지만 순서를 믿지 않는다. */
+/**
+ * @param rank 낮을수록 먼저 보여줄 것. 서버가 정렬해 주지만 순서를 믿지 않는다.
+ * @param origin 폰 후보 경로에서만 온다. `model`(폰 후보가 검증을 지남) · `template`(카드 값으로 채움).
+ */
 @Serializable
-internal data class QuestionCandidateResponse(val text: String, val source: String? = null, val rank: Int = 0)
+internal data class QuestionCandidateResponse(
+    val text: String,
+    val source: String? = null,
+    val rank: Int = 0,
+    val origin: String? = null,
+)
+
+/**
+ * 다음 질문이 묻는 축(Backend#157).
+ *
+ * 폰 추출 프롬프트에 그대로 들어간다. 서버가 세션에 저장해 두어 다시 조회해도 같은 값이 온다.
+ * 값이 없으면 키 자체가 빠진다 — 문답이 끝났거나 서버 프로필의 첫 자유 발화다.
+ */
+@Serializable
+internal data class AskingAxisResponse(val key: String, val label: String)
+
+/** 카드 축 하나. 폰이 질문 후보를 만들 재료다. 값이 없는 축은 [value] 키가 빠져 온다. */
+@Serializable
+internal data class CardAxisResponse(val key: String, val status: String? = null, val value: String? = null)
 
 /**
  * 한 턴의 결과.
@@ -87,20 +139,30 @@ internal data class TurnResponse(
     val endReason: String? = null,
     val progress: ProgressResponse? = null,
     val messages: List<MessageResponse> = emptyList(),
+    val askingAxis: AskingAxisResponse? = null,
 )
 
 /**
- * @param siteCodes 온톨로지 id다. 구역까지 골랐으면 `SUR:*`, 앵커까지면 `ANC:*`.
+ * @param siteNodeId 온톨로지 id 하나다. 구역까지 골랐으면 `SUR:*`, 앵커까지면 `ANC:*`.
+ *   **전에는 `siteCodes`(배열)로 보냈는데 백엔드에 그 필드가 없어 조용히 버려졌다**(#300). 부위
+ *   이름(`siteText`)만 넘어가서 첫 질문이 그 부위에 묶이지 않았다.
+ * @param side `LEFT`·`RIGHT`. 좌우가 있는 부위에만 보낸다. 없는 부위(머리·배 등 13곳)에 보내면 400이다.
  * @param siteText 사람이 읽는 표현. 문답 첫 문장에 그대로 들어간다.
+ * @param profile `ONDEVICE`면 폰이 뽑는다. 첫 자유 발화 없이 첫 축 질문부터 시작한다. 비우면 서버다.
  */
 @Serializable
-internal data class StartSessionRequest(val siteCodes: List<String>, val siteText: String?)
+internal data class StartSessionRequest(
+    val siteNodeId: String?,
+    val side: String? = null,
+    val siteText: String?,
+    val profile: String? = null,
+)
 
 @Serializable
 internal data class SessionResponse(
     val sessionId: Long,
     val status: String? = null,
-    val siteCodes: List<String> = emptyList(),
+    val siteNodeId: String? = null,
     val siteText: String? = null,
     val progress: ProgressResponse? = null,
     val messages: List<MessageResponse> = emptyList(),
@@ -113,6 +175,9 @@ internal data class SessionResponse(
      * 후보를 목록에 채워 두고 환자가 지우거나 더한다.
      */
     val questionCandidates: List<QuestionCandidateResponse> = emptyList(),
+    /** 문답이 끝난 카드의 축. 폰 질문 후보의 재료다. 강도는 여기가 아니라 [severity]에 있다. */
+    val cardAxes: List<CardAxisResponse> = emptyList(),
+    val askingAxis: AskingAxisResponse? = null,
 )
 
 @Serializable

@@ -2,6 +2,7 @@ package com.mist.medicalmate.core.ondevice
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -104,6 +105,47 @@ class VectorParityTest {
     }
 
     @Test
+    fun `질문 후보 예시 대화가 벡터와 같다`() {
+        // 프롬프트 파일이 따로 없고 벡터의 messages가 정본이다. 100개 모두 같은 예시를 쓴다.
+        val history = json.decodeFromString<List<ChatMessage>>(asset(OnDeviceBundle.QUESTIONS_HISTORY_ASSET))
+
+        questionVectors().forEach { vector -> assertEquals(vector.id, vector.messages.dropLast(1), history) }
+    }
+
+    @Test
+    fun `질문 후보 프롬프트 전문이 AI 쪽 렌더와 글자까지 같다`() {
+        // 예시 대화가 끼면 말마다 공백을 걷는 규칙과 지난 어시스턴트 말의 모양까지 맞아야 한다.
+        val vector = questionVectors().single { it.id == "PC01" }
+
+        val rendered = ChatPrompt.of(vector.messages.dropLast(1), vector.messages.last().content).full
+
+        assertEquals(resource("/ondevice/rendered-2b-questions-PC01.enable_thinking_false.txt"), rendered)
+    }
+
+    @Test
+    fun `카드 줄을 벡터와 같게 만든다`() {
+        // 벡터의 카드를 우리 값으로 읽어 다시 쓴다. 줄 이름·차례·빈 칸 표시가 하나라도 다르면 갈린다.
+        questionVectors().forEach { vector ->
+            val user = vector.messages.last().content
+
+            assertEquals(vector.id, user, questionsUserMessage(questionCardOf(user)))
+        }
+    }
+
+    @Test
+    fun `질문 후보 기대 출력 100개를 전부 읽는다`() {
+        val failures =
+            questionVectors().mapNotNull { vector ->
+                (parseQuestions(vector.expectedOutput) as? OnDeviceResult.Malformed)?.let {
+                    "${vector.id}: ${it.cause.message}"
+                }
+            }
+
+        assertEquals(100, questionVectors().size)
+        assertEquals(emptyList<String>(), failures)
+    }
+
+    @Test
     fun `메모 기대 출력 34개를 전부 읽는다`() {
         val failures =
             memoVectors().mapNotNull { vector ->
@@ -190,6 +232,43 @@ class VectorParityTest {
 
     private fun readLines(path: String): List<String> = resource(path).lines().filter { it.isNotBlank() }
 
+    private fun questionVectors(): List<QuestionVector> =
+        readLines("/ondevice/vectors-questions-qwen3.5-2b-q4_0-ssmq8-questions-small4.jsonl").map { line ->
+            val o = json.decodeFromString<JsonObject>(line)
+            QuestionVector(
+                id = o.getValue("id").jsonPrimitive.content,
+                messages = json.decodeFromJsonElement<List<ChatMessage>>(o.getValue("messages")),
+                expectedOutput = o.getValue("expected_output").jsonPrimitive.content,
+            )
+        }
+
+    /** 벡터의 카드 글을 우리 값으로 되읽는다. 시험에서만 쓴다 — 앱은 서버가 준 축으로 만든다. */
+    private fun questionCardOf(user: String): QuestionCard {
+        val lines =
+            user.removePrefix("카드:\n").substringBefore("\n\n").lines().associate {
+                it.substringBefore(": ") to it.substringAfter(": ")
+            }
+        fun axis(label: String) = lines.getValue(label).takeIf { it != "(안 답함)" }
+        fun profile(label: String) = lines.getValue(label).takeIf { it != "(확인 안 됨)" }?.split(", ").orEmpty()
+        val keys =
+            mapOf(
+                "site" to "부위",
+                "onset" to "시작",
+                "character" to "느낌",
+                "time_course" to "경과",
+                "exacerbating_relieving" to "악화·완화",
+                "radiation" to "퍼짐",
+                "associated" to "동반 증상",
+            )
+        return QuestionCard(
+            axes = keys.mapNotNull { (key, label) -> axis(label)?.let { key to it } }.toMap(),
+            severity = axis("심각도"),
+            medications = profile("복용약"),
+            conditions = profile("기저질환"),
+            allergies = profile("알러지"),
+        )
+    }
+
     private fun resource(path: String): String =
         requireNotNull(javaClass.getResourceAsStream(path)) { "$path 없음" }.bufferedReader().use { it.readText() }
 
@@ -214,6 +293,8 @@ class VectorParityTest {
         val expectedOutput: String,
         val expectedLabels: List<String>,
     )
+
+    private data class QuestionVector(val id: String, val messages: List<ChatMessage>, val expectedOutput: String)
 
     private companion object {
         val json = Json { ignoreUnknownKeys = true }

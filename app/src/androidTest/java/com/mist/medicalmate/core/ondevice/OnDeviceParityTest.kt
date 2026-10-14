@@ -8,6 +8,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
@@ -28,7 +29,8 @@ import java.io.File
  * 수를 단정하지 않는다. 단정하는 것은 **모든 출력이 문법대로 읽힌다는 것** 하나다. 출력은 AI 쪽
  * 실측 스크립트(`ondevice_device_run.py`)와 같은 모양의 jsonl로 남겨 그대로 넘길 수 있게 한다.
  *
- * 진료 전 추출은 화면에 아직 붙지 않았지만 같은 엔진·같은 문법이라 함께 돌린다.
+ * 메모 분류·진료 전 추출·질문 후보 셋을 앱이 부르는 길로 돌린다. 질문 후보는 정답이 하나가 아니라
+ * PC와 같은 출력 수보다 모두 읽히는지(JSON 하나, 3~5개, 40자)가 기준이다.
  *
  * 모델이 기기에 있어야 돈다. 내 정보에서 휴대폰 정리를 켜 받아 두거나, 받은 파일을 앱의
  * `no_backup/ondevice/`에 넣는다. 없으면 건너뛴다. CI는 androidTest를 돌리지 않는다.
@@ -61,6 +63,16 @@ class OnDeviceParityTest {
             ),
             grammar = asset(OnDeviceBundle.EXTRACT_GRAMMAR_ASSET),
             parse = ::parseTurnExtraction,
+        )
+    }
+
+    @Test
+    fun questionVectorsOnDevice() = runVectors(QUESTION_VECTORS, "device-app-questions.jsonl") { vector ->
+        val messages = json.decodeFromJsonElement<List<ChatMessage>>(vector.getValue("messages"))
+        Run(
+            prompt = ChatPrompt.of(messages.dropLast(1), messages.last().content),
+            grammar = asset(OnDeviceBundle.QUESTIONS_GRAMMAR_ASSET),
+            parse = ::parseQuestions,
         )
     }
 
@@ -125,6 +137,7 @@ class OnDeviceParityTest {
         const val TAG = "OnDeviceParity"
         const val MEMO_VECTORS = "vectors-memo-qwen3.5-2b-q4_0-ssmq8-memo-small-v5.jsonl"
         const val EXTRACT_VECTORS = "vectors-qwen3.5-2b-q4_0-ssmq8-extract-small-2b-v1.jsonl"
+        const val QUESTION_VECTORS = "vectors-questions-qwen3.5-2b-q4_0-ssmq8-questions-small4.jsonl"
         const val MILLIS = 1000.0
         val json = Json { ignoreUnknownKeys = true }
     }

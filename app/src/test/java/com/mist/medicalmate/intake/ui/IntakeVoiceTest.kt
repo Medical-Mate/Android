@@ -10,6 +10,7 @@ import com.mist.medicalmate.core.voice.VoiceReply
 import com.mist.medicalmate.intake.data.IntakeSession
 import com.mist.medicalmate.intake.data.IntakeSessionMessage
 import com.mist.medicalmate.intake.data.IntakeSessionStatus
+import com.mist.medicalmate.intake.data.IntakeSide
 import com.mist.medicalmate.intake.data.IntakeTurn
 import com.mist.medicalmate.intake.data.SessionRepository
 import kotlinx.coroutines.Dispatchers
@@ -362,8 +363,8 @@ private class VoiceSessionRepository(var ends: Boolean = false) : SessionReposit
     var sentText: String? = null
     var sentByVoice = false
 
-    override suspend fun start(siteCodes: List<String>, siteText: String?): ApiResult<IntakeSession> {
-        startedCodes = siteCodes
+    override suspend fun start(siteCode: String, side: IntakeSide?, siteText: String?): ApiResult<IntakeSession> {
+        startedCodes = listOf(siteCode)
         return ApiResult.Success(session.copy(messages = listOf(IntakeSessionMessage(1, false, "언제부터요?"))))
     }
 
