@@ -55,6 +55,7 @@ fun MyProfileScreen(
     onSettingChange: (AppSetting, Boolean) -> Unit,
     modifier: Modifier = Modifier,
     voiceWakeCallbacks: VoiceWakeCallbacks = VoiceWakeCallbacks(),
+    onDeviceCallbacks: OnDeviceCallbacks = OnDeviceCallbacks(),
 ) {
     Column(
         modifier =
@@ -73,11 +74,15 @@ fun MyProfileScreen(
             onHealthEditClick = onHealthEditClick,
             onSettingChange = onSettingChange,
             onDeleteVoiceModel = voiceWakeCallbacks.onDeleteModel,
+            onDeleteOnDeviceModel = onDeviceCallbacks.onDeleteModel,
         )
     }
 
     if (state.voiceWake.confirming) {
         VoiceWakeConfirmDialog(modelReady = state.voiceWake.modelReady, callbacks = voiceWakeCallbacks)
+    }
+    if (state.onDevice.confirming) {
+        OnDeviceConfirmDialog(modelReady = state.onDevice.modelReady, callbacks = onDeviceCallbacks)
     }
 }
 
@@ -88,6 +93,7 @@ private fun ColumnScope.ProfileContent(
     onHealthEditClick: () -> Unit,
     onSettingChange: (AppSetting, Boolean) -> Unit,
     onDeleteVoiceModel: () -> Unit,
+    onDeleteOnDeviceModel: () -> Unit,
 ) {
     Column(
         modifier =
@@ -113,6 +119,8 @@ private fun ColumnScope.ProfileContent(
         SettingsCard(state = state, onSettingChange = onSettingChange)
         VoiceWakeStatusLine(state.voiceWake.status)
         if (state.canDeleteVoiceModel) VoiceWakeModelDelete(onClick = onDeleteVoiceModel)
+        OnDeviceStatusLine(state.onDevice.status)
+        if (state.canDeleteOnDeviceModel) OnDeviceModelDelete(onClick = onDeleteOnDeviceModel)
         AccountActions(
             accountActions = accountActions,
             modifier = Modifier.padding(top = MedicalMateSpace.s24),

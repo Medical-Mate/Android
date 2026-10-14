@@ -1,0 +1,7 @@
+# 온디바이스 묶음은 바이트 그대로 둔다(#289).
+#
+# 프롬프트와 문법은 모델에 들어가는 글이라 줄 끝이 바뀌면 다른 프롬프트가 된다. 윈도우에서
+# core.autocrlf가 켜져 있으면 받을 때 CRLF로 바뀌고, 그 폴더에서 빌드한 앱은 AI 트랙이 잰 것과
+# 다른 글을 모델에 넣는다. 에러는 나지 않는다.
+app/src/main/assets/ondevice/** -text
+app/src/test/resources/ondevice/** -text

@@ -385,6 +385,15 @@
     <string name="my_profile_voice_wake_denied">마이크를 허용해야 켤 수 있어요</string>
     <string name="my_profile_voice_wake_confirm_message_ready">앱을 쓰다가 "헤이 메이트" 하고 부르면 말로 일정을 잡고 화면을 옮길 수 있어요. 받아 둔 음성 모델이 있어서 바로 켜져요. 목소리는 휴대폰 밖으로 나가지 않아요.</string>
     <string name="my_profile_voice_wake_delete_model">음성 모델 지우기 (68MB)</string>
+    <string name="my_profile_setting_on_device">휴대폰에서 기록 정리</string>
+    <string name="my_profile_on_device_confirm_title">휴대폰에서 정리할까요?</string>
+    <string name="my_profile_on_device_confirm_message">진료 후 메모를 항목으로 나누는 일을 휴대폰 안의 AI가 해요. 메모를 외부 AI 업체로 보내지 않아요. 처음 한 번 정리 모델(1.2GB)을 받으니 와이파이에서 켜 주세요. 다 받기 전이나 휴대폰에서 못 할 때는 지금처럼 서버가 나눠요.</string>
+    <string name="my_profile_on_device_confirm_message_ready">진료 후 메모를 항목으로 나누는 일을 휴대폰 안의 AI가 해요. 메모를 외부 AI 업체로 보내지 않아요. 받아 둔 정리 모델이 있어서 바로 켜져요. 휴대폰에서 못 할 때는 지금처럼 서버가 나눠요.</string>
+    <string name="my_profile_on_device_confirm">켜기</string>
+    <string name="my_profile_on_device_cancel">취소</string>
+    <string name="my_profile_on_device_downloading">정리 모델을 받고 있어요 (%1$d%%)</string>
+    <string name="my_profile_on_device_failed">정리 모델을 못 받았어요. 인터넷 연결과 남은 공간을 확인하고 다시 켜 주세요</string>
+    <string name="my_profile_on_device_delete_model">정리 모델 지우기 (1.2GB)</string>
 
     <!-- 진료 하루 전 알림(#268). 시안에 없어 정한 문구다. -->
     <string name="visit_reminder_channel_name">진료 알림</string>

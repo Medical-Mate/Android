@@ -2,6 +2,8 @@ package com.mist.medicalmate.profile.ui
 
 import com.mist.medicalmate.core.model.FakeVisitReminders
 import com.mist.medicalmate.core.network.ApiResult
+import com.mist.medicalmate.core.ondevice.FakeOnDeviceModel
+import com.mist.medicalmate.core.ondevice.OnDeviceModelState
 import com.mist.medicalmate.core.speech.FakeVoiceWake
 import com.mist.medicalmate.core.speech.WakeWordModelState
 import com.mist.medicalmate.profile.data.FakeHealthProfileRepository
@@ -173,7 +175,83 @@ class MyProfileViewModelTest {
         settings: FakeSettingsRepository = FakeSettingsRepository(),
         local: FakeLocalSettingsStore = FakeLocalSettingsStore(),
         voiceWake: FakeVoiceWake = FakeVoiceWake(),
-    ) = MyProfileViewModel(repository, settings, local, reminders, voiceWake)
+        onDevice: FakeOnDeviceModel = FakeOnDeviceModel(),
+    ) = MyProfileViewModel(repository, settings, local, reminders, voiceWake, onDevice)
+
+    @Test
+    fun `휴대폰 정리는 NPU가 없는 기기에서 줄이 없다`() {
+        // CPU로 돌면 열 배 가까이 느리고 발열로 무너진다. 눌러 봐야 쓸 수 없는 토글을 두지 않는다.
+        val viewModel = viewModel(onDevice = FakeOnDeviceModel(usable = false))
+
+        viewModel.load()
+
+        assertFalse(AppSetting.ON_DEVICE in viewModel.uiState.value.visibleSettings)
+    }
+
+    @Test
+    fun `휴대폰 정리를 켜려고 누르면 확인 창부터 뜨고 아직 받지 않는다`() {
+        // 1.2GB를 받는 일이다. 모르고 켜면 안 된다.
+        val onDevice = FakeOnDeviceModel(usable = true)
+        val viewModel = viewModel(onDevice = onDevice)
+        viewModel.load()
+
+        viewModel.onSettingChange(AppSetting.ON_DEVICE, true)
+
+        val state = viewModel.uiState.value
+        assertTrue(AppSetting.ON_DEVICE in state.visibleSettings)
+        assertTrue(state.onDevice.confirming)
+        assertFalse(state.isOn(AppSetting.ON_DEVICE))
+        assertEquals(0, onDevice.enableCalls)
+    }
+
+    @Test
+    fun `확인하면 켜고 받는 진행률을 적는다`() {
+        val onDevice = FakeOnDeviceModel(usable = true)
+        val viewModel = viewModel(onDevice = onDevice)
+        viewModel.onSettingChange(AppSetting.ON_DEVICE, true)
+
+        viewModel.onDeviceToggle.confirm()
+        onDevice.model.value = OnDeviceModelState.Downloading(0.37f)
+
+        val state = viewModel.uiState.value
+        assertFalse(state.onDevice.confirming)
+        assertTrue(state.isOn(AppSetting.ON_DEVICE))
+        assertEquals(OnDeviceStatus.Downloading(37), state.onDevice.status)
+    }
+
+    @Test
+    fun `정리 모델을 받다가 실패하면 토글이 내려가고 그 사실을 적는다`() {
+        // 실제로는 OnDeviceModel이 꺼진 값을 저장한다. 화면은 그것을 따라간다.
+        val onDevice = FakeOnDeviceModel(usable = true, enabled = true)
+        val viewModel = viewModel(onDevice = onDevice)
+
+        onDevice.model.value = OnDeviceModelState.Failed
+        onDevice.enabled.value = false
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isOn(AppSetting.ON_DEVICE))
+        assertEquals(OnDeviceStatus.Failed, state.onDevice.status)
+    }
+
+    @Test
+    fun `휴대폰 정리를 끄면 모델은 남기고 꺼 둔 동안 지우기 버튼이 있다`() {
+        // 껐다 켤 때마다 1GB를 다시 받을 수 없다. 공간은 버튼으로 돌려받는다.
+        val onDevice = FakeOnDeviceModel(usable = true, enabled = true, model = OnDeviceModelState.Ready)
+        val viewModel = viewModel(onDevice = onDevice)
+        viewModel.load()
+        assertFalse(viewModel.uiState.value.canDeleteOnDeviceModel)
+
+        viewModel.onSettingChange(AppSetting.ON_DEVICE, false)
+
+        assertEquals(1, onDevice.disableCalls)
+        assertEquals(0, onDevice.deleteCalls)
+        assertTrue(viewModel.uiState.value.canDeleteOnDeviceModel)
+
+        viewModel.onDeviceToggle.deleteModel()
+
+        assertEquals(1, onDevice.deleteCalls)
+        assertFalse(viewModel.uiState.value.canDeleteOnDeviceModel)
+    }
 
     @Test
     fun `음성 호출은 켤 수 없는 기기에서 줄이 없다`() {
