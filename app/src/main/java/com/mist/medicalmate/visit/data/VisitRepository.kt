@@ -3,6 +3,10 @@ package com.mist.medicalmate.visit.data
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.core.network.apiCall
 import com.mist.medicalmate.core.network.map
+import com.mist.medicalmate.core.ondevice.OnDeviceBundle
+import com.mist.medicalmate.core.ondevice.OnDeviceExtractor
+import com.mist.medicalmate.core.ondevice.OnDeviceResult
+import com.mist.medicalmate.core.ondevice.wireName
 import jakarta.inject.Inject
 import kotlinx.serialization.json.Json
 import java.time.LocalDate
@@ -43,6 +47,9 @@ interface VisitRepository {
     /**
      * 적어 둔 메모를 항목으로 나눈다. 저장하지 않는다.
      *
+     * 휴대폰에서 정리하기를 켜 두었고 모델이 있으면 폰이 라벨을 붙인다(#289). 아니면 서버가
+     * 나눈다. 부르는 쪽은 어느 쪽이었는지 몰라도 된다.
+     *
      * @param labels 직전 결과의 분류. 있으면 함께 보낸다. 안 보내면 AI 모델을 다시 부른다.
      */
     suspend fun classify(
@@ -72,10 +79,26 @@ data class NewVisit(
 
 data class NewVisitItem(val axis: String, val value: String)
 
+/**
+ * 기록 저장소.
+ *
+ * **메모 분류는 두 길이다.** 폰 모델이 있으면 세 번에 나눠 한다(AI `api-postvisit.md`).
+ * 1. 서버가 모델 없이 문장만 나눈다(`classify: false`). 폰이 문장을 나누지 않는다 — 폰과 서버가
+ *    같은 번호를 가리켜야 서버가 라벨로 카드를 조립한다.
+ * 2. 폰이 문장마다 라벨을 붙인다. 메모 원문이 외부 AI 업체로 가지 않는다.
+ * 3. 라벨을 서버에 보내 조립한다. 모델을 부르지 않는다.
+ *
+ * **어디서 막혀도 서버 분류로 넘어간다.** 모델이 아직 없거나 엔진이 실패하거나, 1과 3 사이에
+ * 서버의 문장 분리 규칙이 바뀌어 409가 와도 그렇다. 폰에서 못 했다고 메모를 못 나누면 안 된다.
+ * 지금까지 앱이 쓰던 길이 그 서버 분류이고 그대로 남는다.
+ */
 internal class DefaultVisitRepository
 @Inject
-constructor(private val api: VisitApi, private val json: Json) :
-    VisitRepository {
+constructor(
+    private val api: VisitApi,
+    private val json: Json,
+    private val onDevice: OnDeviceExtractor,
+) : VisitRepository {
     override suspend fun visits(): ApiResult<List<VisitListItem>> =
         apiCall(json) { api.visits() }.map { list -> list.map { it.toListItem() } }
 
@@ -128,16 +151,55 @@ constructor(private val api: VisitApi, private val json: Json) :
         visitedOn: LocalDate?,
         clinic: String?,
         labels: Map<String, String>?,
-    ): ApiResult<VisitClassification> = apiCall(json) {
-        api.classify(
-            ClassifyMemoRequest(
-                memo = memo,
-                visitedOn = visitedOn?.toString(),
-                clinicName = clinic,
-                labels = labels?.takeIf { it.isNotEmpty() },
-            ),
-        )
-    }.map { it.toClassification() }
+    ): ApiResult<VisitClassification> {
+        // 직전 결과의 라벨이 있으면 다시 나눌 것이 없다. 서버가 그 라벨로 조립만 한다.
+        if (labels.isNullOrEmpty() && onDevice.available()) {
+            classifyOnDevice(ClassifyMemoRequest(memo, visitedOn?.toString(), clinic))?.let { return it }
+        }
+        return apiCall(json) {
+            api.classify(
+                ClassifyMemoRequest(
+                    memo = memo,
+                    visitedOn = visitedOn?.toString(),
+                    clinicName = clinic,
+                    labels = labels?.takeIf { it.isNotEmpty() },
+                ),
+            )
+        }.map { it.toClassification() }
+    }
+
+    /** 폰이 라벨을 붙인다. 어느 단계든 막히면 null이고 서버 분류로 넘어간다. */
+    private suspend fun classifyOnDevice(base: ClassifyMemoRequest): ApiResult<VisitClassification>? {
+        val split = apiCall(json) { api.classify(base.copy(classify = false)) }
+        val sentences = (split as? ApiResult.Success)?.value ?: return null
+        // 나눌 문장이 없으면 폰이 붙일 라벨도 없다. 서버가 돌려준 빈 결과가 답이다.
+        return if (sentences.sentences.isEmpty()) {
+            ApiResult.Success(sentences.toClassification())
+        } else {
+            assembleWithPhoneLabels(base, sentences)
+        }
+    }
+
+    /** 폰이 붙인 라벨을 보내 서버가 조립하게 한다. 폰이 못 붙였거나 서버가 거절하면 null이다. */
+    private suspend fun assembleWithPhoneLabels(
+        base: ClassifyMemoRequest,
+        split: ClassifyMemoResponse,
+    ): ApiResult<VisitClassification>? {
+        val labeled = onDevice.labelMemo(split.sentences) as? OnDeviceResult.Success ?: return null
+        val assembled =
+            apiCall(json) {
+                api.classify(
+                    base.copy(
+                        labels = labeled.value.entries.associate { (index, label) ->
+                            index.toString() to label.wireName
+                        },
+                        labelsMeta = LabelsMetaRequest(OnDeviceBundle.MODEL_ID, OnDeviceBundle.MEMO_PROMPT_VERSION),
+                        splitVersion = split.splitVersion,
+                    ),
+                )
+            }
+        return (assembled as? ApiResult.Success)?.map { it.toClassification() }
+    }
 }
 
 /**

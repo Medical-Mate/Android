@@ -1,18 +1,22 @@
-package com.mist.medicalmate.intake.ondevice
+package com.mist.medicalmate.core.ondevice
 
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * 폰 안 모델로 한 턴을 추출한다.
+ * 폰 안 모델로 뽑는다.
  *
- * 인터페이스를 먼저 두는 이유는 엔진이 아직 없기 때문이다. llama.cpp Snapdragon 빌드에
- * 도커 툴체인이 필요한데 지금 개발 환경에 없다(#142). 엔진이 붙으면 구현이 하나 더 생기고
- * 부르는 쪽은 바뀌지 않는다.
+ * 부르는 쪽은 결과가 폰에서 왔는지 몰라도 된다. [OnDeviceResult.Unavailable]이면 지금처럼
+ * 서버로 보내면 된다.
  *
  * 발화 원문은 폰을 떠나지 않는다. 이 인터페이스가 그 경계다. 여기로 들어간 말은 밖으로
  * 나가지 않고 뽑은 결과만 서버로 간다.
+ *
+ * 진료 전 문답([extractTurn])은 아직 화면에 붙지 않았다. 프롬프트에 "지금 묻는 축"이 들어가야
+ * 하는데 백엔드 응답에 그 값이 없다(#289).
  */
 interface OnDeviceExtractor {
     /** 이 기기에서 쓸 수 있는지. 모델이 없거나 엔진이 없으면 false다. */
@@ -60,20 +64,46 @@ sealed interface OnDeviceResult<out T> {
 }
 
 /**
- * 엔진이 없을 때의 구현.
+ * 엔진으로 돌리는 구현.
  *
- * 늘 [OnDeviceResult.Unavailable]을 돌려준다. 서버 추출로 폴백된다. 엔진이 붙기 전까지
- * 앱이 이 경로로 돈다.
+ * 프롬프트와 문법은 자산에서 한 번 읽어 둔다. 꺼져 있거나 모델을 다 받지 않았으면 엔진을 열지
+ * 않고 [OnDeviceResult.Unavailable]이다.
  */
-class UnavailableOnDeviceExtractor
+internal class LlamaOnDeviceExtractor
 @Inject
-constructor() : OnDeviceExtractor {
-    override suspend fun available(): Boolean = false
+constructor(
+    @ApplicationContext private val context: Context,
+    private val model: OnDeviceModel,
+    private val engine: OnDeviceEngine,
+) : OnDeviceExtractor {
+    private val settings = OnDeviceSettings()
 
-    override suspend fun extractTurn(user: String): OnDeviceResult<TurnExtraction> = OnDeviceResult.Unavailable
+    private val extractPrompt by lazy { asset(OnDeviceBundle.EXTRACT_PROMPT_ASSET) }
+    private val extractGrammar by lazy { asset(OnDeviceBundle.EXTRACT_GRAMMAR_ASSET) }
+    private val memoPrompt by lazy { asset(OnDeviceBundle.MEMO_PROMPT_ASSET) }
 
-    override suspend fun labelMemo(sentences: List<String>): OnDeviceResult<Map<Int, MemoLabel>> =
-        OnDeviceResult.Unavailable
+    override suspend fun available(): Boolean = model.readyFile() != null
+
+    override suspend fun extractTurn(user: String): OnDeviceResult<TurnExtraction> =
+        run(ChatPrompt.of(extractPrompt, user), extractGrammar) { parseTurnExtraction(it) }
+
+    override suspend fun labelMemo(sentences: List<String>): OnDeviceResult<Map<Int, MemoLabel>> {
+        if (sentences.isEmpty()) return OnDeviceResult.Success(emptyMap())
+        return run(ChatPrompt.of(memoPrompt, memoUserMessage(sentences)), memoLabelsGrammar(sentences.size)) {
+            parseMemoLabels(it, sentences.size)
+        }
+    }
+
+    private suspend fun <T> run(
+        prompt: ChatPrompt,
+        grammar: String,
+        parse: (String) -> OnDeviceResult<T>,
+    ): OnDeviceResult<T> {
+        val raw = model.readyFile()?.let { engine.generate(it, prompt, grammar, settings.maxTokens) }
+        return raw?.let(parse) ?: OnDeviceResult.Unavailable
+    }
+
+    private fun asset(path: String): String = context.assets.open(path).bufferedReader().use { it.readText() }
 }
 
 /**

@@ -146,9 +146,14 @@ internal data class CreateVisitRequest(
 internal data class VisitAxisRequest(val axis: String, val value: String)
 
 /**
- * @param labels 직전 응답의 분류. **있으면 반드시 함께 보낸다.** 안 보내면 줄 하나를 옮길
- *   때마다 AI 모델 호출이 나가고, 그 비용이 서버 크레딧과 같은 주머니에서 빠진다. 보내면
- *   모델을 부르지 않고 재조립만 한다.
+ * @param labels 직전 응답의 분류이거나 폰이 붙인 라벨. **있으면 반드시 함께 보낸다.** 안 보내면
+ *   줄 하나를 옮길 때마다 AI 모델 호출이 나가고, 그 비용이 서버 크레딧과 같은 주머니에서
+ *   빠진다. 보내면 모델을 부르지 않고 재조립만 한다.
+ * @param classify `false`면 서버가 모델을 부르지 않고 문장만 나눠 준다. 폰이 라벨을 붙이기 전
+ *   단계다(#289). 비우면 서버가 정한다.
+ * @param labelsMeta 폰이 라벨을 붙였으면 무엇으로 붙였는지. 기록의 `extractedBy`로 남는다.
+ * @param splitVersion 문장을 나눈 규칙의 이름. 폰 라벨과 함께 보낸다 — 그 사이 규칙이 바뀌면
+ *   서버가 409로 막는다. 안 막으면 번호가 다른 문장을 가리킨 채 200이 나간다.
  */
 @Serializable
 internal data class ClassifyMemoRequest(
@@ -156,7 +161,13 @@ internal data class ClassifyMemoRequest(
     val visitedOn: String? = null,
     val clinicName: String? = null,
     val labels: Map<String, String>? = null,
+    val classify: Boolean? = null,
+    val labelsMeta: LabelsMetaRequest? = null,
+    val splitVersion: String? = null,
 )
+
+@Serializable
+internal data class LabelsMetaRequest(val modelId: String, val promptVersion: String)
 
 /**
  * @param sentences 메모를 문장으로 나눈 것. 인덱스가 [labels]의 키다.
@@ -169,6 +180,7 @@ internal data class ClassifyMemoResponse(
     val labels: Map<String, String> = emptyMap(),
     val patientNotes: List<String> = emptyList(),
     val followUp: FollowUpResponse? = null,
+    val splitVersion: String? = null,
 )
 
 @Serializable

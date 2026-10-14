@@ -1,4 +1,4 @@
-package com.mist.medicalmate.intake.ondevice
+package com.mist.medicalmate.core.ondevice
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -116,10 +116,13 @@ enum class FieldStatus {
 }
 
 /**
- * 진료 후 메모 한 문장의 라벨. AI 트랙의 `memo_labels.schema.json`.
+ * 진료 후 메모 한 문장의 라벨. AI 트랙의 `memo_labels-memo-small-v5.schema.json`.
  *
  * 폰은 문장에 라벨만 붙인다. 분리·조립·날짜 계산은 서버가 한다. 문장을 나누는 것도 서버라
  * 폰과 서버가 같은 번호를 가리킨다.
+ *
+ * 차례가 문법의 선택지 차례다. v5에서 생활 지침(`lifestyle_instructions`)이 약 지침 뒤에
+ * 들어왔다 — v4로 붙이면 "커피 줄이래요"가 약 칸으로 간다.
  */
 @Serializable
 enum class MemoLabel {
@@ -131,6 +134,9 @@ enum class MemoLabel {
 
     @SerialName("medication_instructions")
     MEDICATION_INSTRUCTIONS,
+
+    @SerialName("lifestyle_instructions")
+    LIFESTYLE_INSTRUCTIONS,
 
     @SerialName("follow_up")
     FOLLOW_UP,

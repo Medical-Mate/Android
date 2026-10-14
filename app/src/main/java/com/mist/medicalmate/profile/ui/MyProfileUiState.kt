@@ -15,12 +15,24 @@ data class MyProfileUiState(
     val health: HealthSummary = HealthSummary(),
     val settings: Map<AppSetting, Boolean> = DefaultSettings,
     val voiceWake: VoiceWakeUi = VoiceWakeUi(),
+    val onDevice: OnDeviceUi = OnDeviceUi(),
 ) {
     fun isOn(setting: AppSetting): Boolean = settings[setting] == true
 
-    /** 그릴 토글. 음성 호출은 이 기기에서 켤 수 있을 때만 있다. */
+    /** 그릴 토글. 음성 호출과 휴대폰 정리는 이 기기에서 켤 수 있을 때만 있다. */
     val visibleSettings: List<AppSetting>
-        get() = AppSetting.entries.filter { it != AppSetting.VOICE_WAKE || voiceWake.supported }
+        get() =
+            AppSetting.entries.filter {
+                when (it) {
+                    AppSetting.VOICE_WAKE -> voiceWake.supported
+                    AppSetting.ON_DEVICE -> onDevice.supported
+                    else -> true
+                }
+            }
+
+    /** "정리 모델 지우기"를 둘지. 꺼 둔 채 모델이 남아 있을 때만이다. */
+    val canDeleteOnDeviceModel: Boolean
+        get() = onDevice.supported && onDevice.modelReady && !isOn(AppSetting.ON_DEVICE)
 
     /** "음성 모델 지우기"를 둘지. 꺼 둔 채 모델이 남아 있을 때만이다. */
     val canDeleteVoiceModel: Boolean
@@ -63,7 +75,8 @@ sealed interface VoiceWakeStatus {
  * 설정의 초기값. 앞의 셋은 시안 1s-1이 그린 대로다.
  *
  * 읽어 오기 전까지만 쓰인다. 알림은 계정에서, 나머지는 이 기기에서 읽어 덮는다(#187).
- * 서버의 기본값도 켜짐이라 알림은 값이 같다. 음성 호출은 켜면 모델을 받으므로 꺼진 채 시작한다.
+ * 서버의 기본값도 켜짐이라 알림은 값이 같다. 음성 호출과 휴대폰 정리는 켜면 모델을 받으므로 꺼진 채
+ * 시작한다.
  */
 private val DefaultSettings =
     mapOf(
@@ -71,6 +84,7 @@ private val DefaultSettings =
         AppSetting.CARD_AUTO_SAVE to true,
         AppSetting.HANDOFF_BRIGHTNESS to false,
         AppSetting.VOICE_WAKE to false,
+        AppSetting.ON_DEVICE to false,
     )
 
 /**
@@ -130,6 +144,9 @@ enum class AppSetting(@StringRes val labelRes: Int) {
 
     /** 시안에 없는 줄이다(#273). 이 기기에서 켤 수 있을 때만 그린다. */
     VOICE_WAKE(R.string.my_profile_setting_voice_wake),
+
+    /** 시안에 없는 줄이다(#289). NPU가 잡히는 기기에서만 그린다. */
+    ON_DEVICE(R.string.my_profile_setting_on_device),
 }
 
 /**

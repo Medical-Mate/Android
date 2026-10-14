@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mist.medicalmate.core.model.VisitReminders
 import com.mist.medicalmate.core.network.ApiResult
+import com.mist.medicalmate.core.ondevice.OnDeviceModel
 import com.mist.medicalmate.core.speech.VoiceWake
 import com.mist.medicalmate.core.speech.WakeWordModelState
 import com.mist.medicalmate.profile.data.HealthField
@@ -58,9 +59,13 @@ internal constructor(
     private val localSettings: LocalSettingsStore,
     private val reminders: VisitReminders,
     private val voiceWake: VoiceWake,
+    onDevice: OnDeviceModel,
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(MyProfileUiState())
     val uiState: StateFlow<MyProfileUiState> = mutableUiState.asStateFlow()
+
+    /** "휴대폰에서 기록 정리"(#289). 화면의 확인 창·지우기 버튼이 바로 부른다. */
+    val onDeviceToggle = OnDeviceToggle(viewModelScope, onDevice, mutableUiState)
 
     init {
         viewModelScope.launch {
@@ -87,6 +92,7 @@ internal constructor(
         viewModelScope.launch {
             val supported = voiceWake.supported()
             updateVoiceWake { it.copy(supported = supported) }
+            onDeviceToggle.loadSupported()
             loadSettings()
             val profile = (repository.profile() as? ApiResult.Success)?.value ?: return@launch
             mutableUiState.update {
@@ -138,13 +144,17 @@ internal constructor(
             onVoiceWakeChange(enabled)
             return
         }
+        if (setting == AppSetting.ON_DEVICE) {
+            onDeviceToggle.change(enabled)
+            return
+        }
         mutableUiState.update { it.copy(settings = it.settings + (setting to enabled)) }
         viewModelScope.launch {
             when (setting) {
                 AppSetting.VISIT_REMINDER -> saveReminder(enabled)
                 AppSetting.CARD_AUTO_SAVE -> localSettings.setCardAutoSave(enabled)
                 AppSetting.HANDOFF_BRIGHTNESS -> localSettings.setHandoffBrightness(enabled)
-                AppSetting.VOICE_WAKE -> Unit
+                AppSetting.VOICE_WAKE, AppSetting.ON_DEVICE -> Unit
             }
         }
     }

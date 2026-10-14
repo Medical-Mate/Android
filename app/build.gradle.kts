@@ -243,6 +243,12 @@ android {
         assets.srcDir(onDeviceEngineDir.get().dir("assets"))
     }
 
+    // 기기 일치 확인(`OnDeviceMemoParityTest`)이 JVM 시험과 같은 벡터 파일을 읽는다. 사본을 두면
+    // 묶음이 바뀔 때 한쪽만 갈아 끼우게 된다.
+    sourceSets.named("androidTest") {
+        assets.srcDir("src/test/resources/ondevice")
+    }
+
     buildTypes {
         release {
             optimization {
