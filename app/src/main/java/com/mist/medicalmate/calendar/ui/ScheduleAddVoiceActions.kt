@@ -73,7 +73,7 @@ internal class ScheduleAddVoiceActions(
                 VoiceReply.Confirm(R.string.voice_schedule_confirm_exit, onConfirm = routes.exit)
             } else {
                 routes.exit()
-                VoiceReply.Done(R.string.voice_command_moved)
+                VoiceReply.Done(R.string.voice_schedule_exited)
             }
 
         ScheduleAddVoice.OpenHospital -> {
@@ -251,7 +251,8 @@ private val LEAVING = setOf(ScheduleAddVoice.Exit, ScheduleAddVoice.OpenHospital
 private enum class ScheduleAddTarget { CARD, TODO }
 
 /**
- * 맞는 것이 없거나 여럿일 때의 되물음. 여럿이면 후보를 적고 몇 번째인지 묻는다.
+ * 맞는 것이 없거나 여럿일 때의 되물음. 여럿이면 몇 개인지 알리고, 후보를 한 줄에 하나씩 적어 몇 번째인지
+ * 묻는다. 한 줄에 이어 붙이면 제목 속 "·"와 구분이 안 된다.
  */
 private fun whichOne(candidates: List<String>, target: ScheduleAddTarget): VoiceReply {
     val card = target == ScheduleAddTarget.CARD
@@ -261,7 +262,8 @@ private fun whichOne(candidates: List<String>, target: ScheduleAddTarget): Voice
     }
     val which = if (card) R.string.voice_schedule_card_which else R.string.voice_schedule_todo_which
     val ask = if (card) R.string.voice_schedule_card_ask_ordinal else R.string.voice_schedule_todo_ask_ordinal
-    return VoiceReply.Done(which, listOf(candidates.joinToString(" · ")), question = VoiceText(ask))
+    val lines = candidates.joinToString("\n") { "· $it" }
+    return VoiceReply.Done(which, listOf(candidates.size.toString()), question = VoiceText(ask, listOf(lines)))
 }
 
 /**

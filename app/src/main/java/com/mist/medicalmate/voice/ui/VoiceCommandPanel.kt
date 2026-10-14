@@ -67,7 +67,7 @@ internal fun VoiceCommandPanel(panel: VoicePanel, onDismiss: () -> Unit, modifie
         MicBadge(listening = panel.voice == MedicalMateVoiceState.LISTENING)
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s2)) {
             Text(
-                text = panel.message.resolve(),
+                text = panel.message.resolve().sentencePerLine(),
                 style = MedicalMateTheme.typography.bodyLStrong,
                 color = if (panel.confirming) colors.fgPrimary else colors.fgDefault,
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },

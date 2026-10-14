@@ -138,7 +138,7 @@ class VoiceCommandViewModelTest {
 
         val state = viewModel.uiState.value
         assertEquals(VoiceCommandRequest(VoiceCommand.CALENDAR, "캘린더 열어줘"), state.command)
-        assertEquals(VoiceMessage(R.string.voice_command_moved), state.panel?.message)
+        assertEquals(VoiceMessage(R.string.voice_moved_calendar), state.panel?.message)
         assertFalse(speech.stopped)
     }
 

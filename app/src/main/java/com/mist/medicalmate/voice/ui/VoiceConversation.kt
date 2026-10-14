@@ -116,7 +116,8 @@ internal class VoiceConversation(
 
         // 네도 아니요도 아니면 다시 묻는다. 묻던 것을 놓으면 다음 "네"가 엉뚱한 데 간다.
         else -> {
-            say(VoiceMessage(R.string.voice_command_confirm_again), true, VoiceMessage(R.string.voice_command_yes_no))
+            // 묻던 것을 그대로 다시 세운다. "이대로 할까요?"로 바꾸면 무엇을 하려는지가 사라진다.
+            say(VoiceMessage(asking.prompt, asking.args), true, VoiceMessage(R.string.voice_command_confirm_again))
             true
         }
     }
@@ -134,7 +135,20 @@ internal class VoiceConversation(
             )
         } else {
             command(VoiceCommandRequest(parsed, text))
-            say(VoiceMessage(R.string.voice_command_moved), false, null)
+            say(VoiceMessage(parsed.movedMessage()), false, null)
         }
     }
+}
+
+/** 옮긴 뒤 막대에 적는 말. 어디로 갔는지를 적는다. "뒤로"에 "열었어요"라고 하면 틀린 말이다. */
+private fun VoiceCommand.movedMessage(): Int = when (this) {
+    VoiceCommand.HOME -> R.string.voice_moved_home
+    VoiceCommand.CALENDAR -> R.string.voice_moved_calendar
+    VoiceCommand.RECORD -> R.string.voice_moved_record
+    VoiceCommand.PROFILE -> R.string.voice_moved_profile
+    VoiceCommand.BACK -> R.string.voice_moved_back
+    VoiceCommand.INTAKE -> R.string.voice_moved_intake
+    VoiceCommand.VISIT_RECORD -> R.string.voice_moved_visit_record
+    VoiceCommand.BRIEF_CARDS -> R.string.voice_moved_brief_cards
+    VoiceCommand.SCHEDULE_ADD -> R.string.voice_moved_schedule_add
 }
