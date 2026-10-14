@@ -1,25 +1,37 @@
-package com.mist.medicalmate.intake.ondevice
+package com.mist.medicalmate.core.ondevice
 
 import android.content.Context
+import android.os.SystemClock
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * 엔진 열기와 장치 확인.
+ * 엔진 열기, 장치 확인, 생성.
  *
- * 추론은 아직 없다. 이 묶음에서 확인하는 것은 **이 기기에서 백엔드가 실제로 잡히는지**다.
- * NPU가 안 잡히면 에러 없이 CPU로 떨어지고, 그 차이가 첫 호출에서 1.7초와 14.9초다. 조용히
- * 느려지는 것을 나중에 추론 결과만 보고 알아내기는 어렵다.
+ * **이 기기에서 백엔드가 실제로 잡히는지**를 먼저 본다. NPU가 안 잡히면 에러 없이 CPU로
+ * 떨어지고, 그 차이가 첫 호출에서 수 초와 십수 초다. 조용히 느려지는 것을 나중에 추론 결과만
+ * 보고 알아내기는 어렵다.
  *
  * 라이브러리를 부를 수 없는 기기가 있다. arm64가 아니거나 엔진을 넣지 않고 빌드한 경우다.
- * 그때는 [state]가 [OnDeviceEngineState.Unavailable]이고 서버 추출로 넘어간다.
+ * 그때는 [state]가 [OnDeviceEngineState.Unavailable]이고 서버로 넘어간다.
+ *
+ * **모델은 쓸 때 올리고 1분 쉬면 내린다.** 올리는 데 4초쯤 걸려 호출마다 올리면 느리고, 1GB
+ * 넘게 쥐고 있어 계속 두면 다른 앱이 밀려난다. 메모를 고치고 다시 정리하는 동안은 올라가 있다.
+ *
+ * 엔진 호출은 한 번에 하나다. 컨텍스트가 하나이고(`n_seq_max = 1`) 두 생성이 섞이면 상태가
+ * 엉킨다.
  */
 @Singleton
 class OnDeviceEngine
@@ -28,6 +40,69 @@ constructor(@ApplicationContext private val context: Context) {
     private val mutex = Mutex()
 
     private var opened: OnDeviceEngineState? = null
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /** 올려 둔 모델. 0이면 없다. [mutex] 안에서만 읽고 쓴다. */
+    private var session = 0L
+
+    private var loadedFrom: File? = null
+
+    private var idle: Job? = null
+
+    /**
+     * 한 번 생성한다. 엔진이 없거나 모델을 못 올렸거나 생성이 실패하면 null이다.
+     *
+     * @param model 받아 둔 모델 파일. 해시는 받을 때 확인했다.
+     * @param grammar 출력 모양을 강제하는 GBNF.
+     */
+    internal suspend fun generate(model: File, prompt: ChatPrompt, grammar: String, maxTokens: Int): String? {
+        if (state() !is OnDeviceEngineState.Ready) return null
+        return mutex.withLock {
+            idle?.cancel()
+            val output =
+                withContext(Dispatchers.IO) {
+                    val handle = loaded(model) ?: return@withContext null
+                    val started = SystemClock.elapsedRealtime()
+                    OnDeviceNative.nativeGenerate(
+                        handle,
+                        prompt.prefix.toByteArray(Charsets.UTF_8),
+                        prompt.suffix.toByteArray(Charsets.UTF_8),
+                        grammar.toByteArray(Charsets.UTF_8),
+                        maxTokens,
+                    )?.toString(Charsets.UTF_8)
+                        .also { Log.i(TAG, "생성 ${SystemClock.elapsedRealtime() - started}ms") }
+                }
+            idle = scope.launch {
+                delay(IDLE_RELEASE_MS)
+                release()
+            }
+            output
+        }
+    }
+
+    /** 모델을 내린다. 쓰고 있으면 끝나기를 기다린다. */
+    suspend fun release() {
+        mutex.withLock {
+            if (session != 0L) {
+                withContext(Dispatchers.IO) { OnDeviceNative.nativeFree(session) }
+                session = 0L
+                loadedFrom = null
+                Log.i(TAG, "모델을 내렸다")
+            }
+        }
+    }
+
+    /** [mutex] 안에서 부른다. 다른 파일이 올라가 있으면 내리고 다시 올린다. */
+    private fun loaded(model: File): Long? {
+        if (session != 0L && loadedFrom == model) return session
+        if (session != 0L) OnDeviceNative.nativeFree(session)
+        val started = SystemClock.elapsedRealtime()
+        session = OnDeviceNative.nativeLoad(model.absolutePath)
+        loadedFrom = model.takeIf { session != 0L }
+        Log.i(TAG, "모델 올리기 ${SystemClock.elapsedRealtime() - started}ms · ${if (session != 0L) "됨" else "실패"}")
+        return session.takeIf { it != 0L }
+    }
 
     /**
      * 엔진을 열고 무엇으로 돌 수 있는지 본다.
@@ -56,10 +131,12 @@ constructor(@ApplicationContext private val context: Context) {
         }
 
         val htpDir = unpackHtpImages()
-        nativeOpen(context.applicationInfo.nativeLibraryDir, htpDir.absolutePath)
+        OnDeviceNative.nativeOpen(context.applicationInfo.nativeLibraryDir, htpDir.absolutePath)
 
-        val devices = nativeDevices().lineSequence().filter(String::isNotBlank).map(::parseDevice).toList()
-        OnDeviceEngineState.Ready(version = nativeVersion(), devices = devices)
+        val devices = OnDeviceNative.nativeDevices().lineSequence().filter(
+            String::isNotBlank,
+        ).map(::parseDevice).toList()
+        OnDeviceEngineState.Ready(version = OnDeviceNative.nativeVersion(), devices = devices)
     }
 
     /**
@@ -81,15 +158,12 @@ constructor(@ApplicationContext private val context: Context) {
         return target
     }
 
-    private external fun nativeOpen(nativeLibDir: String, htpDir: String)
-
-    private external fun nativeVersion(): String
-
-    private external fun nativeDevices(): String
-
     private companion object {
         const val TAG = "OnDeviceEngine"
         const val LIBRARY = "medicalmate_ondevice"
+
+        /** 마지막 생성 뒤 이만큼 쉬면 모델을 내린다. */
+        const val IDLE_RELEASE_MS = 60_000L
 
         /**
          * 엔진이 기대는 벤더 라이브러리.
