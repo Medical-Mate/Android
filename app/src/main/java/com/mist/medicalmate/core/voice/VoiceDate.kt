@@ -1,18 +1,19 @@
-package com.mist.medicalmate.calendar.ui
+package com.mist.medicalmate.core.voice
 
-import com.mist.medicalmate.core.voice.VoiceWords
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.temporal.TemporalAdjusters
 
-/** 캘린더에서 말로 가리킨 날이나 달(#286). */
-internal sealed interface CalendarVoice {
+/**
+ * 말로 가리킨 날이나 달(#286). 캘린더와 진료 후 기록의 재방문 날짜(#288)가 함께 쓴다.
+ */
+sealed interface VoiceDate {
     /** 그 날의 일자 화면(1r-2)을 연다. */
-    data class Day(val date: LocalDate) : CalendarVoice
+    data class Day(val date: LocalDate) : VoiceDate
 
     /** 그 달로 넘긴다. */
-    data class Month(val month: YearMonth) : CalendarVoice
+    data class Month(val month: YearMonth) : VoiceDate
 }
 
 /**
@@ -27,17 +28,17 @@ internal sealed interface CalendarVoice {
  * 받아쓰기가 이미 숫자로 적는 날짜를 읽는다. 예약 문자처럼 긴 글에서 고르는 것이 아니라 짧은 말이라 기기의
  * 추출기를 부르지 않는다. 해는 보고 있는 달의 해다.
  */
-internal fun parseCalendarVoice(text: String, today: LocalDate, shown: YearMonth): CalendarVoice? {
+fun parseVoiceDate(text: String, today: LocalDate, shown: YearMonth = YearMonth.from(today)): VoiceDate? {
     val heard = VoiceWords.compact(text)
     val relative = RELATIVE_DAYS.entries.firstOrNull { (word, _) -> heard.contains(word) }?.value
     val weekday = WEEKDAY.find(heard)
     val month = monthOf(heard, today, shown)
     val day = DAY.find(heard)?.groupValues?.get(1)?.toInt()
     return when {
-        relative != null -> CalendarVoice.Day(today.plusDays(relative))
-        weekday != null -> CalendarVoice.Day(weekdayOf(weekday, today))
-        day != null -> (month ?: shown).dayOrNull(day)?.let(CalendarVoice::Day)
-        month != null -> CalendarVoice.Month(month)
+        relative != null -> VoiceDate.Day(today.plusDays(relative))
+        weekday != null -> VoiceDate.Day(weekdayOf(weekday, today))
+        day != null -> (month ?: shown).dayOrNull(day)?.let(VoiceDate::Day)
+        month != null -> VoiceDate.Month(month)
         else -> null
     }
 }
@@ -68,7 +69,17 @@ private fun weekdayOf(match: MatchResult, today: LocalDate): LocalDate {
 
 private fun YearMonth.dayOrNull(day: Int): LocalDate? = if (day in 1..lengthOfMonth()) atDay(day) else null
 
-private val RELATIVE_DAYS = linkedMapOf("그저께" to -2L, "그제" to -2L, "어제" to -1L, "오늘" to 0L, "내일" to 1L, "모레" to 2L)
+private val RELATIVE_DAYS =
+    linkedMapOf(
+        "그저께" to -TWO_DAYS,
+        "그제" to -TWO_DAYS,
+        "어제" to -1L,
+        "오늘" to 0L,
+        "내일" to 1L,
+        "모레" to TWO_DAYS,
+    )
+
+private const val TWO_DAYS = 2L
 
 private const val WEEKDAYS = "월화수목금토일"
 

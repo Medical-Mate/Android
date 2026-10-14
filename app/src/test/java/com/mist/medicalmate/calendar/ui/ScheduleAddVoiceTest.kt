@@ -445,8 +445,11 @@ class ScheduleAddVoiceTest {
         val reply = viewModel.voice.handle("두통 카드 가져갈게", ScheduleAddVoiceRoutes()) as VoiceReply.Done
 
         assertEquals(R.string.voice_schedule_card_which, reply.message)
-        assertEquals(listOf("두통 · 어지러움 · 두통 · 메스꺼움"), reply.args)
-        assertEquals(VoiceText(R.string.voice_schedule_card_ask_ordinal), reply.question)
+        assertEquals(listOf("2"), reply.args)
+        assertEquals(
+            VoiceText(R.string.voice_schedule_card_ask_ordinal, listOf("· 두통 · 어지러움\n· 두통 · 메스꺼움")),
+            reply.question,
+        )
         assertTrue(viewModel.uiState.value.cards.none { it.picked })
 
         // 몇 번째로 답하면 고른다.

@@ -11,9 +11,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
+import com.mist.medicalmate.core.voice.VoiceDate
 import com.mist.medicalmate.core.voice.VoiceReply
 import com.mist.medicalmate.core.voice.VoiceTargetEffect
 import com.mist.medicalmate.core.voice.VoiceText
+import com.mist.medicalmate.core.voice.parseVoiceDate
 import kotlinx.serialization.Serializable
 import java.time.LocalDate
 import java.time.YearMonth
@@ -110,13 +112,13 @@ private fun CalendarMonthRoute(
     // "20일", "내일", "다음 주 화요일"이면 그 날을, "12월", "다음 달"이면 그 달로(#286). 다른 화면에서
     // "10월 20일 일정 보여줘"로 들어오면 그 말도 여기서 받는다.
     VoiceTargetEffect { text ->
-        when (val voice = parseCalendarVoice(text, state.today, state.month)) {
-            is CalendarVoice.Day -> {
+        when (val voice = parseVoiceDate(text, state.today, state.month)) {
+            is VoiceDate.Day -> {
                 onDayOpen(voice.date, null)
                 VoiceReply.Done(R.string.voice_calendar_day, listOf(voice.date.format(VOICE_DATE)))
             }
 
-            is CalendarVoice.Month -> {
+            is VoiceDate.Month -> {
                 viewModel.onMonthPick(voice.month)
                 VoiceReply.Done(
                     R.string.voice_calendar_month,
@@ -177,6 +179,14 @@ private fun CalendarDayRoute(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(date, appointmentId) { viewModel.load(date, appointmentId) }
+
+    // "기록할래", "카드 보여 줘"(#288). 다른 화면에서 "진료 후 기록할래"로 들어온 말도 받는다.
+    CalendarDayVoice(
+        uiState = viewModel.uiState,
+        onRecordAdd = onRecordAdd,
+        onRecordOpen = onRecordOpen,
+        onCardOpen = onCardOpen,
+    )
 
     CalendarDayScreen(
         state = state ?: return,

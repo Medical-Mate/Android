@@ -1,4 +1,4 @@
-package com.mist.medicalmate.calendar.ui
+package com.mist.medicalmate.core.voice
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -6,8 +6,8 @@ import org.junit.Test
 import java.time.LocalDate
 import java.time.YearMonth
 
-/** 캘린더에서 말로 날이나 달을 가리킨다(#286). 2026-10-13은 화요일이다. */
-class CalendarVoiceTest {
+/** 말로 날이나 달을 가리킨다(#286 · #288). 2026-10-13은 화요일이다. */
+class VoiceDateTest {
     @Test
     fun `날짜와 가까운 날을 읽는다`() {
         assertEquals(day(2026, 10, 20), parse("10월 20일 일정 보여줘"))
@@ -26,9 +26,9 @@ class CalendarVoiceTest {
 
     @Test
     fun `달만 말하면 그 달로 넘긴다`() {
-        assertEquals(CalendarVoice.Month(YearMonth.of(2026, 11)), parse("다음 달"))
-        assertEquals(CalendarVoice.Month(YearMonth.of(2026, 12)), parse("12월 보여 줘"))
-        assertEquals(CalendarVoice.Month(YearMonth.of(2026, 9)), parse("지난달"))
+        assertEquals(VoiceDate.Month(YearMonth.of(2026, 11)), parse("다음 달"))
+        assertEquals(VoiceDate.Month(YearMonth.of(2026, 12)), parse("12월 보여 줘"))
+        assertEquals(VoiceDate.Month(YearMonth.of(2026, 9)), parse("지난달"))
     }
 
     @Test
@@ -37,7 +37,7 @@ class CalendarVoiceTest {
         assertNull(parse("2월 30일"))
     }
 
-    private fun parse(text: String) = parseCalendarVoice(text, LocalDate.of(2026, 10, 13), YearMonth.of(2026, 10))
+    private fun parse(text: String) = parseVoiceDate(text, LocalDate.of(2026, 10, 13), YearMonth.of(2026, 10))
 
-    private fun day(year: Int, month: Int, day: Int) = CalendarVoice.Day(LocalDate.of(year, month, day))
+    private fun day(year: Int, month: Int, day: Int) = VoiceDate.Day(LocalDate.of(year, month, day))
 }

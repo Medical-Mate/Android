@@ -12,6 +12,7 @@ import androidx.navigation.toRoute
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.speech.rememberMicPermission
 import com.mist.medicalmate.core.voice.VoicePrompt
+import com.mist.medicalmate.core.voice.VoiceReply
 import com.mist.medicalmate.core.voice.VoiceTargetEffect
 import com.mist.medicalmate.core.voice.VoiceText
 import com.mist.medicalmate.core.voice.rememberVoicePrompt
@@ -133,12 +134,34 @@ internal fun NavGraphBuilder.clinicConfirmDestination(
 ) {
     composable<ClinicConfirmDestination> { entry ->
         val route = entry.toRoute<ClinicConfirmDestination>()
+        val confirm = { onConfirmed(route.clinic, route.cardId, route.cardTitle, route.visitedOn) }
+        val other = { onOther(route.cardId, route.cardTitle, route.visitedOn) }
+        // "네, 맞아요" / "다른 병원이에요"(#288).
+        VoiceTargetEffect { text ->
+            when (parseClinicConfirm(text)) {
+                true -> {
+                    confirm()
+                    VoiceReply.Done(R.string.voice_clinic_confirmed)
+                }
+
+                false -> {
+                    other()
+                    VoiceReply.Done(R.string.voice_clinic_other)
+                }
+
+                null -> VoiceReply.NotMine
+            }
+        }
+        val prompt = rememberVoicePrompt()
+        LaunchedEffect(Unit) {
+            prompt(VoicePrompt(question = VoiceText(R.string.voice_clinic_ask, listOf(route.clinic))))
+        }
         ClinicConfirmScreen(
             clinic = route.clinic,
             address = route.address,
             scheduledOn = LocalDate.parse(route.visitedOn),
-            onConfirmClick = { onConfirmed(route.clinic, route.cardId, route.cardTitle, route.visitedOn) },
-            onOtherClick = { onOther(route.cardId, route.cardTitle, route.visitedOn) },
+            onConfirmClick = confirm,
+            onOtherClick = other,
             onBackClick = onExit,
         )
     }
@@ -283,6 +306,11 @@ private fun VisitNoteRoute(
     val askMic = rememberMicPermission(onGranted = viewModel::onMicClick, onDenied = viewModel::onMicDenied)
     val askVoice = rememberMicPermission(onGranted = viewModel::onVoiceClick, onDenied = viewModel::onMicDenied)
 
+    // 막대가 메모를 받아 적는다(#288). "다 했어"면 적은 원문을 들고 1q-1로 간다.
+    VoiceTargetEffect { text -> viewModel.onVoiceNote(text, onSaved) }
+    val prompt = rememberVoicePrompt()
+    LaunchedEffect(Unit) { prompt(VoicePrompt(question = VoiceText(R.string.voice_note_ask))) }
+
     VisitNoteScreen(
         state = state,
         callbacks =
@@ -323,6 +351,16 @@ private fun VisitRecordRoute(
             visitedOn = route.visitedOn?.let(LocalDate::parse),
         )
     }
+
+    // 항목 고치기·지우기, "재방문 11월 3일로", "저장"(#288). 저장은 확인을 받는다.
+    VoiceTargetEffect { text ->
+        viewModel.voice.handle(text, LocalDate.now()) {
+            viewModel.onSaveClick(cardId = route.cardId, onSaved = onSaved)
+        }
+    }
+    val prompt = rememberVoicePrompt()
+    val loaded = state is VisitRecordUiState.Content
+    LaunchedEffect(loaded) { if (loaded) prompt(VoicePrompt(question = VoiceText(R.string.voice_record_ask))) }
 
     VisitRecordScreen(
         state = state,

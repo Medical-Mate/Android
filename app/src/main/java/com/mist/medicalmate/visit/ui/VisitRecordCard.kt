@@ -21,6 +21,8 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateKvRowType
 import com.mist.medicalmate.core.designsystem.component.MedicalMateQuoteBlock
 import com.mist.medicalmate.core.designsystem.component.MedicalMateRowDelete
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTooltip
+import com.mist.medicalmate.core.voice.VoiceFocusFrame
+import com.mist.medicalmate.core.voice.rememberVoiceFocus
 
 /**
  * 분류 결과 카드. Figma `587:3134`.
@@ -47,24 +49,28 @@ internal fun VisitRecordCard(state: VisitRecordUiState.Content, callbacks: Visit
         MedicalMateDivider()
         // 하나도 못 나눴으면 줄이 없다. 그때는 머리 아래가 바로 원문이라 구분선이 겹치지
         // 않게 줄과 함께 뒤쪽 구분선도 빠진다.
+        // 말로 고친 줄로 화면이 옮겨 가고 잠깐 테를 두른다(#288).
+        val focus = rememberVoiceFocus(state.voiceFocus)
         state.items.forEachIndexed { index, item ->
-            if (state.editing) {
-                MedicalMateEditingKvRow(
-                    key = item.key,
-                    value = item.value,
-                    onValueChange = { value -> callbacks.edit.onItemValueChange(index, value) },
-                    delete =
-                    MedicalMateRowDelete(
-                        contentDescription = stringResource(R.string.visit_record_item_delete, item.key),
-                        onClick = { callbacks.edit.onItemDeleteClick(index) },
-                    ),
-                )
-            } else {
-                MedicalMateKvRow(
-                    key = item.key,
-                    value = item.value,
-                    type = rowType(item = item, editing = false),
-                )
+            VoiceFocusFrame(focus, index, MedicalMateRadius.sm) {
+                if (state.editing) {
+                    MedicalMateEditingKvRow(
+                        key = item.key,
+                        value = item.value,
+                        onValueChange = { value -> callbacks.edit.onItemValueChange(index, value) },
+                        delete =
+                        MedicalMateRowDelete(
+                            contentDescription = stringResource(R.string.visit_record_item_delete, item.key),
+                            onClick = { callbacks.edit.onItemDeleteClick(index) },
+                        ),
+                    )
+                } else {
+                    MedicalMateKvRow(
+                        key = item.key,
+                        value = item.value,
+                        type = rowType(item = item, editing = false),
+                    )
+                }
             }
         }
         // 저장한 기록을 다시 볼 때 원문이 없을 수 있다(#256). 빈 인용을 세우면 적지 않은 말이

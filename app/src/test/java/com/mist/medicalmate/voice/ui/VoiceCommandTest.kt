@@ -6,6 +6,15 @@ import org.junit.Test
 
 class VoiceCommandTest {
     @Test
+    fun `진료 후 기록을 남기자는 말은 기록 탭이 아니다`() {
+        assertEquals(VoiceCommand.VISIT_RECORD, parseVoiceCommand("진료 후 기록할래"))
+        assertEquals(VoiceCommand.VISIT_RECORD, parseVoiceCommand("어제 진료 기록 남길래"))
+        assertEquals(VoiceCommand.RECORD, parseVoiceCommand("기록 보여 줘"))
+        // 증상을 적는 것은 증상 정리다.
+        assertEquals(VoiceCommand.INTAKE, parseVoiceCommand("증상 기록할래"))
+    }
+
+    @Test
     fun `카드를 새로 만들자는 말은 증상 정리다`() {
         assertEquals(VoiceCommand.INTAKE, parseVoiceCommand("브리핑 카드 만들어 줘"))
         assertEquals(VoiceCommand.INTAKE, parseVoiceCommand("브리핑 카드를 만들자"))
