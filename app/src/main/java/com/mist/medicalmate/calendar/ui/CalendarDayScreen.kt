@@ -87,15 +87,7 @@ fun CalendarDayScreen(state: CalendarDayUiState, callbacks: CalendarDayCallbacks
     if (state.deleteRequested) {
         MedicalMateDialog(
             title = stringResource(R.string.calendar_day_schedule_delete_title),
-            // 이 일정의 진료 후 기록이 있으면 그것도 함께 지워진다고 알린다(#302).
-            message =
-            stringResource(
-                if (state.records.isEmpty()) {
-                    R.string.calendar_day_schedule_delete_body
-                } else {
-                    R.string.calendar_day_schedule_delete_body_record
-                },
-            ),
+            message = stringResource(R.string.calendar_day_schedule_delete_body),
             confirmLabel = stringResource(R.string.calendar_day_schedule_delete_confirm),
             onConfirm = callbacks.onScheduleDeleteConfirm,
             dismissLabel = stringResource(R.string.calendar_day_edit_cancel),
