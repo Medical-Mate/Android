@@ -147,7 +147,7 @@ private fun briefCardHospital(route: BriefCardDestination): BriefCardHospital? {
 @Composable
 private fun BriefCardVoice(content: BriefCardUiState.Content?, onSave: () -> Unit) {
     val saved = content?.card?.status == BriefCard.Status.CONFIRMED
-    VoiceTargetEffect { text ->
+    VoiceTargetEffect(BRIEF_CARD_SUGGESTIONS) { text ->
         when {
             content == null || content.editing || !VoiceWords.isSave(text) -> VoiceReply.NotMine
             saved -> VoiceReply.Done(R.string.voice_card_already_saved)

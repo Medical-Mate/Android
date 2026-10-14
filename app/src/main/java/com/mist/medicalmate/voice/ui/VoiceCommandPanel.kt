@@ -29,9 +29,11 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.ShadowTint
+import com.mist.medicalmate.core.designsystem.component.MedicalMateDivider
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButtonSize
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
+import com.mist.medicalmate.core.voice.VoiceSuggestion
 
 /**
  * "헤이 메이트"로 부르면 화면 아래에 뜨는 막대(#273·#282).
@@ -43,12 +45,15 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
  * 윗줄은 지금 할 말이다. 처음에는 말할 수 있는 예, 무엇을 했으면 그 결과, 저장 같은 일이면
  * "할까요?"다. 아랫줄은 말하는 중에 들리는 글이다. 윗줄은 바뀔 때마다 스크린 리더가 읽는다.
  *
- * **시안에 없는 막대라 디자인 트랙 확인이 필요하다.**
+ * **추천 말이 있으면 막대 위에 함께 선다**(#292). 부를 때와 못 알아들었을 때 지금 화면에서 알아듣는
+ * 말을 "이렇게 말해도 돼요" 아래 한 줄씩 보여 주고, 구분선 아래에 막대가 그대로 선다.
+ *
+ * **시안에 없는 막대라 디자인 트랙 확인이 필요하다.** 추천 목록도 형식만 맞췄다.
  */
 @Composable
 internal fun VoiceCommandPanel(panel: VoicePanel, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
     val colors = MedicalMateTheme.colors
-    Row(
+    Column(
         modifier =
         modifier
             .fillMaxWidth()
@@ -59,7 +64,86 @@ internal fun VoiceCommandPanel(panel: VoicePanel, onDismiss: () -> Unit, modifie
                 ambientColor = ShadowTint,
                 spotColor = ShadowTint,
             )
-            .background(colors.bgSurface, MedicalMateRadius.lg)
+            .background(colors.bgSurface, MedicalMateRadius.lg),
+    ) {
+        if (panel.suggestions.isNotEmpty()) {
+            Suggestions(panel.suggestions)
+            MedicalMateDivider(modifier = Modifier.padding(horizontal = MedicalMateSpace.s16))
+        }
+        Bar(panel = panel, onDismiss = onDismiss)
+    }
+}
+
+/**
+ * 추천 말 목록(#292). 아이콘 · 따옴표로 감싼 말 · 오른쪽의 하는 일 순이다.
+ *
+ * 누르는 줄이 아니다. 무엇을 말하면 되는지 읽히는 것이 목적이라 버튼 역할을 얹지 않는다. 손으로 할
+ * 사람은 화면의 버튼을 누르면 된다.
+ */
+@Composable
+private fun Suggestions(suggestions: List<VoiceSuggestion>) {
+    val colors = MedicalMateTheme.colors
+    Column(
+        modifier =
+        Modifier
+            .fillMaxWidth()
+            .padding(
+                start = MedicalMateSpace.s16,
+                end = MedicalMateSpace.s16,
+                top = MedicalMateSpace.s16,
+                bottom = MedicalMateSpace.s12,
+            ),
+        verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s10),
+    ) {
+        Text(
+            text = stringResource(R.string.voice_suggest_title),
+            style = MedicalMateTheme.typography.bodySStrong,
+            color = colors.fgSubtle,
+        )
+        suggestions.forEach { suggestion ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier =
+                    Modifier
+                        .size(MicBadgeSize)
+                        .background(colors.bgSubtle, MedicalMateRadius.full),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painter = painterResource(suggestion.icon),
+                        contentDescription = null,
+                        tint = colors.fgSubtle,
+                        modifier = Modifier.size(MicIconSize),
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.voice_suggest_quote, stringResource(suggestion.phrase)),
+                    style = MedicalMateTheme.typography.bodyLStrong,
+                    color = colors.fgDefault,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = stringResource(suggestion.action),
+                    style = MedicalMateTheme.typography.bodyS,
+                    color = colors.fgSubtle,
+                )
+            }
+        }
+    }
+}
+
+/** 막대. 마이크 배지 · 지금 할 말과 물음 · 닫기다. */
+@Composable
+private fun Bar(panel: VoicePanel, onDismiss: () -> Unit) {
+    val colors = MedicalMateTheme.colors
+    Row(
+        modifier =
+        Modifier
+            .fillMaxWidth()
             .padding(start = MedicalMateSpace.s16, top = MedicalMateSpace.s12, bottom = MedicalMateSpace.s12),
         horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12),
         verticalAlignment = Alignment.CenterVertically,
