@@ -227,11 +227,18 @@ internal constructor(
      *
      * [onDeleted]는 실패하면 부르지 않는다. 지워지지 않았는데 화면을 닫으면 캘린더로 돌아가
      * 그 일정이 그대로 있다.
+     *
+     * **이 일정의 진료 후 기록도 함께 지운다**(#302). 화면의 "이 날 기록"이 그것이다 — 그 날 일정의 카드로 남긴
+     * 기록만 선다. 서버에서 기록은 일정이 아니라 카드에 붙어 일정을 지워도 남는데, 남겨 두면 캘린더가 그 날을
+     * "기록 있음"으로 계속 찍는다. 일정을 먼저 지운다 — 기록부터 지웠는데 일정이 안 지워지면 진료 기록만 잃는다.
+     * 기록 삭제는 한 건씩이고 일부가 실패해도 화면을 떠난다. 일정은 이미 지워졌다.
      */
     fun onScheduleDeleteConfirm(onDeleted: () -> Unit) {
-        val id = mutableUiState.value?.schedule?.id?.toLongOrNull() ?: return
+        val state = mutableUiState.value ?: return
+        val id = state.schedule?.id?.toLongOrNull() ?: return
         viewModelScope.launch {
             if (repository.delete(id) is ApiResult.Success) {
+                visitRepository.deleteAll(state.records.map { it.id }.toSet())
                 mutableUiState.update { it?.copy(deleteRequested = false) }
                 onDeleted()
             }

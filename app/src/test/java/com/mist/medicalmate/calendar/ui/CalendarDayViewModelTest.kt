@@ -319,6 +319,23 @@ class CalendarDayViewModelTest {
     }
 
     @Test
+    fun `일정을 지우면 이 일정의 진료 후 기록도 지운다`() {
+        // 남겨 두면 캘린더가 그 날을 "기록 있음"으로 계속 찍는다(#302). 같은 날 다른 카드의 기록은 건드리지 않는다.
+        val today = LocalDate.of(2026, 9, 11)
+        val own = testVisit.copy(id = "8", visitedOn = today)
+        val other = testVisit.copy(id = "9", cardId = 9L, visitedOn = today)
+        val visits = FakeVisitRepository(list = ApiResult.Success(listOf(own, other)))
+        val repository = FakeAppointmentRepository(listOf(testAppointment.copy(on = today)))
+        val viewModel = CalendarDayViewModel(repository, visits, FakeCardRepository(), fixedClock)
+        viewModel.load(today)
+
+        viewModel.onScheduleDeleteConfirm {}
+
+        assertEquals(1L, repository.deletedId)
+        assertEquals(listOf("8"), visits.deletedIds)
+    }
+
+    @Test
     fun `삭제를 확정하면 그 일정을 서버에서 지운다`() {
         val repository = FakeAppointmentRepository(listOf(testAppointment))
         val viewModel = CalendarDayViewModel(repository, FakeVisitRepository(), FakeCardRepository(), fixedClock)
