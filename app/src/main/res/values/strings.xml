@@ -647,6 +647,7 @@
     <string name="voice_day_record_opened">남긴 기록을 열었어요</string>
     <string name="voice_day_recorded">이 날은 이미 남긴 기록이 있어요</string>
     <string name="voice_day_ask_open">"기록 보여 줘"라고 하면 열어요</string>
+    <string name="voice_day_upcoming">아직 진료 전이에요. 진료가 끝난 뒤에 기록할 수 있어요</string>
     <string name="voice_day_no_card">이 날 일정에는 브리핑 카드가 없어서 기록을 남길 수 없어요</string>
     <string name="voice_clinic_ask">%1$s 맞나요? "네"나 "다른 병원이에요"로 답해 주세요</string>
     <string name="voice_clinic_confirmed">그 병원으로 적을게요</string>

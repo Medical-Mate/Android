@@ -79,11 +79,15 @@ internal constructor(
                     ?.filter { it.status != AppointmentStatus.CANCELED }
                     .orEmpty()
             val appointment = live.firstOrNull { it.id == appointmentId } ?: live.firstOrNull()
-            val records = (visitRepository.visits() as? ApiResult.Success)?.value.orEmpty()
+            val onDay = (visitRepository.visits() as? ApiResult.Success)?.value.orEmpty()
                 .filter { it.visitedOn == date }
+            // 일정이 있으면 그 일정의 카드로 남긴 기록만 이 날 기록이다. 일정 없이 기록만 있는 날이면 그 기록 전부다.
+            val records = appointment?.let { ownRecords(it, onDay) } ?: onDay
+            val today = LocalDate.now(clock)
             mutableUiState.value =
                 dayState(date).copy(
-                    schedule = appointment?.toDaySchedule(LocalDate.now(clock)),
+                    upcoming = date > today,
+                    schedule = appointment?.toDaySchedule(today),
                     card = appointment?.toDayCard()?.filled(),
                     records = records.map { it.toDayRecord().filled() },
                     // 진료가 끝난 날에는 진료 전 할 일을 두지 않는다. 시안 1r-2-A도 그렇다.
@@ -93,6 +97,24 @@ internal constructor(
                     nextEvent = records.firstOrNull()?.let { nextEvent(date, it) },
                 )
         }
+    }
+
+    /**
+     * 그 날 기록 가운데 이 일정의 카드로 남긴 것(#302).
+     *
+     * **그 날 기록이 모두 이 일정의 것은 아니다.** 일정을 지우고 같은 날 다른 카드로 새 일정을 잡으면, 지운 일정의
+     * 기록이 그 날에 남아 있다. 그 날 기록이 하나라도 있으면 다녀온 것으로 보던 때는 새 일정이 "진료 완료"로
+     * 서고 그 카드로는 기록을 남길 수 없었다. 다른 카드의 기록은 이 일정의 진료가 아니라서 "이 날 기록"에도
+     * 세우지 않는다 — 이 일정으로 아직 적지 않았으면 그 자리는 "아직 진료 전이에요"다.
+     *
+     * 카드를 고치면 id가 바뀌어(Backend#114) 일정이 든 옛 id와 기록 목록의 최신 id가 다를 수 있다. 버전을 묶어
+     * 주는 `GET /api/cards/{cardId}/visits`의 기록과, id가 그대로 같은 기록을 함께 본다. 모아 주는 목록을 못
+     * 읽으면 id가 같은 것만 남는다.
+     */
+    private suspend fun ownRecords(appointment: Appointment, records: List<VisitListItem>): List<VisitListItem> {
+        val cardId = appointment.cards.firstOrNull()?.id ?: return emptyList()
+        val linked = (visitRepository.cardVisits(cardId) as? ApiResult.Success)?.value.orEmpty().map { it.id }.toSet()
+        return records.filter { it.id in linked || it.cardId == cardId }
     }
 
     /**
@@ -205,11 +227,18 @@ internal constructor(
      *
      * [onDeleted]는 실패하면 부르지 않는다. 지워지지 않았는데 화면을 닫으면 캘린더로 돌아가
      * 그 일정이 그대로 있다.
+     *
+     * **이 일정의 진료 후 기록도 함께 지운다**(#302). 화면의 "이 날 기록"이 그것이다 — 그 날 일정의 카드로 남긴
+     * 기록만 선다. 서버에서 기록은 일정이 아니라 카드에 붙어 일정을 지워도 남는데, 남겨 두면 캘린더가 그 날을
+     * "기록 있음"으로 계속 찍는다. 일정을 먼저 지운다 — 기록부터 지웠는데 일정이 안 지워지면 진료 기록만 잃는다.
+     * 기록 삭제는 한 건씩이고 일부가 실패해도 화면을 떠난다. 일정은 이미 지워졌다.
      */
     fun onScheduleDeleteConfirm(onDeleted: () -> Unit) {
-        val id = mutableUiState.value?.schedule?.id?.toLongOrNull() ?: return
+        val state = mutableUiState.value ?: return
+        val id = state.schedule?.id?.toLongOrNull() ?: return
         viewModelScope.launch {
             if (repository.delete(id) is ApiResult.Success) {
+                visitRepository.deleteAll(state.records.map { it.id }.toSet())
                 mutableUiState.update { it?.copy(deleteRequested = false) }
                 onDeleted()
             }

@@ -86,14 +86,27 @@ data class CalendarDayUiState(
      *
      * 하루에 진료를 두 번 받으면 기록도 두 건이다(#235). 카드와 일정은 초진에 묶이고 기록만
      * 진료마다 쌓이는 것이 확정된 설계라, 이 자리가 한 건만 보면 둘째가 화면에서 사라진다.
+     *
+     * **그 날 일정이 있으면 그 일정의 카드로 남긴 기록만이다**(#302). 지운 일정의 기록이 같은 날 남아 있어도
+     * 새 일정의 진료가 아니다.
      */
     val records: List<DayRecord> = emptyList(),
     val nextEvent: DayNextEvent? = null,
     val todoDraft: List<DayTodo>? = null,
     val deleteRequested: Boolean = false,
+    /**
+     * 아직 오지 않은 날인지. 오늘은 들지 않는다 — 오늘 진료는 다녀와서 바로 적는다.
+     *
+     * **앞날에는 진료 후 기록을 시작하지 않는다**(#302). 기록 날짜가 그 일자라서, 앞날에 적으면 다녀오지 않은
+     * 진료가 기록으로 남고 캘린더가 그 날을 "기록 있음"으로 찍는다. 일정을 지워도 그 점은 남는다.
+     */
+    val upcoming: Boolean = false,
 ) {
     /** 다녀온 날인지. 기록이 있으면 진료가 끝난 것이다. */
     val visited: Boolean get() = records.isNotEmpty()
+
+    /** 진료 후 기록을 시작할 수 있는지. 카드가 걸린 일정이 있고, 아직 적지 않았고, 지난 날이거나 오늘이다. */
+    val canRecord: Boolean get() = card != null && records.isEmpty() && !upcoming
 
     /** 편집 중인지(1r-2-E). 사본이 있으면 편집이다. */
     val editing: Boolean get() = todoDraft != null
