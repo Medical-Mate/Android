@@ -676,14 +676,10 @@
     <string name="voice_suggest_global_visit_do">진료 후 기록</string>
     <string name="voice_suggest_global_day">10월 20일 일정 보여 줘</string>
     <string name="voice_suggest_global_day_do">일정 보기</string>
-    <string name="voice_suggest_global_cards">브리핑 카드 보여 줘</string>
-    <string name="voice_suggest_global_cards_do">브리핑 카드</string>
     <string name="voice_suggest_schedule_date">10월 20일 오후 3시</string>
     <string name="voice_suggest_schedule_date_do">날짜·시간</string>
     <string name="voice_suggest_schedule_hospital">고려튼튼병원</string>
     <string name="voice_suggest_schedule_hospital_do">병원 찾기</string>
-    <string name="voice_suggest_schedule_todo">할 일 추가, 약 챙기기</string>
-    <string name="voice_suggest_schedule_todo_do">할 일</string>
     <string name="voice_suggest_schedule_save">저장해 줘</string>
     <string name="voice_suggest_schedule_save_do">저장</string>
     <string name="voice_suggest_month_day">20일 일정 보여 줘</string>
@@ -704,8 +700,6 @@
     <string name="voice_suggest_body_focus_do">큰 부위부터</string>
     <string name="voice_suggest_body_unsure">잘 모르겠어요</string>
     <string name="voice_suggest_body_unsure_do">고를 곳 듣기</string>
-    <string name="voice_suggest_body_next">다음</string>
-    <string name="voice_suggest_body_next_do">문답 시작</string>
     <string name="voice_suggest_chat_answer">사흘 전부터 아팠어요</string>
     <string name="voice_suggest_chat_answer_do">답하기</string>
     <string name="voice_suggest_chat_repeat">다시 보여 줘</string>

@@ -11,7 +11,6 @@ import com.mist.medicalmate.core.voice.parseVoiceScroll
 import com.mist.medicalmate.intake.ui.BodyVoicePick
 import com.mist.medicalmate.intake.ui.IntakeDoneChoice
 import com.mist.medicalmate.intake.ui.QuestionVoice
-import com.mist.medicalmate.intake.ui.isNextVoice
 import com.mist.medicalmate.intake.ui.isUnsureVoice
 import com.mist.medicalmate.intake.ui.parseDoneVoice
 import com.mist.medicalmate.intake.ui.parseQuestionVoice
@@ -46,7 +45,6 @@ class VoiceSuggestionPhraseTest {
         assertEquals(VoiceCommand.INTAKE, parseVoiceCommand("배가 아파서 정리할래"))
         assertEquals(VoiceCommand.VISIT_RECORD, parseVoiceCommand("진료 끝났어"))
         assertEquals(VoiceCommand.CALENDAR, parseVoiceCommand("10월 20일 일정 보여 줘"))
-        assertEquals(VoiceCommand.BRIEF_CARDS, parseVoiceCommand("브리핑 카드 보여 줘"))
     }
 
     @Test
@@ -73,7 +71,6 @@ class VoiceSuggestionPhraseTest {
         assertTrue(pickBodyPartByVoice("오른쪽 어깨", null) is BodyVoicePick.Picked)
         assertTrue(pickBodyPartByVoice("다리가 아파요", null) is BodyVoicePick.AskSide)
         assertTrue(isUnsureVoice("잘 모르겠어요"))
-        assertTrue(isNextVoice("다음"))
         assertEquals(MedicalMateSeverity.LEVEL_4, parseSeverityVoice("많이 아파요"))
         assertEquals(MedicalMateSeverity.LEVEL_4, parseSeverityVoice("7점"))
         assertTrue(parseQuestionVoice("약 계속 먹어도 되나요?") is QuestionVoice.Add)

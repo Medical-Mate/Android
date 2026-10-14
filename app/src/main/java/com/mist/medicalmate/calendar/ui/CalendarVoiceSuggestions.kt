@@ -23,11 +23,6 @@ internal val SCHEDULE_ADD_SUGGESTIONS =
             MedicalMateIcons.Hospital,
         ),
         VoiceSuggestion(
-            R.string.voice_suggest_schedule_todo,
-            R.string.voice_suggest_schedule_todo_do,
-            MedicalMateIcons.Check,
-        ),
-        VoiceSuggestion(
             R.string.voice_suggest_schedule_save,
             R.string.voice_suggest_schedule_save_do,
             MedicalMateIcons.CheckCircle,

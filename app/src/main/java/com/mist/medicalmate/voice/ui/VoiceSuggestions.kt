@@ -27,9 +27,4 @@ internal val GLOBAL_SUGGESTIONS =
             R.string.voice_suggest_global_day_do,
             MedicalMateIcons.Calendar,
         ),
-        VoiceSuggestion(
-            R.string.voice_suggest_global_cards,
-            R.string.voice_suggest_global_cards_do,
-            MedicalMateIcons.Note,
-        ),
     )

@@ -259,8 +259,12 @@ internal constructor(
             }
     }
 
-    /** 지금 화면이 추천하는 말. 화면이 따로 두지 않았으면 공통 예시다(#292). */
-    private fun suggestionsHere(): List<VoiceSuggestion> = targets.suggestions.ifEmpty { GLOBAL_SUGGESTIONS }
+    /**
+     * 지금 화면이 추천하는 말. 화면이 따로 두지 않았으면 공통 예시다(#292). 세 줄까지만 보인다 — 더 늘면
+     * 막대가 화면 아래를 너무 가리고, 읽을 것이 많으면 고르기가 더 어렵다.
+     */
+    private fun suggestionsHere(): List<VoiceSuggestion> =
+        targets.suggestions.ifEmpty { GLOBAL_SUGGESTIONS }.take(MAX_SUGGESTIONS)
 
     /** 대화가 듣는 것. 받아쓴 말, 화면이 건 말, 받아쓰기가 끝난 것. */
     private sealed interface Heard {
@@ -302,3 +306,6 @@ internal constructor(
         const val IDLE_TIMEOUT_MS = 12_000L
     }
 }
+
+/** 막대 위에 세우는 추천 말의 최대 줄 수. */
+internal const val MAX_SUGGESTIONS = 3

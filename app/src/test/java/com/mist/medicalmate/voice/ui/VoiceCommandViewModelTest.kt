@@ -586,6 +586,18 @@ class VoiceCommandViewModelTest {
         assertEquals(emptyList<VoiceSuggestion>(), viewModel.uiState.value.panel?.suggestions)
     }
 
+    @Test
+    fun `추천 말은 세 줄까지만 띄운다`() = runTest {
+        val viewModel = viewModel(speech = FakeSpeechToText(usable = true, keepOpen = true)).ready()
+        val many =
+            List(5) { VoiceSuggestion(R.string.voice_suggest_month_next, R.string.voice_suggest_month_next_do, it) }
+        viewModel.targets.register(VoiceTarget { VoiceReply.NotMine }) { many }
+
+        detector.wake()
+
+        assertEquals(many.take(3), viewModel.uiState.value.panel?.suggestions)
+    }
+
     private fun viewModel(
         wake: FakeVoiceWake = FakeVoiceWake(usable = true, enabled = true, model = WakeWordModelState.Ready),
         speech: FakeSpeechToText = FakeSpeechToText(usable = true),

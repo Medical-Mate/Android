@@ -28,11 +28,6 @@ internal val BODY_PART_SUGGESTIONS =
             R.string.voice_suggest_body_unsure_do,
             MedicalMateIcons.Info,
         ),
-        VoiceSuggestion(
-            R.string.voice_suggest_body_next,
-            R.string.voice_suggest_body_next_do,
-            MedicalMateIcons.ArrowRight,
-        ),
     )
 
 /** 증상 정리 2단계(1c). 말한 것은 모두 답이다. */
