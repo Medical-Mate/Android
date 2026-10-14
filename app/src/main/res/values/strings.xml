@@ -610,6 +610,7 @@
     <string name="voice_moved_calendar">캘린더를 열었어요</string>
     <string name="voice_moved_record">기록을 열었어요</string>
     <string name="voice_moved_profile">내 정보를 열었어요</string>
+    <string name="voice_moved_back_none">더 돌아갈 화면이 없어요</string>
     <string name="voice_moved_back">앞 화면으로 돌아갔어요</string>
     <string name="voice_moved_intake">증상 정리를 시작할게요</string>
     <string name="voice_moved_brief_cards">브리핑 카드 목록을 열었어요</string>

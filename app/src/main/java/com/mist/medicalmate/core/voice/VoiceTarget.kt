@@ -87,6 +87,12 @@ class VoiceTargets {
 
     private var handoff: Pair<String, Long>? = null
 
+    /**
+     * 돌아갈 화면이 있는지(#298). 그래프가 화면을 옮길 때마다 알려 준다. 알려 주기 전에는 있다고 본다.
+     */
+    @Volatile
+    var canGoBack: Boolean = true
+
     private val asked = MutableSharedFlow<VoicePrompt>(extraBufferCapacity = PROMPT_BUFFER)
 
     val current: VoiceTarget? get() = synchronized(stack) { stack.lastOrNull() }

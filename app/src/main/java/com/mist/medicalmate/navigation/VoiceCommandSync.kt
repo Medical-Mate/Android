@@ -20,7 +20,10 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.mist.medicalmate.auth.ui.SessionUiState
 import com.mist.medicalmate.calendar.ui.CalendarDayDestination
 import com.mist.medicalmate.calendar.ui.ScheduleAddDestination
@@ -80,6 +83,10 @@ internal fun VoiceCommandHost(
         onPauseOrDispose { viewModel.setForeground(false) }
     }
 
+    // 돌아갈 화면이 있는지 알려 준다(#298). 첫 화면의 "뒤로"에 "돌아갔어요"라고 하지 않으려는 것이다.
+    val entry by navController.currentBackStackEntryAsState()
+    LaunchedEffect(entry) { viewModel.targets.canGoBack = navController.previousBackStackEntry != null }
+
     // 화면을 옮기기 전에 비운다. 옮기면서 이 효과가 취소되면 같은 명령이 다시 흘러나간다.
     LaunchedEffect(state.command) {
         val request = state.command ?: return@LaunchedEffect
@@ -109,37 +116,69 @@ internal fun VoiceCommandHost(
 /**
  * 명령을 화면 이동으로.
  *
- * 탭 셋은 탭을 누른 것과 같다. 뒤로는 시작 화면에서 멈춘다. 그 아래로 pop하면 그래프가
- * 빈다.
+ * **손으로 들어갈 때와 같은 스택을 만든다**(#298). 처음에는 지금 화면 위에 그냥 쌓아서, 일정 추가나 병원 찾기
+ * 같은 깊은 화면에서 "배가 아파"라고 하면 그 위에 증상 정리가 쌓이고, 끝나고 뒤로 가면 엉뚱한 화면이 나왔다.
+ * 이제 그 화면에 손으로 들어가는 탭의 첫 화면으로 돌아간 뒤 그 위에 연다([voiceTabOf]). 증상 정리·브리핑 카드
+ * 목록·내 정보는 홈 위에, 일정 추가·일자 화면은 캘린더 위에 선다. 같은 화면이 이미 맨 위에 있으면 쌓지 않는다.
  *
- * 일정 추가는 말에 날짜나 병원이 들어 있으면 그 말을 예약 문자처럼 들고 간다. "10월 20일 오후
- * 3시 고려튼튼통증의학과 일정 추가해 줘"가 칸이 채워진 일정 추가가 된다(#282). 아무것도 없는 "일정
- * 추가해 줘"에 넘기면 "날짜를 찾지 못했어요"가 떠서 넘기지 않는다. 말로 연 것이라는 표시(`voice`)를
- * 함께 실어, 병원을 말했으면 병원 찾기가 하나로 좁혀질 때 알아서 고른다.
+ * 탭 셋은 탭을 누른 것과 같다. 다만 날짜를 말한 "캘린더"는 그 탭에 저장해 둔 화면을 되살리지 않는다. 예전에
+ * 열어 둔 일자 화면이 되살아나면 날짜를 여는 말이 그 화면에 잘못 넘어간다.
+ *
+ * 캘린더·카드 목록·일자 화면은 옮겨 간 화면이 그 말을 받아 날짜나 카드를 연다(#286·#288). 일정 추가는 말에
+ * 날짜나 병원이 들어 있으면 그 말을 예약 문자처럼 들고 간다(#282).
  */
 private fun NavHostController.perform(request: VoiceCommandRequest, targets: VoiceTargets) {
-    // 캘린더와 카드 목록은 옮겨 간 화면이 그 말을 받아 날짜나 카드를 연다(#286).
-    if (request.command == VoiceCommand.CALENDAR || request.command == VoiceCommand.BRIEF_CARDS) {
-        targets.handOff(request.text)
-    }
-    when (request.command) {
-        VoiceCommand.HOME -> selectTab(MedicalMateTab.HOME)
-        VoiceCommand.CALENDAR -> selectTab(MedicalMateTab.CALENDAR)
-        VoiceCommand.RECORD -> selectTab(MedicalMateTab.RECORD)
-        VoiceCommand.PROFILE -> navigate(MyProfileDestination) { launchSingleTop = true }
+    val command = request.command
+    val tab = voiceTabOf(command)
+    val text = request.text
+    when (command) {
+        VoiceCommand.HOME, VoiceCommand.RECORD -> selectTab(tab)
+        VoiceCommand.CALENDAR ->
+            if (DATE_HINT.containsMatchIn(text)) {
+                targets.handOff(text)
+                openTabRoot(tab)
+            } else {
+                selectTab(tab)
+            }
+
         VoiceCommand.BACK -> if (previousBackStackEntry != null) popBackStack()
-        // "오른쪽 어깨가 아파"의 부위를 증상 정리가 바로 고른다(#284).
-        VoiceCommand.INTAKE -> navigate(IntakeDestination(null, spoken = request.text))
-        // 말한 날, 없으면 오늘의 일자 화면을 열고 그 말을 넘긴다. 그 화면이 기록을 시작한다(#288).
+        VoiceCommand.INTAKE -> openOn(tab, IntakeDestination(null, spoken = text))
         VoiceCommand.VISIT_RECORD -> {
             val today = LocalDate.now()
-            val day = (parseVoiceDate(request.text, today) as? VoiceDate.Day)?.date ?: today
-            targets.handOff(request.text)
-            navigate(CalendarDayDestination(date = day.toString()))
+            val day = (parseVoiceDate(text, today) as? VoiceDate.Day)?.date ?: today
+            targets.handOff(text)
+            openOn(tab, CalendarDayDestination(date = day.toString()))
         }
-        VoiceCommand.BRIEF_CARDS -> navigate(BriefCardListDestination) { launchSingleTop = true }
+
+        VoiceCommand.BRIEF_CARDS -> {
+            targets.handOff(text)
+            openOn(tab, BriefCardListDestination)
+        }
+
+        VoiceCommand.PROFILE -> openOn(tab, MyProfileDestination)
         VoiceCommand.SCHEDULE_ADD ->
-            navigate(ScheduleAddDestination(sharedText = request.text.takeIf(::mentionsSchedule), voice = true))
+            openOn(tab, ScheduleAddDestination(sharedText = text.takeIf(::mentionsSchedule), voice = true))
+    }
+}
+
+/**
+ * [tab]의 첫 화면으로 돌아간 뒤 [destination]을 연다. 이미 [destination]과 같은 화면이 맨 위에 있으면 그대로
+ * 둔다 — 쓰던 것을 버리고 새로 열지 않는다.
+ */
+private fun NavHostController.openOn(tab: MedicalMateTab, destination: Any) {
+    if (currentDestination?.hasRoute(destination::class) == true) return
+    openTabRoot(tab)
+    navigate(destination) { launchSingleTop = true }
+}
+
+/**
+ * [tab]의 첫 화면으로 간다. 탭을 누를 때와 달리 그 탭에 저장해 둔 화면을 되살리지 않는다. 떠나는 탭의 화면은
+ * 탭을 누를 때처럼 저장해 둔다.
+ */
+private fun NavHostController.openTabRoot(tab: MedicalMateTab) {
+    navigate(tab.destination()) {
+        popUpTo(graph.findStartDestination().id) { saveState = true }
+        launchSingleTop = true
     }
 }
 
