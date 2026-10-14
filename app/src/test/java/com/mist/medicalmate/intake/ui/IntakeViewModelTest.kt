@@ -379,6 +379,41 @@ class IntakeViewModelTest {
     }
 
     @Test
+    fun `화면이 가려지면 듣던 것을 멈추고 AI가 답해도 다시 듣지 않는다`() {
+        // 다음 화면으로 가도 이 ViewModel은 백스택에 남는다. 마이크를 잡고 있으면 "헤이 메이트"가 듣히지 않는다(#304).
+        val speech = FakeSpeechToText(keepOpen = true)
+        val viewModel = intakeViewModel(speech = speech)
+        viewModel.openChatStep()
+        viewModel.voice.onVoiceMode()
+        assertTrue(speech.active.value)
+
+        viewModel.voice.onHidden()
+        viewModel.voice.onReplied()
+
+        assertFalse(speech.active.value)
+
+        viewModel.voice.onShown()
+        viewModel.voice.onReplied()
+
+        assertTrue(speech.active.value)
+    }
+
+    @Test
+    fun `문답 단계를 넘어가면 듣던 것을 멈춘다`() {
+        // 네 단계가 한 목적지 안이라 화면이 가려지지 않는다. 3단계에서도 마이크를 잡고 있으면 호출어가 듣히지 않는다(#304).
+        val speech = FakeSpeechToText(keepOpen = true)
+        val viewModel = intakeViewModel(repository = FakeSessionRepository(ends = true), speech = speech)
+        viewModel.openChatStep()
+        viewModel.voice.onVoiceMode()
+        assertTrue(speech.active.value)
+
+        viewModel.onNext("")
+
+        assertEquals(IntakeStep.SEVERITY, viewModel.uiState.value.step)
+        assertFalse(speech.active.value)
+    }
+
+    @Test
     fun `말소리가 들어오면 듣고 있어요가 된다`() {
         val speech = FakeSpeechToText(chunks = listOf(SpeechChunk.Partial("배가")), keepOpen = true)
         val viewModel = intakeViewModel(speech = speech)

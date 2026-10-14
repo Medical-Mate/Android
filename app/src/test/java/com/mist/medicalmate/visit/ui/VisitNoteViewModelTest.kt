@@ -105,6 +105,19 @@ class VisitNoteViewModelTest {
     }
 
     @Test
+    fun `화면이 가려지면 듣던 것을 멈춘다`() {
+        // 다음 화면으로 가도 이 ViewModel은 백스택에 남는다. 마이크를 잡고 있으면 "헤이 메이트"가 듣히지 않는다(#304).
+        val speech = FakeSpeechToText(keepOpen = true)
+        val viewModel = viewModel(speech)
+        viewModel.onVoiceClick()
+        assertTrue(speech.active.value)
+
+        viewModel.onScreenHidden()
+
+        assertFalse(speech.active.value)
+    }
+
+    @Test
     fun `말소리가 들어오면 듣고 있어요가 된다`() {
         val speech = FakeSpeechToText(chunks = listOf(SpeechChunk.Partial("위염")), keepOpen = true)
         val viewModel = viewModel(speech)

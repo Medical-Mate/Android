@@ -154,6 +154,7 @@ internal constructor(private val repository: SessionRepository, speech: SpeechTo
      */
     fun onNext(severityLabel: String) {
         val state = mutableUiState.value
+        leaveChat(state)
         // 단계를 떠날 때 그 단계의 값을 서버에 남긴다. 고를 때마다 보내면 슬라이더를 끄는
         // 동안 요청이 줄줄이 나간다. 둘 다 끝난 문답에도 보낼 수 있어 시점이 자유롭다.
         when (state.step) {
@@ -197,12 +198,23 @@ internal constructor(private val repository: SessionRepository, speech: SpeechTo
      */
     fun onBack() {
         val state = mutableUiState.value
+        leaveChat(state)
         if (state.step == IntakeStep.BODY_PART) {
             if (state.bodyMap.focus != null) bodyMap.onFocusClear()
             return
         }
         mutableUiState.update { it.copy(step = IntakeStep.entries[it.step.ordinal - 1]) }
     }
+}
+
+/**
+ * 문답 단계를 떠날 때 듣던 것을 멈춘다(#304).
+ *
+ * 네 단계가 한 목적지 안에서 넘어가서 화면이 가려지지 않는다. 멈추지 않으면 3단계에서도 마이크를 잡고 있어
+ * "헤이 메이트"가 듣히지 않는다.
+ */
+private fun IntakeViewModel.leaveChat(state: IntakeUiState) {
+    if (state.step == IntakeStep.SYMPTOM_CHAT) voice.stop()
 }
 
 /**
