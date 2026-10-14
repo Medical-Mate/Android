@@ -2,7 +2,6 @@ package com.mist.medicalmate.visit.ui
 
 import androidx.annotation.Keep
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
-import com.mist.medicalmate.core.voice.VoiceFocus
 import com.mist.medicalmate.visit.data.VisitFollowUp
 import java.time.LocalDate
 
@@ -210,8 +209,6 @@ sealed interface VisitRecordUiState {
         val draft: VisitRecordDraft? = null,
         val deleteRequested: Boolean = false,
         val saveFailure: VisitSaveFailure? = null,
-        /** 말로 바뀐 줄(#288). 화면이 그 줄로 옮겨 가고 잠깐 테를 두른다. */
-        val voiceFocus: VoiceFocus<Int>? = null,
     ) : VisitRecordUiState {
         val editing: Boolean get() = draft != null
 

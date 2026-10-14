@@ -79,8 +79,8 @@ internal constructor(
      *
      * 직전 결과의 [labels]를 함께 보낸다. 다시 부를 때 AI 모델을 부르지 않고 재조립만 한다.
      */
-    /** 받아쓴 말(#288). 항목 고치기·지우기, 재방문 날짜, 저장. */
-    internal val voice = VisitRecordVoiceActions(state = { mutableUiState.value }, update = ::update)
+    /** 받아쓴 말(#288). 저장만 한다. 말로는 고치거나 지우지 않는다(#296). */
+    internal val voice = VisitRecordVoiceActions(state = { mutableUiState.value })
 
     fun load(clinic: String?, note: String, visitedOn: LocalDate?) {
         // 흐름이 시작된 캘린더 일자다. 없으면 오늘로 둔다.

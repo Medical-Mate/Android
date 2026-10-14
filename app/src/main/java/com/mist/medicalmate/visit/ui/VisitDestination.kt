@@ -352,11 +352,9 @@ private fun VisitRecordRoute(
         )
     }
 
-    // 항목 고치기·지우기, "재방문 11월 3일로", "저장"(#288). 저장은 확인을 받는다.
+    // "저장"(#288). 확인을 받는다. 말로는 고치거나 지우지 않는다(#296).
     VoiceTargetEffect(VISIT_RECORD_SUGGESTIONS) { text ->
-        viewModel.voice.handle(text, LocalDate.now()) {
-            viewModel.onSaveClick(cardId = route.cardId, onSaved = onSaved)
-        }
+        viewModel.voice.handle(text) { viewModel.onSaveClick(cardId = route.cardId, onSaved = onSaved) }
     }
     val prompt = rememberVoicePrompt()
     val loaded = state is VisitRecordUiState.Content
