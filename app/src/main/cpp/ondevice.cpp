@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstdlib>
+#include <cmath>
 #include <string>
 #include <vector>
 
@@ -148,20 +149,36 @@ bool load_prefix(Session & session, const std::string & prefix) {
 }
 
 /**
- * 문법을 앞에, greedy를 뒤에 건다.
+ * 문법에 맞는 것 가운데 가장 높은 토큰을 고른다. 온도 0이라 greedy다.
  *
- * 온도 0이라 greedy다. 문법이 앞에 있어야 문법에 맞지 않는 토큰을 먼저 지운 뒤 가장 높은 것을
- * 고른다. 뒤에 두면 고른 것이 문법에 맞지 않을 수 있다.
+ * **먼저 가장 높은 토큰 하나만 문법에 대어 본다.** 맞으면 그것을 쓰고, 어긋날 때만 어휘 전체를
+ * 문법에 거른다. llama-server가 이렇게 한다. 처음에는 매 토큰 어휘 전체(약 24만)를 문법에
+ * 걸렀는데, 그 일이 CPU에서 토큰마다 돌아 같은 기기에서 생성이 15.8에서 5 tok/s대로 떨어졌다.
+ * 결과는 같다 — 가장 높은 토큰이 문법에 맞으면 걸러도 그것이 남는다.
  */
-llama_sampler * make_sampler(const llama_vocab * vocab, const std::string & grammar) {
-    llama_sampler * grammar_sampler = llama_sampler_init_grammar(vocab, grammar.c_str(), "root");
-    if (grammar_sampler == nullptr) {
-        return nullptr;
+llama_token pick(llama_context * context, const llama_vocab * vocab, llama_sampler * grammar) {
+    const float * logits = llama_get_logits_ith(context, -1);
+    const int32_t vocab_size = llama_vocab_n_tokens(vocab);
+    const llama_token best = static_cast<llama_token>(std::max_element(logits, logits + vocab_size) - logits);
+
+    llama_token_data single = {best, logits[best], 0.0f};
+    llama_token_data_array one = {&single, 1, -1, false};
+    llama_sampler_apply(grammar, &one);
+    if (std::isfinite(one.data[0].logit)) {
+        return best;
     }
-    llama_sampler * chain = llama_sampler_chain_init(llama_sampler_chain_default_params());
-    llama_sampler_chain_add(chain, grammar_sampler);
-    llama_sampler_chain_add(chain, llama_sampler_init_greedy());
-    return chain;
+
+    std::vector<llama_token_data> candidates(static_cast<size_t>(vocab_size));
+    for (llama_token id = 0; id < vocab_size; ++id) {
+        candidates[static_cast<size_t>(id)] = {id, logits[id], 0.0f};
+    }
+    llama_token_data_array all = {candidates.data(), candidates.size(), -1, false};
+    llama_sampler_apply(grammar, &all);
+    const auto chosen =
+            std::max_element(all.data, all.data + all.size, [](const llama_token_data & a, const llama_token_data & b) {
+                return a.logit < b.logit;
+            });
+    return chosen->id;
 }
 
 std::string piece(const llama_vocab * vocab, llama_token token) {
@@ -302,8 +319,8 @@ JNIEXPORT jbyteArray JNICALL Java_com_mist_medicalmate_core_ondevice_OnDeviceNat
         return nullptr;
     }
 
-    llama_sampler * sampler = make_sampler(vocab, from_bytes(env, grammar_bytes));
-    if (sampler == nullptr) {
+    llama_sampler * grammar = llama_sampler_init_grammar(vocab, from_bytes(env, grammar_bytes).c_str(), "root");
+    if (grammar == nullptr) {
         __android_log_print(ANDROID_LOG_ERROR, TAG, "문법을 읽지 못했다");
         return nullptr;
     }
@@ -311,17 +328,18 @@ JNIEXPORT jbyteArray JNICALL Java_com_mist_medicalmate_core_ondevice_OnDeviceNat
     std::string output;
     bool failed = false;
     for (jint i = 0; i < max_tokens; ++i) {
-        llama_token token = llama_sampler_sample(sampler, session->context, -1);
+        llama_token token = pick(session->context, vocab, grammar);
         if (llama_vocab_is_eog(vocab, token)) {
             break;
         }
+        llama_sampler_accept(grammar, token);
         output += piece(vocab, token);
         if (llama_decode(session->context, llama_batch_get_one(&token, 1)) != 0) {
             failed = true;
             break;
         }
     }
-    llama_sampler_free(sampler);
+    llama_sampler_free(grammar);
 
     return failed ? nullptr : to_bytes(env, output);
 }
