@@ -80,6 +80,9 @@ data class VoicePrompt(val message: VoiceText? = null, val question: VoiceText? 
 class VoiceTargets {
     private val stack = mutableListOf<VoiceTarget>()
 
+    /** 화면마다 추천하는 말(#292). 화면의 상태에 따라 달라질 수 있어 부를 때 읽는다. */
+    private val suggestionsOf = mutableMapOf<VoiceTarget, () -> List<VoiceSuggestion>>()
+
     private val scrollers = mutableListOf<VoiceScroller>()
 
     private var handoff: Pair<String, Long>? = null
@@ -88,18 +91,28 @@ class VoiceTargets {
 
     val current: VoiceTarget? get() = synchronized(stack) { stack.lastOrNull() }
 
+    /** 지금 화면이 추천하는 말. 없으면 비어 있고, 막대가 공통 예시로 채운다. */
+    val suggestions: List<VoiceSuggestion>
+        get() = synchronized(stack) { stack.lastOrNull()?.let { suggestionsOf[it]?.invoke() }.orEmpty() }
+
     /** 지금 화면에서 말로 굴릴 것(#284). 시트처럼 화면 위에 뜬 것이 나중에 등록해 맨 위가 된다. */
     val currentScroller: VoiceScroller? get() = synchronized(scrollers) { scrollers.lastOrNull() }
 
     /** 화면이 먼저 건 말. 대화가 이어지는 동안만 받는다. */
     val prompts: SharedFlow<VoicePrompt> = asked.asSharedFlow()
 
-    fun register(target: VoiceTarget) {
-        synchronized(stack) { stack += target }
+    fun register(target: VoiceTarget, suggestions: () -> List<VoiceSuggestion> = { emptyList() }) {
+        synchronized(stack) {
+            stack += target
+            suggestionsOf[target] = suggestions
+        }
     }
 
     fun unregister(target: VoiceTarget) {
-        synchronized(stack) { stack.remove(target) }
+        synchronized(stack) {
+            stack.remove(target)
+            suggestionsOf.remove(target)
+        }
     }
 
     /**
@@ -145,14 +158,18 @@ val LocalVoiceTargets = staticCompositionLocalOf<VoiceTargets?> { null }
  * 이 화면이 알아듣는 말을 등록한다. 화면이 컴포지션을 떠나면 지운다.
  *
  * [target]은 매번 새로 만들어도 된다. 등록은 한 번만 하고 부를 때 가장 최근 것을 쓴다.
+ *
+ * @param suggestions 이 화면에서 추천하는 말(#292). 부를 때와 못 알아들었을 때 막대 위에 선다. 화면의
+ *   단계에 따라 바뀌어도 된다. 부를 때 가장 최근 것을 읽는다.
  */
 @Composable
-fun VoiceTargetEffect(target: VoiceTarget) {
+fun VoiceTargetEffect(suggestions: List<VoiceSuggestion> = emptyList(), target: VoiceTarget) {
     val targets = LocalVoiceTargets.current ?: return
     val latest by rememberUpdatedState(target)
+    val latestSuggestions by rememberUpdatedState(suggestions)
     DisposableEffect(targets) {
         val registered = VoiceTarget { text -> latest.handle(text) }
-        targets.register(registered)
+        targets.register(registered) { latestSuggestions }
         onDispose { targets.unregister(registered) }
     }
     // 이 화면을 연 말이 넘어왔으면 받아 처리하고 그 답을 막대에 건다(#286).

@@ -47,7 +47,9 @@ private fun BriefCardListRoute(
     LaunchedEffect(Unit) { viewModel.load() }
 
     // "두 번째", "두통 카드", "9월 4일 카드"로 찾아 연다(#286). 들어오면 무엇을 열지 묻는다.
-    VoiceTargetEffect { text -> viewModel.onVoice(text, LocalDate.now()) { id -> onCardClick(id) } }
+    VoiceTargetEffect(CARD_LIST_SUGGESTIONS) { text ->
+        viewModel.onVoice(text, LocalDate.now()) { id -> onCardClick(id) }
+    }
     val prompt = rememberVoicePrompt()
     LaunchedEffect(Unit) { prompt(VoicePrompt(question = VoiceText(R.string.voice_card_ask))) }
 

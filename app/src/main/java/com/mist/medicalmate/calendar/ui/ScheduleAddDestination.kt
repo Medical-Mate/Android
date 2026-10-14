@@ -173,7 +173,7 @@ private fun ScheduleAddRoute(
     }
 
     // "헤이 메이트" 다음의 말(#282). 화면의 칸과 버튼을 모두 말로 부른다. 저장과 나가기는 확인을 받는다.
-    VoiceTargetEffect { text ->
+    VoiceTargetEffect(SCHEDULE_ADD_SUGGESTIONS) { text ->
         viewModel.voice.handle(
             text,
             ScheduleAddVoiceRoutes(

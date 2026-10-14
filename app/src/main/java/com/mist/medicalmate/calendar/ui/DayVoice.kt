@@ -52,7 +52,7 @@ internal fun CalendarDayVoice(
     onRecordOpen: (String) -> Unit,
     onCardOpen: (String) -> Unit,
 ) {
-    VoiceTargetEffect { text ->
+    VoiceTargetEffect(CALENDAR_DAY_SUGGESTIONS) { text ->
         val voice = parseDayVoice(text)
         val state = voice?.let { withTimeoutOrNull(DAY_WAIT_MS) { uiState.first { it != null } } }
         val card = state?.card

@@ -137,7 +137,7 @@ internal fun NavGraphBuilder.clinicConfirmDestination(
         val confirm = { onConfirmed(route.clinic, route.cardId, route.cardTitle, route.visitedOn) }
         val other = { onOther(route.cardId, route.cardTitle, route.visitedOn) }
         // "네, 맞아요" / "다른 병원이에요"(#288).
-        VoiceTargetEffect { text ->
+        VoiceTargetEffect(CLINIC_CONFIRM_SUGGESTIONS) { text ->
             when (parseClinicConfirm(text)) {
                 true -> {
                     confirm()
@@ -251,7 +251,7 @@ private fun HospitalPickRoute(
         }
     }
 
-    VoiceTargetEffect { text -> viewModel.onVoice(text, submit) }
+    VoiceTargetEffect(HOSPITAL_PICK_SUGGESTIONS) { text -> viewModel.onVoice(text, submit) }
 
     // 말로 찾은 결과(#282). 하나로 좁혀졌으면 고르고 마치며 무엇을 골랐는지 알린다. 여럿이거나 없으면
     // 막대로 되묻는다. 사용자는 몇 번째인지, 동네나 지점 이름, 다른 병원 이름으로 답한다.
@@ -307,7 +307,7 @@ private fun VisitNoteRoute(
     val askVoice = rememberMicPermission(onGranted = viewModel::onVoiceClick, onDenied = viewModel::onMicDenied)
 
     // 막대가 메모를 받아 적는다(#288). "다 했어"면 적은 원문을 들고 1q-1로 간다.
-    VoiceTargetEffect { text -> viewModel.onVoiceNote(text, onSaved) }
+    VoiceTargetEffect(VISIT_NOTE_SUGGESTIONS) { text -> viewModel.onVoiceNote(text, onSaved) }
     val prompt = rememberVoicePrompt()
     LaunchedEffect(Unit) { prompt(VoicePrompt(question = VoiceText(R.string.voice_note_ask))) }
 
@@ -353,7 +353,7 @@ private fun VisitRecordRoute(
     }
 
     // 항목 고치기·지우기, "재방문 11월 3일로", "저장"(#288). 저장은 확인을 받는다.
-    VoiceTargetEffect { text ->
+    VoiceTargetEffect(VISIT_RECORD_SUGGESTIONS) { text ->
         viewModel.voice.handle(text, LocalDate.now()) {
             viewModel.onSaveClick(cardId = route.cardId, onSaved = onSaved)
         }

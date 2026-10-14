@@ -170,7 +170,7 @@ private fun IntakeVoice(state: IntakeUiState, spoken: String?, viewModel: Intake
             next = { viewModel.onNext(labels.getValue(viewModel.uiState.value.severity)) },
             severityLabel = { labels.getValue(it) },
         )
-    VoiceTargetEffect { text -> viewModel.voiceCommands.handle(text, routes) }
+    VoiceTargetEffect(state.voiceSuggestions()) { text -> viewModel.voiceCommands.handle(text, routes) }
 
     val prompt = rememberVoicePrompt()
     // 손으로 큰 부위를 짚어 들어가도 그 안에 고를 수 있는 곳을 읽어 준다.
@@ -201,7 +201,7 @@ private fun IntakeVoice(state: IntakeUiState, spoken: String?, viewModel: Intake
 /** 1c-5를 말로 고른다(#284). "카드 만들어 줘", "병원부터 찾을래". */
 @Composable
 private fun IntakeDoneVoice(onCard: () -> Unit, onHospital: () -> Unit) {
-    VoiceTargetEffect { text ->
+    VoiceTargetEffect(INTAKE_DONE_SUGGESTIONS) { text ->
         when (parseDoneVoice(text)) {
             IntakeDoneChoice.CARD -> {
                 onCard()

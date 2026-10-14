@@ -18,6 +18,7 @@ import com.mist.medicalmate.core.voice.parseVoiceScroll
  * @param say 막대에 적는다. `confirming`이면 "네"를 기다리는 물음이다. `question`은 화면이 되묻는
  *   것이다. 비우면 지난 물음을 지운다.
  * @param command 전역 명령을 그래프에 넘긴다.
+ * @param suggest 지금 화면의 추천 말을 막대 위에 띄운다(#292). 못 알아들었을 때 부른다.
  * @param shown 지금 막대에 떠 있는 것. 못 알아들었을 때 물음을 남기고, "다시 보여 줘"에 그대로 다시
  *   띄운다(#284).
  */
@@ -27,6 +28,7 @@ internal class VoiceConversation(
     private val say: (message: VoiceMessage, confirming: Boolean, question: VoiceMessage?) -> Unit,
     private val command: (VoiceCommandRequest) -> Unit,
     private val shown: () -> VoicePanel? = { null },
+    private val suggest: () -> Unit = {},
 ) {
     /** 아직 "네"를 기다리는 일. */
     private var pending: VoiceReply.Confirm? = null
@@ -133,6 +135,8 @@ internal class VoiceConversation(
                 false,
                 shown()?.question ?: VoiceMessage(R.string.voice_command_hint),
             )
+            // 무엇을 말하면 되는지 모를 때다. 이 화면에서 알아듣는 말을 보여 준다.
+            suggest()
         } else {
             command(VoiceCommandRequest(parsed, text))
             say(VoiceMessage(parsed.movedMessage()), false, null)

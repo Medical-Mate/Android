@@ -111,7 +111,7 @@ private fun CalendarMonthRoute(
 
     // "20일", "내일", "다음 주 화요일"이면 그 날을, "12월", "다음 달"이면 그 달로(#286). 다른 화면에서
     // "10월 20일 일정 보여줘"로 들어오면 그 말도 여기서 받는다.
-    VoiceTargetEffect { text ->
+    VoiceTargetEffect(CALENDAR_MONTH_SUGGESTIONS) { text ->
         when (val voice = parseVoiceDate(text, state.today, state.month)) {
             is VoiceDate.Day -> {
                 onDayOpen(voice.date, null)

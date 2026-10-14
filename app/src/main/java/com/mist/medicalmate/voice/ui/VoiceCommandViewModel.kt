@@ -11,6 +11,7 @@ import com.mist.medicalmate.core.speech.VoiceWakeTrace
 import com.mist.medicalmate.core.speech.WakeWordDetector
 import com.mist.medicalmate.core.speech.WakeWordModelState
 import com.mist.medicalmate.core.voice.VoicePrompt
+import com.mist.medicalmate.core.voice.VoiceSuggestion
 import com.mist.medicalmate.core.voice.VoiceTargets
 import com.mist.medicalmate.core.voice.VoiceText
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -45,6 +46,8 @@ typealias VoiceMessage = VoiceText
  * @param confirming [message]가 "할까요?"이고 "네"를 기다린다.
  * @param question 화면이 되묻는 것(#282). 빠진 칸이나 골라야 할 것이 있을 때 사용자가 무엇을
  *   말하면 되는지 적는다. 말하는 중에는 들리는 글이 이 자리를 잠깐 쓴다.
+ * @param suggestions 막대 위에 띄우는 추천 말(#292). 부를 때와 못 알아들었을 때만 서고, 무엇이든 처리하면
+ *   걷는다.
  */
 data class VoicePanel(
     val voice: MedicalMateVoiceState = MedicalMateVoiceState.IDLE,
@@ -52,6 +55,7 @@ data class VoicePanel(
     val message: VoiceMessage = VoiceMessage(R.string.voice_command_hint),
     val confirming: Boolean = false,
     val question: VoiceMessage? = null,
+    val suggestions: List<VoiceSuggestion> = emptyList(),
 )
 
 /** 알아들은 전역 명령과 그 말 전체. 일정 추가는 말 속의 날짜·병원까지 들고 간다. */
@@ -168,7 +172,7 @@ internal constructor(
         trace.log { "호출됨. 대화를 시작한다" }
         val detecting = detectorJob
         detecting?.cancel()
-        mutableUiState.update { it.copy(panel = VoicePanel()) }
+        mutableUiState.update { it.copy(panel = VoicePanel(suggestions = suggestionsHere())) }
         commandJob =
             viewModelScope.launch {
                 detecting?.join()
@@ -196,8 +200,16 @@ internal constructor(
                 targets = targets,
                 trace = trace,
                 say = { message, confirming, question ->
-                    updatePanel { it.copy(message = message, confirming = confirming, question = question) }
+                    updatePanel {
+                        it.copy(
+                            message = message,
+                            confirming = confirming,
+                            question = question,
+                            suggestions = emptyList(),
+                        )
+                    }
                 },
+                suggest = { updatePanel { it.copy(suggestions = suggestionsHere()) } },
                 command = { request -> mutableUiState.update { it.copy(command = request) } },
                 shown = { mutableUiState.value.panel },
             )
@@ -216,7 +228,9 @@ internal constructor(
     private suspend fun hear(event: Heard, conversation: VoiceConversation): Boolean = when (event) {
         is Heard.Asked -> {
             val prompt = event.prompt
-            updatePanel { it.copy(message = prompt.message ?: it.message, question = prompt.question) }
+            updatePanel {
+                it.copy(message = prompt.message ?: it.message, question = prompt.question, suggestions = emptyList())
+            }
             true
         }
 
@@ -244,6 +258,9 @@ internal constructor(
                 }
             }
     }
+
+    /** 지금 화면이 추천하는 말. 화면이 따로 두지 않았으면 공통 예시다(#292). */
+    private fun suggestionsHere(): List<VoiceSuggestion> = targets.suggestions.ifEmpty { GLOBAL_SUGGESTIONS }
 
     /** 대화가 듣는 것. 받아쓴 말, 화면이 건 말, 받아쓰기가 끝난 것. */
     private sealed interface Heard {

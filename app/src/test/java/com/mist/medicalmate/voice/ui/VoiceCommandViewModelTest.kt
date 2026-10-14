@@ -10,6 +10,7 @@ import com.mist.medicalmate.core.speech.WakeWordModelState
 import com.mist.medicalmate.core.voice.VoicePrompt
 import com.mist.medicalmate.core.voice.VoiceReply
 import com.mist.medicalmate.core.voice.VoiceScroll
+import com.mist.medicalmate.core.voice.VoiceSuggestion
 import com.mist.medicalmate.core.voice.VoiceTarget
 import com.mist.medicalmate.core.voice.VoiceText
 import kotlinx.coroutines.Dispatchers
@@ -530,6 +531,59 @@ class VoiceCommandViewModelTest {
         detector.wake()
 
         assertEquals(VoiceText(R.string.voice_scroll_end_up), viewModel.uiState.value.panel?.message)
+    }
+
+    @Test
+    fun `부르면 지금 화면의 추천 말을 띄우고 화면이 없으면 공통 예시를 띄운다`() = runTest {
+        val viewModel = viewModel(speech = FakeSpeechToText(usable = true, keepOpen = true)).ready()
+
+        detector.wake()
+        assertEquals(GLOBAL_SUGGESTIONS, viewModel.uiState.value.panel?.suggestions)
+
+        viewModel.dismiss()
+        val here = listOf(VoiceSuggestion(R.string.voice_suggest_month_next, R.string.voice_suggest_month_next_do, 0))
+        viewModel.targets.register(VoiceTarget { VoiceReply.NotMine }) { here }
+        detector.wake()
+        assertEquals(here, viewModel.uiState.value.panel?.suggestions)
+    }
+
+    @Test
+    fun `못 알아들으면 추천 말을 다시 띄우고 알아들으면 걷는다`() = runTest {
+        val speech =
+            FakeSpeechToText(
+                usable = true,
+                chunks = listOf(SpeechChunk.Final("20일"), SpeechChunk.Final("음 그게")),
+                keepOpen = true,
+            )
+        val viewModel = viewModel(speech = speech).ready()
+        val here = listOf(VoiceSuggestion(R.string.voice_suggest_month_day, R.string.voice_suggest_month_day_do, 0))
+        var heard = 0
+        viewModel.targets.register(
+            VoiceTarget {
+                heard++
+                if (heard == 1) VoiceReply.Done(R.string.voice_calendar_day, listOf("10월 20일")) else VoiceReply.NotMine
+            },
+        ) { here }
+
+        detector.wake()
+
+        // 첫 말은 알아들어 걷혔다가, 둘째 말을 못 알아들어 다시 섰다.
+        assertEquals(here, viewModel.uiState.value.panel?.suggestions)
+        assertEquals(
+            VoiceMessage(R.string.voice_command_missed, listOf("음 그게")),
+            viewModel.uiState.value.panel?.message,
+        )
+    }
+
+    @Test
+    fun `알아들은 말 뒤에는 추천 말을 걷는다`() = runTest {
+        val speech = FakeSpeechToText(usable = true, chunks = listOf(SpeechChunk.Final("20일")), keepOpen = true)
+        val viewModel = viewModel(speech = speech).ready()
+        viewModel.targets.register(VoiceTarget { VoiceReply.Done(R.string.voice_calendar_day, listOf("10월 20일")) })
+
+        detector.wake()
+
+        assertEquals(emptyList<VoiceSuggestion>(), viewModel.uiState.value.panel?.suggestions)
     }
 
     private fun viewModel(
