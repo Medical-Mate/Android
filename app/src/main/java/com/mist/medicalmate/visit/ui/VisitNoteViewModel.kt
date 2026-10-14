@@ -162,6 +162,16 @@ constructor(private val clock: Clock, private val speech: SpeechToText) : ViewMo
         }
     }
 
+    /**
+     * 화면이 가려졌다(#304). 다음 화면으로 갔거나 앱이 뒤로 갔다. 듣던 것을 멈춘다.
+     *
+     * 다음 화면으로 가도 이 ViewModel은 백스택에 남아 받아쓰기가 이어졌고, 그동안 호출어 감지기가 마이크를
+     * 내주고 쉬어서 "헤이 메이트"가 듣히지 않았다. 패널은 그대로 두고, 돌아와 마이크를 누르면 다시 듣는다.
+     */
+    fun onScreenHidden() {
+        dictation.stop()
+    }
+
     /** 음성 패널의 "직접 입력할게요". 패널을 닫고 적던 글로 돌아간다. */
     fun onTypeInsteadClick() {
         dictation.stop()

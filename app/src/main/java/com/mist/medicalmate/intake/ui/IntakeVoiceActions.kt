@@ -1,6 +1,7 @@
 package com.mist.medicalmate.intake.ui
 
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
+import com.mist.medicalmate.core.model.IntakeStep
 import com.mist.medicalmate.core.speech.Dictation
 import com.mist.medicalmate.core.speech.SpeechToText
 import kotlinx.coroutines.CoroutineScope
@@ -34,6 +35,12 @@ class IntakeVoiceActions(
             onVoice = { voice -> update { it.copy(voice = voice) } },
             onDictated = ::onDictated,
         )
+
+    /**
+     * 화면이 보이는지(#304). 다음 화면으로 가도 이 ViewModel은 백스택에 남아 있어, AI 답이 그 뒤에 와도 다시
+     * 듣기 시작했다. 안 보이는 화면이 마이크를 잡고 있으면 호출어 감지기가 쉬어서 "헤이 메이트"가 듣히지 않는다.
+     */
+    private var shown = true
 
     /**
      * 받아쓴 글이 왔다.
@@ -90,7 +97,8 @@ class IntakeVoiceActions(
      * 화면으로 가는 동안 녹음이 남는다.
      */
     fun onReplied() {
-        if (state().inputMode != IntakeInputMode.VOICE) return
+        // 답이 늦게 와서 그 사이 문답 단계를 떠났으면 듣지 않는다(#304).
+        if (!shown || state().step != IntakeStep.SYMPTOM_CHAT || state().inputMode != IntakeInputMode.VOICE) return
         dictation.start("")
     }
 
@@ -99,9 +107,24 @@ class IntakeVoiceActions(
         dictation.onDenied()
     }
 
-    /** 글로 바꾸거나 화면을 떠날 때. 듣던 것을 멈춘다. */
+    /** 글로 바꿀 때. 듣던 것을 멈춘다. */
     fun stop() {
         dictation.stop()
+    }
+
+    /**
+     * 화면이 가려졌다(#304). 다음 화면으로 갔거나 앱이 뒤로 갔다. 듣던 것을 멈추고, 돌아오기 전에는 다시 듣지 않는다.
+     *
+     * 패널은 그대로 둔다. 돌아와서 마이크를 누르면 다시 듣는다.
+     */
+    fun onHidden() {
+        shown = false
+        dictation.stop()
+    }
+
+    /** 화면이 다시 보인다. */
+    fun onShown() {
+        shown = true
     }
 
     /** 이 기기에서 음성을 쓸 수 있는지. 쓸 수 없으면 화면이 마이크를 그리지 않는다. */

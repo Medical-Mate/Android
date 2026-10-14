@@ -5,6 +5,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
@@ -301,6 +303,9 @@ private fun VisitNoteRoute(
 
     // 이 기기에서 음성을 쓸 수 있는지. 쓸 수 없으면 마이크를 그리지 않는다.
     LaunchedEffect(Unit) { viewModel.checkVoice() }
+    // 화면이 가려지면 받아쓰기를 멈춘다(#304). 이 엔트리는 백스택에 남아서, 멈추지 않으면 다른 화면에서도 마이크를
+    // 잡고 있어 "헤이 메이트"가 듣히지 않는다.
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.onScreenHidden() }
 
     // 권한은 마이크를 누를 때 묻는다. 화면을 열자마자 묻지 않는다.
     val askMic = rememberMicPermission(onGranted = viewModel::onMicClick, onDenied = viewModel::onMicDenied)
