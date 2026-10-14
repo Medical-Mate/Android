@@ -137,6 +137,9 @@ internal class VoiceConversation(
             )
             // 무엇을 말하면 되는지 모를 때다. 이 화면에서 알아듣는 말을 보여 준다.
             suggest()
+        } else if (parsed == VoiceCommand.BACK && !targets.canGoBack) {
+            // 첫 화면이다(#298). 옮기지 않으므로 "돌아갔어요"라고 하면 틀린 말이다.
+            say(VoiceMessage(R.string.voice_moved_back_none), false, null)
         } else {
             command(VoiceCommandRequest(parsed, text))
             say(VoiceMessage(parsed.movedMessage()), false, null)

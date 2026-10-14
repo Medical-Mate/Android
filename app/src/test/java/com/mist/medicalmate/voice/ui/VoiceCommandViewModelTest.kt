@@ -598,6 +598,30 @@ class VoiceCommandViewModelTest {
         assertEquals(many.take(3), viewModel.uiState.value.panel?.suggestions)
     }
 
+    @Test
+    fun `돌아갈 화면이 없으면 뒤로라고 해도 옮기지 않고 그렇다고 한다`() = runTest {
+        val speech = FakeSpeechToText(usable = true, chunks = listOf(SpeechChunk.Final("뒤로 가")), keepOpen = true)
+        val viewModel = viewModel(speech = speech).ready()
+        viewModel.targets.canGoBack = false
+
+        detector.wake()
+
+        assertNull(viewModel.uiState.value.command)
+        assertEquals(VoiceMessage(R.string.voice_moved_back_none), viewModel.uiState.value.panel?.message)
+    }
+
+    @Test
+    fun `돌아갈 화면이 있으면 뒤로를 넘긴다`() = runTest {
+        val speech = FakeSpeechToText(usable = true, chunks = listOf(SpeechChunk.Final("뒤로 가")), keepOpen = true)
+        val viewModel = viewModel(speech = speech).ready()
+        viewModel.targets.canGoBack = true
+
+        detector.wake()
+
+        assertEquals(VoiceCommand.BACK, viewModel.uiState.value.command?.command)
+        assertEquals(VoiceMessage(R.string.voice_moved_back), viewModel.uiState.value.panel?.message)
+    }
+
     private fun viewModel(
         wake: FakeVoiceWake = FakeVoiceWake(usable = true, enabled = true, model = WakeWordModelState.Ready),
         speech: FakeSpeechToText = FakeSpeechToText(usable = true),

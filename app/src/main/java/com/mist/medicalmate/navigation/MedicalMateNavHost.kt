@@ -289,17 +289,18 @@ private fun NavHostController.homeCallbacks(): HomeCallbacks = HomeCallbacks(
  * `launchSingleTop`은 같은 탭을 다시 눌렀을 때 같은 화면이 두 장 쌓이는 것을 막는다.
  */
 internal fun NavHostController.selectTab(tab: MedicalMateTab) {
-    val destination =
-        when (tab) {
-            MedicalMateTab.RECORD -> RecordDestination
-            MedicalMateTab.HOME -> HomeDestination
-            MedicalMateTab.CALENDAR -> CalendarDestination
-        }
-    navigate(destination) {
+    navigate(tab.destination()) {
         popUpTo(graph.findStartDestination().id) { saveState = true }
         launchSingleTop = true
         restoreState = true
     }
+}
+
+/** 탭의 첫 화면. */
+internal fun MedicalMateTab.destination(): Any = when (this) {
+    MedicalMateTab.RECORD -> RecordDestination
+    MedicalMateTab.HOME -> HomeDestination
+    MedicalMateTab.CALENDAR -> CalendarDestination
 }
 
 /**
