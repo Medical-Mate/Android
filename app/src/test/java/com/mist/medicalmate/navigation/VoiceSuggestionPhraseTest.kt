@@ -89,8 +89,6 @@ class VoiceSuggestionPhraseTest {
         assertNull(parseNoteVoice("약은 식후에 드시래요"))
         assertEquals(NoteVoice.UNDO, parseNoteVoice("방금 거 지워"))
         assertEquals(NoteVoice.DONE, parseNoteVoice("다 했어"))
-        assertTrue(parseRecordVoice("약은 타이레놀로 바꿔 줘", today) is RecordVoice.Edit)
-        assertTrue(parseRecordVoice("재방문 11월 3일로", today) is RecordVoice.FollowUp)
-        assertEquals(RecordVoice.Save, parseRecordVoice("저장해 줘", today))
+        assertEquals(RecordVoice.SAVE, parseRecordVoice("저장해 줘"))
     }
 }

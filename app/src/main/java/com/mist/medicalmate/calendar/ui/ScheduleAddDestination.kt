@@ -10,8 +10,10 @@ import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.mist.medicalmate.R
 import com.mist.medicalmate.core.notification.rememberNotificationPermission
 import com.mist.medicalmate.core.voice.VoicePrompt
+import com.mist.medicalmate.core.voice.VoiceReply
 import com.mist.medicalmate.core.voice.VoiceTargetEffect
 import com.mist.medicalmate.core.voice.rememberVoicePrompt
 import com.mist.medicalmate.navigation.ConsumeResult
@@ -172,18 +174,17 @@ private fun ScheduleAddRoute(
         viewModel.onSaveClick(onSaved)
     }
 
-    // "헤이 메이트" 다음의 말(#282). 화면의 칸과 버튼을 모두 말로 부른다. 저장과 나가기는 확인을 받는다.
-    VoiceTargetEffect(SCHEDULE_ADD_SUGGESTIONS) { text ->
-        viewModel.voice.handle(
-            text,
-            ScheduleAddVoiceRoutes(
-                save = save,
-                exit = onExit,
-                openHospital = { onHospitalPick(state.hospital, false) },
-                newCard = onCardNew,
-            ),
-        )
-    }
+    ScheduleAddVoiceTarget(
+        editing = state.appointmentId != null,
+        voice = viewModel.voice,
+        routes =
+        ScheduleAddVoiceRoutes(
+            save = save,
+            exit = onExit,
+            openHospital = { onHospitalPick(state.hospital, false) },
+            newCard = onCardNew,
+        ),
+    )
 
     ScheduleAddScreen(
         state = state,
@@ -202,4 +203,22 @@ private fun ScheduleAddRoute(
         ),
         modifier = modifier,
     )
+}
+
+/**
+ * "헤이 메이트" 다음의 말(#282). 화면의 칸과 버튼을 모두 말로 부른다. 저장과 나가기는 확인을 받는다.
+ *
+ * **이미 잡은 일정을 고치러 연 화면이면 말로 하지 않는다**(#296) — 여기서의 저장이 곧 저장된 일정의 수정이다.
+ * 이 화면의 말이면 화면에서 하라고 하고, 아니면 "뒤로" 같은 전역 명령으로 넘긴다. 새 일정을 적는 중에
+ * 잘못 넣은 것을 말로 고치고 지우는 것은 그대로다.
+ */
+@Composable
+private fun ScheduleAddVoiceTarget(editing: Boolean, voice: ScheduleAddVoiceActions, routes: ScheduleAddVoiceRoutes) {
+    VoiceTargetEffect(if (editing) emptyList() else SCHEDULE_ADD_SUGGESTIONS) { text ->
+        when {
+            !editing -> voice.handle(text, routes)
+            parseScheduleAddVoice(text) == null -> VoiceReply.NotMine
+            else -> VoiceReply.Done(R.string.voice_by_hand)
+        }
+    }
 }

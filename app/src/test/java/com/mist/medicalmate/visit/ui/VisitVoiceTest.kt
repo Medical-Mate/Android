@@ -13,7 +13,6 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.Clock
@@ -92,50 +91,37 @@ class VisitVoiceTest {
     // 1q-1
 
     @Test
-    fun `기록 확인의 말을 읽는다`() {
-        assertEquals(RecordVoice.FollowUp(LocalDate.of(2026, 11, 3)), parseRecordVoice("재방문 11월 3일로 바꿔 줘", TODAY))
-        assertEquals(RecordVoice.Edit("약", null, "타이레놀"), parseRecordVoice("약은 타이레놀로 바꿔 줘", TODAY))
-        assertEquals("단순 근육통", (parseRecordVoice("소견 고쳐, 단순 근육통", TODAY) as RecordVoice.Edit).value)
-        assertTrue(parseRecordVoice("검사 지워 줘", TODAY) is RecordVoice.Delete)
-        assertEquals(RecordVoice.Save, parseRecordVoice("저장해 줘", TODAY))
-        assertNull(parseRecordVoice("홈으로 가", TODAY))
+    fun `기록 확인에서는 저장만 알아듣고 고치거나 지우는 말은 화면에서 하라고 한다`() {
+        assertEquals(RecordVoice.SAVE, parseRecordVoice("저장해 줘"))
+        assertEquals(RecordVoice.BY_HAND, parseRecordVoice("약은 타이레놀로 바꿔 줘"))
+        assertEquals(RecordVoice.BY_HAND, parseRecordVoice("검사 지워 줘"))
+        assertEquals(RecordVoice.BY_HAND, parseRecordVoice("재방문 11월 3일로 바꿔 줘"))
+        assertNull(parseRecordVoice("홈으로 가"))
     }
 
     @Test
-    fun `항목을 고치고 지우고 고친 줄을 보인다`() {
+    fun `말로는 항목을 고치지 않는다`() {
         val holder = RecordHolder()
+        val before = holder.content
 
-        holder.actions.handle("약은 타이레놀로 바꿔 줘", TODAY) {}
-        assertEquals("타이레놀", holder.content.items[1].value)
-        assertEquals(listOf(1), holder.content.voiceFocus?.targets)
+        val reply = holder.actions.handle("약은 타이레놀로 바꿔 줘") {} as VoiceReply.Done
 
-        holder.actions.handle("첫 번째 항목 지워 줘", TODAY) {}
-        assertEquals(listOf("약", "재방문"), holder.content.items.map { it.key })
+        assertEquals(R.string.voice_by_hand, reply.message)
+        assertEquals(before, holder.content)
     }
 
     @Test
-    fun `재방문 날짜를 바꾸면 줄과 저장할 날짜가 함께 바뀐다`() {
+    fun `저장은 확인을 받고 편집 중에는 받지 않는다`() {
         val holder = RecordHolder()
-
-        holder.actions.handle("재방문 11월 3일로", TODAY) {}
-
-        assertEquals(LocalDate.of(2026, 11, 3), holder.content.record.followUp?.date)
-        assertEquals("11월 3일 (화)", holder.content.items.first { it.axis == AXIS_FOLLOW_UP }.value)
-    }
-
-    @Test
-    fun `어느 항목인지 모르면 항목을 적어 묻고 저장은 확인을 받는다`() {
-        val holder = RecordHolder()
-
-        val which = holder.actions.handle("그거 고쳐, 타이레놀", TODAY) {} as VoiceReply.Done
-        assertEquals(R.string.voice_record_which, which.message)
-        assertEquals(listOf("· 소견\n· 약\n· 재방문"), which.question?.args)
-
         var saved = 0
-        val confirm = holder.actions.handle("저장", TODAY) { saved++ } as VoiceReply.Confirm
+
+        val confirm = holder.actions.handle("저장") { saved++ } as VoiceReply.Confirm
         assertEquals(0, saved)
         confirm.onConfirm()
         assertEquals(1, saved)
+
+        holder.content = holder.content.copy(draft = VisitRecordDraft.of(holder.content.record))
+        assertEquals(R.string.voice_by_hand, (holder.actions.handle("저장") { saved++ } as VoiceReply.Done).message)
     }
 
     private fun noteViewModel() = VisitNoteViewModel(
@@ -162,7 +148,7 @@ class VisitVoiceTest {
                 ),
             )
 
-        val actions = VisitRecordVoiceActions(state = { content }, update = { content = it(content) })
+        val actions = VisitRecordVoiceActions(state = { content })
     }
 
     private companion object {
