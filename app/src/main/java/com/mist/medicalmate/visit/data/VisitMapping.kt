@@ -112,18 +112,25 @@ private fun axisLabel(axis: String): String = when (axis) {
     AXIS_FINDINGS -> "소견"
     AXIS_TESTS -> "검사"
     AXIS_MEDICATION -> "약"
+    AXIS_LIFESTYLE -> "지침"
     AXIS_FOLLOW_UP -> "재방문"
     else -> axis
 }
 
 /** 시안 1q-1이 그리는 차례. */
-private val AXIS_ORDER = listOf(AXIS_FINDINGS, AXIS_TESTS, AXIS_MEDICATION, AXIS_FOLLOW_UP)
+private val AXIS_ORDER = listOf(AXIS_FINDINGS, AXIS_TESTS, AXIS_MEDICATION, AXIS_LIFESTYLE, AXIS_FOLLOW_UP)
 
 internal const val AXIS_FINDINGS = "findings"
 
 internal const val AXIS_TESTS = "tests"
 
 internal const val AXIS_MEDICATION = "medication_instructions"
+
+/**
+ * 생활 지침. 서버가 `lifestyle_axis`를 켜야 나온다(AI `api-postvisit.md`). 꺼져 있으면 약 칸에
+ * 접혀 온다. 시안에 없는 줄이라 이름은 AI 문서의 화면 라벨을 따랐다.
+ */
+internal const val AXIS_LIFESTYLE = "lifestyle_instructions"
 
 internal const val AXIS_FOLLOW_UP = "follow_up"
 
