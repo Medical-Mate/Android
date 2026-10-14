@@ -121,8 +121,7 @@ internal constructor(
             // 확정하지 않은 재방문도 달력에 찍는다. 뽑아 두기만 한 날은 일정에 없다(#186).
             val revisits = (visitRepository.visits() as? ApiResult.Success)?.value.orEmpty()
             mutableUiState.update { it.withMonth(appointments, cards, revisits, month, today) }
-            // 달을 읽는 것만으로도 시트가 설 수 있다. 화면을 열자마자 오늘이 카드만 있는
-            // 날이면 누르지 않아도 시트가 뜨는데, 그 길에서도 항목 수를 채워야 한다.
+            // 떠 있던 시트를 새 값으로 다시 세웠다. 그 항목 수도 다시 채운다.
             fillCardItemCount()
         }
     }
@@ -150,7 +149,10 @@ private fun CalendarUiState.withMonth(
             .toSet(),
         plannedDays = plannedDays(live, visits, month, today),
         schedules = onSelected.map { it.toSchedule(today) },
-        cardSheet = if (onSelected.isEmpty()) monthCards.cardOn(selected, live) else null,
+        // **시트는 날을 눌렀을 때만 뜬다**(#302). 달을 다시 읽을 때 새로 띄우면, 시트에서 카드나 일정으로
+        // 갔다가 돌아올 때마다 다시 떠서 지나온 화면으로 또 보내려는 것처럼 보였다. 떠 있던 시트만 새 값으로
+        // 맞춘다 — 그 사이 일정이 생겼으면 닫힌다.
+        cardSheet = cardSheet?.let { if (onSelected.isEmpty()) monthCards.cardOn(selected, live) else null },
     )
 }
 

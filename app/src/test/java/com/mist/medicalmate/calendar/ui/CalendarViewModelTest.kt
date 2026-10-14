@@ -162,6 +162,29 @@ class CalendarViewModelTest {
     }
 
     @Test
+    fun `닫은 시트는 달을 다시 읽어도 다시 뜨지 않는다`() {
+        // 시트에서 카드로 갔다가 돌아오면 화면이 달을 다시 읽는다(#302).
+        val viewModel = monthViewModel()
+        viewModel.onDaySelect(LocalDate.of(2026, 9, 4))
+        viewModel.onCardSheetDismiss()
+
+        viewModel.load()
+
+        assertNull(viewModel.uiState.value.cardSheet)
+        assertEquals(LocalDate.of(2026, 9, 4), viewModel.uiState.value.selected)
+    }
+
+    @Test
+    fun `떠 있던 시트는 달을 다시 읽어도 그대로 선다`() {
+        val viewModel = monthViewModel()
+        viewModel.onDaySelect(LocalDate.of(2026, 9, 4))
+
+        viewModel.load()
+
+        assertEquals("1", viewModel.uiState.value.cardSheet?.id)
+    }
+
+    @Test
     fun `다른 날로 옮기면 앞서 뜬 시트가 닫힌다`() {
         val viewModel = monthViewModel()
         viewModel.onDaySelect(LocalDate.of(2026, 9, 4))

@@ -116,10 +116,17 @@ fun CalendarMonthScreen(
         CardSheet(
             date = state.selected,
             card = card,
-            onCardOpenClick = onCardOpenClick,
+            // 시트를 닫고 옮긴다(#302). 닫지 않고 가면 돌아왔을 때 시트가 그대로 서 있다.
+            onCardOpenClick = { id ->
+                onCardSheetDismiss()
+                onCardOpenClick(id)
+            },
             // 이미 만든 일정이 있으면 그 날로 간다. 없을 때만 만들러 간다. 만들러 갈 때는
             // 이 카드를 들고 가서 가져갈 카드로 이미 골라 둔다(#239).
-            onScheduleClick = { card.scheduledOn?.let(onCardScheduleOpen) ?: onCardScheduleAdd(card.id) },
+            onScheduleClick = {
+                onCardSheetDismiss()
+                card.scheduledOn?.let(onCardScheduleOpen) ?: onCardScheduleAdd(card.id)
+            },
             onDismissRequest = onCardSheetDismiss,
         )
     }
