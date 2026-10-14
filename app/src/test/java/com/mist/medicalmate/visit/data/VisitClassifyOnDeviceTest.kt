@@ -1,10 +1,12 @@
 package com.mist.medicalmate.visit.data
 
 import com.mist.medicalmate.core.network.ApiResult
+import com.mist.medicalmate.core.ondevice.ExtractedTurn
 import com.mist.medicalmate.core.ondevice.MemoLabel
 import com.mist.medicalmate.core.ondevice.OnDeviceExtractor
 import com.mist.medicalmate.core.ondevice.OnDeviceResult
-import com.mist.medicalmate.core.ondevice.TurnExtraction
+import com.mist.medicalmate.core.ondevice.QuestionCard
+import com.mist.medicalmate.core.ondevice.SuggestedQuestion
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
@@ -165,7 +167,10 @@ class VisitClassifyOnDeviceTest {
 
         override suspend fun available() = available
 
-        override suspend fun extractTurn(user: String): OnDeviceResult<TurnExtraction> = OnDeviceResult.Unavailable
+        override suspend fun extractTurn(user: String): OnDeviceResult<ExtractedTurn> = OnDeviceResult.Unavailable
+
+        override suspend fun suggestQuestions(card: QuestionCard): OnDeviceResult<List<SuggestedQuestion>> =
+            OnDeviceResult.Unavailable
 
         override suspend fun labelMemo(sentences: List<String>): OnDeviceResult<Map<Int, MemoLabel>> {
             calls++

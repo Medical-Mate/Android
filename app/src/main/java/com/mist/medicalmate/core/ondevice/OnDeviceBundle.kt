@@ -1,6 +1,9 @@
 package com.mist.medicalmate.core.ondevice
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /**
  * AI 트랙이 넘긴 고정 묶음. `Medical-Mate/AI`의 `docs/android-ondevice-handoff.md` "묶음 v2".
@@ -34,6 +37,17 @@ object OnDeviceBundle {
 
     const val EXTRACT_GRAMMAR_ASSET = "ondevice/turn_extraction.small.gbnf"
 
+    /**
+     * 질문 후보. 문답이 끝난 카드로 "의사에게 물어볼 것"을 3~5개 만든다.
+     *
+     * 프롬프트 파일이 따로 없다. AI 쪽 벡터의 `messages`(시스템 프롬프트와 예시 두 쌍)를 그대로
+     * 옮긴 것이 [QUESTIONS_HISTORY_ASSET]이고, 마지막 사용자 메시지만 [questionsUserMessage]가
+     * 만든다. 문법은 질문 40자 상한이다 — 상한이 없으면 같은 말을 되풀이하다 1024토큰까지 간다.
+     */
+    const val QUESTIONS_HISTORY_ASSET = "ondevice/questions-small4.messages.json"
+
+    const val QUESTIONS_GRAMMAR_ASSET = "ondevice/questions.gbnf"
+
     /** 진료 후 메모 분류. 문장마다 라벨 하나. 문법은 문장 수에 맞춰 [memoLabelsGrammar]가 만든다. */
     const val MEMO_PROMPT_ASSET = "ondevice/prompt-memo-small-v5.system.txt"
 
@@ -49,8 +63,20 @@ object OnDeviceBundle {
 
     const val EXTRACT_PROMPT_VERSION = "extract-small-2b-v1"
 
+    const val QUESTIONS_PROMPT_VERSION = "questions-small4"
+
+    /**
+     * 서버에 "무엇으로 만들었는지" 알리는 값. 진료 전 추출의 `extractionMeta`, 질문 후보의
+     * `candidatesMeta`로 간다. 백엔드는 열어 보지 않고 AI에 넘기고, AI 계약이 뱀 표기다.
+     */
+    fun meta(promptVersion: String): JsonObject = buildJsonObject {
+        put("model_id", MODEL_ID)
+        put("prompt_version", promptVersion)
+    }
+
     /** 묶음 버전. 불일치를 AI 쪽에 알릴 때 함께 적는다. */
-    const val VERSION = "Qwen3.5-2B-Q4_0-ssmout-q8 · extract-small-2b-v1 · memo-small-v5 (2026-10-13)"
+    const val VERSION =
+        "Qwen3.5-2B-Q4_0-ssmout-q8 · extract-small-2b-v1 · questions-small4 · memo-small-v5 (2026-10-13)"
 }
 
 /**
@@ -132,3 +158,63 @@ internal fun memoUserMessage(sentences: List<String>): String = buildString {
     sentences.forEachIndexed { index, sentence -> append("$index: $sentence\n") }
     append("번호마다 라벨 하나. JSON:")
 }
+
+/**
+ * 진료 전 추출의 사용자 메시지. 벡터 `user` 형식 그대로다.
+ *
+ * @param axisKey 백엔드가 준 `askingAxis.key`(`onset`).
+ * @param axisLabel 같은 자리의 `label`(`언제부터·어떻게 시작`). AI가 폰 프롬프트와 같은 원천에서
+ *   내므로 가공하지 않고 넣는다(Backend#157).
+ */
+internal fun extractUserMessage(axisKey: String, axisLabel: String, answer: String): String =
+    "질문한 항목: $axisLabel (axis=$axisKey). 이 항목만 답한다.\n환자: $answer\nJSON:"
+
+/**
+ * 질문 후보의 카드. AI 쪽 `assist_prompts.questions_user`가 읽는 값 그대로다.
+ *
+ * @param axes 축 키 → 값. 키는 카드의 키(`exacerbating_relieving`)를 그대로 쓴다.
+ * @param severity "3 (꽤 아파요)". 강도는 카드 축이 아니라 3단계에서 따로 고른다.
+ * @param medications 비어 있으면 "(확인 안 됨)"이다. "없음"이 아니다 — 온보딩이 "없어요"와
+ *   "모른다"를 가르지 못해 빈 답은 확인이 안 된 것이고, 알러지에서 둘은 처방이 갈린다.
+ */
+data class QuestionCard(
+    val axes: Map<String, String>,
+    val severity: String?,
+    val medications: List<String>,
+    val conditions: List<String>,
+    val allergies: List<String>,
+)
+
+/**
+ * 질문 후보의 사용자 메시지.
+ *
+ * 줄 차례와 이름이 AI 쪽 표(`_AXIS_KO`)와 같아야 한다. 값이 없는 칸은 "(안 답함)"이다 — 프롬프트가
+ * 그 칸으로는 질문을 만들지 말라고 적는다.
+ */
+internal fun questionsUserMessage(card: QuestionCard): String {
+    val axes = QUESTION_CARD_AXES.map { (key, label) ->
+        val value = if (key == SEVERITY_AXIS) card.severity else card.axes[key]
+        "$label: ${value?.takeIf { it.isNotBlank() } ?: NOT_ANSWERED}"
+    }
+    val profile =
+        listOf("복용약" to card.medications, "기저질환" to card.conditions, "알러지" to card.allergies)
+            .map { (label, items) -> "$label: ${items.joinToString(", ").ifEmpty { PROFILE_UNKNOWN }}" }
+    return "카드:\n" + (axes + profile).joinToString("\n") + "\n\n의사에게 물어볼 것 후보. JSON:"
+}
+
+/** AI 쪽 `_AXIS_KO`의 차례. 그쪽은 악화·완화를 `exacerbating`으로 부르는데 카드 키는 다르다. */
+private val QUESTION_CARD_AXES =
+    listOf(
+        "site" to "부위",
+        "onset" to "시작",
+        "character" to "느낌",
+        SEVERITY_AXIS to "심각도",
+        "time_course" to "경과",
+        "exacerbating_relieving" to "악화·완화",
+        "radiation" to "퍼짐",
+        "associated" to "동반 증상",
+    )
+
+private const val SEVERITY_AXIS = "severity"
+private const val NOT_ANSWERED = "(안 답함)"
+private const val PROFILE_UNKNOWN = "(확인 안 됨)"
