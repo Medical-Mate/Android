@@ -26,6 +26,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateCardEmphasis
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateListRow
 import com.mist.medicalmate.core.designsystem.component.MedicalMateListRowType
+import com.mist.medicalmate.core.designsystem.ddayLabel
 import com.mist.medicalmate.core.model.IntakeStep
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -224,7 +225,7 @@ internal fun ScheduleRow(schedule: HomeSchedule, today: LocalDate, onClick: () -
             schedule.date.format(scheduleDate),
             schedule.time ?: stringResource(R.string.calendar_time_unset),
         ),
-        badge = stringResource(R.string.home_schedule_dday, daysUntil(today, schedule.date)),
+        badge = ddayLabel(daysUntil(today, schedule.date)),
         badgeTone = MedicalMateBadgeTone.BRAND,
         type = MedicalMateListRowType.BADGE,
         onClick = onClick,

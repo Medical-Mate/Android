@@ -34,6 +34,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateRowDelete
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTodoRow
+import com.mist.medicalmate.core.designsystem.ddayLabel
 import com.mist.medicalmate.core.voice.rememberVoiceScrollState
 import com.mist.medicalmate.core.voice.voicePanelSpace
 import java.time.format.DateTimeFormatter
@@ -213,7 +214,7 @@ private fun ColumnScope.ScheduleSection(state: CalendarDayUiState, callbacks: Ca
 
             schedule.dday >= 0 ->
                 Text(
-                    text = stringResource(R.string.calendar_day_dday, schedule.dday),
+                    text = ddayLabel(schedule.dday),
                     style = MedicalMateTheme.typography.labelS,
                     color = MedicalMateTheme.colors.fgSubtle,
                 )

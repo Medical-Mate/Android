@@ -77,7 +77,8 @@ fun MedicalMateBadge(
             modifier = Modifier.padding(horizontal = MedicalMateSpace.s8),
             contentAlignment = Alignment.Center,
         ) {
-            Text(text = label, style = MedicalMateTheme.typography.labelS)
+            // 옆의 글이 길어도 꺾이지 않는다(#294). "D-0"이 "D"와 "-0" 두 줄로 갈라진 적이 있다.
+            Text(text = label, style = MedicalMateTheme.typography.labelS, maxLines = 1, softWrap = false)
         }
     }
 }

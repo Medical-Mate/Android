@@ -44,6 +44,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateNavLeading
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTabBar
+import com.mist.medicalmate.core.designsystem.ddayLabel
 import com.mist.medicalmate.core.voice.rememberVoiceScrollState
 import com.mist.medicalmate.core.voice.voicePanelSpace
 import java.time.LocalDate
@@ -380,7 +381,7 @@ private fun ColumnScope.SelectedDay(state: CalendarUiState, onScheduleClick: (St
             badge =
             schedule.dday
                 .takeIf { it >= 0 }
-                ?.let { stringResource(R.string.calendar_day_dday, it) },
+                ?.let { ddayLabel(it) },
             badgeTone = MedicalMateBadgeTone.BRAND,
             type =
             if (schedule.dday >= 0) MedicalMateListRowType.BADGE else MedicalMateListRowType.DEFAULT,
