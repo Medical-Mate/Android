@@ -56,22 +56,22 @@ internal val VISIT_NOTE_SUGGESTIONS =
         ),
     )
 
-/** 진료 후 기록 확인(1q-1). */
+/** 진료 후 기록 확인(1q-1). 저장만 말로 한다(#296). 고치는 것은 `편집`으로 손으로 한다. */
 internal val VISIT_RECORD_SUGGESTIONS =
     listOf(
-        VoiceSuggestion(
-            R.string.voice_suggest_record_edit,
-            R.string.voice_suggest_record_edit_do,
-            MedicalMateIcons.Edit,
-        ),
-        VoiceSuggestion(
-            R.string.voice_suggest_record_follow_up,
-            R.string.voice_suggest_record_follow_up_do,
-            MedicalMateIcons.Calendar,
-        ),
         VoiceSuggestion(
             R.string.voice_suggest_record_save,
             R.string.voice_suggest_record_save_do,
             MedicalMateIcons.CheckCircle,
+        ),
+        VoiceSuggestion(
+            R.string.voice_suggest_record_down,
+            R.string.voice_suggest_record_down_do,
+            MedicalMateIcons.ChevronDown,
+        ),
+        VoiceSuggestion(
+            R.string.voice_suggest_record_back,
+            R.string.voice_suggest_record_back_do,
+            MedicalMateIcons.ChevronLeft,
         ),
     )
