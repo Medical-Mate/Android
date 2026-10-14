@@ -281,15 +281,16 @@ class CalendarDayViewModelTest {
     }
 
     @Test
-    fun `지운 일정의 기록이 남은 날에도 새 일정으로 기록할 수 있다`() {
-        // 15일 일정을 지우고 다른 카드로 15일 일정을 다시 잡은 경우다(#302). 남은 기록은 다른 카드의 것이다.
+    fun `지운 일정의 기록이 남은 날에도 새 일정은 진료 전이다`() {
+        // 15일 일정을 지우고 다른 카드로 15일 일정을 다시 잡은 경우다(#302). 남은 기록은 다른 카드의 것이라
+        // 이 날 기록에 세우지 않고, 새 일정의 카드로 기록할 수 있다.
         val today = LocalDate.of(2026, 9, 11)
         val left = testVisit.copy(id = "7", cardId = 9L, visitedOn = today)
         val viewModel = dayViewModel(listOf(testAppointment.copy(on = today)), visits = listOf(left))
 
         viewModel.load(today)
 
-        assertEquals(listOf("7"), viewModel.state().records.map { it.id })
+        assertTrue(viewModel.state().records.isEmpty())
         assertFalse(viewModel.state().visited)
         assertTrue(viewModel.state().canRecord)
         assertTrue(viewModel.state().todos.isNotEmpty())
