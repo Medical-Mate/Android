@@ -72,6 +72,12 @@ private fun MyProfileRoute(
             onCancel = viewModel::onVoiceWakeCancel,
             onDeleteModel = viewModel::onVoiceWakeModelDelete,
         ),
+        onDeviceCallbacks =
+        OnDeviceCallbacks(
+            onConfirm = viewModel.onDeviceToggle::confirm,
+            onCancel = viewModel.onDeviceToggle::cancel,
+            onDeleteModel = viewModel.onDeviceToggle::deleteModel,
+        ),
     )
 }
 
