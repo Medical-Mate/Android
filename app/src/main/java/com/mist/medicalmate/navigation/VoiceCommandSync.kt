@@ -3,6 +3,7 @@ package com.mist.medicalmate.navigation
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -20,14 +21,19 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.mist.medicalmate.auth.ui.SessionUiState
 import com.mist.medicalmate.calendar.ui.CalendarDayDestination
+import com.mist.medicalmate.calendar.ui.CalendarDestination
 import com.mist.medicalmate.calendar.ui.ScheduleAddDestination
 import com.mist.medicalmate.card.ui.BriefCardListDestination
+import com.mist.medicalmate.card.ui.RecordDestination
+import com.mist.medicalmate.core.designsystem.MedicalMateSize
+import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
 import com.mist.medicalmate.core.voice.LocalVoicePanelInset
 import com.mist.medicalmate.core.voice.LocalVoiceTargets
@@ -95,8 +101,11 @@ internal fun VoiceCommandHost(
     }
 
     // 막대는 화면 위에 겹쳐 뜬다. 화면을 줄이지 않고 그 높이만 내려 주어 스크롤 끝에 빈자리를 붙인다(#284).
+    // Mate Card는 탭바 위 12에 뜬다(#312). 탭바가 없는 화면은 바닥 위 12다. 잰 높이에 탭바를 넣지 않는다 —
+    // 탭바 화면의 스크롤은 탭바 위에서 끝나서 그만큼 비우면 너무 많이 빈다.
+    val gap = MedicalMateSpace.s12
     var panelHeight by remember { mutableIntStateOf(0) }
-    val inset = with(LocalDensity.current) { if (state.panel != null) panelHeight.toDp() else 0.dp }
+    val inset = with(LocalDensity.current) { if (state.panel != null) panelHeight.toDp() + gap else 0.dp }
     Box(modifier = modifier) {
         CompositionLocalProvider(
             LocalVoiceTargets provides viewModel.targets,
@@ -107,7 +116,11 @@ internal fun VoiceCommandHost(
             VoiceCommandPanel(
                 panel = panel,
                 onDismiss = viewModel::dismiss,
-                modifier = Modifier.align(Alignment.BottomCenter).onSizeChanged { panelHeight = it.height },
+                modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = if (entry.onTabRoot()) MedicalMateSize.tabBarHeight + gap else gap)
+                    .onSizeChanged { panelHeight = it.height },
             )
         }
     }
@@ -192,3 +205,11 @@ private fun mentionsSchedule(text: String): Boolean =
 private val HOSPITAL_HINT = Regex("""병원|의원|치과|한의원|클리닉|과\s""")
 
 private val DATE_HINT = Regex("""\d|오늘|내일|모레|글피|다음\s?주|이번\s?주|다음\s?달|[월화수목금토일]요일""")
+
+/** 탭바가 있는 화면인지. 탭의 첫 화면 셋만 탭바를 단다. */
+private fun NavBackStackEntry?.onTabRoot(): Boolean {
+    val destination = this?.destination ?: return false
+    return destination.hasRoute<HomeDestination>() ||
+        destination.hasRoute<CalendarDestination>() ||
+        destination.hasRoute<RecordDestination>()
+}

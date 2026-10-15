@@ -15,7 +15,8 @@ internal val GLOBAL_SUGGESTIONS =
         VoiceSuggestion(
             R.string.voice_suggest_global_intake,
             R.string.voice_suggest_global_intake_do,
-            MedicalMateIcons.Stethoscope,
+            // Mate Card 마스터의 가이드가 증상 정리에 note를 단다(#312).
+            MedicalMateIcons.Note,
         ),
         VoiceSuggestion(
             R.string.voice_suggest_global_visit,

@@ -40,6 +40,7 @@ import com.mist.medicalmate.visit.ui.hospitalPickDestination
 import com.mist.medicalmate.visit.ui.visitDetailDestination
 import com.mist.medicalmate.visit.ui.visitNoteDestination
 import com.mist.medicalmate.visit.ui.visitRecordDestination
+import java.time.LocalDate
 
 /**
  * 그래프 등록을 도메인별로 나눈 확장 함수들.
@@ -160,21 +161,7 @@ internal fun NavGraphBuilder.calendarDestinations(navController: NavHostControll
         // 일정에 병원이 있으면 그 병원이 맞는지 먼저 묻는다(1m-12, #246). 병원은 일정을 추가할
         // 때 이미 등록해 두는 값이라 아는 채로 다시 찾게 할 이유가 없다. 없을 때만 찾기로 간다.
         onRecordAdd = { cardId, cardTitle, visitedOn, clinic, address ->
-            // 오늘이 아니라 그 일자다. 어제 진료를 오늘 적어도 기록은 그 날에 남는다.
-            val on = visitedOn.toString()
-            navController.navigate(
-                if (clinic.isNullOrBlank()) {
-                    HospitalPickDestination(cardId = cardId, cardTitle = cardTitle, visitedOn = on)
-                } else {
-                    ClinicConfirmDestination(
-                        clinic = clinic,
-                        address = address,
-                        cardId = cardId,
-                        cardTitle = cardTitle,
-                        visitedOn = on,
-                    )
-                },
-            )
+            navController.openVisitRecord(cardId, cardTitle, visitedOn, clinic, address)
         },
         // 그 날 남긴 기록 하나를 보는 줄이라 기록 상세(1j-3)가 아니라 진료 후 기록 상세로 간다(#256).
         // 1j-3은 카드·기록·예정을 타임라인으로 모아 보이는 자리고, 기록 탭의 줄만 그리로 간다.
@@ -323,3 +310,32 @@ internal fun NavGraphBuilder.recordDestinations(navController: NavHostController
  *
  * 메모를 저장하면 서버가 방문을 만들고 그 id를 준다. 그 호출이 아직 없어서 자리만 채운다.
  */
+
+/**
+ * 진료 후 기록을 시작한다. 캘린더 일자의 "진료 후 기록하기"와 홈 배너의 같은 링크가 함께 쓴다(#312).
+ *
+ * 일정에 병원이 있으면 그 병원이 맞는지 먼저 묻는다(1m-12, #246). 없을 때만 병원 찾기로 간다. 기록 날짜는 오늘이
+ * 아니라 그 일정의 날이다 — 어제 진료를 오늘 적어도 기록은 그 날에 남는다.
+ */
+internal fun NavHostController.openVisitRecord(
+    cardId: String,
+    cardTitle: String,
+    visitedOn: LocalDate,
+    clinic: String?,
+    address: String? = null,
+) {
+    val on = visitedOn.toString()
+    navigate(
+        if (clinic.isNullOrBlank()) {
+            HospitalPickDestination(cardId = cardId, cardTitle = cardTitle, visitedOn = on)
+        } else {
+            ClinicConfirmDestination(
+                clinic = clinic,
+                address = address,
+                cardId = cardId,
+                cardTitle = cardTitle,
+                visitedOn = on,
+            )
+        },
+    )
+}

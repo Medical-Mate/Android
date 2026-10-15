@@ -119,7 +119,7 @@ internal class ScheduleAddVoiceActions(
                 listOfNotNull(
                     ScheduleAddFocusTarget.Hospital.takeIf { current.hospital == null },
                     ScheduleAddFocusTarget.Date.takeIf { current.date == null },
-                )
+                ) + current.cards.takeIf { current.cardMissing }.orEmpty().map { ScheduleAddFocusTarget.Card(it.id) }
             update { it.copy(showErrors = true).focusing(missing) }
             return VoiceReply.Done(R.string.voice_schedule_missing)
         }
@@ -267,12 +267,14 @@ private fun whichOne(candidates: List<String>, target: ScheduleAddTarget): Voice
 }
 
 /**
- * 이어서 물을 것. 일정에 꼭 있어야 하는 병원과 날짜를 차례로 묻고, 다 찼으면 저장하라고 한다.
- * 시간·카드·할 일은 없어도 저장되므로 묻지 않고 마지막 안내에 함께 적는다.
+ * 이어서 물을 것. 일정에 꼭 있어야 하는 병원 · 날짜 · 가져갈 카드(#312)를 차례로 묻고, 다 찼으면 저장하라고
+ * 한다. 시간과 할 일은 없어도 저장되므로 묻지 않는다. 고를 카드가 없으면 새로 만들라고 한다.
  */
 internal fun ScheduleAddUiState.nextQuestion(): VoiceText = when {
     hospital == null -> VoiceText(R.string.voice_ask_hospital)
     date == null -> VoiceText(R.string.voice_ask_date)
+    cardMissing && cards.isEmpty() -> VoiceText(R.string.voice_ask_card_new)
+    cardMissing -> VoiceText(R.string.voice_ask_card)
     else -> VoiceText(R.string.voice_ask_done)
 }
 

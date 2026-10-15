@@ -80,6 +80,8 @@ internal data class ScheduleAddDestination(
      * 말했으면 병원 찾기가 하나로 좁혀질 때 알아서 고른다.
      */
     val voice: Boolean = false,
+    /** 예약 문자 방법 안내 시트(1r-4-S)를 띄운 채 연다. 홈 배너의 "방법 보기"가 이 길이다(#312). */
+    val guide: Boolean = false,
 )
 
 internal fun NavGraphBuilder.scheduleAddDestination(
@@ -100,6 +102,7 @@ internal fun NavGraphBuilder.scheduleAddDestination(
             sharedText = route.sharedText,
             time = route.time?.let(LocalTime::parse),
             voice = route.voice,
+            guide = route.guide,
             onHospitalPick = onHospitalPick,
             onCardNew = onCardNew,
             onSaved = onSaved,
@@ -125,6 +128,7 @@ private fun ScheduleAddRoute(
     sharedText: String?,
     time: LocalTime?,
     voice: Boolean,
+    guide: Boolean,
     onHospitalPick: (query: String?, voice: Boolean) -> Unit,
     onCardNew: () -> Unit,
     onSaved: () -> Unit,
@@ -146,6 +150,8 @@ private fun ScheduleAddRoute(
         viewModel.load(appointmentId, date, cardId, followUp, sharedText)
     }
 
+    OpenGuideOnce(guide) { viewModel.onSheetOpen(ScheduleAddSheet.GUIDE) }
+
     // 병원 찾기에서 골라 돌아온 값. 엔트리가 그대로 살아 있어서 적어 둔 날짜·시간·할 일이
     // 남는다. 라우트 인자는 처음부터 병원이 정해진 채로 열리는 경우(1r-4-B)에 쓴다.
     entry.ConsumeResult(NavResult.HOSPITAL_NAME, viewModel::onHospitalPicked)
@@ -161,10 +167,10 @@ private fun ScheduleAddRoute(
         onHospitalPick(query, byVoice)
     }
 
-    // 말로 하는 중이면 빠진 칸을 묻는다(#282). 들어올 때, 병원 찾기에서 돌아올 때, 병원이나 날짜가
+    // 말로 하는 중이면 빠진 칸을 묻는다(#282). 들어올 때, 병원 찾기에서 돌아올 때, 병원 · 날짜 · 카드가
     // 채워질 때마다다. 병원 찾기를 열려는 참이면 그쪽이 묻는다. 막대가 닫혀 있으면 버려진다.
     val prompt = rememberVoicePrompt()
-    LaunchedEffect(state.hospital == null, state.date == null) {
+    LaunchedEffect(state.hospital == null, state.date == null, state.cardMissing) {
         if (state.hospitalSearch == null) prompt(VoicePrompt(question = state.nextQuestion()))
     }
 

@@ -1,45 +1,47 @@
 package com.mist.medicalmate.home.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
+import com.mist.medicalmate.core.designsystem.MedicalMateTheme
+import com.mist.medicalmate.core.designsystem.component.MedicalMateActionCard
 import com.mist.medicalmate.core.designsystem.component.MedicalMateEmptyState
 import com.mist.medicalmate.core.designsystem.component.MedicalMateEmptyStateType
+import com.mist.medicalmate.core.designsystem.component.MedicalMateResumeCard
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTabBar
-import com.mist.medicalmate.core.voice.rememberVoiceLazyListState
-import com.mist.medicalmate.core.voice.voicePanelInset
+import com.mist.medicalmate.core.model.IntakeStep
+import com.mist.medicalmate.core.voice.rememberVoiceScrollState
+import com.mist.medicalmate.core.voice.voicePanelSpace
 import java.time.LocalDate
 
 /**
- * 와이어프레임 1n. Figma `399:1339`(기록 있음)과 `399:1720`(기록 없음)을 옮겼다.
+ * 홈. Figma `Wireframe 10-15`의 1n-1(기록 있음)과 1n-2(처음)다(#312).
  *
- * 두 화면이 같은 상태의 두 갈래다. 헤더, 오늘의 한 줄, 시작 버튼까지 같고 그 아래가
- * 목록이거나 빈 상태다.
+ * 맨 위 사진 배너(400, 처음 홈은 334) 아래로 흰 시트가 28 겹쳐 올라온다. 시트에는 증상 정리 시작하기 · 이어서
+ * 하기 · 최근 브리핑 카드 · 다가오는 일정이 차례로 선다. 탭바만 바닥에 고정되고 배너와 시트가 함께 스크롤한다.
  *
- * 블록 사이 간격이 모두 16이다. `Section Header`는 자체 여백(위 24 아래 10)을 갖고
- * 있어 추가 간격을 주지 않는다.
+ * 처음 온 사람(1n-2)은 스크롤하지 않는다. 시트가 남은 높이를 전부 받고 그 안에서 빈 상태가 가운데에 선다.
  *
- * [today]를 받는 이유는 D-day를 화면이 열린 날 기준으로 계산해야 하기 때문이다. 기본값을
- * `LocalDate.now()`로 두면 Preview와 테스트에서 값을 고정할 수 없다.
- *
- * 1Depth 화면이라 하단 탭을 함께 그린다. 기록과 캘린더 목적지가 생겨서 세 탭이 모두
- * 동작한다(#75).
+ * [today]를 받는 이유는 D-day를 화면이 열린 날 기준으로 계산해야 하기 때문이다. 기본값을 `LocalDate.now()`로
+ * 두면 Preview와 테스트에서 값을 고정할 수 없다.
  *
  * 화면을 이루는 조각들은 `HomeComponents.kt`, Preview는 `HomePreviews.kt`에 있다.
  */
@@ -51,39 +53,28 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     onTabSelect: (MedicalMateTab) -> Unit = {},
 ) {
-    Column(modifier = modifier) {
-        HomeBody(
-            state = state,
-            today = today,
-            callbacks = callbacks,
-            modifier = Modifier.weight(1f),
-        )
-        MedicalMateTabBar(selected = MedicalMateTab.HOME, onSelect = onTabSelect)
-    }
-}
-
-/** 탭바를 뺀 본문. 상태에 따라 내용이 갈리고 토스트가 그 위에 얹힌다. */
-@Composable
-private fun HomeBody(state: HomeUiState, today: LocalDate, callbacks: HomeCallbacks, modifier: Modifier = Modifier) {
-    Box(modifier = modifier) {
-        when (state) {
-            HomeUiState.Loading -> LoadingContent()
-            HomeUiState.Failed -> FailedContent(onRetryClick = callbacks.onRetryClick)
-            is HomeUiState.Content ->
-                HomeContent(
-                    content = state,
-                    today = today,
-                    callbacks = callbacks,
-                )
+    Column(modifier = modifier.background(MedicalMateTheme.colors.bgSurface)) {
+        Box(modifier = Modifier.weight(1f)) {
+            when (state) {
+                HomeUiState.Loading -> LoadingContent()
+                HomeUiState.Failed -> FailedContent(onRetryClick = callbacks.onRetryClick)
+                is HomeUiState.Content ->
+                    if (state.firstVisit) {
+                        FirstHomeContent(content = state, callbacks = callbacks)
+                    } else {
+                        HomeContent(content = state, today = today, callbacks = callbacks)
+                    }
+            }
         }
+        MedicalMateTabBar(selected = MedicalMateTab.HOME, onSelect = onTabSelect)
     }
 }
 
 /**
  * 홈에서 나가는 길들.
  *
- * 파라미터로 하나씩 받으면 목적지가 늘 때마다 서명이 길어진다. 아직 대상 화면이 없는
- * 것은 호출자가 빈 동작을 준다.
+ * 파라미터로 하나씩 받으면 목적지가 늘 때마다 서명이 길어진다. 아직 대상 화면이 없는 것은 호출자가 빈 동작을
+ * 준다.
  */
 data class HomeCallbacks(
     val onStartIntakeClick: () -> Unit = {},
@@ -95,7 +86,31 @@ data class HomeCallbacks(
     val onNotificationClick: () -> Unit = {},
     val onProfileClick: () -> Unit = {},
     val onRetryClick: () -> Unit = {},
-)
+    /** 배너 1 · 오늘 진료의 "진료 후 기록하기". 병원 확인(1m-12)부터 간다. */
+    val onRecordVisitClick: (HomeVisitLink) -> Unit = {},
+    /** 일정 추가(1r-4). 카드가 있으면 그 카드가 골라진 채 열린다. */
+    val onScheduleAddClick: (cardId: String?) -> Unit = {},
+    /** 배너 2 · 예약 문자의 "방법 보기". 일정 추가와 방법 안내 시트(1r-4-S)가 함께 열린다. */
+    val onMessageGuideClick: () -> Unit = {},
+    /** 배너 4의 "카드 저장하기". 카드가 없으면 카드 목록이다. */
+    val onSaveCardClick: (cardId: String?) -> Unit = {},
+    /** 배너 5의 "메이트에게 말해보기". 홈 위에 메이트 카드가 뜬다(1n-1-M). */
+    val onMateClick: () -> Unit = {},
+) {
+    /** 배너 링크가 가는 곳. 시안의 "흐름" 메모를 따른다. */
+    fun onBannerClick(banner: HomeBanner) {
+        when (banner) {
+            HomeBanner.Welcome -> Unit
+            is HomeBanner.Today -> onRecordVisitClick(banner.visit)
+            is HomeBanner.Tomorrow -> onSavedCardClick(banner.cardId)
+            is HomeBanner.CardReady -> onScheduleAddClick(banner.cardId)
+            HomeBanner.Message -> onMessageGuideClick()
+            HomeBanner.Schedule -> onScheduleAddClick(null)
+            is HomeBanner.SaveCard -> onSaveCardClick(banner.cardId)
+            HomeBanner.Mate -> onMateClick()
+        }
+    }
+}
 
 @Composable
 private fun LoadingContent(modifier: Modifier = Modifier) {
@@ -128,143 +143,90 @@ private fun FailedContent(onRetryClick: () -> Unit, modifier: Modifier = Modifie
     }
 }
 
-@Composable
-private fun HomeContent(
-    content: HomeUiState.Content,
-    today: LocalDate,
-    callbacks: HomeCallbacks,
-    modifier: Modifier = Modifier,
-) {
-    if (content.savedCards.isEmpty() && content.upcoming.isEmpty()) {
-        EmptyHomeContent(content = content, callbacks = callbacks, modifier = modifier)
-        return
-    }
-    LazyColumn(
-        state = rememberVoiceLazyListState(),
-        modifier = modifier.fillMaxSize(),
-        contentPadding =
-        PaddingValues(
-            start = MedicalMateSize.gutter,
-            end = MedicalMateSize.gutter,
-            top = MedicalMateSpace.s8,
-            bottom = MedicalMateSize.gutter + voicePanelInset(),
-        ),
-        verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s16),
-    ) {
-        item {
-            HomeHeader(
-                userInitial = content.userInitial,
-                hasUnreadNotification = content.hasUnreadNotification,
-                onNotificationClick = callbacks.onNotificationClick,
-                onProfileClick = callbacks.onProfileClick,
-            )
-        }
-        item { TodayLineCard(content.todayLine) }
-        item { StartIntakeButton(onClick = callbacks.onStartIntakeClick) }
-
-        content.resume?.let { resume ->
-            item { ResumeCard(resume = resume, onClick = { callbacks.onResumeClick(resume.intakeId) }) }
-        }
-
-        savedCardsSection(content = content, callbacks = callbacks)
-        upcomingSection(content = content, today = today, callbacks = callbacks)
-    }
-}
-
 /**
- * 카드도 일정도 없는 홈. Figma `1n-2`다.
- *
- * 목록이 아니라 한 화면이다. 시안이 오늘의 한 줄 · 시작 버튼 다음에 빈 상태를 두고, 그것이
- * 남은 높이를 전부 받아 그 안에서 가운데에 선다(320x409). 목록으로 두면 빈 상태가 버튼
- * 바로 밑에 붙고 그 아래가 통째로 빈다.
- *
- * **행동 버튼을 두지 않는다.** 시안의 인스턴스가 그 자리를 꺼 두었다. 바로 위에 "증상 정리
- * 시작하기"가 있어서, 같은 곳으로 가는 버튼이 한 화면에 둘이 된다.
- *
- * 스크롤을 걸지 않는다. 남은 높이를 나눠 갖는 것과 스크롤은 같이 쓸 수 없고, 이 상태의
- * 내용은 화면에 들어간다. 글꼴을 크게 키우면 빈 상태가 먼저 줄어든다.
+ * 1n-1. 배너와 시트가 함께 스크롤한다. 사진은 상태바 뒤까지 이어지고, 사진이 상태바 뒤에 있는 동안만 상태바
+ * 아이콘이 흰색이다. 시트가 올라와 흰 면이 상태바 뒤에 오면 어두운 아이콘으로 돌아간다.
  */
 @Composable
-private fun EmptyHomeContent(content: HomeUiState.Content, callbacks: HomeCallbacks, modifier: Modifier = Modifier) {
+private fun HomeContent(content: HomeUiState.Content, today: LocalDate, callbacks: HomeCallbacks) {
+    val statusBar = statusBarTop()
+    val scroll = rememberVoiceScrollState()
+    val photoLimit = with(LocalDensity.current) { PhotoUnderStatusBarScroll.roundToPx() }
+    val onPhoto by remember { derivedStateOf { scroll.value < photoLimit } }
+    HomeStatusBarIcons(light = onPhoto)
     Column(
-        modifier =
-        modifier
-            .fillMaxSize()
-            .padding(
-                start = MedicalMateSize.gutter,
-                end = MedicalMateSize.gutter,
-                top = MedicalMateSpace.s8,
-                bottom = MedicalMateSize.gutter,
-            ),
-        verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s16),
+        modifier = Modifier.underStatusBar(statusBar).fillMaxSize().verticalScroll(scroll).voicePanelSpace(),
     ) {
-        HomeHeader(
-            userInitial = content.userInitial,
-            hasUnreadNotification = content.hasUnreadNotification,
-            onNotificationClick = callbacks.onNotificationClick,
-            onProfileClick = callbacks.onProfileClick,
-        )
-        TodayLineCard(content.todayLine)
-        StartIntakeButton(onClick = callbacks.onStartIntakeClick)
-        content.resume?.let { resume ->
-            ResumeCard(resume = resume, onClick = { callbacks.onResumeClick(resume.intakeId) })
+        HomeBannerPager(content = content, callbacks = callbacks, statusBar = statusBar)
+        HomeSheet {
+            SheetTop(content = content, callbacks = callbacks)
+            if (content.savedCards.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12)) {
+                    MedicalMateSectionHeader(
+                        title = stringResource(R.string.home_saved_cards),
+                        actionLabel = stringResource(R.string.home_saved_cards_all),
+                        onActionClick = callbacks.onAllCardsClick,
+                    )
+                    BriefingList(cards = content.savedCards, onCardClick = callbacks.onSavedCardClick)
+                }
+            }
+            content.upcoming?.let { schedule ->
+                Column(verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12)) {
+                    MedicalMateSectionHeader(
+                        title = stringResource(R.string.home_upcoming),
+                        actionLabel = stringResource(R.string.home_calendar),
+                        onActionClick = callbacks.onCalendarClick,
+                    )
+                    ScheduleCard(
+                        schedule = schedule,
+                        today = today,
+                        onClick = { callbacks.onScheduleClick(schedule.date, schedule.id) },
+                    )
+                }
+            }
         }
-        MedicalMateEmptyState(
-            type = MedicalMateEmptyStateType.NO_RECORD,
-            title = stringResource(R.string.home_empty_title),
-            description = stringResource(R.string.home_empty_description),
-            modifier = Modifier.weight(1f),
-        )
     }
 }
 
 /**
- * 최근 브리핑 카드 구역.
+ * 1n-2. 처음 온 사람. 배너가 짧고(334) 시트가 남은 높이를 받아 빈 상태를 가운데에 둔다.
  *
- * 카드가 없는데 일정은 있는 경우다. 둘 다 없으면 화면이 [EmptyHomeContent]로 갈린다.
- * 제목만 남기고 빈 목록을 두면 무엇을 해야 하는지 알 수 없어서 빈 상태를 둔다.
+ * **빈 상태에 행동 버튼을 두지 않는다.** 시안의 인스턴스가 그 자리를 꺼 두었다. 바로 위에 "증상 정리
+ * 시작하기"가 있다.
  */
-private fun LazyListScope.savedCardsSection(content: HomeUiState.Content, callbacks: HomeCallbacks) {
-    if (content.savedCards.isEmpty()) {
-        item {
+@Composable
+private fun FirstHomeContent(content: HomeUiState.Content, callbacks: HomeCallbacks) {
+    val statusBar = statusBarTop()
+    HomeStatusBarIcons(light = true)
+    Column(modifier = Modifier.underStatusBar(statusBar).fillMaxSize()) {
+        HomeBannerPager(content = content, callbacks = callbacks, statusBar = statusBar)
+        HomeSheet(modifier = Modifier.weight(1f)) {
+            SheetTop(content = content, callbacks = callbacks)
             MedicalMateEmptyState(
                 type = MedicalMateEmptyStateType.NO_RECORD,
                 title = stringResource(R.string.home_empty_title),
                 description = stringResource(R.string.home_empty_description),
-                actionLabel = stringResource(R.string.home_empty_action),
-                onActionClick = callbacks.onStartIntakeClick,
+                modifier = Modifier.weight(1f),
             )
         }
-        return
-    }
-    item {
-        MedicalMateSectionHeader(
-            title = stringResource(R.string.home_saved_cards),
-            actionLabel = stringResource(R.string.home_saved_cards_all),
-            onActionClick = callbacks.onAllCardsClick,
-        )
-    }
-    items(items = content.savedCards, key = { it.id }) { card ->
-        SavedCardRow(card = card, onClick = { callbacks.onSavedCardClick(card.id) })
     }
 }
 
-/** 다가오는 일정 구역. 일정이 없으면 구역 자체를 두지 않는다. Figma `1n-2`가 그렇다. */
-private fun LazyListScope.upcomingSection(content: HomeUiState.Content, today: LocalDate, callbacks: HomeCallbacks) {
-    if (content.upcoming.isEmpty()) return
-
-    item {
-        MedicalMateSectionHeader(
-            title = stringResource(R.string.home_upcoming),
-            actionLabel = stringResource(R.string.home_calendar),
-            onActionClick = callbacks.onCalendarClick,
-        )
-    }
-    items(items = content.upcoming, key = { it.id }) { schedule ->
-        ScheduleRow(
-            schedule = schedule,
-            today = today,
-            onClick = { callbacks.onScheduleClick(schedule.date, schedule.id) },
+/** 시트 맨 위. `Card / Action` 다음에 진행 중인 문답이 있으면 `Card / Resume`가 선다. */
+@Composable
+private fun SheetTop(content: HomeUiState.Content, callbacks: HomeCallbacks) {
+    MedicalMateActionCard(
+        label = stringResource(R.string.home_action_label),
+        title = stringResource(R.string.home_start_intake),
+        onClick = callbacks.onStartIntakeClick,
+    )
+    content.resume?.let { resume ->
+        MedicalMateResumeCard(
+            done = resume.doneSteps,
+            total = IntakeStep.total,
+            label = stringResource(R.string.home_resume_label),
+            title = stringResource(R.string.home_resume_step, resume.symptomTitle, resume.doneSteps),
+            onClick = { callbacks.onResumeClick(resume.intakeId) },
         )
     }
 }

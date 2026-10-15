@@ -101,6 +101,8 @@ data class MedicalMateTypography(
     val labelL: TextStyle,
     val labelM: TextStyle,
     val labelS: TextStyle,
+    /** 작은 칩·진행 원 숫자(`Chip` Info, `Card / Resume`). Bold 11/16, 자간 0. 2026-10-15 추가. M3 슬롯이 없다. */
+    val labelXS: TextStyle,
     val numericL: TextStyle,
     val numericM: TextStyle,
 )
@@ -120,6 +122,7 @@ internal val DefaultMedicalMateTypography =
         labelL = mmTextStyle(FontWeight.SemiBold, 15, 20, 0.0),
         labelM = mmTextStyle(FontWeight.SemiBold, 13, 18, 0.0),
         labelS = mmTextStyle(FontWeight.Medium, 11, 16, 2.0),
+        labelXS = mmTextStyle(FontWeight.Bold, 11, 16, 0.0),
         numericL = mmTextStyle(FontWeight.Bold, 24, 30, -1.5),
         numericM = mmTextStyle(FontWeight.SemiBold, 17, 22, -1.0),
     )

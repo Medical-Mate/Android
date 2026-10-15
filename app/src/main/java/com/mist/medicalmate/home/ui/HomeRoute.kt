@@ -9,6 +9,8 @@ import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
+import com.mist.medicalmate.core.speech.rememberMicPermission
+import com.mist.medicalmate.core.voice.LocalVoiceTargets
 import java.time.LocalDate
 
 /**
@@ -32,10 +34,14 @@ fun HomeRoute(
 
     LaunchedEffect(Unit) { viewModel.refresh() }
 
+    // 배너 5의 "메이트에게 말해보기"(#312). 마이크 권한을 받고 메이트 카드를 띄운다. 거절하면 아무 일도 없다.
+    val targets = LocalVoiceTargets.current
+    val summonMate = rememberMicPermission(onGranted = { targets?.summon?.invoke() }, onDenied = {})
+
     HomeScreen(
         state = state,
         today = today,
-        callbacks = callbacks.copy(onRetryClick = viewModel::refresh),
+        callbacks = callbacks.copy(onRetryClick = viewModel::refresh, onMateClick = summonMate),
         modifier = modifier,
         onTabSelect = onTabSelect,
     )

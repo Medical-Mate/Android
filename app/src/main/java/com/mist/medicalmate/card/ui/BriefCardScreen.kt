@@ -12,6 +12,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
@@ -62,10 +67,20 @@ fun BriefCardScreen(
     callbacks: BriefCardCallbacks,
     modifier: Modifier = Modifier,
     toastMessage: String? = null,
+    openExport: Boolean = false,
 ) {
     val content = state as? BriefCardUiState.Content
     // 공유할 때 찍을 카드 본문(#275). 스크롤로 가려진 아래까지 한 장에 담는다.
     val export = rememberBriefCardExport(rememberGraphicsLayer())
+    // 홈 배너에서 "카드 저장하기"로 왔으면 카드가 그려진 뒤 시트를 한 번 띄운다(#312). 화면이 다시 만들어져도
+    // 또 띄우지 않는다.
+    var exportShown by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(openExport, content != null) {
+        if (openExport && content != null && !exportShown) {
+            exportShown = true
+            export.open()
+        }
+    }
     Column(
         modifier =
         modifier

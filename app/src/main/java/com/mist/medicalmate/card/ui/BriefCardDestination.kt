@@ -53,6 +53,8 @@ internal data class BriefCardDestination(
      */
     val hospitalName: String? = null,
     val hospitalAddress: String? = null,
+    /** 열리자마자 이미지로 내보내기 시트(1e-1-X)를 띄울지. 홈 배너 4의 "카드 저장하기"다(#312). */
+    val export: Boolean = false,
 )
 
 internal fun NavGraphBuilder.briefCardDestination(
@@ -69,6 +71,7 @@ internal fun NavGraphBuilder.briefCardDestination(
             cardId = route.cardId?.toLongOrNull(),
             sessionId = route.sessionId,
             hospital = briefCardHospital(route),
+            export = route.export,
             onSaved = onSaved,
             onDeleted = onDeleted,
             onHospitalChange = onHospitalChange,
@@ -92,6 +95,7 @@ private fun BriefCardRoute(
     cardId: Long?,
     sessionId: Long?,
     hospital: BriefCardHospital?,
+    export: Boolean,
     onSaved: () -> Unit,
     onDeleted: () -> Unit,
     onHospitalChange: (String) -> Unit,
@@ -140,6 +144,7 @@ private fun BriefCardRoute(
         ),
         modifier = modifier,
         toastMessage = saveResult?.let { stringResource(saveMessage(it)) },
+        openExport = export,
     )
 }
 

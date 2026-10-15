@@ -258,10 +258,12 @@ class ScheduleAddVoiceTest {
     }
 
     @Test
-    fun `병원과 날짜가 있으면 저장하기 전에 묻고 네라고 하면 저장한다`() = runTest {
-        val viewModel = viewModel()
+    fun `필수 칸이 차면 저장하기 전에 묻고 네라고 하면 저장한다`() = runTest {
+        val viewModel = viewModel(cards = listOf(card("7", "오른쪽 어깨 통증")))
+        viewModel.load()
         viewModel.onHospitalPicked("고려튼튼통증의학과의원")
         viewModel.onDateConfirm(OCT_20)
+        viewModel.onCardPickChange("7", true)
         var saved = 0
 
         val reply = viewModel.voice.handle("저장해 줘", ScheduleAddVoiceRoutes(save = { saved++ }))
@@ -389,10 +391,22 @@ class ScheduleAddVoiceTest {
         val first = viewModel.voice.handle("20일", routes) as VoiceReply.Done
         assertEquals(VoiceText(R.string.voice_ask_hospital), first.question)
 
-        // 병원까지 차면 저장하라고 한다.
+        // 병원까지 차면 가져갈 카드를 묻는다(#312). 고를 카드가 없으면 새로 만들라고 한다.
         viewModel.onHospitalPicked("고려튼튼통증의학과의원")
         val second = viewModel.voice.handle("할 일 추가, 신분증", routes) as VoiceReply.Done
-        assertEquals(VoiceText(R.string.voice_ask_done), second.question)
+        assertEquals(VoiceText(R.string.voice_ask_card_new), second.question)
+    }
+
+    @Test
+    fun `카드가 비면 고르라고 하고 고르면 저장하라고 한다`() {
+        val cards = listOf(pick("1", "복부 통증 · 3주"))
+        val state = ScheduleAddUiState(hospital = "고려튼튼통증의학과의원", date = OCT_20, cards = cards)
+
+        assertEquals(VoiceText(R.string.voice_ask_card), state.nextQuestion())
+        assertEquals(
+            VoiceText(R.string.voice_ask_done),
+            state.copy(cards = cards.map { it.copy(picked = true) }).nextQuestion(),
+        )
     }
 
     @Test
