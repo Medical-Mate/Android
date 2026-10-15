@@ -70,11 +70,13 @@ internal class FakeSessionRepository(
 
     var sentText: String? = null
     var sentByVoice: Boolean = false
+    var sentCount = 0
     var savedSeverity: IntakeSeverity? = null
     var sentQuestions: List<String>? = null
     var turnEnded: Boolean = ends
 
     override suspend fun send(sessionId: Long, text: String, byVoice: Boolean): ApiResult<IntakeTurn> {
+        sentCount++
         sentText = text
         sentByVoice = byVoice
         return ApiResult.Success(
