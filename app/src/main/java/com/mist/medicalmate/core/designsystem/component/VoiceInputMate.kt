@@ -34,9 +34,8 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
  * 마스터 설명이 "다 말씀하시면 한 번 더 눌러주세요"라 카드 전체를 눌러도 듣기를 끝낸다([onClick]). 진료 후
  * 메모(1p-T)에서는 마이크 FAB가 카드에 자리를 내주어 이것이 끝내는 자리다.
  *
- * **파형이 움직인다**(#318). 디자인 트랙이 넘긴 [MateWaveform]의 `Large` 모양이다 — 듣는 중에는 천천히 숨 쉬고,
- * [speaking](받아쓰는 글)이 새로 들어오면 말하는 움직임으로 바뀐다. 기기에서 애니메이션을 껐으면 시안 모양 그대로
- * 멈춘다. 화면이 [title]·[description]으로 글을 고정할 수 있다.
+ * **파형은 말이 들릴 때만 움직인다**(#318). 디자인 트랙이 넘긴 [MateWaveform]의 `Large` 모양이다 — [speaking](받아쓰는
+ * 글)이 새로 들어오면 움직이고, 들리지 않으면 시안 모양 그대로 멈춰 있다. 기기에서 애니메이션을 껐으면 늘 멈춘다. 화면이 [title]·[description]으로 글을 고정할 수 있다.
  */
 @Composable
 fun MedicalMateVoiceInputMate(

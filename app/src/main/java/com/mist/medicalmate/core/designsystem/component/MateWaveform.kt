@@ -77,9 +77,10 @@ class MateWaveformShape private constructor(
  * 폭도 같은 비율로 바뀐다.
  *
  * **움직임** (회의 캔버스 7-B v2 · Figma `3539:5606` 설명과 같은 값)
- * - 말소리가 없을 때(듣는 중): 1.8초 주기로 느리게 숨 쉰다. 높이 45~75%, 불투명도 85%.
- * - 말할 때: 1.1초 주기, 높이 45↔100%. [level]이 클수록 100%에 가깝다.
- * - 두 상태는 끊기지 않고 [level]에 따라 섞인다. 막대마다 박자가 조금씩 늦어 물결처럼 보인다
+ * - 말소리가 없을 때는 Figma 모양 그대로 멈춰 있다(#318, 사용자 결정). 회의 캔버스는 이때 1.8초 주기로 숨 쉬게
+ *   적었지만, 듣기만 하는 동안 움직이면 말이 들리는 것처럼 보여 뺐다. 받아쓴 글이 들어올 때만 움직인다.
+ * - 말할 때: 1.1초 주기, 높이 45↔100%. [level]이 클수록 많이 움직인다.
+ * - 멈춘 모양과 움직임은 끊기지 않고 [level]에 따라 섞인다. 막대마다 박자가 조금씩 늦어 물결처럼 보인다
  *   (지연 0 · -0.2 · -0.45 · -0.7 · -0.9초).
  * - 곡선은 cubic-bezier(.45, 0, .55, 1).
  * - 시스템 "애니메이션 끄기"(애니메이터 길이 배율 0)면 Figma 모양 그대로 멈춘다.
@@ -128,15 +129,13 @@ fun MateWaveform(
         val barW = shape.barWidth * unit
         val t = elapsed.floatValue
         val lv = smoothed.floatValue
-        val alpha = if (animate) IDLE_ALPHA + (1f - IDLE_ALPHA) * lv else 1f
         for (i in shape.barCenterX.indices) {
             val scale =
                 if (!animate) {
                     1f
                 } else {
-                    val idle = IDLE_MIN + (IDLE_MAX - IDLE_MIN) * pulse(t, IDLE_PERIOD_SEC, PHASE[i])
                     val speak = SPEAK_MIN + (1f - SPEAK_MIN) * pulse(t, SPEAK_PERIOD_SEC, PHASE[i])
-                    idle + (speak - idle) * lv
+                    1f + (speak - 1f) * lv
                 }
             // 둥근 끝(반지름 barW/2)이 위아래로 붙으므로 선 길이는 전체 높이에서 막대 폭을 뺀 값
             val half = max(shape.barHeights[i] * unit * scale - barW, 0f) / 2f
@@ -147,7 +146,6 @@ fun MateWaveform(
                 end = Offset(x, cy + half),
                 strokeWidth = barW,
                 cap = StrokeCap.Round,
-                alpha = alpha,
             )
         }
     }
@@ -158,15 +156,18 @@ fun MateWaveform(
  *
  * 지금 받아쓰기는 ML Kit GenAI `AudioSource.fromMic()`이 마이크를 잡고 있어 음량(RMS)을
  * 따로 주지 않는다. 대신 부분 인식 글자가 새로 들어올 때마다 신호를 0.9로 올렸다가 0.7초에
- * 걸쳐 내린다. 말을 이어 하면 글자가 계속 들어와 높게 유지되고, 멈추면 숨 쉬는 상태로 돌아간다.
+ * 걸쳐 내린다. 말을 이어 하면 글자가 계속 들어와 높게 유지되고, 멈추면 파형이 멈춘다.
+ *
+ * 처음 받은 글은 세지 않는다. 음성을 켜기 전에 적어 둔 글이 있으면 듣기 시작하자마자 말이 들린 것처럼 움직였다.
  *
  * @param partialText 지금까지 들어온 부분 인식 글자(발화가 끊기면 빈 글자로).
  */
 @Composable
 fun rememberSpeechActivityLevel(partialText: String): () -> Float {
     val level = remember { Animatable(0f) }
+    val first = remember { partialText }
     LaunchedEffect(partialText) {
-        if (partialText.isBlank()) {
+        if (partialText.isBlank() || partialText == first) {
             level.animateTo(0f, tween(durationMillis = 300))
             return@LaunchedEffect
         }
@@ -193,11 +194,7 @@ private fun rememberAnimationsEnabled(): Boolean {
 
 // 움직임 (회의 캔버스 7-B v2 CSS keyframes · Figma 3539:5606 설명과 같은 값)
 private const val SPEAK_PERIOD_SEC = 1.1f
-private const val IDLE_PERIOD_SEC = 1.8f
 private const val SPEAK_MIN = 0.45f
-private const val IDLE_MIN = 0.45f
-private const val IDLE_MAX = 0.75f
-private const val IDLE_ALPHA = 0.85f
 
 /** CSS animation-delay 0 · -0.2 · -0.45 · -0.7 · -0.9초를 1.1초 주기에 대한 비율로 */
 private val PHASE = floatArrayOf(0f, 0.18f, 0.41f, 0.64f, 0.82f)
