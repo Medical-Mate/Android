@@ -20,6 +20,8 @@ import com.mist.medicalmate.calendar.ui.CalendarDestination
 import com.mist.medicalmate.calendar.ui.ScheduleAddDestination
 import com.mist.medicalmate.card.ui.BriefCardDestination
 import com.mist.medicalmate.card.ui.BriefCardListDestination
+import com.mist.medicalmate.card.ui.BriefCardRoutes
+import com.mist.medicalmate.card.ui.BriefCardScheduleRoutes
 import com.mist.medicalmate.card.ui.RecordDestination
 import com.mist.medicalmate.card.ui.briefCardDestination
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
@@ -88,24 +90,7 @@ internal fun MedicalMateNavHost(
                 onOnboardingCompleted = onOnboardingCompleted,
             )
             intakeDestinations(navController)
-            briefCardDestination(
-                onSaved = { navController.resetTo(HomeDestination) },
-                // 카드의 `변경`. 어느 카드로 돌아갈지 들고 간다.
-                onHospitalChange = { cardId ->
-                    navController.navigate(
-                        HospitalPickDestination(purpose = HospitalPickPurpose.BEFORE_VISIT, cardId = cardId),
-                    )
-                },
-                // 지운 카드의 화면에 남을 수 없다. 시안이 카드 목록으로 보낸다(1e-1-DC). 홈까지만
-                // 걷어내고 목록을 얹어서, 뒤로 가면 홈이 나오고 목록이 두 장 쌓이지 않게 한다.
-                onDeleted = {
-                    navController.navigate(BriefCardListDestination) {
-                        popUpTo<HomeDestination> { inclusive = false }
-                        launchSingleTop = true
-                    }
-                },
-                onExit = { navController.popBackStack() },
-            )
+            briefCardDestination(navController.briefCardRoutes())
             homeDestination(
                 callbacks = navController.homeCallbacks(),
                 onTabSelect = navController::selectTab,
@@ -287,6 +272,33 @@ private fun NavHostController.homeCallbacks(): HomeCallbacks = HomeCallbacks(
             else -> navigate(BriefCardDestination(cardId, export = true))
         }
     },
+)
+
+/** 브리핑 카드(1e-1)에서 나가는 길들. */
+private fun NavHostController.briefCardRoutes() = BriefCardRoutes(
+    onHome = { resetTo(HomeDestination) },
+    // 카드의 `변경`. 어느 카드로 돌아갈지 들고 간다.
+    onHospitalChange = { cardId ->
+        navigate(HospitalPickDestination(purpose = HospitalPickPurpose.BEFORE_VISIT, cardId = cardId))
+    },
+    // 지운 카드의 화면에 남을 수 없다. 시안이 카드 목록으로 보낸다(1e-1-DC). 홈까지만
+    // 걷어내고 목록을 얹어서, 뒤로 가면 홈이 나오고 목록이 두 장 쌓이지 않게 한다.
+    onDeleted = {
+        navigate(BriefCardListDestination) {
+            popUpTo<HomeDestination> { inclusive = false }
+            launchSingleTop = true
+        }
+    },
+    onExit = { popBackStack() },
+    // 하단 버튼 셋(#314). 일정 추가는 저장하면 이 카드로 돌아온다.
+    schedule =
+    BriefCardScheduleRoutes(
+        onScheduleAdd = { cardId -> navigate(ScheduleAddDestination(cardId = cardId)) },
+        onViewSchedule = { date, appointmentId ->
+            navigate(CalendarDayDestination(date.toString(), appointmentId.toLongOrNull()))
+        },
+        onRecordVisit = { cardId, title, date, clinic -> openVisitRecord(cardId, title, date, clinic) },
+    ),
 )
 
 /**

@@ -10,11 +10,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -30,8 +30,6 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
-import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
-import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonType
 import com.mist.medicalmate.core.designsystem.component.MedicalMateCalloutEdit
 import com.mist.medicalmate.core.designsystem.component.MedicalMateDialog
 import com.mist.medicalmate.core.designsystem.component.MedicalMateEmptyState
@@ -44,9 +42,10 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
 import com.mist.medicalmate.core.model.MAX_BRIEF_CARD_QUESTIONS
 import com.mist.medicalmate.core.voice.rememberVoiceScrollState
 import com.mist.medicalmate.core.voice.voicePanelSpace
+import java.time.LocalDate
 
 /**
- * 와이어프레임 1e-1과 1e-1-E. Figma `404:1679`, `597:4804`.
+ * 와이어프레임 1e-1과 1e-1-E. 10-15 시안 `3681:17863`(일정 없음) · `3663:7393`(진료 전) · `3663:7428`(진료 지남).
  *
  * 문답을 마치면 AI가 정리한 카드가 여기 나온다. 읽기와 편집이 같은 화면의 두 모드다.
  *
@@ -54,12 +53,11 @@ import com.mist.medicalmate.core.voice.voicePanelSpace
  * 바꾸면 `확인`이다. 문서의 CRUD 규칙이고, 아무것도 안 건드렸는데 `확인`이 떠 있으면 뭘
  * 확인하라는 건지 알 수 없다는 이유가 붙어 있다.
  *
- * 하단도 모드에 따라 갈린다. 읽을 때는 저장하기, 편집 중에는 `브리핑 카드 삭제`다. 개체를
- * 통째로 지우는 것이라 문서가 하단 Danger CTA와 확인 대화상자를 함께 요구한다.
+ * 하단은 `BriefCardFooter`다. 읽을 때는 저장 여부와 그 카드의 일정으로 네 가지로 갈리고(#314), 편집 중에는
+ * `브리핑 카드 삭제`다.
  *
- * **"진료실에서 보여주기"는 시안에 없다.** 1e-1의 하단에는 저장하기만 있는데 플로우는
- * 1e-1에서 진료실 화면(1f-1)으로 이어진다. 그대로 두면 그 화면에 갈 방법이 없어서
- * 보조 버튼으로 뒀고 디자인 트랙에 남겼다(#72). 시안에서는 그 프레임이 지워졌다.
+ * **내보내기는 카드 머리에 있다**(#314). 10-15 시안이 상단 바의 `공유` 글자를 걷고 카드 제목 줄 끝에
+ * `export` 아이콘(Icon Button S)을 두었다. 누르면 이미지로 내보내기 시트(1e-1-X)가 뜬다.
  */
 @Composable
 fun BriefCardScreen(
@@ -68,6 +66,7 @@ fun BriefCardScreen(
     modifier: Modifier = Modifier,
     toastMessage: String? = null,
     openExport: Boolean = false,
+    today: LocalDate = remember { LocalDate.now() },
 ) {
     val content = state as? BriefCardUiState.Content
     // 공유할 때 찍을 카드 본문(#275). 스크롤로 가려진 아래까지 한 장에 담는다.
@@ -93,9 +92,6 @@ fun BriefCardScreen(
             surface = MedicalMateSurfaceStyle.GLASS,
             actionLabel = content?.let { stringResource(navActionLabel(it)) },
             onActionClick = content?.let { { onNavAction(it, callbacks) } },
-            // 편집 중에는 감춘다. 고치다 만 카드가 나간다.
-            secondaryActionLabel = stringResource(R.string.brief_card_share).takeIf { content?.editing == false },
-            onSecondaryActionClick = export::open,
         )
         when (state) {
             BriefCardUiState.Loading ->
@@ -111,12 +107,33 @@ fun BriefCardScreen(
                 CardContent(
                     state = state,
                     callbacks = callbacks,
-                    capture = export.capture,
+                    export = export,
                     toastMessage = toastMessage,
+                    today = today,
                 )
         }
     }
-    BriefCardExportSheet(export = export, onSave = callbacks.onSaveImageClick, onShare = callbacks.onShareClick)
+    BriefCardOverlays(content = content, export = export, callbacks = callbacks)
+}
+
+/** 화면 위에 뜨는 것들. 내보내기 시트(1e-1-X) · 저장 직후 일정 시트(1e-1-S) · 삭제 확인(1e-1-DC)이다. */
+@Composable
+private fun BriefCardOverlays(
+    content: BriefCardUiState.Content?,
+    export: BriefCardExport,
+    callbacks: BriefCardCallbacks,
+) {
+    BriefCardExportSheet(
+        export = export,
+        card = content?.card,
+        onSave = callbacks.onSaveImageClick,
+        onShare = callbacks.onShareClick,
+    )
+    BriefCardScheduleSheet(
+        visible = content?.scheduleSheet == true,
+        onScheduleClick = callbacks.onScheduleClick,
+        onDismiss = callbacks.onOverlayDismiss,
+    )
     if (content?.deleteRequested == true) {
         MedicalMateDialog(
             title = stringResource(R.string.brief_card_delete_title),
@@ -124,7 +141,7 @@ fun BriefCardScreen(
             confirmLabel = stringResource(R.string.brief_card_delete_confirm),
             onConfirm = callbacks.onDeleteConfirm,
             dismissLabel = stringResource(R.string.brief_card_cancel),
-            onDismissRequest = callbacks.onDeleteDismiss,
+            onDismissRequest = callbacks.onOverlayDismiss,
         )
     }
 }
@@ -132,7 +149,7 @@ fun BriefCardScreen(
 /**
  * 카드 화면에서 나가는 길들.
  *
- * 수정은 화면 안에서 모드만 바뀌므로 목적지가 아니다. 저장과 진료실 화면이 나가는 길이다.
+ * 수정은 화면 안에서 모드만 바뀌므로 목적지가 아니다. 하단 버튼 셋과 병원 `변경`이 나가는 길이다.
  *
  * [onShareClick]과 [onSaveImageClick]은 찍은 카드 이미지를 받는다. 공유 시트를 띄우고 갤러리에 쓰려면
  * `Context`가 있어야 해서 화면이 아니라 라우트가 맡는다.
@@ -146,7 +163,14 @@ data class BriefCardCallbacks(
     val onSaveClick: () -> Unit = {},
     val onHospitalChangeClick: () -> Unit = {},
     val onDeleteClick: () -> Unit = {},
-    val onDeleteDismiss: () -> Unit = {},
+    /** 삭제 확인 대화상자나 저장 직후 일정 시트를 닫는다. */
+    val onOverlayDismiss: () -> Unit = {},
+    /** `진료 일정 잡기`. 이 카드가 골라진 일정 추가(1r-4)로 간다. */
+    val onScheduleClick: () -> Unit = {},
+    /** `진료 일정 보기`. 그 일정의 일자 화면(1r-2)으로 간다. */
+    val onViewScheduleClick: (BriefCardAppointment) -> Unit = {},
+    /** `진료 후 기록하기`. 그 일정의 병원 확인(1m-12)부터 간다. */
+    val onRecordVisitClick: (BriefCardAppointment) -> Unit = {},
     val onDeleteConfirm: () -> Unit = {},
     val onRetryClick: () -> Unit = {},
     val onShareClick: (ImageBitmap) -> Unit = {},
@@ -176,9 +200,11 @@ private fun onNavAction(content: BriefCardUiState.Content, callbacks: BriefCardC
 private fun ColumnScope.CardContent(
     state: BriefCardUiState.Content,
     callbacks: BriefCardCallbacks,
-    capture: BriefCardCapture,
+    export: BriefCardExport,
     toastMessage: String?,
+    today: LocalDate,
 ) {
+    val capture = export.capture
     Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
         Column(
             modifier =
@@ -215,6 +241,9 @@ private fun ColumnScope.CardContent(
                 onItemValueChange = callbacks.edit::onItemValueChange,
                 onItemDeleteClick = if (state.editing) callbacks.edit::onItemDeleteClick else null,
                 maskPatient = capture.maskPatient,
+                // 편집 중에는 감춘다. 고치다 만 카드가 나간다.
+                export =
+                if (state.editing) null else BriefCardHeadExport(onClick = export::open, hidden = capture.capturing),
             )
             // 편집 중에는 알러지 경고를 감춘다. 지울 수 없는 항목이라 x가 붙지 않는데, x가 없는
             // 블록이 편집 화면에 남아 있으면 왜 이것만 못 고치는지가 설명되지 않는다. 문서가
@@ -233,7 +262,7 @@ private fun ColumnScope.CardContent(
         }
         BriefCardExportToast(message = toastMessage)
     }
-    Footer(state = state, callbacks = callbacks)
+    BriefCardFooter(state = state, today = today, callbacks = callbacks)
 }
 
 /** 질문 편집에 필요한 문구와 조작을 모은다. 문구는 화면이 들고 조작은 사본이 받는다. */
@@ -277,66 +306,6 @@ private fun HospitalSection(hospital: BriefCardHospital?, onChangeClick: () -> U
         name = hospital?.name ?: stringResource(R.string.brief_card_hospital_unset),
         address = hospital?.address,
     )
-}
-
-/**
- * 하단.
- *
- * **이미 저장한 카드에는 하단이 없다**(#229). 홈이나 기록에서 여는 카드는 다시 보는
- * 자리인데 저장하기가 서 있으면 아직 저장이 안 된 것으로 읽힌다.
- *
- * 아직 저장하지 않은 카드에는 남긴다. 저장이 곧 확정이고, 확정하지 않은 카드에는 진료 후
- * 기록을 붙일 수 없다(#220). 저장 자리를 통째로 없애면 그 카드를 되살릴 길이 사라진다.
- *
- * [saveFailed]면 버튼 위에 왜 안 됐는지를 적는다. 아무 말도 하지 않으면 버튼이 안 먹는
- * 것으로 읽고 계속 누르게 된다 — 기기에서 실제로 그랬다(#196·#198). 버튼은 살려 둔다.
- * 다시 눌러야 하는 자리다.
- */
-@Composable
-private fun Footer(state: BriefCardUiState.Content, callbacks: BriefCardCallbacks) {
-    val editing = state.editing
-    val saveFailed = state.saveFailed
-    if (!editing && state.card.status == BriefCard.Status.CONFIRMED) return
-
-    Column(
-        modifier =
-        Modifier
-            .fillMaxWidth()
-            .background(MedicalMateTheme.colors.bgSurface)
-            .padding(
-                start = MedicalMateSize.gutter,
-                end = MedicalMateSize.gutter,
-                top = MedicalMateSpace.s12,
-                bottom = MedicalMateSpace.s8,
-            ),
-        verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12),
-    ) {
-        if (editing) {
-            // 편집 중 하단은 삭제 하나다. 사본을 옮기는 것은 Nav 우측 `확인`이 하고, 되돌리는
-            // 것은 `취소`가 한다. 저장하기를 함께 두면 확인과 저장이 같은 일을 두 번 한다.
-            MedicalMateButton(
-                onClick = callbacks.onDeleteClick,
-                label = stringResource(R.string.brief_card_delete),
-                type = MedicalMateButtonType.DANGER,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        } else {
-            if (saveFailed) {
-                Text(
-                    text = stringResource(R.string.brief_card_save_failed),
-                    style = MedicalMateTheme.typography.bodyS,
-                    color = MedicalMateTheme.colors.fgDanger,
-                )
-            }
-            // **진료실에서 보여주기가 없다.** IA가 진료실 전달을 1e-1로 대체하면서 그 버튼도
-            // 사라졌다(#167 · #194). 저장하기가 카드를 확정하고 홈으로 나간다.
-            MedicalMateButton(
-                onClick = callbacks.onSaveClick,
-                label = stringResource(R.string.brief_card_save),
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-    }
 }
 
 @Composable

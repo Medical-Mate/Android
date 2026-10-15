@@ -64,6 +64,8 @@ data class BriefCard(
      * 그 id로 그대로 열리므로 여기서 받는 것이 어긋나지 않는다.
      */
     val writtenOn: LocalDate? = null,
+    /** 이 카드로 잡은 일정(#314). 하단 버튼이 이 값으로 갈린다. 없으면 일정을 잡지 않은 카드다. */
+    val appointment: BriefCardAppointment? = null,
 ) {
     /**
      * 백엔드 카드 상태 `DRAFT` / `CONFIRMED`에 대응한다.
@@ -89,6 +91,40 @@ data class BriefCard(
  * 그리지 않는다.
  */
 data class BriefCardHospital(val name: String, val address: String? = null)
+
+/** 카드에 잡힌 일정. [clinic]은 일정에 적은 병원이고 없을 수 있다. */
+data class BriefCardAppointment(val id: String, val date: LocalDate, val clinic: String? = null)
+
+/**
+ * 읽는 중 하단 버튼(#314). 시안 1e-1 네 장이다.
+ *
+ * 저장하지 않은 카드는 [SAVE]다. 저장한 카드는 그 카드로 잡은 일정으로 갈린다. 일정이 없으면 [SCHEDULE],
+ * 앞날이면 [VIEW_SCHEDULE], 당일이거나 지났으면 [RECORD_VISIT]다.
+ */
+enum class BriefCardFooterAction {
+    /** Primary "저장하기". 카드를 확정한다. */
+    SAVE,
+
+    /** Primary "진료 일정 잡기". 이 카드가 골라진 일정 추가로 간다. */
+    SCHEDULE,
+
+    /** Outline "진료 일정 보기". 그 일정의 일자 화면으로 간다. */
+    VIEW_SCHEDULE,
+
+    /** Tonal "진료 후 기록하기". 그 일정의 병원 확인(1m-12)부터 간다. */
+    RECORD_VISIT,
+}
+
+/** [today]를 기준으로 하단 버튼을 고른다. 당일은 진료를 다녀왔을 수 있어 기록하기다. */
+fun BriefCard.footerAction(today: LocalDate): BriefCardFooterAction {
+    val on = appointment?.date
+    return when {
+        status != BriefCard.Status.CONFIRMED -> BriefCardFooterAction.SAVE
+        on == null -> BriefCardFooterAction.SCHEDULE
+        on.isAfter(today) -> BriefCardFooterAction.VIEW_SCHEDULE
+        else -> BriefCardFooterAction.RECORD_VISIT
+    }
+}
 
 /**
  * 카드의 항목 한 줄. Figma `KV Row`.
@@ -156,6 +192,8 @@ sealed interface BriefCardUiState {
         val draft: BriefCardDraft? = null,
         val deleteRequested: Boolean = false,
         val saveFailed: Boolean = false,
+        /** 저장 직후 일정 시트(1e-1-S, #314)가 떠 있는지. 처음 저장했고 그 카드로 잡은 일정이 없을 때만 뜬다. */
+        val scheduleSheet: Boolean = false,
     ) : BriefCardUiState {
         val editing: Boolean get() = draft != null
 

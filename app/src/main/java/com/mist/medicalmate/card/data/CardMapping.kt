@@ -1,9 +1,11 @@
 package com.mist.medicalmate.card.data
 
 import com.mist.medicalmate.card.ui.BriefCard
+import com.mist.medicalmate.card.ui.BriefCardAppointment
 import com.mist.medicalmate.card.ui.BriefCardHospital
 import com.mist.medicalmate.card.ui.BriefCardItem
 import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
+import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -34,6 +36,14 @@ internal fun CardResponse.toBriefCard(): BriefCard = BriefCard(
     // 병원이고 `visit`은 진료를 받은 병원이라 셋이 다 다를 수 있다.
     hospital = clinic?.toHospital(),
     writtenOn = createdAt?.let { OffsetDateTime.parse(it).toLocalDate() },
+    appointment =
+    appointment?.let {
+        BriefCardAppointment(
+            id = it.appointmentId.toString(),
+            date = LocalDate.parse(it.scheduledOn),
+            clinic = it.clinicName,
+        )
+    },
 )
 
 /**
