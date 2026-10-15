@@ -20,8 +20,8 @@ import java.io.IOException
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
-import java.time.LocalTime
 import java.time.ZoneId
+import kotlin.random.Random
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTest {
@@ -113,34 +113,108 @@ class HomeViewModelTest {
         assertTrue(viewModel.uiState.value is HomeUiState.Content)
     }
 
+    @Test
+    fun `처음 온 사람은 환영 배너 한 장뿐이다`() {
+        // 1n-2. 장 수도 넘김도 없다.
+        val viewModel = viewModel(repository = { ApiResult.Success(snapshot.copy(lead = HomeLead.FirstVisit)) })
+
+        viewModel.refresh()
+
+        assertEquals(listOf(HomeBanner.Welcome), (viewModel.uiState.value as HomeUiState.Content).banners)
+    }
+
+    @Test
+    fun `상황에 맞는 첫 장 뒤로 2~5장이 선다`() {
+        val today =
+            HomeVisitLink(cardId = "1", cardTitle = "복부 통증", clinic = "서울OO병원", date = LocalDate.of(2026, 9, 11))
+        val viewModel =
+            viewModel(repository = { ApiResult.Success(snapshot.copy(lead = HomeLead.TodayVisit("서울OO병원 내과", today))) })
+
+        viewModel.refresh()
+
+        assertEquals(
+            listOf(
+                HomeBanner.Today("서울OO병원 내과", today),
+                HomeBanner.Message,
+                HomeBanner.Schedule,
+                HomeBanner.SaveCard("1"),
+                HomeBanner.Mate,
+            ),
+            (viewModel.uiState.value as HomeUiState.Content).banners,
+        )
+    }
+
+    @Test
+    fun `맞는 상황이 없으면 2~5장 가운데 하나를 첫 장에 둔다`() {
+        // 사용자 결정. 첫 장이 무작위다.
+        val viewModel = viewModel()
+        viewModel.random = FixedRandom(2)
+
+        viewModel.refresh()
+
+        val banners = (viewModel.uiState.value as HomeUiState.Content).banners
+        assertEquals(HomeBanner.SaveCard("1"), banners.first())
+        assertEquals(5, banners.size)
+    }
+
+    @Test
+    fun `다시 읽어도 무작위로 고른 첫 장이 바뀌지 않는다`() {
+        // 홈으로 돌아올 때마다 다시 읽는다. 그때마다 바뀌면 방금 본 배너가 사라진 것처럼 보인다.
+        val viewModel = viewModel()
+        viewModel.random = FixedRandom(1)
+        viewModel.refresh()
+        viewModel.random = FixedRandom(3)
+
+        viewModel.refresh()
+
+        assertEquals(HomeBanner.Schedule, (viewModel.uiState.value as HomeUiState.Content).banners.first())
+    }
+
+    @Test
+    fun `카드가 없으면 카드 저장 배너는 카드 목록으로 간다`() {
+        // 사용자 결정. 저장 배너가 가리킬 카드가 없다.
+        val viewModel = viewModel(repository = { ApiResult.Success(snapshot.copy(savedCards = emptyList())) })
+
+        viewModel.refresh()
+
+        assertTrue(HomeBanner.SaveCard(null) in (viewModel.uiState.value as HomeUiState.Content).banners)
+    }
+
     private fun viewModel(
         repository: suspend (LocalDate) -> ApiResult<HomeSnapshot> = {
             ApiResult.Success(snapshot)
         },
     ) = HomeViewModel(
         repository = object : HomeRepository {
-            override suspend fun load(today: LocalDate, now: LocalTime) = repository(today)
+            override suspend fun load(today: LocalDate) = repository(today)
         },
         clock = Clock.fixed(Instant.parse("2026-09-11T09:00:00Z"), ZoneId.of("Asia/Seoul")),
     )
+
+    /** 늘 같은 수를 내는 난수. 첫 장을 고정해 본다. */
+    private class FixedRandom(private val value: Int) : Random() {
+        override fun nextBits(bitCount: Int): Int = value
+
+        override fun nextInt(until: Int): Int = value
+    }
 
     private companion object {
         val snapshot =
             HomeSnapshot(
                 userInitial = "김",
-                todayLine = HomeTodayLine.LastDaysAgo(12),
+                lead = HomeLead.Other,
                 resume = HomeResume(intakeId = "7", symptomTitle = "복부", step = IntakeStep.SYMPTOM_CHAT),
                 savedCards =
                 listOf(
                     SavedCardSummary(
                         id = "1",
                         title = "복부 통증 · 3주",
-                        visited = true,
+                        status = HomeCardStatus.VISITED,
                         writtenOn = LocalDate.of(2026, 9, 4),
                         clinic = "서울OO병원 내과",
                     ),
                 ),
-                upcoming = emptyList(),
+                upcoming = null,
             )
     }
 }

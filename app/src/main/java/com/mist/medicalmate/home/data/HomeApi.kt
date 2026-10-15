@@ -2,6 +2,7 @@ package com.mist.medicalmate.home.data
 
 import kotlinx.serialization.Serializable
 import retrofit2.http.GET
+import retrofit2.http.Path
 
 /**
  * 홈 API. `/v3/api-docs`의 `GET /api/me/home` 기준이다.
@@ -15,7 +16,25 @@ import retrofit2.http.GET
 internal interface HomeApi {
     @GET("api/me/home")
     suspend fun home(): HomeResponse
+
+    /**
+     * 카드 하나. 홈 배너 첫 장이 "카드는 준비됐어요"인지 가르는 데만 쓴다(#312) — 최근 카드에 잡힌 일정이
+     * 있는지가 홈 응답의 카드 요약에 없다. `card` 도메인의 같은 경로를 따로 적은 것은 도메인끼리 서로를
+     * 참조하지 않기 위해서다. 필요한 값만 받는다.
+     */
+    @GET("api/cards/{cardId}")
+    suspend fun card(@Path("cardId") cardId: Long): HomeCardResponse
 }
+
+/**
+ * @param appointment 카드에 잡힌 일정. 안 지난 것 중 가장 가까운 것, 다 지났으면 가장 최근 것이다. 일정이
+ *   없으면 `null`이다.
+ */
+@Serializable
+internal data class HomeCardResponse(val cardId: Long, val appointment: HomeCardAppointment? = null)
+
+@Serializable
+internal data class HomeCardAppointment(val appointmentId: Long, val scheduledOn: String)
 
 /**
  * @param lastVisitedOn 마지막 진료일(`yyyy-MM-dd`). 없으면 아직 진료 기록이 없는 사람이다.
@@ -75,6 +94,8 @@ internal data class InProgressSessionResponse(
 internal data class CardSummaryResponse(
     val cardId: Long,
     val title: String? = null,
+    /** 주 호소. 배너가 "복부 통증 카드가 기다리고 있어요"라고 부를 때 쓴다. */
+    val chiefComplaint: String? = null,
     val status: String? = null,
     val visited: Boolean = false,
     val clinicName: String? = null,

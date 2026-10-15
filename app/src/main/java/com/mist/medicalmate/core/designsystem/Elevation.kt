@@ -1,8 +1,11 @@
 package com.mist.medicalmate.core.designsystem
 
 import android.os.Build
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 
 /**
@@ -72,3 +75,41 @@ object MedicalMateGlass {
     val isBlurSupported: Boolean
         get() = Build.VERSION.SDK_INT >= MIN_BLUR_SDK
 }
+
+/**
+ * 2026-10-15 게시로 늘어난 효과 스타일.
+ *
+ * 앞의 세 고도와 달리 Figma 값을 그대로 옮긴다. Compose UI 1.9부터 `Modifier.dropShadow`가 offset ·
+ * blur · spread · 색을 따로 받아서 근사할 필요가 없다. 글자 그림자는 `TextStyle.shadow`가 한 겹만 받아
+ * 두 겹을 [onImageTextTight]·[onImageTextWide]로 나눠 둔다. 그리는 쪽이 글자를 두 번 겹쳐 그린다.
+ *
+ * ```
+ * Elevation/Primary         #3B4FC0 28%  (0, 8)  blur 30  spread -18
+ * Shadow/On Image · Text    #131722 50%  (0, 1)  blur 2  +  #131722 40%  (0, 2)  blur 16
+ * Shadow/On Image · Icon    #131722 50%  (0, 1)  blur 3
+ * ```
+ */
+object MedicalMateEffects {
+    /** `bg/primary` 채움 카드·큰 버튼. 홈의 `Card / Action`. */
+    val elevationPrimary: Shadow =
+        Shadow(radius = 30.dp, color = PrimaryShadowColor, spread = (-18).dp, offset = DpOffset(0.dp, 8.dp))
+
+    /** 사진 위 흰 글자의 가까운 겹. */
+    val onImageTextTight: ShadowSpec = ShadowSpec(OnImageShadowColor.copy(alpha = 0.5f), y = 1.dp, blur = 2.dp)
+
+    /** 사진 위 흰 글자의 넓은 겹. */
+    val onImageTextWide: ShadowSpec = ShadowSpec(OnImageShadowColor.copy(alpha = 0.4f), y = 2.dp, blur = 16.dp)
+
+    /** 사진 위 흰 아이콘. */
+    val onImageIcon: ShadowSpec = ShadowSpec(OnImageShadowColor.copy(alpha = 0.5f), y = 1.dp, blur = 3.dp)
+}
+
+/** 아래로 [y]만큼 내리고 [blur]만큼 흐린 한 겹. 글자·아이콘처럼 모양을 따라가는 그림자에 쓴다. */
+@Immutable
+data class ShadowSpec(val color: Color, val y: Dp, val blur: Dp)
+
+/** `Elevation/Primary`의 색. `primary/600`에 28%다. */
+private val PrimaryShadowColor = Color(0x473B4FC0)
+
+/** 사진 위 그림자의 색. 브랜드 틴트가 아니라 `neutral/900`이다 — 사진 위에서는 어둡게 눌러야 글자가 산다. */
+private val OnImageShadowColor = Color(0xFF131722)

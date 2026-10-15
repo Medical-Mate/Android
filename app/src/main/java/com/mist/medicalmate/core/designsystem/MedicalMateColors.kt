@@ -5,7 +5,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 /**
- * DESIGN.md의 시맨틱 컬러 40개.
+ * DESIGN.md의 시맨틱 컬러. 2026-10-15 게시로 세 개(`bg/primary-strong` · `bg/on-dark` · `border/on-dark`)가 늘었다.
  *
  * Material3 `ColorScheme`에는 `bg/canvas`, `fg/subtle`, `border/subtle`, `severity/1~5`에
  * 대응하는 역할이 없어서 별도 홀더를 둔다. 매핑되는 역할은 `ColorScheme`에도 같은 값으로
@@ -23,6 +23,8 @@ data class MedicalMateColors(
     val bgPrimaryPressed: Color,
     val bgPrimarySubtle: Color,
     val bgPrimaryFaint: Color,
+    /** 진한 정보 칩 면(`Chip` Type=Info). 2026-10-15 추가. */
+    val bgPrimaryStrong: Color,
     val bgInfo: Color,
     val bgSuccess: Color,
     val bgWarning: Color,
@@ -37,6 +39,8 @@ data class MedicalMateColors(
     val bgInverseSoft: Color,
     /** Overlay Scrim. 컴포넌트에서 opacity 50%를 적용한다(DESIGN.md의 컴포넌트 규격). */
     val bgScrim: Color,
+    /** 사진·`bg/primary` 면 위 반투명 면. 흰 20%다. 홈 배너 아바타 원과 `Card / Action` 아이콘 원. 2026-10-15 추가. */
+    val bgOnDark: Color,
     val fgDefault: Color,
     val fgSubtle: Color,
     /** 비활성 아이콘·장식 획 전용. 텍스트에 쓰지 않는다(DESIGN.md의 접근성 기준). */
@@ -55,6 +59,8 @@ data class MedicalMateColors(
     val borderStrong: Color,
     val borderFocus: Color,
     val borderPrimary: Color,
+    /** 사진 위 반투명 선. 흰 32%다. 홈 배너 아바타 테두리와 링크 위 구분선. 2026-10-15 추가. */
+    val borderOnDark: Color,
     val severity1: Color,
     val severity2: Color,
     val severity3: Color,
@@ -80,6 +86,7 @@ internal val LightMedicalMateColors =
         bgPrimaryPressed = Primary600,
         bgPrimarySubtle = Primary100,
         bgPrimaryFaint = Primary50,
+        bgPrimaryStrong = Primary800,
         bgInfo = Primary50,
         bgSuccess = Green50,
         bgWarning = Amber50,
@@ -87,6 +94,7 @@ internal val LightMedicalMateColors =
         bgInverse = Neutral900,
         bgInverseSoft = Neutral700,
         bgScrim = Neutral900,
+        bgOnDark = Neutral0.copy(alpha = ON_DARK_FILL_ALPHA),
         fgDefault = Neutral900,
         fgSubtle = Neutral600,
         fgMuted = Neutral500,
@@ -104,6 +112,7 @@ internal val LightMedicalMateColors =
         borderStrong = Neutral500,
         borderFocus = Primary500,
         borderPrimary = Primary500,
+        borderOnDark = Neutral0.copy(alpha = ON_DARK_BORDER_ALPHA),
         severity1 = Severity1Base,
         severity2 = Severity2Base,
         severity3 = Severity3Base,
@@ -115,6 +124,10 @@ internal val LightMedicalMateColors =
         severity4Tint = Severity4TintBase,
         severity5Tint = Severity5TintBase,
     )
+
+/** `bg/on-dark`와 `border/on-dark`의 불투명도. 팔레트가 아니라 변수 값 자체가 흰색의 알파다. */
+private const val ON_DARK_FILL_ALPHA = 0.2f
+private const val ON_DARK_BORDER_ALPHA = 0.32f
 
 /**
  * 테마 밖에서 읽으면 개발 중에 바로 드러나도록 기본값을 두지 않는다.

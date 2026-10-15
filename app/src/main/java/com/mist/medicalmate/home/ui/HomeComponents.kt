@@ -1,233 +1,116 @@
 package com.mist.medicalmate.home.ui
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.dropShadow
+import androidx.compose.ui.graphics.shadow.Shadow
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.R
-import com.mist.medicalmate.core.designsystem.MedicalMateIcons
-import com.mist.medicalmate.core.designsystem.MedicalMateLogo
+import com.mist.medicalmate.core.designsystem.MedicalMateElevation
+import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
+import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
-import com.mist.medicalmate.core.designsystem.component.MedicalMateAvatar
+import com.mist.medicalmate.core.designsystem.ShadowTint
 import com.mist.medicalmate.core.designsystem.component.MedicalMateBadgeTone
-import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
-import com.mist.medicalmate.core.designsystem.component.MedicalMateCard
-import com.mist.medicalmate.core.designsystem.component.MedicalMateCardEmphasis
-import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButton
+import com.mist.medicalmate.core.designsystem.component.MedicalMateDivider
 import com.mist.medicalmate.core.designsystem.component.MedicalMateListRow
 import com.mist.medicalmate.core.designsystem.component.MedicalMateListRowType
+import com.mist.medicalmate.core.designsystem.component.MedicalMateScheduleCard
 import com.mist.medicalmate.core.designsystem.ddayLabel
-import com.mist.medicalmate.core.model.IntakeStep
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import java.util.Locale
 
-/**
- * 홈 화면을 이루는 조각들. [HomeScreen]에서만 쓴다.
- *
- * 모두 디자인 시스템 컴포넌트를 조립한 것이다. 홈에서만 쓰는 배치라 여기 둔다.
+/*
+ * 홈(1n-1 · 1n-2)을 이루는 조각(#312). 화면 틀은 `HomeScreen.kt`, 맨 위 배너는 `HomeBanners.kt`에 있다.
  */
 
 /**
- * Figma Header(`399:1342`) 350x52.
- *
- * 로고가 마스터의 0.8배다. 로그인 화면은 36으로 쓰고 홈은 28.8이다. Figma 인스턴스를
- * 축소한 값이라 반올림하지 않았다.
- *
- * 알림과 아바타는 hit area 48을 유지한다. 아바타의 시각 크기는 36이라 바깥 `Box`가
- * 터치 목표를 확보한다.
- *
- * 알림의 접근성 이름이 읽지 않은 알림 유무에 따라 바뀐다. 아이콘 위 점만으로는 스크린
- * 리더에 전달되지 않는다.
+ * 배너 아래 흰 시트. 배너 위로 28 겹쳐 올라오고(1n-1의 프레임 간격 −28) 위 모서리가 28이다. `Elevation/Sheet`를
+ * 두 겹 그대로 건다. 안쪽 여백은 위 28 · 좌우 20 · 아래 20이고 블록 간격은 12다.
  */
 @Composable
-internal fun HomeHeader(
-    userInitial: String,
-    hasUnreadNotification: Boolean,
-    onNotificationClick: () -> Unit,
-    onProfileClick: () -> Unit,
-) {
-    Row(
+internal fun HomeSheet(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    val shape = MedicalMateRadius.sheetTop
+    Column(
+        modifier =
+        modifier
+            .overlapUp(SheetOverlap)
+            .fillMaxWidth()
+            .dropShadow(shape, SheetShadowWide)
+            .dropShadow(shape, SheetShadowTight)
+            .clip(shape)
+            .background(MedicalMateTheme.colors.bgSurface)
+            .padding(
+                start = MedicalMateSize.gutter,
+                end = MedicalMateSize.gutter,
+                top = SheetPaddingTop,
+                bottom = MedicalMateSize.gutter,
+            ),
+        verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12),
+        content = content,
+    )
+}
+
+/**
+ * 최근 브리핑 카드 묶음. 카드 한 장(반경 20 · `Elevation/Card`) 안에 줄을 담고 `Divider`로 가른다(1n-1). 줄의
+ * 배지는 브리핑 카드 전체(1j-4)와 같은 규칙이다(사용자 결정).
+ */
+@Composable
+internal fun BriefingList(cards: List<SavedCardSummary>, onCardClick: (String) -> Unit) {
+    Column(
         modifier =
         Modifier
             .fillMaxWidth()
-            .height(HeaderHeight),
-        verticalAlignment = Alignment.CenterVertically,
+            .dropShadow(MedicalMateRadius.lg, CardShadow)
+            .clip(MedicalMateRadius.lg)
+            .background(MedicalMateTheme.colors.bgSurface),
     ) {
-        Image(
-            painter = painterResource(MedicalMateLogo.Lockup),
-            contentDescription = stringResource(R.string.app_name),
-            modifier = Modifier.height(HeaderLockupHeight),
-        )
-        Box(modifier = Modifier.weight(1f))
-        MedicalMateIconButton(
-            onClick = onNotificationClick,
-            icon = MedicalMateIcons.Bell,
-            contentDescription =
-            stringResource(
-                if (hasUnreadNotification) {
-                    R.string.home_notification_unread
-                } else {
-                    R.string.home_notification
-                },
-            ),
-        )
-        Box(
-            modifier =
-            Modifier.sizeIn(
-                minWidth = MedicalMateSize.touchMin,
-                minHeight = MedicalMateSize.touchMin,
-            ),
-            contentAlignment = Alignment.Center,
-        ) {
-            MedicalMateAvatar(
-                initial = userInitial,
-                contentDescription = stringResource(R.string.home_profile),
-                size = HeaderAvatarSize,
-                onClick = onProfileClick,
+        cards.forEachIndexed { index, card ->
+            if (index > 0) MedicalMateDivider()
+            val written = card.writtenOn.format(cardDate)
+            MedicalMateListRow(
+                title = card.title,
+                meta =
+                card.clinic?.let { stringResource(R.string.home_card_meta, written, it) }
+                    ?: stringResource(R.string.home_card_meta_draft, written),
+                badge = stringResource(card.status.label()),
+                badgeTone = card.status.tone(),
+                type = MedicalMateListRowType.BADGE,
+                onClick = { onCardClick(card.id) },
+                floating = false,
             )
         }
     }
 }
 
-/**
- * Figma의 "오늘의 한 줄" 카드(`399:1634`) 350x140.
- *
- * `Card`의 Brand 강조를 쓴다. 문서의 컴포넌트 규격이 큰 유색 면을 환자 콘텐츠에만 쓰라고 하는데,
- * 이 카드가 담는 것은 환자의 진료 흐름이다.
- *
- * 문구를 [HomeTodayLine] 갈래별로 조립한다. 첫 방문과 재방문의 문장이 아예 달라서
- * 한 문구에 값만 끼워 넣을 수 없다.
- */
+/** 다가오는 일정 한 장. Figma `Card / Schedule`. 제목은 "내과 재진", 메타는 "서울OO병원 · 금 오전 10:30"이다. */
 @Composable
-internal fun TodayLineCard(todayLine: HomeTodayLine) {
-    MedicalMateCard(emphasis = MedicalMateCardEmphasis.BRAND) {
-        Text(
-            text = stringResource(todayLine.labelRes()),
-            style = MedicalMateTheme.typography.labelS,
-            color = MedicalMateTheme.colors.fgSubtle,
-        )
-        Text(text = todayLine.title(), style = MedicalMateTheme.typography.headingS)
-        todayLine.body().forEach { line ->
-            Text(
-                text = line,
-                style = MedicalMateTheme.typography.bodyM,
-                color = MedicalMateTheme.colors.fgSubtle,
-            )
-        }
-    }
-}
-
-/**
- * Figma의 시작 버튼(`399:1741`) 320x56.
- *
- * **청진기 아이콘이다**(#227). 마이크를 달고 있었는데 시안이 `Icon/stethoscope`를 쓴다.
- * 말로 답하는 것은 증상 정리의 한 가지 방법이고 글로도 적을 수 있어서, 마이크는 그 안의
- * 수단을 앞세운 셈이었다.
- */
-@Composable
-internal fun StartIntakeButton(onClick: () -> Unit) {
-    MedicalMateButton(
-        onClick = onClick,
-        label = stringResource(R.string.home_start_intake),
-        leadingIcon = MedicalMateIcons.Stethoscope,
-        modifier = Modifier.fillMaxWidth(),
-    )
-}
-
-/**
- * Figma의 "이어서 하기" 카드(`399:1642`) 350x116.
- *
- * 눌러서 이어 쓸 수 있으므로 카드에 [onClick]을 준다.
- */
-@Composable
-internal fun ResumeCard(resume: HomeResume, onClick: () -> Unit) {
-    MedicalMateCard(onClick = onClick) {
-        Text(
-            text = stringResource(R.string.home_resume_label),
-            style = MedicalMateTheme.typography.labelS,
-            color = MedicalMateTheme.colors.fgSubtle,
-        )
-        Text(
-            text = stringResource(R.string.home_resume_title),
-            style = MedicalMateTheme.typography.headingS,
-        )
-        Text(
-            text =
-            stringResource(
-                R.string.home_resume_progress,
-                resume.symptomTitle,
-                IntakeStep.total,
-                resume.step.number,
-            ),
-            style = MedicalMateTheme.typography.bodyM,
-            color = MedicalMateTheme.colors.fgSubtle,
-        )
-    }
-}
-
-/**
- * 저장된 브리핑 카드 한 줄.
- *
- * 진료를 다녀온 카드는 상태 배지와 병원·진료과를, 아직인 카드는 카드만 작성됐다는 메타를
- * 보여준다. Figma `1n-1`의 두 행이 각각 그 경우다.
- *
- * 배지는 카드의 확정 여부가 아니라 진료를 다녀왔는지로 붙인다. 확정만 하고 아직 안 간 카드에
- * "진료 완료"가 붙으면 안 된다.
- */
-@Composable
-internal fun SavedCardRow(card: SavedCardSummary, onClick: () -> Unit) {
-    val visited = card.visited
-    val written = card.writtenOn.format(cardDate)
-
-    MedicalMateListRow(
-        title = card.title,
-        meta =
-        card.clinic?.let { stringResource(R.string.home_card_meta, written, it) }
-            ?: stringResource(R.string.home_card_meta_draft, written),
-        badge = if (visited) stringResource(R.string.home_card_confirmed) else null,
-        badgeTone = MedicalMateBadgeTone.SUCCESS,
-        type =
-        if (visited) MedicalMateListRowType.BADGE else MedicalMateListRowType.DEFAULT,
-        onClick = onClick,
-    )
-}
-
-/**
- * 다가오는 일정 한 줄.
- *
- * D-day를 [today]에서 계산한다. 화면이 열린 날이 기준이어야 하므로 호출자가 넘긴다.
- * 값을 미리 만들어 두면 날짜가 바뀐 뒤에도 옛 값이 남는다.
- */
-@Composable
-internal fun ScheduleRow(schedule: HomeSchedule, today: LocalDate, onClick: () -> Unit) {
-    // 시안 1n-1의 줄 제목이 "서울OO병원 내과 재진"이다. 병원 뒤에 초진인지 재진인지를 붙여
-    // 같은 병원의 일정 둘을 목록에서 가를 수 있게 한다.
+internal fun ScheduleCard(schedule: HomeSchedule, today: LocalDate, onClick: () -> Unit) {
     val visit =
-        stringResource(
-            if (schedule.followUp) R.string.home_schedule_follow_up else R.string.home_schedule_first,
-        )
-    MedicalMateListRow(
-        title = stringResource(R.string.home_schedule_title, schedule.title, visit),
-        meta =
-        stringResource(
-            R.string.home_schedule_meta,
-            schedule.date.format(scheduleDate),
-            schedule.time ?: stringResource(R.string.calendar_time_unset),
-        ),
+        stringResource(if (schedule.followUp) R.string.home_schedule_follow_up else R.string.home_schedule_first)
+    val time = schedule.time?.format(bannerTime) ?: stringResource(R.string.calendar_time_unset)
+    val whenText = "${schedule.date.format(weekday)} $time"
+    MedicalMateScheduleCard(
+        month = stringResource(R.string.home_schedule_month, schedule.date.monthValue),
+        day = schedule.date.dayOfMonth.toString(),
+        meta = schedule.clinic?.let { stringResource(R.string.home_schedule_meta, it, whenText) } ?: whenText,
+        title = schedule.department?.let { stringResource(R.string.home_schedule_title, it, visit) } ?: visit,
         badge = ddayLabel(daysUntil(today, schedule.date)),
-        badgeTone = MedicalMateBadgeTone.BRAND,
-        type = MedicalMateListRowType.BADGE,
         onClick = onClick,
     )
 }
@@ -235,16 +118,57 @@ internal fun ScheduleRow(schedule: HomeSchedule, today: LocalDate, onClick: () -
 /** 남은 일수. 컴포저블 밖에 둬서 JVM 테스트로 확인한다. */
 internal fun daysUntil(today: LocalDate, date: LocalDate): Long = ChronoUnit.DAYS.between(today, date)
 
-private val HeaderHeight = 52.dp
+private fun HomeCardStatus.label(): Int = when (this) {
+    HomeCardStatus.DRAFT -> R.string.record_status_draft
+    HomeCardStatus.BEFORE_VISIT -> R.string.record_status_before_visit
+    HomeCardStatus.VISITED -> R.string.record_status_confirmed
+}
 
-/** Figma 인스턴스가 마스터(139x36)의 0.8배다. */
-private val HeaderLockupHeight = 28.8.dp
+/** 브리핑 카드 전체(1j-4)와 같은 톤. 작성 중 Warning · 진료 전 Brand · 진료 완료 Success. */
+private fun HomeCardStatus.tone(): MedicalMateBadgeTone = when (this) {
+    HomeCardStatus.DRAFT -> MedicalMateBadgeTone.WARNING
+    HomeCardStatus.BEFORE_VISIT -> MedicalMateBadgeTone.BRAND
+    HomeCardStatus.VISITED -> MedicalMateBadgeTone.SUCCESS
+}
 
-/** Figma 인스턴스가 마스터(44)보다 작다. hit area는 바깥에서 48을 확보한다. */
-private val HeaderAvatarSize = 36.dp
+/**
+ * 위로 [by]만큼 겹쳐 올린다. 차지하는 높이도 그만큼 줄여 아래가 비지 않는다. 높이가 정해진 자리(처음 홈의
+ * 남은 높이)에서는 그만큼 더 크게 그려 바닥까지 채운다.
+ */
+private fun Modifier.overlapUp(by: Dp): Modifier = layout { measurable, constraints ->
+    val extra = by.roundToPx()
+    val grown =
+        if (constraints.hasBoundedHeight) {
+            Constraints(
+                minWidth = constraints.minWidth,
+                maxWidth = constraints.maxWidth,
+                minHeight = constraints.minHeight + extra,
+                maxHeight = constraints.maxHeight + extra,
+            )
+        } else {
+            constraints
+        }
+    val placeable = measurable.measure(grown)
+    layout(placeable.width, (placeable.height - extra).coerceAtLeast(0)) { placeable.place(0, -extra) }
+}
 
-/** 카드 메타용 "2026.09.04" 형식. */
+private val SheetOverlap = 28.dp
+private val SheetPaddingTop = 28.dp
+
+/** `Elevation/Sheet` 두 겹. 위로 4 · blur 24 · 10%, 제자리 blur 2 · 5%. */
+private val SheetShadowWide =
+    Shadow(radius = 24.dp, color = ShadowTint.copy(alpha = 0.10f), offset = DpOffset(0.dp, (-4).dp))
+private val SheetShadowTight = Shadow(radius = 2.dp, color = ShadowTint.copy(alpha = 0.05f))
+
+/** 최근 브리핑 카드 묶음의 `Elevation/Card`. 앞의 겹(y3 blur10 8%)을 쓴다. */
+private val CardShadow =
+    Shadow(radius = 10.dp, color = ShadowTint.copy(alpha = 0.08f), offset = DpOffset(0.dp, MedicalMateElevation.card))
+
+/** 카드 메타용 "2026.09.18". */
 private val cardDate = DateTimeFormatter.ofPattern("yyyy.MM.dd")
 
-/** 일정용 "9월 12일 (금)" 형식. */
-private val scheduleDate = DateTimeFormatter.ofPattern("M월 d일 (E)")
+/** "오전 10:30". 로케일을 고정한다 — 기기 언어가 한국어가 아니면 AM/PM이 섞인다. */
+internal val bannerTime = DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)
+
+/** 일정 카드의 요일 "금". */
+private val weekday = DateTimeFormatter.ofPattern("E", Locale.KOREAN)

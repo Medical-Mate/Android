@@ -458,83 +458,60 @@
     <string name="home_notification_unread">알림, 읽지 않은 알림 있음</string>
     <string name="home_profile">내 정보</string>
 
-    <string name="home_today_first_label">처음 오셨네요</string>
-    <string name="home_today_first_title">아픈 곳을 말로 편하게 알려주세요</string>
-    <string name="home_today_first_body">언제부터, 얼마나 아픈지 하나씩 물어볼게요.\n답변은 진료실에서 보여줄 카드로 정리돼요.</string>
-    <string name="home_today_label">오늘의 한 줄</string>
+    <!-- 홈 배너(#312). Figma Home Banner 다섯 장. 첫 장은 상황에 따라 바뀐다. -->
+    <string name="home_banner_welcome_title">처음 오셨네요,\n반가워요</string>
+    <string name="home_banner_welcome_body">아픈 곳을 짚고 몇 가지만 답하면\n진료실에서 보여줄 카드가 돼요.</string>
+    <string name="home_banner_today_title">진료 잘\n다녀오셨나요?</string>
+    <string name="home_banner_today_body">%1$s에서 들은 말을\n잊기 전에 남겨두세요.</string>
+    <!-- 일정에 병원 이름이 없을 때(사용자 결정). -->
+    <string name="home_banner_today_body_no_clinic">진료실에서 들은 말을\n잊기 전에 남겨두세요.</string>
+    <string name="home_banner_today_link">진료 후 기록하기</string>
+    <string name="home_banner_tomorrow_title">내일 진료 전에\n카드 한 번 볼까요?</string>
+    <!-- 첫 줄의 "%1$s"는 "오전 10:30 서울OO병원 내과"처럼 있는 것만 잇는다. 둘 다 없으면 _no_detail이다. -->
+    <string name="home_banner_tomorrow_body">내일 %1$s예요.\n달라진 점이 있으면 오늘 고쳐두세요.</string>
+    <string name="home_banner_tomorrow_body_no_detail">내일 진료예요.\n달라진 점이 있으면 오늘 고쳐두세요.</string>
+    <string name="home_banner_tomorrow_link">카드 다시 보기</string>
+    <string name="home_banner_card_title">카드는 준비됐어요,\n언제 진료 가실래요?</string>
+    <string name="home_banner_card_body">%1$s 카드가 기다리고 있어요.\n진료 날짜를 정하면 미리 알려드려요.</string>
+    <string name="home_banner_card_link">진료 일정 잡기</string>
+    <string name="home_banner_message_title">예약 문자,\n그대로 넘겨주세요</string>
+    <string name="home_banner_message_body">병원에서 받은 예약 문자를 공유하면\n날짜와 시간이 알아서 채워져요.</string>
+    <string name="home_banner_message_link">방법 보기</string>
+    <string name="home_banner_schedule_title">진료 날짜,\n대신 기억할게요</string>
+    <string name="home_banner_schedule_body">일정을 넣어두면 진료 전날과\n진료 뒤에 한 번씩 알려드려요.</string>
+    <string name="home_banner_schedule_link">일정 추가하기</string>
+    <string name="home_banner_save_title">카드를 사진첩에\n넣어둘까요?</string>
+    <string name="home_banner_save_body">인터넷이 안 될 때도\n사진첩에서 바로 꺼내 보여주세요.</string>
+    <string name="home_banner_save_link">카드 저장하기</string>
+    <string name="home_banner_mate_title">“헤이 메이트”라고\n불러보세요</string>
+    <string name="home_banner_mate_body">다음 진료가 언제인지 묻거나\n들은 말을 말로 남길 수 있어요.</string>
+    <string name="home_banner_mate_link">메이트에게 말해보기</string>
+    <string name="home_banner_page">%1$d / %2$d</string>
 
-    <!-- ①-a 오늘 일정 · 시간 전 -->
-    <string name="home_today_ahead_title">오늘 진료가 있어요</string>
-    <string name="home_today_ahead_body">브리핑 카드를 진료실에서 그대로 보여주세요.</string>
-
-    <!-- ①-b 오늘 일정 · 시간 지남 · 기록 없음 -->
-    <string name="home_today_done_title">오늘 진료는 어떠셨어요?</string>
-    <string name="home_today_done_lead">들은 말을 잊기 전에 남겨두세요.</string>
-    <string name="home_today_done_body">캘린더에서 오늘 일정을 누르면 기록할 수 있어요.</string>
-
-    <!-- ①-c 오늘 일정 · 기록 저장됨 -->
-    <string name="home_today_recorded_title">오늘 진료를 기록해두셨어요</string>
-    <string name="home_today_recorded_lead">다음 방문이 정해졌으면 캘린더에 등록해두세요.</string>
-    <string name="home_today_recorded_body">약이나 검사 일정도 함께 남기면 좋아요.</string>
-
-    <!-- ② 지난 일정 · 기록 없음 -->
-    <string name="home_today_missing_title">%1$s 진료, 기록이 아직 없어요</string>
-    <string name="home_today_missing_lead">기억나는 대로 몇 줄이면 충분해요.</string>
-    <string name="home_today_missing_body">캘린더에서 그 날을 누르면 적을 수 있어요.</string>
-
-    <!-- ③-a 다음 진료 = 내일 -->
-    <string name="home_today_tomorrow_title">내일 진료가 있어요</string>
-    <string name="home_today_tomorrow_body">달라진 점이 있으면 카드를 오늘 손봐두세요.</string>
-
-    <!-- ③-b 다음 진료 = N일 후 -->
-    <string name="home_today_next_title">다음 진료가 %1$d일 남았어요</string>
-    <string name="home_today_next_body">달라진 점이 있으면 카드를 미리 손봐두세요.</string>
-
-    <!-- ④-a 지난 진료 = 어제 -->
-    <string name="home_today_yesterday_title">어제 진료 다녀오셨네요</string>
-    <string name="home_today_yesterday_lead">처방받은 약은 시간 맞춰 챙기세요.</string>
-
-    <!-- ④-b 지난 진료 = N일 전 -->
-    <string name="home_today_since_title">지난 진료 후 %1$d일이 지났어요</string>
-    <string name="home_today_since_lead">달라진 점이 있으면 새 증상 정리를 시작해두세요.</string>
-
-    <!-- ④ 공통 -->
-    <string name="home_today_last_body">다음 방문이 정해지면 캘린더에 등록해두세요.</string>
-
-    <!-- ⑤ 카드만 있음 -->
-    <string name="home_today_card_title">브리핑 카드가 준비돼 있어요</string>
-    <string name="home_today_card_lead">진료 날짜가 정해지면 캘린더에 등록해두세요.</string>
-    <string name="home_today_card_body">진료실에서는 이 카드를 그대로 보여주면 돼요.</string>
-
-    <!-- 일정 한 줄. 시각과 병원이 있는 만큼만 적는다. -->
-    <string name="home_today_at_clinic">%1$s %2$s예요.</string>
-    <string name="home_today_at">%1$s예요.</string>
-    <string name="home_today_on_clinic">%1$s %2$s예요.</string>
-    <string name="home_today_on">%1$s 진료예요.</string>
+    <!-- Card / Action · Card / Resume · Card / Schedule -->
+    <string name="home_action_label">진료 전에</string>
+    <string name="home_resume_step">%1$s · %2$d단계까지 했어요</string>
+    <string name="home_schedule_month">%1$d월</string>
+    <string name="home_schedule_meta">%1$s · %2$s</string>
+    <string name="home_schedule_title">%1$s %2$s</string>
 
     <string name="home_start_intake">증상 정리 시작하기</string>
 
     <string name="home_resume_label">이어서 하기</string>
-    <string name="home_resume_title">작성 중이던 증상 정리가 있어요</string>
-    <string name="home_resume_progress">%1$s · %2$d단계 중 %3$d단계까지 답했어요</string>
 
     <string name="home_saved_cards">최근 브리핑 카드</string>
     <string name="home_saved_cards_all">전체 보기</string>
-    <string name="home_card_confirmed">진료 완료</string>
     <string name="home_card_meta">%1$s · %2$s</string>
     <string name="home_card_meta_draft">%1$s · 카드만 작성됨</string>
 
     <string name="home_upcoming">다가오는 일정</string>
     <string name="home_calendar">캘린더</string>
-    <string name="home_schedule_meta">%1$s %2$s</string>
-    <!-- 병원 이름 뒤에 초진인지 재진인지를 붙인다. 시안 1n-1의 "서울OO병원 내과 재진"이다. -->
-    <string name="home_schedule_title">%1$s %2$s</string>
+    <!-- 진료과 뒤에 초진인지 재진인지를 붙인다. 시안 1n-1의 "내과 재진"이다. -->
     <string name="home_schedule_first">초진</string>
     <string name="home_schedule_follow_up">재진</string>
 
     <string name="home_empty_title">아직 진료 기록이 없어요</string>
     <string name="home_empty_description">증상을 정리해두면 진료실에서 바로 보여줄 수 있어요</string>
-    <string name="home_empty_action">증상 정리하기</string>
 
     <string name="home_failed_title">불러오지 못했어요</string>
     <string name="home_failed_description">인터넷 연결을 확인하고 다시 시도해주세요</string>
