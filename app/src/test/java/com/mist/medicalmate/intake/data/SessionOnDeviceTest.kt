@@ -34,16 +34,39 @@ class SessionOnDeviceTest {
     fun `폰 모델이 있으면 온디바이스로 연다`() = runTest {
         val api = FakeSessionApi()
 
-        repository(api, FakeSessionOnDevice()).start("SUR:051", IntakeSide.LEFT, "왼쪽 어깨")
+        repository(api, FakeSessionOnDevice()).start("SUR:051", IntakeSide.LEFT, "왼쪽 어깨", SEVERITY)
 
-        assertEquals(StartSessionRequest("SUR:051", "LEFT", "왼쪽 어깨", "ONDEVICE"), api.started)
+        assertEquals(
+            StartSessionRequest("SUR:051", "LEFT", "왼쪽 어깨", "ONDEVICE", SeverityRequest(3, "꽤 아파요")),
+            api.started,
+        )
+    }
+
+    @Test
+    fun `고른 강도를 세션을 여는 요청에 함께 보낸다`() = runTest {
+        // 강도가 문답 앞으로 왔다(Backend#169). 문답은 강도를 묻지 않는다.
+        val api = FakeSessionApi()
+
+        repository(api, FakeSessionOnDevice()).start("SUR:051", IntakeSide.LEFT, "왼쪽 어깨", IntakeSeverity(4, "많이 아파요"))
+
+        assertEquals(SeverityRequest(4, "많이 아파요"), api.started?.severity)
+    }
+
+    @Test
+    fun `강도를 다시 고르면 그 값만 보낸다`() = runTest {
+        val api = FakeSessionApi()
+
+        repository(api, FakeSessionOnDevice()).setSeverity(SESSION, IntakeSeverity(2, "은근히 아파요"))
+
+        assertEquals(SeverityRequest(2, "은근히 아파요"), api.severity)
+        assertNull(api.candidates)
     }
 
     @Test
     fun `폰 모델이 없으면 서버 프로필로 연다`() = runTest {
         val api = FakeSessionApi()
 
-        repository(api, FakeSessionOnDevice(available = false)).start("SUR:051", IntakeSide.RIGHT, "오른쪽 어깨")
+        repository(api, FakeSessionOnDevice(available = false)).start("SUR:051", IntakeSide.RIGHT, "오른쪽 어깨", SEVERITY)
 
         assertNull(api.started?.profile)
     }
@@ -53,7 +76,7 @@ class SessionOnDeviceTest {
         // 전에는 siteCodes 배열로 보냈는데 백엔드에 그 필드가 없어 조용히 버려졌다.
         val api = FakeSessionApi()
 
-        repository(api, FakeSessionOnDevice()).start("SUR:032", IntakeSide.LEFT, "아랫배")
+        repository(api, FakeSessionOnDevice()).start("SUR:032", IntakeSide.LEFT, "아랫배", SEVERITY)
 
         assertEquals("SUR:032", api.started?.siteNodeId)
         assertEquals("LEFT", api.started?.side)
@@ -64,7 +87,7 @@ class SessionOnDeviceTest {
         // 머리·배 등 13곳에 좌우를 보내면 400이다. 그러면 세션이 열리지 않는다.
         val api = FakeSessionApi()
 
-        repository(api, FakeSessionOnDevice()).start("SUR:021", IntakeSide.LEFT, "가슴 가운데")
+        repository(api, FakeSessionOnDevice()).start("SUR:021", IntakeSide.LEFT, "가슴 가운데", SEVERITY)
 
         assertNull(api.started?.side)
     }
@@ -74,7 +97,7 @@ class SessionOnDeviceTest {
         val api = FakeSessionApi(nextAxis = AskingAxisResponse("character", "어떤 느낌"))
         val onDevice = FakeSessionOnDevice()
         val repository = repository(api, onDevice)
-        repository.start("SUR:051", IntakeSide.LEFT, "왼쪽 어깨")
+        repository.start("SUR:051", IntakeSide.LEFT, "왼쪽 어깨", SEVERITY)
 
         repository.send(SESSION, "한 달 전부터요", byVoice = false)
         repository.send(SESSION, "찌릿찌릿해요", byVoice = true)
@@ -110,7 +133,7 @@ class SessionOnDeviceTest {
         // 그 턴은 서버가 뽑는다.
         val api = FakeSessionApi()
         val repository = repository(api, FakeSessionOnDevice(extracted = false))
-        repository.start("SUR:051", IntakeSide.LEFT, "왼쪽 어깨")
+        repository.start("SUR:051", IntakeSide.LEFT, "왼쪽 어깨", SEVERITY)
 
         repository.send(SESSION, "한 달 전부터요", byVoice = false)
 
@@ -124,7 +147,7 @@ class SessionOnDeviceTest {
         val api = FakeSessionApi(startAxis = null)
         val onDevice = FakeSessionOnDevice()
         val repository = repository(api, onDevice)
-        repository.start("SUR:051", IntakeSide.LEFT, "왼쪽 어깨")
+        repository.start("SUR:051", IntakeSide.LEFT, "왼쪽 어깨", SEVERITY)
 
         repository.send(SESSION, "어깨가 아파요", byVoice = false)
 
@@ -133,14 +156,24 @@ class SessionOnDeviceTest {
     }
 
     @Test
-    fun `문답이 끝나 후보가 없으면 폰이 만든 후보를 보내고 그 결과를 쓴다`() = runTest {
-        val api = FakeSessionApi()
+    fun `문답이 끝난 턴에 후보가 없으면 폰이 만든 후보를 보내고 그 결과를 쓴다`() = runTest {
+        val api = FakeSessionApi(ended = true)
 
-        val session = repository(api, FakeSessionOnDevice()).setSeverity(SESSION, 3, "꽤 아파요")
+        val turn = repository(api, FakeSessionOnDevice()).send(SESSION, "그게 다예요", byVoice = false)
 
         assertEquals(listOf(PhoneQuestionCandidate("어깨를 써도 되나요?", "exacerbating")), api.candidates?.candidates)
         assertEquals("questions-small4", api.candidates?.candidatesMeta?.get("prompt_version")?.jsonPrimitive?.content)
-        assertEquals(listOf("검증을 지난 질문"), (session as ApiResult.Success).value.questions)
+        assertEquals(listOf("검증을 지난 질문"), (turn as ApiResult.Success).value.questionCandidates)
+    }
+
+    @Test
+    fun `문답 중인 턴에는 후보를 만들지 않는다`() = runTest {
+        val api = FakeSessionApi()
+
+        val turn = repository(api, FakeSessionOnDevice()).send(SESSION, "한 달 전부터요", byVoice = false)
+
+        assertNull(api.candidates)
+        assertEquals(emptyList<String>(), (turn as ApiResult.Success).value.questionCandidates)
     }
 
     @Test
@@ -148,10 +181,10 @@ class SessionOnDeviceTest {
         val onDevice = FakeSessionOnDevice()
 
         repository(
-            FakeSessionApi(),
+            FakeSessionApi(ended = true),
             onDevice,
             PatientHealth(medications = listOf("진통제")),
-        ).setSeverity(SESSION, 3, "꽤 아파요")
+        ).send(SESSION, "그게 다예요", byVoice = false)
 
         assertEquals(
             QuestionCard(
@@ -167,32 +200,34 @@ class SessionOnDeviceTest {
 
     @Test
     fun `폰 모델이 없어도 빈 후보를 보낸다`() = runTest {
-        // 온디바이스로 시작한 세션은 서버가 후보를 만들지 않는다. 안 보내면 4단계가 빈 채로 열린다.
-        val api = FakeSessionApi()
+        // 온디바이스로 시작한 세션은 서버가 후보를 만들지 않는다. 안 보내면 추천 질문이 빈 채로 열린다.
+        val api = FakeSessionApi(ended = true)
 
-        repository(api, FakeSessionOnDevice(available = false)).setSeverity(SESSION, 3, "꽤 아파요")
+        repository(api, FakeSessionOnDevice(available = false)).send(SESSION, "그게 다예요", byVoice = false)
 
         assertEquals(emptyList<PhoneQuestionCandidate>(), api.candidates?.candidates)
     }
 
     @Test
-    fun `서버가 이미 후보를 줬으면 보내지 않는다`() = runTest {
-        // 서버 프로필 세션이다. 지금까지와 같다.
-        val api = FakeSessionApi(serverCandidates = listOf("서버가 고른 질문"))
+    fun `서버가 끝난 턴에 후보를 실었으면 보내지 않는다`() = runTest {
+        // 서버 프로필 세션이다(Backend#169).
+        val api = FakeSessionApi(ended = true, serverCandidates = listOf("서버가 고른 질문"))
 
-        val session = repository(api, FakeSessionOnDevice()).setSeverity(SESSION, 3, "꽤 아파요")
+        val turn = repository(api, FakeSessionOnDevice()).send(SESSION, "그게 다예요", byVoice = false)
 
         assertNull(api.candidates)
-        assertEquals(listOf("서버가 고른 질문"), (session as ApiResult.Success).value.questions)
+        assertEquals(listOf("서버가 고른 질문"), (turn as ApiResult.Success).value.questionCandidates)
     }
 
     @Test
-    fun `후보를 보내지 못하면 강도 저장 결과를 그대로 쓴다`() = runTest {
-        val api = FakeSessionApi(rejectCandidates = true)
+    fun `후보를 보내지 못해도 턴은 그대로 쓴다`() = runTest {
+        // 추천 없이 직접 적는 칸만 선다. 문답을 끝내지 못하게 막는 것보다 낫다.
+        val api = FakeSessionApi(ended = true, rejectCandidates = true)
 
-        val session = repository(api, FakeSessionOnDevice()).setSeverity(SESSION, 3, "꽤 아파요")
+        val turn = repository(api, FakeSessionOnDevice()).send(SESSION, "그게 다예요", byVoice = false)
 
-        assertEquals(emptyList<String>(), (session as ApiResult.Success).value.questions)
+        assertEquals(true, (turn as ApiResult.Success).value.ended)
+        assertEquals(emptyList<String>(), turn.value.questionCandidates)
     }
 
     private fun repository(api: SessionApi, onDevice: OnDeviceExtractor, health: PatientHealth? = null) =
@@ -203,35 +238,49 @@ class SessionOnDeviceTest {
         private val nextAxis: AskingAxisResponse? = null,
         private val serverCandidates: List<String> = emptyList(),
         private val rejectCandidates: Boolean = false,
+        /** 보낸 말에 문답이 끝나는지. 끝나면 세션도 끝난 상태로 읽힌다. */
+        private val ended: Boolean = false,
     ) : SessionApi {
         var started: StartSessionRequest? = null
         val sent = mutableListOf<SendMessageRequest>()
         var candidates: PhoneQuestionCandidatesRequest? = null
+        var severity: SeverityRequest? = null
 
         override suspend fun start(request: StartSessionRequest): SessionResponse {
             started = request
             return SessionResponse(sessionId = SESSION, askingAxis = startAxis)
         }
 
-        override suspend fun session(sessionId: Long) = SessionResponse(sessionId = SESSION, askingAxis = startAxis)
+        override suspend fun session(sessionId: Long) = if (ended) {
+            SessionResponse(
+                sessionId = SESSION,
+                status = "COMPLETED",
+                severity = SeverityResponse(3, "꽤 아파요"),
+                cardAxes =
+                listOf(
+                    CardAxisResponse("site", "filled", "왼쪽 어깨"),
+                    CardAxisResponse("onset", "filled", "한 달 전부터"),
+                    CardAxisResponse("radiation", "not_asked"),
+                ),
+            )
+        } else {
+            SessionResponse(sessionId = SESSION, askingAxis = startAxis)
+        }
 
         override suspend fun sendMessage(sessionId: Long, request: SendMessageRequest): TurnResponse {
             sent += request
-            return TurnResponse(sessionId = SESSION, askingAxis = nextAxis)
+            return TurnResponse(
+                sessionId = SESSION,
+                ended = ended,
+                askingAxis = nextAxis,
+                questionCandidates = serverCandidates.map { QuestionCandidateResponse(it, rank = 1) },
+            )
         }
 
-        override suspend fun putSeverity(sessionId: Long, request: SeverityRequest) = SessionResponse(
-            sessionId = SESSION,
-            status = "COMPLETED",
-            severity = SeverityResponse(request.level, request.label),
-            questionCandidates = serverCandidates.map { QuestionCandidateResponse(it, rank = 1) },
-            cardAxes =
-            listOf(
-                CardAxisResponse("site", "filled", "왼쪽 어깨"),
-                CardAxisResponse("onset", "filled", "한 달 전부터"),
-                CardAxisResponse("radiation", "not_asked"),
-            ),
-        )
+        override suspend fun putSeverity(sessionId: Long, request: SeverityRequest): SessionResponse {
+            severity = request
+            return SessionResponse(sessionId = SESSION, severity = SeverityResponse(request.level, request.label))
+        }
 
         override suspend fun putQuestions(sessionId: Long, request: QuestionsRequest) = SessionResponse(SESSION)
 
@@ -251,6 +300,7 @@ class SessionOnDeviceTest {
 
     private companion object {
         const val SESSION = 7L
+        val SEVERITY = IntakeSeverity(3, "꽤 아파요")
         val EXTRACTED = JsonObject(mapOf("notes" to JsonPrimitive("x")))
     }
 }

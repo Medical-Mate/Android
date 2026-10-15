@@ -22,13 +22,20 @@ data class IntakeMessage(val id: Long, val sender: Sender, val text: String) {
 enum class IntakeInputMode { TEXT, VOICE }
 
 /**
+ * 추천 질문 고르기의 한 줄. Figma `Question Row`(`3644:7446`).
+ *
+ * @param custom 환자가 직접 적은 줄인지. 아니면 AI 추천이다.
+ */
+data class IntakeQuestion(val text: String, val selected: Boolean, val custom: Boolean = false)
+
+/**
  * 증상 정리 화면의 상태.
  *
- * 네 단계가 한 상태에 모여 있다. 단계를 오가도 앞 단계의 답이 남아 있어야 하고, 마지막에
+ * 세 단계가 한 상태에 모여 있다. 단계를 오가도 앞 단계의 답이 남아 있어야 하고, 마지막에
  * 카드 한 장으로 묶여야 한다.
  */
 /**
- * @param sessionId 서버가 들고 있는 문답 id. 부위를 고르고 다음을 누를 때 받는다.
+ * @param sessionId 서버가 들고 있는 문답 id. 강도를 고르고 다음을 누를 때 받는다.
  *   임시저장의 열쇠라서, 없으면 앱을 나갔다 와도 이어 할 자리가 없다. 세션 만들기가
  *   실패해도 문답은 그대로 진행하므로 `null`일 수 있다.
  * @param restoring 홈의 "이어서 하기"로 들어와 서버에서 불러오는 중인지.
@@ -52,8 +59,16 @@ data class IntakeUiState(
     val voiceAvailable: Boolean = false,
     val awaitingReply: Boolean = false,
     val severity: MedicalMateSeverity = MedicalMateSeverity.LEVEL_3,
-    val questionDraft: String = "",
-    val questions: List<String> = emptyList(),
+    /**
+     * 문답이 끝난 자리의 질문 줄(1c-D). AI 추천이 먼저 서고 직접 적은 줄이 뒤에 붙는다. 체크한 줄만
+     * 브리핑 카드로 간다.
+     */
+    val questionRows: List<IntakeQuestion> = emptyList(),
+    /**
+     * 빈 칸("질문 직접 추가")을 눌러 질문을 적는 중인지(1c-D2·D3). 하단이 다음 버튼에서 입력칸으로
+     * 바뀌고, 적은 글은 문답과 같은 [draft]에 쓴다. 보내면 체크된 줄로 붙는다.
+     */
+    val writingQuestion: Boolean = false,
     val chatFinished: Boolean = false,
     val completed: Boolean = false,
     val sessionId: Long? = null,
@@ -97,12 +112,20 @@ data class IntakeUiState(
      * 음성일 때만 있다. 그때는 입력칸이 패널로 바뀌어 있어서 받아쓴 글을 볼 자리가 대화밖에
      * 없다. 보내면 진짜 마디가 되고 이 자리는 비워진다.
      */
-    val speaking: String? get() = draft.takeIf { inputMode == IntakeInputMode.VOICE && it.isNotBlank() }
+    val speaking: String?
+        get() = draft.takeIf { inputMode == IntakeInputMode.VOICE && !writingQuestion && it.isNotBlank() }
 
-    /** 질문이 상한까지 찼는지. 찼으면 추가 버튼이 꺼지고 필드 아래에 그 사실을 적는다(#264). */
-    val questionsFull: Boolean get() = questions.size >= MAX_BRIEF_CARD_QUESTIONS
+    /** 브리핑 카드에 담을 질문. 체크한 줄을 화면 순서대로 모은다. */
+    val questions: List<String> get() = questionRows.filter { it.selected }.map { it.text }
 
-    val canAddQuestion: Boolean get() = questionDraft.isNotBlank() && !questionsFull
+    /**
+     * 카드에 담을 질문이 상한까지 찼는지(#264). 찼으면 체크를 더 받지 않고 빈 칸을 감춘다. 서버가 그
+     * 수를 넘기면 저장을 거절한다.
+     */
+    val questionsFull: Boolean get() = questionRows.count { it.selected } >= MAX_BRIEF_CARD_QUESTIONS
+
+    /** 직접 적은 질문을 붙일 수 있는지. */
+    val canAddQuestion: Boolean get() = writingQuestion && draft.isNotBlank() && !questionsFull
 
     /**
      * 다음 마디. id를 지금 있는 것들에서 이어 붙인다.

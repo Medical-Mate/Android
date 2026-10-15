@@ -312,16 +312,13 @@
     <string name="intake_severity_notice_title">숫자는 진료실에서 의사가 읽어요</string>
     <string name="intake_severity_notice_body">환자분은 낱말로 고르시면 돼요.\n카드에는 NRS 등가로 함께 표시됩니다.</string>
 
-    <string name="intake_questions_question">의사에게 물어볼 것을 적어두세요</string>
-    <string name="intake_questions_description">진료실에서 잊지 않고 꺼낼 수 있게\n브리핑 카드 맨 아래에 함께 담아드려요.</string>
-    <string name="intake_questions_placeholder">정밀 검사를 받아야 하나요?</string>
-    <string name="intake_questions_add">질문 추가</string>
-    <string name="intake_questions_saved">적어둔 질문</string>
-    <string name="intake_questions_ai_hint">AI가 추천하는 질문이에요</string>
-    <!-- 적어둔 질문 수와 상한. 상한은 서버와 같은 5개다(#264). -->
-    <string name="intake_questions_count">%1$d / %2$d개</string>
-    <string name="intake_questions_full">질문은 %1$d개까지 적을 수 있어요</string>
-    <string name="intake_questions_remove">%1$d번째 질문 지우기</string>
+    <!-- 추천 질문 고르기(1c-D~D4, #310). 목록 위아래의 AI 말과 빈 칸. -->
+    <string name="intake_questions_intro">물어볼 질문 %1$d개를 골라봤어요.\n눌러서 카드에 담아주세요.</string>
+    <!-- 직접 적은 질문이 없을 때(1c-D1)와 있을 때(1c-D4). -->
+    <string name="intake_questions_summary_more">질문 %1$d개를 카드에 담을게요.\n더 묻고 싶은 게 있으면 빈 칸에 적어주세요.</string>
+    <string name="intake_questions_summary_done">질문 %1$d개를 카드에 담을게요.\n진료실에서 순서대로 물어보세요.</string>
+    <string name="intake_questions_add_row">질문 직접 추가</string>
+    <string name="intake_questions_writing">작성 중…</string>
 
     <!-- Figma V2 · 스플래시(1320:4553). -->
     <string name="splash_tagline">진료실에서 하고 싶은 말, 미리 정리해요</string>
@@ -599,7 +596,6 @@
     <string name="voice_listening_description">다 말씀하시면 버튼을 다시 눌러주세요</string>
     <string name="voice_processing_title">정리하는 중이에요</string>
     <string name="voice_processing_description">잠시만 기다려 주세요</string>
-    <string name="voice_next_hint">"다음"이라고 말하거나 버튼을 눌러주세요</string>
     <string name="voice_denied_title">마이크를 쓸 수 없어요</string>
     <string name="voice_denied_description">설정에서 마이크 권한을 켜주세요</string>
     <string name="voice_type_instead">직접 입력할게요</string>
@@ -783,8 +779,6 @@
     <string name="voice_intake_waiting">잠시만요, 다음 질문을 받는 중이에요</string>
     <string name="voice_intake_no_session">지금은 답을 보낼 수 없어요. 화면에서 다시 시도해 주세요</string>
     <string name="voice_intake_still_asking">아직 여쭤볼 게 남았어요</string>
-    <string name="voice_intake_chat_over">물어볼 건 다 물어봤어요</string>
-    <string name="voice_intake_ask_chat_next">"다음"이라고 하면 아픈 정도로 넘어가요</string>
     <string name="voice_intake_moved_on">다음으로 넘어갈게요</string>
     <string name="voice_intake_ask_severity">%1$s 얼마나 아프세요? 이 중에서 말씀해 주세요\n%2$s\n0점부터 10점까지 점수로 말해도 돼요</string>
     <string name="voice_intake_severity_list">이 중에서 가장 가까운 걸 골라 주세요</string>

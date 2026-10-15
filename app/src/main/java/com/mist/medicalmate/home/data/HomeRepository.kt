@@ -150,17 +150,14 @@ private fun lastVisit(today: LocalDate, last: LocalDate?): HomeTodayLine? {
  *
  * **서버의 진행도를 그대로 옮기지 않는다**(#176). `progressCurrent` / `progressTotal`은 문답
  * 왕복을 센 것이고 상한이 20이다. 그대로 찍으면 "20단계 중 0단계까지 답했어요"가 되는데
- * 환자가 보는 증상 정리는 네 단계다.
+ * 환자가 보는 증상 정리는 세 단계다.
  *
- * 부위를 짚어야 세션이 생기므로 1단계는 이미 끝난 것이고, 문답에 한 마디라도 답했으면
- * 2단계다. 응답에 강도도 질문도 없어서 3·4단계는 여기서 가려낼 수 없다. 이름대로
- * `IN_PROGRESS`인 세션만 담긴다면 그 카드가 가리키는 것은 늘 문답 중인 세션이라 이 규칙으로
- * 맞는다. 어느 쪽인지 백엔드에 확인 중이다.
+ * 세션은 부위와 강도를 고른 뒤에 생기므로(#310) 홈에 뜨는 문답은 늘 3단계에 있다.
  */
 private fun InProgressSessionResponse.toResume() = HomeResume(
     intakeId = sessionId.toString(),
     symptomTitle = siteText.orEmpty(),
-    step = if (progressCurrent > 0) IntakeStep.SYMPTOM_CHAT else IntakeStep.BODY_PART,
+    step = IntakeStep.SYMPTOM_CHAT,
 )
 
 /**

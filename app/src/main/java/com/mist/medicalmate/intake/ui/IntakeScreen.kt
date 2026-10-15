@@ -12,22 +12,22 @@ import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateScreenPreviews
 import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
-import com.mist.medicalmate.core.designsystem.component.MedicalMateBottomCtaBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
+import com.mist.medicalmate.core.designsystem.component.MedicalMateFooter
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateProgressIndicator
-import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
 import com.mist.medicalmate.core.model.IntakeStep
 
 /**
- * 와이어프레임 1l·1c·1d·1i. 증상 정리 네 단계를 한 화면이 그린다.
+ * 증상 정리 세 단계를 한 화면이 그린다(#310). 1단계 부위(앱의 3D 인체도), 2단계 통증 강도(1d), 3단계
+ * 문답과 추천 질문 고르기(1c-2 · 1c-3 · 1c-D~D4)다.
  *
- * 단계마다 내용이 크게 다르지만 상단 내비와 진행 표시, 하단 영역은 같다. 목적지를 넷으로
- * 나누면 그 껍데기를 네 번 적고 진행 표시가 어긋난다.
+ * 단계마다 내용이 크게 다르지만 상단 내비와 진행 표시, 하단 영역은 같다. 목적지를 셋으로
+ * 나누면 그 껍데기를 세 번 적고 진행 표시가 어긋난다.
  *
  * 진행 표시는 본문 안에 있다. Figma가 각 화면의 `Content` 첫 줄에 뒀다.
  *
- * 하단은 단계마다 다르다. 문답은 입력창이나 음성이고 나머지는 다음 버튼이다.
+ * 상단 내비는 불투명이다. 10-15 시안의 Nav Bar 면이 `bg/surface` 100%다.
  */
 @Composable
 fun IntakeScreen(state: IntakeUiState, callbacks: IntakeCallbacks, modifier: Modifier = Modifier) {
@@ -40,16 +40,14 @@ fun IntakeScreen(state: IntakeUiState, callbacks: IntakeCallbacks, modifier: Mod
         MedicalMateNavBar(
             title = stringResource(R.string.intake_title),
             onLeadingClick = callbacks.onBackClick,
-            surface = MedicalMateSurfaceStyle.GLASS,
         )
         Box(modifier = Modifier.weight(1f)) {
             when (state.step) {
                 IntakeStep.BODY_PART -> BodyPartStep(state = state, callbacks = callbacks)
-                IntakeStep.SYMPTOM_CHAT -> ChatStep(state = state)
                 IntakeStep.SEVERITY ->
                     SeverityStep(state = state, onSeverityChange = callbacks.onSeverityChange)
 
-                IntakeStep.QUESTIONS -> QuestionsStep(state = state, callbacks = callbacks)
+                IntakeStep.SYMPTOM_CHAT -> ChatStep(state = state, callbacks = callbacks)
             }
         }
         IntakeFooter(state = state, callbacks = callbacks)
@@ -81,13 +79,12 @@ data class IntakeCallbacks(
     val onMicClick: () -> Unit = {},
     val onTypeInsteadClick: () -> Unit = {},
     val onSeverityChange: (MedicalMateSeverity) -> Unit = {},
-    val onQuestionDraftChange: (String) -> Unit = {},
-    val onAddQuestionClick: () -> Unit = {},
-    val onRemoveQuestionClick: (Int) -> Unit = {},
+    val onQuestionToggle: (Int) -> Unit = {},
+    val onQuestionAddClick: () -> Unit = {},
 )
 
 /**
- * 진행 표시. 네 단계 모두 본문 첫 줄에 같은 형태로 둔다.
+ * 진행 표시. 세 단계 모두 본문 첫 줄에 같은 형태로 둔다.
  *
  * 화면 껍데기에 두지 않고 각 단계가 부르는 이유는 Figma가 `Content` 안에 뒀기 때문이다.
  * 본문이 스크롤되면 함께 올라간다.
@@ -112,34 +109,24 @@ private val previewChatState =
             IntakeMessage(1, IntakeMessage.Sender.PATIENT, "한 3주쯤 됐어요. 요즘 더 아파요."),
             IntakeMessage(2, IntakeMessage.Sender.AI, "3주 전부터 점점 심해지셨네요. 어떨 때 더 아프세요?"),
             IntakeMessage(3, IntakeMessage.Sender.PATIENT, "밥 먹고 30분쯤 지나면 명치가 쓰려요."),
-            IntakeMessage(4, IntakeMessage.Sender.AI, "명치가 얼마나 아프세요?"),
         ),
     )
 
 /**
- * 하단 영역.
+ * 하단 영역. 10-15 시안의 `Footer`(그림자 없음)다.
  *
- * 문답 단계만 입력이 붙고 나머지는 다음 버튼이다. 문답에서도 물어볼 것이 남지 않으면
- * 다음 버튼이 함께 나온다. **시안에 문답을 끝내는 조작이 없다.** 그대로 두면 통증
- * 강도로 갈 방법이 없어서 넣었고 디자인 트랙에 남겼다(#69).
- *
- * **`Bottom CTA Bar`를 쓴다.** 같은 모양을 직접 짜 두는 바람에 아래 여백이 8이었고
- * (컴포넌트는 안전 여백 24다) 버튼이 화면 바닥에 붙어 보였다. 자식 간격도 12가 아니라
- * 10이 맞는 값이다.
+ * 문답 중에는 입력이고(1c-2 · 1c-3), 문답이 끝나면 다음 버튼만 남는다(1c-D). 빈 칸을 눌러 질문을 적는
+ * 동안은 다시 입력이 선다(1c-D2 · D3). 나머지 단계는 다음 버튼이다.
  */
 @Composable
 private fun IntakeFooter(state: IntakeUiState, callbacks: IntakeCallbacks) {
-    MedicalMateBottomCtaBar {
-        when (state.step) {
-            IntakeStep.SYMPTOM_CHAT -> {
-                if (state.chatFinished) {
-                    NextButton(onClick = callbacks.onNextClick)
-                }
-                ChatInput(state = state, callbacks = callbacks)
-            }
-
-            IntakeStep.BODY_PART ->
+    MedicalMateFooter {
+        when {
+            state.step == IntakeStep.BODY_PART ->
                 NextButton(onClick = callbacks.onNextClick, enabled = state.canLeaveBodyPart)
+
+            state.step == IntakeStep.SYMPTOM_CHAT && (!state.chatFinished || state.writingQuestion) ->
+                ChatInput(state = state, callbacks = callbacks)
 
             else -> NextButton(onClick = callbacks.onNextClick)
         }
@@ -170,26 +157,6 @@ private fun IntakeSeverityPreview() {
     MedicalMateTheme {
         IntakeScreen(
             state = previewChatState.copy(step = IntakeStep.SEVERITY),
-            callbacks = IntakeCallbacks(),
-        )
-    }
-}
-
-@MedicalMateScreenPreviews
-@Composable
-private fun IntakeQuestionsPreview() {
-    MedicalMateTheme {
-        IntakeScreen(
-            state =
-            previewChatState.copy(
-                step = IntakeStep.QUESTIONS,
-                questions =
-                listOf(
-                    "검사를 받아야 하나요?",
-                    "지금 진통제 계속 먹어도 되나요?",
-                    "어떤 증상이면 바로 다시 와야 하나요?",
-                ),
-            ),
             callbacks = IntakeCallbacks(),
         )
     }

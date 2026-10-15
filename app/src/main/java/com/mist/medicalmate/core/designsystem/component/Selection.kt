@@ -23,7 +23,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
 import com.mist.medicalmate.core.designsystem.MedicalMateRadius
-import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 
@@ -68,41 +67,55 @@ fun MedicalMateCheckbox(
         horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            modifier =
-            Modifier
-                .size(BoxSize)
-                .background(
-                    color = if (checked && enabled) colors.bgPrimary else colors.bgSurface,
-                    shape = MedicalMateRadius.xs,
-                )
-                .then(
-                    if (checked && enabled) {
-                        Modifier
-                    } else {
-                        Modifier.border(
-                            width = UncheckedBorderWidth,
-                            color = if (enabled) colors.borderStrong else colors.borderSubtle,
-                            shape = MedicalMateRadius.xs,
-                        )
-                    },
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (checked) {
-                Icon(
-                    painter = painterResource(MedicalMateIcons.Check),
-                    contentDescription = null,
-                    tint = if (enabled) colors.fgOnPrimary else colors.fgDisabled,
-                    modifier = Modifier.size(MedicalMateSize.iconSm),
-                )
-            }
-        }
+        MedicalMateCheckboxBox(checked = checked, enabled = enabled)
         if (label != null) {
             Text(
                 text = label,
                 style = MedicalMateTheme.typography.bodyL,
                 color = if (enabled) colors.fgDefault else colors.fgDisabled,
+            )
+        }
+    }
+}
+
+/**
+ * 체크박스의 상자만. 눌리는 영역은 부르는 쪽이 정한다.
+ *
+ * `Question Row`처럼 줄 전체가 체크를 바꾸는 컴포넌트가 이 상자를 안에 둔다. 그 줄에 [MedicalMateCheckbox]를
+ * 넣으면 상자와 줄이 각자 눌려 한 번 누름에 두 번 바뀐다.
+ *
+ * 체크 표시는 16이다. 마스터(`311:851`)의 `Box` 안 `Check`가 그 크기다.
+ */
+@Composable
+internal fun MedicalMateCheckboxBox(checked: Boolean, enabled: Boolean = true) {
+    val colors = MedicalMateTheme.colors
+    Box(
+        modifier =
+        Modifier
+            .size(BoxSize)
+            .background(
+                color = if (checked && enabled) colors.bgPrimary else colors.bgSurface,
+                shape = MedicalMateRadius.xs,
+            )
+            .then(
+                if (checked && enabled) {
+                    Modifier
+                } else {
+                    Modifier.border(
+                        width = UncheckedBorderWidth,
+                        color = if (enabled) colors.borderStrong else colors.borderSubtle,
+                        shape = MedicalMateRadius.xs,
+                    )
+                },
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (checked) {
+            Icon(
+                painter = painterResource(MedicalMateIcons.Check),
+                contentDescription = null,
+                tint = if (enabled) colors.fgOnPrimary else colors.fgDisabled,
+                modifier = Modifier.size(CheckSize),
             )
         }
     }
@@ -233,6 +246,9 @@ private val SelectionRowHeight = 54.dp
 private val BoxSize = 24.dp
 
 private val UncheckedBorderWidth = 1.5.dp
+
+/** 마스터 `Box` 안의 `Check` 16. 크기 토큰(18 · 20 · 24)에 없는 값이다. */
+private val CheckSize = 16.dp
 
 /** 문서의 "선택은 7px ring". */
 private val RadioRingWidth = 7.dp
