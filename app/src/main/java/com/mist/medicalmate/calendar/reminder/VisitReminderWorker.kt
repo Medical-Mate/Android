@@ -35,12 +35,12 @@ internal class VisitReminderWorker(context: Context, params: WorkerParameters) :
     override suspend fun doWork(): Result {
         val appointmentId = inputData.getLong(KEY_APPOINTMENT_ID, 0L)
         val date = inputData.getString(KEY_DATE)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
-        val title = inputData.getString(KEY_TITLE).orEmpty()
+        val clinic = inputData.getString(KEY_CLINIC)?.takeIf { it.isNotBlank() }
         val time = inputData.getString(KEY_TIME)?.let { runCatching { LocalTime.parse(it) }.getOrNull() }
         val kind =
             VisitReminderKind.entries.firstOrNull { it.name == inputData.getString(KEY_KIND) }
                 ?: VisitReminderKind.BEFORE_VISIT
-        show(appointmentId, date, kind, text(applicationContext, kind, title, time))
+        show(appointmentId, date, kind, text(applicationContext, kind, clinic, time))
         return Result.success()
     }
 
@@ -70,40 +70,53 @@ internal class VisitReminderWorker(context: Context, params: WorkerParameters) :
     internal companion object {
         const val KEY_APPOINTMENT_ID = "appointmentId"
         const val KEY_DATE = "date"
-        const val KEY_TITLE = "title"
         const val KEY_TIME = "time"
         const val KEY_KIND = "kind"
+        const val KEY_CLINIC = "clinic"
     }
 }
 
 /**
- * 알림 제목과 본문(#316).
+ * 알림 제목과 본문(#316). 디자인 트랙이 넘긴 네 가지 문구다.
  *
- * 진료 후 기록 알림은 홈 배너의 오늘 진료 문구(시안 1n-1 배너 1)를 쓴다. 알림 자체의 시안은 없다. 진료 전 알림은
- * 전과 같다 — 시각을 정한 일정은 24시간 전이라 "내일 진료가 있어요"가 그대로 맞는다.
+ * | | 시각 있음 | 시간 미정 |
+ * | -- | -- | -- |
+ * | 진료 전 | 내일 오전 10:30 진료예요 | 내일 진료가 있어요 |
+ * | 진료 후 기록 | 진료 잘 다녀오셨어요? | 오늘 진료 다녀오셨어요? |
+ *
+ * 본문은 "서울OO병원 내과 · 일정 확인하기", 진료 후 기록은 "… · 들은 말 남기기"다. 병원이 없으면 할 일만 적는다.
  */
-private fun text(context: Context, kind: VisitReminderKind, title: String, time: LocalTime?): Pair<String, String> =
-    when (kind) {
-        VisitReminderKind.BEFORE_VISIT -> context.getString(R.string.visit_reminder_title) to body(context, title, time)
-        VisitReminderKind.AFTER_VISIT ->
-            context.getString(R.string.visit_record_reminder_title) to
-                context.getString(R.string.visit_record_reminder_body)
-    }
+private fun text(context: Context, kind: VisitReminderKind, clinic: String?, time: LocalTime?): Pair<String, String> {
+    val title =
+        when (kind) {
+            VisitReminderKind.BEFORE_VISIT ->
+                time?.let { context.getString(R.string.visit_reminder_title_timed, it.format(TIME)) }
+                    ?: context.getString(R.string.visit_reminder_title)
+            VisitReminderKind.AFTER_VISIT ->
+                context.getString(
+                    if (time !=
+                        null
+                    ) {
+                        R.string.visit_record_reminder_title_timed
+                    } else {
+                        R.string.visit_record_reminder_title
+                    },
+                )
+        }
+    val action =
+        context.getString(
+            if (kind == VisitReminderKind.BEFORE_VISIT) {
+                R.string.visit_reminder_action
+            } else {
+                R.string.visit_record_reminder_action
+            },
+        )
+    return title to (clinic?.let { context.getString(R.string.visit_reminder_body, it, action) } ?: action)
+}
 
 /** 일정 하나에 알림이 둘이라 종류마다 번호를 달리한다. 같으면 뒤에 뜬 것이 앞의 것을 덮는다. */
 private fun notificationId(appointmentId: Long, kind: VisitReminderKind): Int =
     (appointmentId * 2 + kind.ordinal).hashCode()
-
-/**
- * 진료 전 알림 본문. "서울OO병원 내과 재진 · 오전 10:30"이다.
- *
- * 제목이 비면 병원도 카드도 없이 만든 일정이다. 그때는 무엇인지 적을 수 없어 일정을 열어
- * 보라고만 적는다. 시간 미정이면 시각을 빼고 일정 이름만 적는다.
- */
-private fun body(context: Context, title: String, time: LocalTime?): String {
-    val name = title.ifBlank { context.getString(R.string.visit_reminder_untitled) }
-    return if (time == null) name else context.getString(R.string.visit_reminder_body_timed, name, time.format(TIME))
-}
 
 /**
  * 알림을 누르면 그 일정의 일자 화면(1r-2)을 연다.

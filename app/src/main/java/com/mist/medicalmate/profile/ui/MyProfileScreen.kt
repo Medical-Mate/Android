@@ -100,13 +100,6 @@ fun MyProfileScreen(
             AppInfoSection(appVersion = callbacks.appVersion)
         }
     }
-
-    if (state.voiceWake.confirming) {
-        VoiceWakeConfirmDialog(modelReady = state.voiceWake.modelReady, callbacks = voiceWakeCallbacks)
-    }
-    if (state.onDevice.confirming) {
-        OnDeviceConfirmDialog(modelReady = state.onDevice.modelReady, callbacks = onDeviceCallbacks)
-    }
 }
 
 /**

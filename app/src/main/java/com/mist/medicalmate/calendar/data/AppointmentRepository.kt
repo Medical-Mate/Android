@@ -117,6 +117,8 @@ data class Appointment(
     val origin: AppointmentOrigin = AppointmentOrigin.MANUAL,
     /** 진료 전 할 일. 그 일정에 매달린다. */
     val todos: List<AppointmentTodo> = emptyList(),
+    /** 병원과 진료과("서울OO병원 내과"). 둘 다 없으면 null이다. 진료 알림 본문이 적는다(#316). */
+    val clinic: String? = null,
 )
 
 /** 일정에 붙은 카드. */
@@ -189,6 +191,7 @@ private fun AppointmentResponse.toAppointment() = Appointment(
     cards = cards.map { AppointmentCard(id = it.cardId, title = it.title) },
     origin = originOf(origin),
     todos = todos.map { AppointmentTodo(text = it.text, done = it.done) },
+    clinic = listOfNotNull(clinicName, department).filter { it.isNotBlank() }.joinToString(" ").ifEmpty { null },
 )
 
 /**

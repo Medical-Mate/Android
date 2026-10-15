@@ -189,8 +189,8 @@ class MyProfileViewModelTest {
     }
 
     @Test
-    fun `휴대폰 정리를 켜려고 누르면 확인 창부터 뜨고 아직 받지 않는다`() {
-        // 1.2GB를 받는 일이다. 모르고 켜면 안 된다.
+    fun `휴대폰 정리를 켜면 확인 창 없이 바로 받기 시작한다`() {
+        // 확인 창은 걷어냈다(#316, 사용자 결정).
         val onDevice = FakeOnDeviceModel(usable = true)
         val viewModel = viewModel(onDevice = onDevice)
         viewModel.load()
@@ -199,22 +199,19 @@ class MyProfileViewModelTest {
 
         val state = viewModel.uiState.value
         assertTrue(AppSetting.ON_DEVICE in state.mateSettings)
-        assertTrue(state.onDevice.confirming)
-        assertFalse(state.isOn(AppSetting.ON_DEVICE))
-        assertEquals(0, onDevice.enableCalls)
+        assertTrue(state.isOn(AppSetting.ON_DEVICE))
+        assertEquals(1, onDevice.enableCalls)
     }
 
     @Test
-    fun `확인하면 켜고 받는 진행률을 적는다`() {
+    fun `켜면 받는 진행률을 적는다`() {
         val onDevice = FakeOnDeviceModel(usable = true)
         val viewModel = viewModel(onDevice = onDevice)
-        viewModel.onSettingChange(AppSetting.ON_DEVICE, true)
 
-        viewModel.onDeviceToggle.confirm()
+        viewModel.onSettingChange(AppSetting.ON_DEVICE, true)
         onDevice.model.value = OnDeviceModelState.Downloading(0.37f)
 
         val state = viewModel.uiState.value
-        assertFalse(state.onDevice.confirming)
         assertTrue(state.isOn(AppSetting.ON_DEVICE))
         assertEquals(OnDeviceStatus.Downloading(37), state.onDevice.status)
     }
@@ -273,29 +270,15 @@ class MyProfileViewModelTest {
     }
 
     @Test
-    fun `음성 호출을 켜려고 누르면 확인 창부터 뜨고 아직 켜지지 않는다`() {
-        // 41MB를 받는 일이다. 모르고 켜면 안 된다.
+    fun `음성 호출을 켜면 확인 창 없이 켜고 받는 중을 적는다`() {
+        // 확인 창은 걷어냈다(#316, 사용자 결정). 마이크 권한은 화면이 먼저 받고 켜기를 보낸다.
         val voiceWake = FakeVoiceWake(usable = true)
         val viewModel = viewModel(voiceWake = voiceWake)
 
         viewModel.onSettingChange(AppSetting.VOICE_WAKE, true)
 
         val state = viewModel.uiState.value
-        assertTrue(state.voiceWake.confirming)
-        assertFalse(state.isOn(AppSetting.VOICE_WAKE))
-        assertEquals(0, voiceWake.enableCalls)
-    }
-
-    @Test
-    fun `확인하고 권한을 받으면 켜고 받는 중을 적는다`() {
-        val voiceWake = FakeVoiceWake(usable = true)
-        val viewModel = viewModel(voiceWake = voiceWake)
-        viewModel.onSettingChange(AppSetting.VOICE_WAKE, true)
-
-        viewModel.onVoiceWakeConfirmed()
-
-        val state = viewModel.uiState.value
-        assertFalse(state.voiceWake.confirming)
+        assertEquals(1, voiceWake.enableCalls)
         assertTrue(state.isOn(AppSetting.VOICE_WAKE))
         assertEquals(VoiceWakeStatus.Downloading(0), state.voiceWake.status)
     }
@@ -327,24 +310,11 @@ class MyProfileViewModelTest {
     }
 
     @Test
-    fun `확인 창을 닫으면 아무것도 바뀌지 않는다`() {
-        val voiceWake = FakeVoiceWake(usable = true)
-        val viewModel = viewModel(voiceWake = voiceWake)
-        viewModel.onSettingChange(AppSetting.VOICE_WAKE, true)
-
-        viewModel.onVoiceWakeCancel()
-
-        assertFalse(viewModel.uiState.value.voiceWake.confirming)
-        assertFalse(viewModel.uiState.value.isOn(AppSetting.VOICE_WAKE))
-        assertEquals(0, voiceWake.enableCalls)
-    }
-
-    @Test
     fun `마이크 권한을 거부하면 켜지 않고 그 사실을 적는다`() {
         val voiceWake = FakeVoiceWake(usable = true)
         val viewModel = viewModel(voiceWake = voiceWake)
-        viewModel.onSettingChange(AppSetting.VOICE_WAKE, true)
 
+        // 권한은 켜기 전에 묻는다. 거부하면 켜기를 보내지 않는다.
         viewModel.onVoiceWakeDenied()
 
         val state = viewModel.uiState.value
@@ -413,13 +383,11 @@ class MyProfileViewModelTest {
 
     @Test
     fun `모델이 남아 있으면 다시 켤 때 받지 않는다`() {
-        // 확인 창도 받는다는 문장 없이 뜬다. 그 문구는 modelReady를 보고 화면이 고른다.
         val voiceWake = FakeVoiceWake(usable = true, enabled = false, model = WakeWordModelState.Ready)
         val viewModel = viewModel(voiceWake = voiceWake)
-        viewModel.onSettingChange(AppSetting.VOICE_WAKE, true)
         assertTrue(viewModel.uiState.value.voiceWake.modelReady)
 
-        viewModel.onVoiceWakeConfirmed()
+        viewModel.onSettingChange(AppSetting.VOICE_WAKE, true)
 
         val state = viewModel.uiState.value
         assertTrue(state.isOn(AppSetting.VOICE_WAKE))

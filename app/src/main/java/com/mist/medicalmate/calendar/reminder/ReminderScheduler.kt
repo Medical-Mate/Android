@@ -57,9 +57,9 @@ constructor(
                             // 날짜가 있어야 알림을 눌렀을 때 그 일정의 일자 화면이 열린다. 전에는 빠져 있어
                             // 앱만 열렸다.
                             VisitReminderWorker.KEY_DATE to reminder.on.toString(),
-                            VisitReminderWorker.KEY_TITLE to reminder.title,
                             VisitReminderWorker.KEY_TIME to reminder.time?.toString(),
                             VisitReminderWorker.KEY_KIND to reminder.kind.name,
+                            VisitReminderWorker.KEY_CLINIC to reminder.clinic,
                         ),
                     ).addTag(VISIT_REMINDER_TAG)
                     .build()

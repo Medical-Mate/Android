@@ -44,8 +44,8 @@ import kotlinx.coroutines.launch
  * 토글을 누르면 화면을 먼저 바꾸고 저장을 보낸다. 왕복을 기다리면 누른 뒤에 잠깐 안 바뀐
  * 것처럼 보인다. 실패하면 되돌린다.
  *
- * **음성 호출(#273)만 바로 켜지지 않는다.** 41MB를 받는 일이라 확인 창을 거치고, 화면이
- * 마이크 권한을 받은 뒤에 [onVoiceWakeConfirmed]로 켠다. 토글의 값은 [VoiceWake.enabled]를
+ * **음성 호출(#273)은 마이크 권한을 받은 뒤에 켠다.** 화면이 권한을 묻고 받으면 켜기를 보낸다. 켤 때의
+ * 확인 창은 걷어냈다(#316, 사용자 결정). 토글의 값은 [VoiceWake.enabled]를
  * 따라간다 — 받다가 실패하면 그쪽이 내리고 화면도 따라 내려간다.
  */
 @HiltViewModel
@@ -145,20 +145,18 @@ internal constructor(
         viewModelScope.launch { saveReminder(setting, enabled) }
     }
 
-    /** 켜려고 누르면 확인 창부터 띄운다. 끄면 바로 끈다. 받아 둔 모델은 남긴다(#280). */
+    /**
+     * 켜면 모델을 받기 시작하고 끄면 바로 끈다. 받아 둔 모델은 남긴다(#280). 켜기는 화면이 마이크 권한을 받은
+     * 뒤에만 보낸다.
+     */
     private fun onVoiceWakeChange(enabled: Boolean) {
         if (enabled) {
-            updateVoiceWake { it.copy(confirming = true, status = VoiceWakeStatus.Idle) }
+            updateVoiceWake { it.copy(status = VoiceWakeStatus.Idle) }
+            viewModelScope.launch { voiceWake.enable() }
             return
         }
         mutableUiState.update { it.copy(settings = it.settings + (AppSetting.VOICE_WAKE to false)) }
         viewModelScope.launch { voiceWake.disable() }
-    }
-
-    /** 확인 창에서 켜기를 눌렀고 마이크 권한도 받았다. */
-    fun onVoiceWakeConfirmed() {
-        updateVoiceWake { it.copy(confirming = false) }
-        viewModelScope.launch { voiceWake.enable() }
     }
 
     /** "음성 모델 지우기"를 눌렀다. 꺼 둔 상태에서만 버튼이 있다. */
@@ -166,14 +164,9 @@ internal constructor(
         viewModelScope.launch { voiceWake.deleteModel() }
     }
 
-    /** 확인 창을 닫았다. 아무것도 바뀌지 않는다. */
-    fun onVoiceWakeCancel() {
-        updateVoiceWake { it.copy(confirming = false) }
-    }
-
     /** 켜려 했는데 마이크 권한을 거부했다. 듣지 못하는 호출어를 켜 둘 수 없다. */
     fun onVoiceWakeDenied() {
-        updateVoiceWake { it.copy(confirming = false, status = VoiceWakeStatus.Denied) }
+        updateVoiceWake { it.copy(status = VoiceWakeStatus.Denied) }
     }
 
     private fun updateVoiceWake(change: (VoiceWakeUi) -> VoiceWakeUi) {

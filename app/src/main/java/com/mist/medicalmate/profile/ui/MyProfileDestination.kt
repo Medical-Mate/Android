@@ -84,9 +84,12 @@ private fun MyProfileRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val requestNotificationPermission = rememberNotificationPermission()
-    // 음성 호출은 확인 창에서 켜기를 누른 뒤에 묻는다. 그때가 마이크가 왜 필요한지 보이는 자리다.
+    // 음성 호출은 토글을 켤 때 마이크 권한을 묻고 받으면 켠다. 그때가 마이크가 왜 필요한지 보이는 자리다.
     val requestMicPermission =
-        rememberMicPermission(onGranted = viewModel::onVoiceWakeConfirmed, onDenied = viewModel::onVoiceWakeDenied)
+        rememberMicPermission(
+            onGranted = { viewModel.onSettingChange(AppSetting.VOICE_WAKE, true) },
+            onDenied = viewModel::onVoiceWakeDenied,
+        )
 
     val context = LocalContext.current
     // 휴대폰 알림이 꺼져 있는지(#316). 기기 설정에서 바꾸고 돌아올 수 있어 보일 때마다 다시 본다.
@@ -109,24 +112,19 @@ private fun MyProfileRoute(
             onSettingChange = { setting, enabled ->
                 // 켜는 순간이 알림이 왜 필요한지 보이는 자리다.
                 if (setting.isReminder && enabled) requestNotificationPermission()
-                viewModel.onSettingChange(setting, enabled)
+                if (setting == AppSetting.VOICE_WAKE && enabled) {
+                    requestMicPermission()
+                } else {
+                    viewModel.onSettingChange(setting, enabled)
+                }
             },
             notificationsBlocked = notificationsBlocked,
             appVersion = BuildConfig.VERSION_NAME,
         ),
         modifier = modifier,
         voiceWakeCallbacks =
-        VoiceWakeCallbacks(
-            onConfirm = requestMicPermission,
-            onCancel = viewModel::onVoiceWakeCancel,
-            onDeleteModel = viewModel::onVoiceWakeModelDelete,
-        ),
-        onDeviceCallbacks =
-        OnDeviceCallbacks(
-            onConfirm = viewModel.onDeviceToggle::confirm,
-            onCancel = viewModel.onDeviceToggle::cancel,
-            onDeleteModel = viewModel.onDeviceToggle::deleteModel,
-        ),
+        VoiceWakeCallbacks(onDeleteModel = viewModel::onVoiceWakeModelDelete),
+        onDeviceCallbacks = OnDeviceCallbacks(onDeleteModel = viewModel.onDeviceToggle::deleteModel),
     )
 }
 

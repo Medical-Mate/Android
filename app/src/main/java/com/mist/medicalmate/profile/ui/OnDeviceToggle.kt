@@ -10,8 +10,8 @@ import kotlinx.coroutines.launch
 /**
  * 내 정보의 "휴대폰에서 기록 정리" 토글(#289).
  *
- * 다른 토글과 달리 바로 켜지지 않는다. 1.2GB를 받는 일이라 확인 창을 거치고, 다 받을 때까지
- * 진행률을 적고, 꺼도 모델이 남아 지우는 버튼이 따로 있다. 이 갈래들을 [MyProfileViewModel]에
+ * 켜면 바로 모델(1.2GB)을 받기 시작한다. 확인 창은 걷어냈다(#316, 사용자 결정). 다 받을 때까지 진행률을
+ * 적고, 꺼도 모델이 남아 지우는 버튼이 따로 있다. 이 갈래들을 [MyProfileViewModel]에
  * 늘어놓으면 알림·음성 호출 토글과 섞여 어느 것이 어느 토글의 일인지 읽기 어려워 따로 둔다.
  *
  * 토글의 값은 [OnDeviceModel.enabled]를 따라간다 — 받다가 실패하면 그쪽이 내리고 화면도 따라
@@ -41,25 +41,10 @@ class OnDeviceToggle internal constructor(
         update { it.copy(supported = supported) }
     }
 
-    /** 켜려고 누르면 확인 창부터 띄운다. 끄면 바로 끈다. 받아 둔 모델은 남긴다. */
+    /** 켜면 모델을 받기 시작하고 끄면 바로 끈다. 받아 둔 모델은 남긴다. */
     fun change(enabled: Boolean) {
-        if (enabled) {
-            update { it.copy(confirming = true) }
-            return
-        }
-        state.update { it.copy(settings = it.settings + (AppSetting.ON_DEVICE to false)) }
-        scope.launch { model.disable() }
-    }
-
-    /** 확인 창에서 켜기를 눌렀다. 모델을 받기 시작한다. */
-    fun confirm() {
-        update { it.copy(confirming = false) }
-        scope.launch { model.enable() }
-    }
-
-    /** 확인 창을 닫았다. 아무것도 바뀌지 않는다. */
-    fun cancel() {
-        update { it.copy(confirming = false) }
+        state.update { it.copy(settings = it.settings + (AppSetting.ON_DEVICE to enabled)) }
+        scope.launch { if (enabled) model.enable() else model.disable() }
     }
 
     /** "정리 모델 지우기"를 눌렀다. 꺼 둔 상태에서만 버튼이 있다. */

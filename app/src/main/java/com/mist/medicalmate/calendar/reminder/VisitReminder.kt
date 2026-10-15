@@ -20,6 +20,8 @@ internal data class VisitReminder(
     val time: LocalTime?,
     val fireAt: LocalDateTime,
     val kind: VisitReminderKind = VisitReminderKind.BEFORE_VISIT,
+    /** 알림 본문 앞에 적을 병원과 진료과. 없으면 본문이 할 일만 적는다. */
+    val clinic: String? = null,
 )
 
 /** 진료 전 알림과 진료 후 기록 알림(#316). */
@@ -62,8 +64,15 @@ private fun afterVisitAt(appointment: Appointment, settings: ReminderSettings): 
     appointment.time?.let { appointment.on.atTime(it).plusHours(AFTER_VISIT_HOURS) }
         ?: appointment.on.atTime(settings.afterVisitTime)
 
-private fun Appointment.reminder(kind: VisitReminderKind, fireAt: LocalDateTime) =
-    VisitReminder(appointmentId = id, title = title, on = on, time = time, fireAt = fireAt, kind = kind)
+private fun Appointment.reminder(kind: VisitReminderKind, fireAt: LocalDateTime) = VisitReminder(
+    appointmentId = id,
+    title = title,
+    on = on,
+    time = time,
+    fireAt = fireAt,
+    kind = kind,
+    clinic = clinic,
+)
 
 /** 시각을 정한 일정의 진료 전 알림. 24시간 전이다. */
 private const val BEFORE_VISIT_HOURS = 24L
