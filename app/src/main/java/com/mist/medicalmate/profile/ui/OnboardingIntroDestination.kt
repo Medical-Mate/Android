@@ -39,7 +39,6 @@ internal fun NavGraphBuilder.onboardingIntroDestination(onDoneClick: () -> Unit)
 @Composable
 private fun OnboardingRoute(onDoneClick: () -> Unit) {
     var index by rememberSaveable { mutableStateOf(0) }
-    var forward by rememberSaveable { mutableStateOf(true) }
     val pages = remember { OnboardingPage.entries }
     val page = pages[index]
 
@@ -51,7 +50,6 @@ private fun OnboardingRoute(onDoneClick: () -> Unit) {
     // 앞으로 간다.
     val toPrevious = {
         if (index > 0) {
-            forward = false
             index -= 1
         }
     }
@@ -64,12 +62,10 @@ private fun OnboardingRoute(onDoneClick: () -> Unit) {
             if (page.isLast) {
                 onDoneClick()
             } else {
-                forward = true
                 index += 1
             }
         },
         onSkipClick = onDoneClick,
-        forward = forward,
         onPreviousClick = toPrevious,
     )
 }

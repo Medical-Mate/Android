@@ -1,6 +1,9 @@
 package com.mist.medicalmate.core.designsystem.component
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -58,9 +61,16 @@ fun MedicalMateOnboardingProgress(current: Int, modifier: Modifier = Modifier, t
 @Composable
 private fun Dot(active: Boolean) {
     val colors = MedicalMateTheme.colors
+    // 장이 바뀔 때 점이 늘고 줄며 색이 바뀐다. DESIGN.md 모션의 `Smart Animate 240ms EASE_IN_AND_OUT`이다(#318).
     val width by animateDpAsState(
         targetValue = if (active) ActiveDotWidth else DotSize,
+        animationSpec = tween(DOT_DURATION, easing = FigmaEaseInAndOut),
         label = "onboardingDotWidth",
+    )
+    val color by animateColorAsState(
+        targetValue = if (active) colors.bgPrimary else colors.bgSubtle,
+        animationSpec = tween(DOT_DURATION, easing = FigmaEaseInAndOut),
+        label = "onboardingDotColor",
     )
     Box(
         modifier =
@@ -68,7 +78,7 @@ private fun Dot(active: Boolean) {
             .width(width)
             .height(DotSize)
             .background(
-                color = if (active) colors.bgPrimary else colors.bgSubtle,
+                color = color,
                 shape = MedicalMateRadius.full,
             ),
     )
@@ -85,3 +95,8 @@ private val ActiveDotWidth = 20.dp
 
 /** 문서의 전체 높이 24. 점은 6이고 나머지는 위아래 여백이다. */
 private val TrackHeight = 24.dp
+
+private const val DOT_DURATION = 240
+
+/** Figma의 `EASE_IN_AND_OUT`. */
+private val FigmaEaseInAndOut = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)
