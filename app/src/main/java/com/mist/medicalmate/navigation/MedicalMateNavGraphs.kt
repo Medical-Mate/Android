@@ -24,11 +24,13 @@ import com.mist.medicalmate.profile.ui.AccountActionCallbacks
 import com.mist.medicalmate.profile.ui.HealthEditDestination
 import com.mist.medicalmate.profile.ui.ProfileCompleteDestination
 import com.mist.medicalmate.profile.ui.ProfileSetupDestination
+import com.mist.medicalmate.profile.ui.ReminderTimeDestination
 import com.mist.medicalmate.profile.ui.healthEditDestination
 import com.mist.medicalmate.profile.ui.myProfileDestination
 import com.mist.medicalmate.profile.ui.onboardingIntroDestination
 import com.mist.medicalmate.profile.ui.profileCompleteDestination
 import com.mist.medicalmate.profile.ui.profileSetupDestination
+import com.mist.medicalmate.profile.ui.reminderTimeDestination
 import com.mist.medicalmate.visit.ui.ClinicConfirmDestination
 import com.mist.medicalmate.visit.ui.HospitalPickDestination
 import com.mist.medicalmate.visit.ui.HospitalPickPurpose
@@ -123,12 +125,14 @@ internal fun NavGraphBuilder.profileDestinations(
     myProfileDestination(
         accountActions = accountActions,
         onHealthEdit = { navController.navigate(HealthEditDestination) },
+        onReminderTime = { navController.navigate(ReminderTimeDestination) },
         onExit = { navController.popBackStack() },
     )
     healthEditDestination(
         onSaved = { navController.popBackStack() },
         onExit = { navController.popBackStack() },
     )
+    reminderTimeDestination(onExit = { navController.popBackStack() })
 }
 
 /**

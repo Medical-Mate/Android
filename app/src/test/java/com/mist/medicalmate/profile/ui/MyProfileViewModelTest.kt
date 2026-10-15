@@ -1,13 +1,13 @@
 package com.mist.medicalmate.profile.ui
 
 import com.mist.medicalmate.core.model.FakeVisitReminders
+import com.mist.medicalmate.core.model.ReminderSettings
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.core.ondevice.FakeOnDeviceModel
 import com.mist.medicalmate.core.ondevice.OnDeviceModelState
 import com.mist.medicalmate.core.speech.FakeVoiceWake
 import com.mist.medicalmate.core.speech.WakeWordModelState
 import com.mist.medicalmate.profile.data.FakeHealthProfileRepository
-import com.mist.medicalmate.profile.data.FakeLocalSettingsStore
 import com.mist.medicalmate.profile.data.FakeSettingsRepository
 import com.mist.medicalmate.profile.data.HealthEdit
 import com.mist.medicalmate.profile.data.HealthField
@@ -24,6 +24,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.time.LocalTime
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MyProfileViewModelTest {
@@ -139,12 +140,13 @@ class MyProfileViewModelTest {
     }
 
     @Test
-    fun `설정 세 개의 초기값이 시안과 같다`() {
+    fun `알림 둘은 처음에 켜져 있고 미정 시각은 오후 7시다`() {
+        // 서버의 기본값과 같다(Backend#176).
         val state = viewModel().uiState.value
 
         assertTrue(state.isOn(AppSetting.VISIT_REMINDER))
-        assertTrue(state.isOn(AppSetting.CARD_AUTO_SAVE))
-        assertFalse(state.isOn(AppSetting.HANDOFF_BRIGHTNESS))
+        assertTrue(state.isOn(AppSetting.RECORD_REMINDER))
+        assertEquals(LocalTime.of(19, 0), state.untimedReminderTime)
     }
 
     @Test
@@ -162,21 +164,19 @@ class MyProfileViewModelTest {
     fun `하나를 바꿔도 다른 설정은 그대로다`() {
         val viewModel = viewModel()
 
-        viewModel.onSettingChange(AppSetting.HANDOFF_BRIGHTNESS, true)
+        viewModel.onSettingChange(AppSetting.RECORD_REMINDER, false)
 
         val state = viewModel.uiState.value
-        assertTrue(state.isOn(AppSetting.HANDOFF_BRIGHTNESS))
+        assertFalse(state.isOn(AppSetting.RECORD_REMINDER))
         assertTrue(state.isOn(AppSetting.VISIT_REMINDER))
-        assertTrue(state.isOn(AppSetting.CARD_AUTO_SAVE))
     }
 
     private fun viewModel(
         repository: FakeHealthProfileRepository = FakeHealthProfileRepository(),
         settings: FakeSettingsRepository = FakeSettingsRepository(),
-        local: FakeLocalSettingsStore = FakeLocalSettingsStore(),
         voiceWake: FakeVoiceWake = FakeVoiceWake(),
         onDevice: FakeOnDeviceModel = FakeOnDeviceModel(),
-    ) = MyProfileViewModel(repository, settings, local, reminders, voiceWake, onDevice)
+    ) = MyProfileViewModel(repository, settings, reminders, voiceWake, onDevice)
 
     @Test
     fun `휴대폰 정리는 NPU가 없는 기기에서 줄이 없다`() {
@@ -185,7 +185,7 @@ class MyProfileViewModelTest {
 
         viewModel.load()
 
-        assertFalse(AppSetting.ON_DEVICE in viewModel.uiState.value.visibleSettings)
+        assertFalse(AppSetting.ON_DEVICE in viewModel.uiState.value.mateSettings)
     }
 
     @Test
@@ -198,7 +198,7 @@ class MyProfileViewModelTest {
         viewModel.onSettingChange(AppSetting.ON_DEVICE, true)
 
         val state = viewModel.uiState.value
-        assertTrue(AppSetting.ON_DEVICE in state.visibleSettings)
+        assertTrue(AppSetting.ON_DEVICE in state.mateSettings)
         assertTrue(state.onDevice.confirming)
         assertFalse(state.isOn(AppSetting.ON_DEVICE))
         assertEquals(0, onDevice.enableCalls)
@@ -260,7 +260,7 @@ class MyProfileViewModelTest {
 
         viewModel.load()
 
-        assertFalse(AppSetting.VOICE_WAKE in viewModel.uiState.value.visibleSettings)
+        assertFalse(AppSetting.VOICE_WAKE in viewModel.uiState.value.mateSettings)
     }
 
     @Test
@@ -269,7 +269,7 @@ class MyProfileViewModelTest {
 
         viewModel.load()
 
-        assertTrue(AppSetting.VOICE_WAKE in viewModel.uiState.value.visibleSettings)
+        assertTrue(AppSetting.VOICE_WAKE in viewModel.uiState.value.mateSettings)
     }
 
     @Test
@@ -436,54 +436,43 @@ class MyProfileViewModelTest {
 
     @Test
     fun `알림은 계정에서 읽는다`() {
-        val viewModel = viewModel(settings = FakeSettingsRepository(read = ApiResult.Success(false)))
-
-        viewModel.load()
-
-        assertFalse(viewModel.uiState.value.isOn(AppSetting.VISIT_REMINDER))
-    }
-
-    @Test
-    fun `나머지 둘은 이 기기에서 읽는다`() {
-        // 이 기기에서 어떻게 보일지의 문제라 서버가 읽을 일이 없다.
-        val viewModel = viewModel(local = FakeLocalSettingsStore(cardAutoSave = false, handoffBrightness = true))
+        val read = ReminderSettings(beforeVisit = false, afterVisit = true, beforeVisitTime = LocalTime.of(20, 30))
+        val viewModel = viewModel(settings = FakeSettingsRepository(read = ApiResult.Success(read)))
 
         viewModel.load()
 
         val state = viewModel.uiState.value
-        assertFalse(state.isOn(AppSetting.CARD_AUTO_SAVE))
-        assertTrue(state.isOn(AppSetting.HANDOFF_BRIGHTNESS))
+        assertFalse(state.isOn(AppSetting.VISIT_REMINDER))
+        assertTrue(state.isOn(AppSetting.RECORD_REMINDER))
+        assertEquals(LocalTime.of(20, 30), state.untimedReminderTime)
     }
 
     @Test
-    fun `알림을 못 읽어도 나머지는 읽는다`() {
+    fun `알림을 못 읽으면 지금 값으로 둔다`() {
         // 토글 하나 때문에 화면을 막지 않는다.
-        val viewModel =
-            viewModel(
-                settings = FakeSettingsRepository(read = FakeSettingsRepository.OFFLINE),
-                local = FakeLocalSettingsStore(cardAutoSave = false),
-            )
+        val viewModel = viewModel(settings = FakeSettingsRepository(read = FakeSettingsRepository.OFFLINE))
 
         viewModel.load()
 
-        assertFalse(viewModel.uiState.value.isOn(AppSetting.CARD_AUTO_SAVE))
+        assertTrue(viewModel.uiState.value.isOn(AppSetting.VISIT_REMINDER))
     }
 
     @Test
-    fun `알림을 끄면 서버로 나간다`() {
+    fun `알림을 끄면 그 하나만 서버로 나간다`() {
+        // 서버가 보낸 필드만 바꾼다. 다른 알림을 함께 보내면 다른 기기에서 고친 값을 덮는다.
         val settings = FakeSettingsRepository()
         val viewModel = viewModel(settings = settings)
 
-        viewModel.onSettingChange(AppSetting.VISIT_REMINDER, false)
+        viewModel.onSettingChange(AppSetting.RECORD_REMINDER, false)
 
-        assertEquals(false, settings.saved)
+        assertEquals(false, settings.savedAfterVisit)
+        assertNull(settings.savedBeforeVisit)
     }
 
     @Test
     fun `알림 저장이 실패하면 토글을 되돌린다`() {
         // 안 받겠다고 한 것이 서버에 안 남았는데 화면만 꺼져 있으면 알림이 계속 온다.
-        val settings = FakeSettingsRepository(write = FakeSettingsRepository.OFFLINE)
-        val viewModel = viewModel(settings = settings)
+        val viewModel = viewModel(settings = FakeSettingsRepository(writeFails = true))
 
         viewModel.onSettingChange(AppSetting.VISIT_REMINDER, false)
 
@@ -502,30 +491,11 @@ class MyProfileViewModelTest {
 
     @Test
     fun `알림 저장이 실패하면 예약을 건드리지 않는다`() {
-        val viewModel = viewModel(settings = FakeSettingsRepository(write = FakeSettingsRepository.OFFLINE))
+        val viewModel = viewModel(settings = FakeSettingsRepository(writeFails = true))
 
         viewModel.onSettingChange(AppSetting.VISIT_REMINDER, false)
 
         assertEquals(0, reminders.refreshes)
-    }
-
-    @Test
-    fun `다른 토글은 예약과 상관없다`() {
-        val viewModel = viewModel()
-
-        viewModel.onSettingChange(AppSetting.CARD_AUTO_SAVE, false)
-
-        assertEquals(0, reminders.refreshes)
-    }
-
-    @Test
-    fun `이 기기 설정은 서버로 나가지 않는다`() {
-        val settings = FakeSettingsRepository()
-        val viewModel = viewModel(settings = settings)
-
-        viewModel.onSettingChange(AppSetting.CARD_AUTO_SAVE, false)
-
-        assertNull(settings.saved)
     }
 
     @Test

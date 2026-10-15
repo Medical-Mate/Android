@@ -3,7 +3,6 @@ package com.mist.medicalmate.profile.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,46 +12,46 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.R
-import com.mist.medicalmate.core.designsystem.MedicalMateElevation
-import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateScreenPreviews
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
-import com.mist.medicalmate.core.designsystem.ShadowTint
 import com.mist.medicalmate.core.designsystem.component.MedicalMateAvatar
-import com.mist.medicalmate.core.designsystem.component.MedicalMateCard
 import com.mist.medicalmate.core.designsystem.component.MedicalMateKvRow
 import com.mist.medicalmate.core.designsystem.component.MedicalMateKvRowType
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
+import com.mist.medicalmate.core.designsystem.component.MedicalMateNotice
+import com.mist.medicalmate.core.designsystem.component.MedicalMateNoticeTone
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
+import com.mist.medicalmate.core.designsystem.component.MedicalMateSettingCard
+import com.mist.medicalmate.core.designsystem.component.MedicalMateSettingNavigationRow
+import com.mist.medicalmate.core.designsystem.component.MedicalMateSettingToggleRow
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
-import com.mist.medicalmate.core.designsystem.component.MedicalMateToggle
 import com.mist.medicalmate.core.voice.rememberVoiceScrollState
 import com.mist.medicalmate.core.voice.voicePanelSpace
 import com.mist.medicalmate.profile.data.HealthField
 import com.mist.medicalmate.profile.data.HealthStatus
 
 /**
- * 와이어프레임 1s-1. Figma `407:2375`.
+ * 와이어프레임 1s-1. 10-15 시안 `3663:15766`(#316).
  *
- * 홈 헤더의 아바타에서 들어온다. 하단 탭에 두지 않은 이유는 세 탭이 기록·홈·캘린더로
- * 확정됐기 때문이다(Tab Bar v2).
+ * 홈 헤더의 아바타에서 들어온다. 프로필 카드 아래로 건강 정보 · 알림 · 메이트 · 계정 · 앱 정보가 차례로 선다.
+ * 덩이 사이가 14이고 구역 머리는 `Section Header`, 줄은 `Setting Row`다.
  *
  * 건강 정보는 요약만 보여주고 고치는 것은 1s-2로 넘긴다. 진료 때 보여줄 값이라 실수로
  * 바뀌면 안 되고, 이 화면은 확인하는 자리다.
+ *
+ * **이용약관 · 개인정보 처리방침은 자리만 있다.** 출시 준비 때 문서를 붙인다(사용자 결정). 앱 버전은 빌드의
+ * 버전 이름이다.
  */
 @Composable
 fun MyProfileScreen(
     state: MyProfileUiState,
     accountActions: AccountActionCallbacks,
-    onBackClick: () -> Unit,
-    onHealthEditClick: () -> Unit,
-    onSettingChange: (AppSetting, Boolean) -> Unit,
+    callbacks: MyProfileCallbacks,
     modifier: Modifier = Modifier,
     voiceWakeCallbacks: VoiceWakeCallbacks = VoiceWakeCallbacks(),
     onDeviceCallbacks: OnDeviceCallbacks = OnDeviceCallbacks(),
@@ -65,17 +64,41 @@ fun MyProfileScreen(
     ) {
         MedicalMateNavBar(
             title = stringResource(R.string.my_profile_title),
-            onLeadingClick = onBackClick,
+            onLeadingClick = callbacks.onBackClick,
             surface = MedicalMateSurfaceStyle.GLASS,
         )
-        ProfileContent(
-            state = state,
-            accountActions = accountActions,
-            onHealthEditClick = onHealthEditClick,
-            onSettingChange = onSettingChange,
-            onDeleteVoiceModel = voiceWakeCallbacks.onDeleteModel,
-            onDeleteOnDeviceModel = onDeviceCallbacks.onDeleteModel,
-        )
+        Column(
+            modifier =
+            Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .verticalScroll(rememberVoiceScrollState()).voicePanelSpace()
+                .padding(
+                    start = MedicalMateSize.gutter,
+                    end = MedicalMateSize.gutter,
+                    top = MedicalMateSpace.s8,
+                    bottom = MedicalMateSpace.s16,
+                ),
+            verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s14),
+        ) {
+            ProfileCard(state.profile)
+            MedicalMateSectionHeader(
+                title = stringResource(R.string.my_profile_health),
+                actionLabel = stringResource(R.string.my_profile_health_edit),
+                onActionClick = callbacks.onHealthEditClick,
+            )
+            HealthCard(state.health)
+            ReminderSection(state = state, callbacks = callbacks)
+            MateSection(
+                state = state,
+                onSettingChange = callbacks.onSettingChange,
+                onDeleteVoiceModel = voiceWakeCallbacks.onDeleteModel,
+                onDeleteOnDeviceModel = onDeviceCallbacks.onDeleteModel,
+            )
+            MedicalMateSectionHeader(title = stringResource(R.string.my_profile_account))
+            AccountActions(accountActions = accountActions)
+            AppInfoSection(appVersion = callbacks.appVersion)
+        }
     }
 
     if (state.voiceWake.confirming) {
@@ -86,44 +109,108 @@ fun MyProfileScreen(
     }
 }
 
+/**
+ * 내 정보에서 나가는 길과 화면 안의 조작.
+ *
+ * [notificationsBlocked]는 휴대폰 알림 권한이 꺼져 있는지다. 기기 설정이라 라우트가 읽어 넘긴다.
+ */
+data class MyProfileCallbacks(
+    val onBackClick: () -> Unit = {},
+    val onHealthEditClick: () -> Unit = {},
+    val onReminderTimeClick: () -> Unit = {},
+    val onSettingChange: (AppSetting, Boolean) -> Unit = { _, _ -> },
+    val notificationsBlocked: Boolean = false,
+    val appVersion: String = "",
+)
+
+/**
+ * 알림. 진료 전 · 진료 후 기록 토글과 `알림 시간` 줄이다. 토글 설명과 줄의 값이 시간 미정 일정의 알림 시각을
+ * 적는다.
+ *
+ * 휴대폰 알림이 꺼져 있으면 카드 아래 `Notice`(Warning)가 선다. 토글을 켜 둬도 그 상태로는 알림이 오지 않는다.
+ */
 @Composable
-private fun ColumnScope.ProfileContent(
+private fun ReminderSection(state: MyProfileUiState, callbacks: MyProfileCallbacks) {
+    val untimed = reminderTimeWords(state.untimedReminderTime)
+    MedicalMateSectionHeader(title = stringResource(R.string.my_profile_reminders))
+    MedicalMateSettingCard {
+        MedicalMateSettingToggleRow(
+            title = stringResource(AppSetting.VISIT_REMINDER.labelRes),
+            description = stringResource(R.string.my_profile_visit_reminder_description, untimed),
+            checked = state.isOn(AppSetting.VISIT_REMINDER),
+            onCheckedChange = { callbacks.onSettingChange(AppSetting.VISIT_REMINDER, it) },
+        )
+        MedicalMateSettingToggleRow(
+            title = stringResource(AppSetting.RECORD_REMINDER.labelRes),
+            description = stringResource(R.string.my_profile_record_reminder_description, untimed),
+            checked = state.isOn(AppSetting.RECORD_REMINDER),
+            onCheckedChange = { callbacks.onSettingChange(AppSetting.RECORD_REMINDER, it) },
+        )
+        MedicalMateSettingNavigationRow(
+            title = stringResource(R.string.my_profile_reminder_time),
+            value = reminderTimeValue(state.untimedReminderTime),
+            onClick = callbacks.onReminderTimeClick,
+        )
+    }
+    if (callbacks.notificationsBlocked) {
+        MedicalMateNotice(
+            title = stringResource(R.string.my_profile_notifications_off_title),
+            body = stringResource(R.string.my_profile_notifications_off_body),
+            tone = MedicalMateNoticeTone.WARNING,
+        )
+    }
+}
+
+/**
+ * 메이트. 헤이 메이트로 부르기와, 시험용으로 남긴 휴대폰에서 기록 정리(사용자 결정)다. 둘 다 이 기기에서 켤 수
+ * 있을 때만 줄이 서고, 둘 다 없으면 구역째 감춘다.
+ *
+ * 모델을 받는 중이거나 실패한 사정, 꺼 둔 채 남은 모델을 지우는 버튼은 시안에 없는 줄이라 카드 아래에 둔다.
+ */
+@Composable
+private fun MateSection(
     state: MyProfileUiState,
-    accountActions: AccountActionCallbacks,
-    onHealthEditClick: () -> Unit,
     onSettingChange: (AppSetting, Boolean) -> Unit,
     onDeleteVoiceModel: () -> Unit,
     onDeleteOnDeviceModel: () -> Unit,
 ) {
-    Column(
-        modifier =
-        Modifier
-            .fillMaxWidth()
-            .weight(1f)
-            .verticalScroll(rememberVoiceScrollState()).voicePanelSpace()
-            .padding(
-                start = MedicalMateSize.gutter,
-                end = MedicalMateSize.gutter,
-                top = MedicalMateSpace.s8,
-                bottom = MedicalMateSpace.s32,
-            ),
-    ) {
-        ProfileCard(state.profile)
-        MedicalMateSectionHeader(
-            title = stringResource(R.string.my_profile_health),
-            actionLabel = stringResource(R.string.my_profile_health_edit),
-            onActionClick = onHealthEditClick,
-        )
-        HealthCard(state.health)
-        MedicalMateSectionHeader(title = stringResource(R.string.my_profile_settings))
-        SettingsCard(state = state, onSettingChange = onSettingChange)
+    val settings = state.mateSettings
+    if (settings.isEmpty()) return
+    MedicalMateSectionHeader(title = stringResource(R.string.my_profile_mate))
+    Column {
+        MedicalMateSettingCard {
+            settings.forEach { setting ->
+                MedicalMateSettingToggleRow(
+                    title = stringResource(setting.labelRes),
+                    description =
+                    if (setting == AppSetting.VOICE_WAKE) {
+                        stringResource(R.string.my_profile_voice_wake_description)
+                    } else {
+                        null
+                    },
+                    checked = state.isOn(setting),
+                    onCheckedChange = { onSettingChange(setting, it) },
+                )
+            }
+        }
         VoiceWakeStatusLine(state.voiceWake.status)
         if (state.canDeleteVoiceModel) VoiceWakeModelDelete(onClick = onDeleteVoiceModel)
         OnDeviceStatusLine(state.onDevice.status)
         if (state.canDeleteOnDeviceModel) OnDeviceModelDelete(onClick = onDeleteOnDeviceModel)
-        AccountActions(
-            accountActions = accountActions,
-            modifier = Modifier.padding(top = MedicalMateSpace.s24),
+    }
+}
+
+/** 앱 정보. 이용약관 · 개인정보 처리방침은 출시 준비 때 붙일 자리라 눌러도 아무 일이 없다(사용자 결정). */
+@Composable
+private fun AppInfoSection(appVersion: String) {
+    MedicalMateSectionHeader(title = stringResource(R.string.my_profile_app_info))
+    MedicalMateSettingCard {
+        MedicalMateSettingNavigationRow(title = stringResource(R.string.my_profile_terms), onClick = {})
+        MedicalMateSettingNavigationRow(title = stringResource(R.string.my_profile_privacy), onClick = {})
+        MedicalMateSettingNavigationRow(
+            title = stringResource(R.string.my_profile_app_version),
+            value = appVersion,
+            onClick = {},
         )
     }
 }
@@ -140,7 +227,8 @@ private fun ColumnScope.ProfileContent(
  */
 @Composable
 private fun ProfileCard(profile: MyProfile) {
-    MedicalMateCard {
+    // 시안 `Profile`. 사방 18 · 아바타와 글 사이 14 · 글 줄 사이 3이다.
+    MedicalMateSettingCard(verticalPadding = ProfileCardPadding) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s14),
@@ -151,7 +239,7 @@ private fun ProfileCard(profile: MyProfile) {
                 size = AvatarSize,
                 contentDescription = null,
             )
-            Column(verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s2)) {
+            Column(verticalArrangement = Arrangement.spacedBy(ProfileLineGap)) {
                 profile.name?.let { name ->
                     Text(
                         text = name,
@@ -187,10 +275,10 @@ private fun metaLine(profile: MyProfile): String? = listOfNotNull(
     profile.sex?.let { stringResource(it.labelRes) },
 ).joinToString(" · ").takeIf { it.isNotBlank() }
 
-/** 알러지만 브랜드색으로 세운다. 진료 때 먼저 전해야 하는 값이다. */
+/** 알러지만 브랜드색으로 세운다. 진료 때 먼저 전해야 하는 값이다. 카드는 위아래 4다(시안 `Health Card`). */
 @Composable
 private fun HealthCard(health: HealthSummary) {
-    RowCard {
+    MedicalMateSettingCard(verticalPadding = MedicalMateSpace.s4) {
         MedicalMateKvRow(
             key = stringResource(R.string.my_profile_health_medications),
             value = summaryText(health.medications),
@@ -221,54 +309,13 @@ private fun summaryText(field: HealthField): String = when (field.status) {
     HealthStatus.UNKNOWN -> stringResource(R.string.my_profile_health_unknown)
 }
 
-/**
- * 설정.
- *
- * 음성 호출은 이 기기에서 켤 수 있을 때만 줄이 있다([MyProfileUiState.visibleSettings]).
- */
-@Composable
-private fun SettingsCard(state: MyProfileUiState, onSettingChange: (AppSetting, Boolean) -> Unit) {
-    RowCard {
-        state.visibleSettings.forEach { setting ->
-            MedicalMateToggle(
-                checked = state.isOn(setting),
-                onCheckedChange = { checked -> onSettingChange(setting, checked) },
-                label = stringResource(setting.labelRes),
-            )
-        }
-    }
-}
-
-/**
- * 행을 담는 카드.
- *
- * `Card` 컴포넌트를 쓰지 않는다. 그쪽은 안쪽 여백 20에 자식 사이 간격 6인데, 이 두 카드는
- * 행 자체가 높이 54~56에 여백을 갖고 있어서 카드가 위아래로 4만 남긴다. 그대로 `Card`에
- * 넣으면 시안보다 44 높아진다. 층은 같은 `Elevation/Card`로 준다.
- */
-@Composable
-private fun RowCard(content: @Composable ColumnScope.() -> Unit) {
-    Column(
-        modifier =
-        Modifier
-            .fillMaxWidth()
-            .shadow(
-                elevation = MedicalMateElevation.card,
-                shape = MedicalMateRadius.lg,
-                ambientColor = ShadowTint,
-                spotColor = ShadowTint,
-            )
-            .background(MedicalMateTheme.colors.bgSurface, MedicalMateRadius.lg)
-            .padding(horizontal = MedicalMateSpace.s20, vertical = RowCardPadding),
-        content = content,
-    )
-}
-
 /** 시안의 아바타는 이 화면에서만 56이다. 홈 헤더는 44다. */
 private val AvatarSize = 56.dp
 
-/** 시안의 Health Card는 위아래 4, Settings는 6이다. 행 높이가 여백을 이미 갖고 있다. */
-private val RowCardPadding = 4.dp
+/** 시안 `Profile` 카드의 사방 18과 글 줄 사이 3. 토큰에 없는 값이다. */
+private val ProfileCardPadding = 18.dp
+
+private val ProfileLineGap = 3.dp
 
 @MedicalMateScreenPreviews
 @Composable
@@ -277,9 +324,7 @@ private fun MyProfileScreenPreview() {
         MyProfileScreen(
             state = previewMyProfile,
             accountActions = AccountActionCallbacks(),
-            onBackClick = {},
-            onHealthEditClick = {},
-            onSettingChange = { _, _ -> },
+            callbacks = MyProfileCallbacks(appVersion = "1.0.0"),
         )
     }
 }
