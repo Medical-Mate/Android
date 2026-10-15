@@ -1,29 +1,27 @@
 package com.mist.medicalmate.profile.ui
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -34,7 +32,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateRadius
@@ -52,10 +49,9 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateOnboardingPro
  * 로그인 뒤 한 번 지나간다. 상단 바에 Nav Bar를 두지 않는다. 뒤로 갈 곳이 로그인이라
  * 돌아가면 로그아웃처럼 읽힌다. 앞으로 가는 길과 건너뛰는 길만 둔다. 시안도 그렇다.
  *
- * **장이 밀려서 바뀐다**(#227). 전에는 글과 그림이 그 자리에서 즉시 갈렸다. 넘긴 것인지
- * 화면이 바뀐 것인지 구별되지 않고, 되짚어 온 것인지도 알 수 없다. 앞으로 갈 때는 오른쪽에서
- * 들어오고 되짚을 때는 왼쪽에서 들어온다 — 화면 전환(`MedicalMateNavTransitions`)과 같은
- * 방향이다.
+ * **장은 프로토타입대로 겹쳐 바뀐다**(#318). 10-15 프로토타입(`3663:6862`)의 다음 버튼이 `DISSOLVE` 350ms
+ * `EASE_IN_AND_OUT`으로 다음 장을 연다. 전에는 #227에서 정한 대로 옆으로 밀렸는데 시안에 맞춰 바꿨다. 되짚을
+ * 때도 같은 전환이다.
  *
  * 상단 바와 하단 버튼은 그대로 둔다. 진행 표시가 함께 밀리면 몇 번째 장인지가 눈에서
  * 사라지고, 버튼은 자리가 고정이라 손가락이 따라다니지 않아도 된다.
@@ -68,7 +64,6 @@ fun OnboardingScreen(
     onNextClick: () -> Unit,
     onSkipClick: () -> Unit,
     modifier: Modifier = Modifier,
-    forward: Boolean = true,
     onPreviousClick: () -> Unit = {},
 ) {
     Column(
@@ -80,7 +75,6 @@ fun OnboardingScreen(
         TopBar(page = page, onSkipClick = onSkipClick)
         PageContent(
             page = page,
-            forward = forward,
             onNext = onNextClick,
             onPrevious = onPreviousClick,
         )
@@ -149,24 +143,13 @@ private fun TopBar(page: OnboardingPage, onSkipClick: () -> Unit) {
  * 잘리기 전에 160 넘게 흡수한다.
  */
 @Composable
-private fun ColumnScope.PageContent(
-    page: OnboardingPage,
-    forward: Boolean,
-    onNext: () -> Unit,
-    onPrevious: () -> Unit,
-) {
+private fun ColumnScope.PageContent(page: OnboardingPage, onNext: () -> Unit, onPrevious: () -> Unit) {
     val threshold = with(LocalDensity.current) { SwipeThreshold.toPx() }
     AnimatedContent(
         targetState = page,
         transitionSpec = {
-            val direction = if (forward) 1 else -1
-            val spec = tween<IntOffset>(PAGE_DURATION, easing = FastOutSlowInEasing)
-            val fade = tween<Float>(PAGE_DURATION, easing = FastOutSlowInEasing)
-            (
-                slideInHorizontally(spec) { width -> direction * width } + fadeIn(fade)
-                ) togetherWith (
-                slideOutHorizontally(spec) { width -> -direction * width / PAGE_PARALLAX } + fadeOut(fade)
-                )
+            val dissolve = tween<Float>(PAGE_DURATION, easing = FigmaEaseInAndOut)
+            fadeIn(dissolve) togetherWith fadeOut(dissolve)
         },
         modifier =
         Modifier
@@ -192,49 +175,56 @@ private fun ColumnScope.PageContent(
             },
         label = "onboarding",
     ) { shown ->
-        Column(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = MedicalMateSize.gutter, vertical = MedicalMateSpace.s16),
-            ) {
-                Text(
-                    text = stringResource(shown.title),
-                    style = MedicalMateTheme.typography.headingL,
-                    color = MedicalMateTheme.colors.fgDefault,
-                )
-                Text(
-                    text = stringResource(shown.description),
-                    style = MedicalMateTheme.typography.bodyM,
-                    color = MedicalMateTheme.colors.fgSubtle,
-                    modifier = Modifier.padding(top = MedicalMateSpace.s24),
-                )
-            }
-            Spacer(Modifier.weight(1f))
-            Illustration(page = shown)
-            Spacer(Modifier.height(IllustrationBottom))
-        }
+        PageBody(shown)
     }
 }
 
-/** 화면 전환과 같은 값이다. 한 장 넘기는 데 320이면 충분하다. */
-private const val PAGE_DURATION = 320
+/** 한 장의 글과 그림. 10-15 시안 V2-00~03의 Content다(#318). */
+@Composable
+private fun PageBody(shown: OnboardingPage) {
+    // 위 72 · 좌우 20 · 아래 24에 글 묶음과 그림 칸이 24 간격으로 선다.
+    Column(
+        modifier =
+        Modifier
+            .fillMaxSize()
+            .padding(
+                start = MedicalMateSize.gutter,
+                end = MedicalMateSize.gutter,
+                top = ContentTop,
+                bottom = MedicalMateSpace.s24,
+            ),
+        verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s24),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s24)) {
+            Text(
+                text = stringResource(shown.title),
+                style = MedicalMateTheme.typography.displayM,
+                color = MedicalMateTheme.colors.fgDefault,
+            )
+            Text(
+                text = stringResource(shown.description),
+                style = MedicalMateTheme.typography.bodyL,
+                color = MedicalMateTheme.colors.fgSubtle,
+            )
+        }
+        Illustration(page = shown)
+    }
+}
 
-/** 물러나는 장이 움직이는 몫. 들어오는 장이 네 배 더 움직인다. */
-private const val PAGE_PARALLAX = 4
+/** 프로토타입의 `DISSOLVE` 길이다. */
+private const val PAGE_DURATION = 350
+
+/** Figma의 `EASE_IN_AND_OUT`. */
+private val FigmaEaseInAndOut = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)
 
 /**
- * 장마다 하나씩인 선화.
+ * 장마다 하나씩인 그림. 시안 `Onboarding Illustration`(`3610:10270`, #318)이다.
  *
- * 시안의 그림은 352 폭이라 콘텐츠 320을 넘어 좌우 거터로 16씩 빠져나간다. 그래서 이 블록만
- * 거터를 받지 않고 화면 폭을 쓴다.
+ * 높이 340 칸 가운데에 그림을 **원래 크기 그대로** 둔다(1/4 326 · 2/4 342×228 · 3/4 340 · 4/4 307). 비율을 바꾸지
+ * 않는다는 것이 마스터의 규칙이다. 2/4와 3/4는 콘텐츠 폭 320보다 넓어 좌우 거터로 조금 나간다 — 시안도 그렇다.
+ * 칸의 폭에 맞춰 줄이지 않으려고 `requiredSize`로 둔다.
  *
- * 폭을 352에서 멈춘다. 화면 폭을 그대로 채우게 두면 시안보다 넓은 기기에서 그림이 함께
- * 커진다. SM-S928N(411dp)에서 재 보니 1.15배가 되어 304 칸을 29 넘겼다. 352보다 좁은
- * 기기에서만 비율대로 줄어든다.
- *
- * 그림 안에 글자가 없어서 통째로 내보냈다. 원본 색은 그대로 두고 tint를 씌우지 않는다.
- * 그라디언트가 한 색으로 눌리고, 선이 세 가지 색으로 나뉘어 있다.
+ * 그림은 디자인 트랙이 넘긴 래스터를 3배(`drawable-nodpi`, 무손실 WebP)로 넣었다.
  */
 @Composable
 private fun Illustration(page: OnboardingPage) {
@@ -242,18 +232,12 @@ private fun Illustration(page: OnboardingPage) {
         modifier = Modifier
             .fillMaxWidth()
             .height(IllustrationHeight),
+        contentAlignment = Alignment.Center,
     ) {
         Image(
             painter = painterResource(page.illustration),
             contentDescription = null,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = ArtTop)
-                // widthIn이 fillMaxWidth보다 앞이어야 한다. 뒤에 두면 fillMaxWidth가 폭을
-                // 고정해 버려서 상한이 최소값에 밀려 무시된다.
-                .widthIn(max = ArtMaxWidth)
-                .fillMaxWidth()
-                .aspectRatio(ART_ASPECT),
+            modifier = Modifier.requiredSize(width = page.artWidth.dp, height = page.artHeight.dp),
         )
     }
 }
@@ -261,20 +245,13 @@ private fun Illustration(page: OnboardingPage) {
 /** 시안의 Top Bar 56. 그 안에서 진행 표시와 건너뛰기가 세로 가운데에 선다. */
 private val TopBarHeight = 56.dp
 
-/** 그림 칸 304와 그 아래 여백 80. Content 664에서 글과 빈 칸이 나머지를 쓴다. */
-private val IllustrationHeight = 304.dp
+/** 시안 Content의 위 72와 그림 칸 높이 340. */
+private val ContentTop = 72.dp
+
+private val IllustrationHeight = 340.dp
 
 /** 장이 넘어가는 최소 거리. 이보다 짧으면 넘기려던 것이 아니라 스쳤다고 본다. */
 private val SwipeThreshold = 56.dp
-
-private val IllustrationBottom = 80.dp
-
-/** 그림은 352x290.4이고 칸 안에서 y=6.8에 놓인다. 360 화면에서 좌우로 4씩 남는다. */
-private val ArtMaxWidth = 352.dp
-
-private val ArtTop = 6.8.dp
-
-private const val ART_ASPECT = 352f / 290.4f
 
 @MedicalMateScreenPreviews
 @Composable

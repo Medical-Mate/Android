@@ -5,6 +5,8 @@ import com.mist.medicalmate.core.model.IntakeStep
 import com.mist.medicalmate.core.speech.Dictation
 import com.mist.medicalmate.core.speech.SpeechToText
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -14,9 +16,12 @@ import kotlinx.coroutines.launch
  * 클래스가 네 단계를 한 번에 들고 있어서 단계마다 조작을 더하면 한 클래스가 너무 많은 일을
  * 한다.
  *
- * **말로 하는 대화의 한 바퀴를 여기가 돈다.** 마이크를 누르면 듣고, 다 말하고 누르면 그
- * 자리에서 보내고, AI가 답하면 다시 듣는다. 매번 마이크를 누르게 하면 말로 하는 흐름이
- * 끊긴다. 문답이 끝난 뒤에는 "다음"을 듣는다.
+ * **말로 하는 대화의 한 바퀴를 여기가 돈다.** 마이크를 누르면 듣고, 말이 1초 끊기면 그 자리에서 보내고(#318),
+ * AI가 답하면 다시 듣는다. 매번 마이크를 누르게 하면 말로 하는 흐름이 끊긴다. 다 말하고 직접 눌러도 보낸다.
+ * 듣기 시작하고 5초 동안 아무 말이 없으면 패널을 닫는다(#318). 문답이 끝난 뒤에는 "다음"을 듣는다.
+ *
+ * **받아쓴 말은 입력칸에 적지 않는다**(#318, 사용자 결정). 패널이 떠 있는 동안 입력칸은 그 전 글을 보이고, 패널이 닫히면
+ * 음성을 켜기 전에 손으로 적어 둔 글([IntakeUiState.typedBefore])로 되돌린다.
  *
  * @param onCommand 말이 끝났을 때 할 일. 보내는 것도 다음으로 가는 것도 세션과 단계를 아는
  *   ViewModel이 한다.
@@ -42,6 +47,9 @@ class IntakeVoiceActions(
      */
     private var shown = true
 
+    /** 조용한 시간을 세는 일(#318). 말이 들리면 1초 뒤 보내기로, 듣기 시작하면 5초 뒤 닫기로 다시 센다. */
+    private var silence: Job? = null
+
     /**
      * 받아쓴 글이 왔다.
      *
@@ -54,11 +62,41 @@ class IntakeVoiceActions(
      */
     private fun onDictated(text: String, latest: String) {
         if (state().chatFinished && latest.isNextCommand()) {
-            dictation.stop()
+            stop()
             onCommand(VoiceCommand.NEXT)
             return
         }
         update { it.copy(draft = text) }
+        armSilence(heardSpeech = true)
+    }
+
+    /**
+     * 조용한 시간을 센다(#318, 사용자 결정).
+     *
+     * [heardSpeech]면 **말이 1초 끊길 때 보낸다.** 전에는 다 말하고 패널을 한 번 더 눌러야 보내졌다. 받아쓴 글이 들어올
+     * 때마다 처음부터 다시 세서 말하는 동안에는 보내지 않는다. 문답이 끝난 뒤에는 보내지 않는다 — 그 자리에서는
+     * "다음"만 듣는다.
+     *
+     * 아니면 듣기를 막 시작한 것이고 **5초 동안 아무 말이 없으면 패널을 닫는다.** 켜 둔 채 잊은 마이크가 계속 듣지 않게
+     * 한다. 인식기가 그 사이 스스로 끝났어도 같다. 글로 바꿨거나 화면을 떠났으면 아무것도 하지 않는다.
+     */
+    private fun armSilence(heardSpeech: Boolean) {
+        silence?.cancel()
+        if (heardSpeech && state().chatFinished) return
+        silence =
+            scope.launch {
+                delay(if (heardSpeech) SILENCE_SEND_MS else SILENCE_CLOSE_MS)
+                val current = state()
+                if (!shown || current.inputMode != IntakeInputMode.VOICE) return@launch
+                when {
+                    heardSpeech && current.draft.isNotBlank() -> {
+                        update { it.copy(typedBefore = "") }
+                        stop()
+                        onCommand(VoiceCommand.SEND)
+                    }
+                    !heardSpeech -> onCommand(VoiceCommand.CLOSE)
+                }
+            }
     }
 
     /**
@@ -68,7 +106,11 @@ class IntakeVoiceActions(
      * 눌러야 듣기 시작하면 그 사이에 한 말이 사라진다.
      */
     fun onVoiceMode() {
-        update { it.copy(inputMode = IntakeInputMode.VOICE, voice = MedicalMateVoiceState.IDLE) }
+        update {
+            it.copy(inputMode = IntakeInputMode.VOICE, voice = MedicalMateVoiceState.IDLE, typedBefore = it.draft)
+        }
+        // 닫기를 먼저 건다. 듣자마자 말이 오면 그 말이 보내기로 바꿔 건다.
+        armSilence(heardSpeech = false)
         dictation.start(state().draft)
     }
 
@@ -83,10 +125,12 @@ class IntakeVoiceActions(
      */
     fun onMicClick() {
         if (!dictation.listening) {
+            armSilence(heardSpeech = false)
             dictation.start(state().draft)
             return
         }
-        dictation.stop()
+        update { it.copy(typedBefore = "") }
+        stop()
         onCommand(VoiceCommand.SEND)
     }
 
@@ -99,6 +143,7 @@ class IntakeVoiceActions(
     fun onReplied() {
         // 답이 늦게 와서 그 사이 문답 단계를 떠났으면 듣지 않는다(#304).
         if (!shown || state().step != IntakeStep.SYMPTOM_CHAT || state().inputMode != IntakeInputMode.VOICE) return
+        armSilence(heardSpeech = false)
         dictation.start("")
     }
 
@@ -109,6 +154,7 @@ class IntakeVoiceActions(
 
     /** 글로 바꿀 때. 듣던 것을 멈춘다. */
     fun stop() {
+        silence?.cancel()
         dictation.stop()
     }
 
@@ -119,7 +165,7 @@ class IntakeVoiceActions(
      */
     fun onHidden() {
         shown = false
-        dictation.stop()
+        stop()
     }
 
     /** 화면이 다시 보인다. */
@@ -143,6 +189,9 @@ enum class VoiceCommand {
 
     /** 다음 단계로 간다. 문답이 끝난 뒤에만 나온다. */
     NEXT,
+
+    /** 패널을 닫고 글로 돌아간다. 듣기 시작하고 5초 동안 아무 말이 없을 때다(#318). */
+    CLOSE,
 }
 
 /**
@@ -157,6 +206,12 @@ private fun String.isNextCommand(): Boolean {
 }
 
 private const val NEXT_WORD = "다음"
+
+/** 말이 끊긴 뒤 보내기까지 기다리는 시간(#318, 사용자 결정). */
+private const val SILENCE_SEND_MS = 1_000L
+
+/** 아무 말이 없을 때 패널을 닫기까지 기다리는 시간(#318, 사용자 결정). */
+private const val SILENCE_CLOSE_MS = 5_000L
 
 /** "다음" 두 자에 조사·어미가 붙는 만큼. */
 private const val NEXT_COMMAND_MAX = 6

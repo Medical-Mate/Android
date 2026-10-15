@@ -1,5 +1,8 @@
 package com.mist.medicalmate.core.designsystem.component
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,6 +17,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,6 +27,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -38,6 +44,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.ShadowTint
+import kotlinx.coroutines.launch
 
 /*
  * 홈 시트의 카드 셋(#312). Figma `추가 · 새 컴포넌트` 02 홈(`3313:4910`)의 `Card / Action` · `Card / Resume` ·
@@ -191,12 +198,24 @@ private fun TwoLines(label: String, title: String, modifier: Modifier) {
     }
 }
 
-/** 진행 원. 지름 44 · 굵기 3.96(지름의 9%) · 빈 칸 `bg/subtle` · 채움 `bg/primary`. 끝은 각지다. */
+/**
+ * 진행 원. 지름 44 · 굵기 3.96(지름의 9%) · 빈 칸 `bg/subtle` · 채움 `bg/primary`. 끝은 각지다.
+ *
+ * **카드가 뜨면 호가 0에서 [done]까지 찬다**(#318). 홈 프로토타입(`3677:11740`)의 `Progress (열린 호 · 0→1/3)`가 0.75초
+ * 뒤에 0.8초 동안 ease-out으로 그려지고, 숫자(`Step`)는 1초 뒤에 0.4초 동안 ease-out으로 나타난다. 진행이 바뀌면
+ * 다시 찬다. 기기에서 애니메이션을 껐으면 바로 다 찬 모양이다.
+ */
 @Composable
 private fun ProgressRing(done: Int, total: Int) {
     val track = MedicalMateTheme.colors.bgSubtle
     val fill = MedicalMateTheme.colors.bgPrimary
     val spoken = stringResource(R.string.progress_step, done, total)
+    val drawn = remember(done, total) { Animatable(0f) }
+    val stepAlpha = remember(done, total) { Animatable(0f) }
+    LaunchedEffect(drawn, stepAlpha) {
+        launch { drawn.animateTo(1f, tween(RING_FILL_MS, delayMillis = RING_FILL_DELAY_MS, easing = CssEaseOut)) }
+        stepAlpha.animateTo(1f, tween(STEP_FADE_MS, delayMillis = STEP_FADE_DELAY_MS, easing = CssEaseOut))
+    }
     Box(
         modifier = Modifier.size(RingSize).clearAndSetSemantics { contentDescription = spoken },
         contentAlignment = Alignment.Center,
@@ -208,16 +227,25 @@ private fun ProgressRing(done: Int, total: Int) {
             val topLeft = Offset(inset, inset)
             drawArc(track, 0f, FULL_TURN, false, topLeft, arcSize, style = Stroke(width))
             if (total > 0 && done > 0) {
-                drawArc(fill, START_ANGLE, FULL_TURN * done / total, false, topLeft, arcSize, style = Stroke(width))
+                val sweep = FULL_TURN * done / total * drawn.value
+                drawArc(fill, START_ANGLE, sweep, false, topLeft, arcSize, style = Stroke(width))
             }
         }
         Text(
             text = "$done/$total",
             style = MedicalMateTheme.typography.labelXS,
             color = MedicalMateTheme.colors.fgPrimary,
+            modifier = Modifier.graphicsLayer { alpha = stepAlpha.value },
         )
     }
 }
+
+/** CSS `ease-out`. 프로토타입이 이 곡선이다. */
+private val CssEaseOut = CubicBezierEasing(0f, 0f, 0.58f, 1f)
+private const val RING_FILL_DELAY_MS = 750
+private const val RING_FILL_MS = 800
+private const val STEP_FADE_DELAY_MS = 1_000
+private const val STEP_FADE_MS = 400
 
 /** 마스터의 좌우 18. 간격 스케일 밖 값이다. */
 private val CardPaddingHorizontal = 18.dp

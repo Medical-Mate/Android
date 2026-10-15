@@ -121,7 +121,16 @@ internal constructor(private val repository: SessionRepository, speech: SpeechTo
     /** 글과 음성을 바꾼다. 바꿀 때 음성 상태를 대기로 되돌린다. */
     fun onInputModeChange(mode: IntakeInputMode) {
         if (mode == IntakeInputMode.TEXT) voice.stop()
-        mutableUiState.update { it.copy(inputMode = mode, voice = MedicalMateVoiceState.IDLE) }
+        mutableUiState.update {
+            // 패널을 닫으면 받아쓴 말은 버리고 음성을 켜기 전에 적어 둔 글로 돌아간다(#318). 받아쓴 말이 입력칸에
+            // 남지 않는다.
+            val leavingVoice = mode == IntakeInputMode.TEXT && it.inputMode == IntakeInputMode.VOICE
+            it.copy(
+                inputMode = mode,
+                voice = MedicalMateVoiceState.IDLE,
+                draft = if (leavingVoice) it.typedBefore else it.draft,
+            )
+        }
     }
 
     /** 음성 조작. 왜 나눴는지는 [IntakeVoiceActions]에 있다. */
@@ -155,6 +164,7 @@ internal constructor(private val repository: SessionRepository, speech: SpeechTo
             VoiceCommand.SEND -> onSend()
             // 문답이 끝난 뒤에만 오는 명령이라 강도 라벨을 쓰지 않는다.
             VoiceCommand.NEXT -> onNext("")
+            VoiceCommand.CLOSE -> onInputModeChange(IntakeInputMode.TEXT)
         }
     }
 

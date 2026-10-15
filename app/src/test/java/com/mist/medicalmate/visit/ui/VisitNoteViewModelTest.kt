@@ -11,6 +11,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -22,9 +23,11 @@ import java.time.ZoneId
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class VisitNoteViewModelTest {
+    private val dispatcher = UnconfinedTestDispatcher()
+
     @Before
     fun setUp() {
-        Dispatchers.setMain(UnconfinedTestDispatcher())
+        Dispatchers.setMain(dispatcher)
     }
 
     @After
@@ -128,15 +131,27 @@ class VisitNoteViewModelTest {
     }
 
     @Test
-    fun `듣는 중에 패널 마이크를 누르면 멈춘다`() {
-        // 다 말했을 때 누르는 자리다. 패널은 남고 상태만 돌아온다.
-        val speech = FakeSpeechToText(chunks = listOf(SpeechChunk.Partial("위염")), keepOpen = true)
+    fun `5초 동안 아무 말이 없으면 패널을 닫고 받아쓴 글은 남긴다`() {
+        // 패널을 눌러 멈추는 길은 걷어냈다(#318). 켜 둔 채 잊은 마이크는 이 시간이 닫는다.
+        val speech = FakeSpeechToText(chunks = listOf(SpeechChunk.Final("위염이래요")), keepOpen = true)
         val viewModel = viewModel(speech)
         viewModel.onVoiceClick()
 
-        viewModel.onMicClick()
+        dispatcher.scheduler.advanceTimeBy(SILENCE_CLOSE + 1)
 
-        assertEquals(MedicalMateVoiceState.IDLE, viewModel.uiState.value.voice)
+        assertNull(viewModel.uiState.value.voice)
+        assertEquals("위염이래요", viewModel.uiState.value.note)
+    }
+
+    @Test
+    fun `5초가 지나기 전에는 닫지 않는다`() {
+        val speech = FakeSpeechToText(chunks = emptyList(), keepOpen = true)
+        val viewModel = viewModel(speech)
+        viewModel.onVoiceClick()
+
+        dispatcher.scheduler.advanceTimeBy(SILENCE_CLOSE - 100)
+
+        assertNotNull(viewModel.uiState.value.voice)
     }
 
     @Test
@@ -280,4 +295,8 @@ class VisitNoteViewModelTest {
 
     private fun viewModel(speech: FakeSpeechToText = FakeSpeechToText()) =
         VisitNoteViewModel(Clock.fixed(Instant.parse("2026-09-12T01:00:00Z"), ZoneId.of("Asia/Seoul")), speech)
+
+    private companion object {
+        const val SILENCE_CLOSE = 5_000L
+    }
 }
