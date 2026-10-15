@@ -11,13 +11,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.res.painterResource
@@ -35,10 +33,13 @@ import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
+import com.mist.medicalmate.core.designsystem.component.MateWaveform
+import com.mist.medicalmate.core.designsystem.component.MateWaveformShape
 import com.mist.medicalmate.core.designsystem.component.MedicalMateDivider
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButtonSize
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
+import com.mist.medicalmate.core.designsystem.component.rememberSpeechActivityLevel
 import com.mist.medicalmate.core.voice.VoiceSuggestion
 
 /**
@@ -151,7 +152,7 @@ private fun Main(panel: VoicePanel, onDismiss: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s14),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Wave(speaking = speaking)
+        Wave(heard = panel.heard)
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4)) {
             Text(
                 text = if (speaking) panel.heard else panel.message.resolve().sentencePerLine(),
@@ -177,27 +178,17 @@ private fun Main(panel: VoicePanel, onDismiss: () -> Unit) {
 }
 
 /**
- * 마스터의 `Wave`. 40×48 안에 3 폭 막대 다섯을 3 간격으로 세운다. 말이 들리면 막대가 커지고, 아니면 작고 85%
- * 불투명이다. 색만으로 알리지 않는다 — 아랫줄 글이 함께 바뀐다.
+ * 마스터의 `Wave`([MateWaveformShape.Panel]). **말이 들릴 때만 움직인다**(#320, 사용자 결정 — 증상 문답 · 진료 후
+ * 메모의 카드와 같다). 받아쓴 글([heard])이 새로 들어오면 움직이고, 들리지 않으면 마스터의 조용한 높이에 85%
+ * 불투명으로 멈춘다. 색만으로 알리지 않는다 — 아랫줄 글이 함께 바뀐다.
  */
 @Composable
-private fun Wave(speaking: Boolean) {
-    val heights = if (speaking) SpeakingBars else QuietBars
-    Row(
-        modifier = Modifier.size(width = WaveWidth, height = MedicalMateSize.controlMd).clearAndSetSemantics { },
-        horizontalArrangement = Arrangement.spacedBy(WaveGap, Alignment.CenterHorizontally),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        heights.forEach { height ->
-            Box(
-                modifier =
-                Modifier
-                    .size(width = WaveBarWidth, height = height)
-                    .alpha(if (speaking) 1f else QUIET_ALPHA)
-                    .background(MedicalMateTheme.colors.bgPrimary, WaveBarShape),
-            )
-        }
-    }
+private fun Wave(heard: String) {
+    MateWaveform(
+        level = rememberSpeechActivityLevel(partialText = heard),
+        shape = MateWaveformShape.Panel,
+        modifier = Modifier.clearAndSetSemantics { },
+    )
 }
 
 /** 문구에 값을 끼운다. 값은 많아야 둘이라 펼쳐 넘기지 않고 하나씩 넘긴다. */
@@ -224,21 +215,6 @@ private const val HEARD_MAX_LINES = 3
 private val GuideRowMinHeight = 36.dp
 
 private val GuideIconCircle = 28.dp
-
-private val WaveWidth = 40.dp
-
-private val WaveGap = 3.dp
-
-private val WaveBarWidth = 3.dp
-
-private val WaveBarShape = RoundedCornerShape(1.5.dp)
-
-/** 마스터의 막대 높이. 말하는 중과 그 밖의 두 벌이다. */
-private val SpeakingBars = listOf(10.dp, 18.dp, 24.dp, 16.dp, 10.dp)
-
-private val QuietBars = listOf(8.dp, 12.dp, 16.dp, 12.dp, 8.dp)
-
-private const val QUIET_ALPHA = 0.85f
 
 @Preview
 @Composable

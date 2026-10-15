@@ -16,6 +16,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
@@ -33,21 +34,25 @@ import kotlin.math.min
  * 막대 하나는 폭 [barWidth]의 알약(양 끝이 반원)이고 [barHeights]는 끝까지 포함한 높이다.
  */
 class MateWaveformShape private constructor(
-    internal val gridWidth: Float,
-    internal val gridHeight: Float,
+    /** Figma 격자 크기. */
+    internal val grid: Size,
     internal val barCenterX: FloatArray,
     internal val barWidth: Float,
     internal val barHeights: FloatArray,
     val defaultSize: Dp,
+    /** 말소리가 없을 때 멈춰 서는 모양. 없으면 [barHeights] 그대로 불투명하게 멈춘다. */
+    internal val quiet: QuietBars? = null,
 ) {
+    /** 말소리가 없을 때의 막대 높이([heights])와 불투명도([alpha]). */
+    class QuietBars(internal val heights: FloatArray, internal val alpha: Float)
+
     companion object {
         /**
          * Figma `302:719` Icon/waveform (= `R.drawable.ic_waveform`). 24 격자, 획 1.75,
          * 선 길이 3.6·10.4·15.6·10.4·3.6에 둥근 끝을 더한 높이. 메이트 떠 있는 카드(40dp)용.
          */
         val Icon = MateWaveformShape(
-            gridWidth = 24f,
-            gridHeight = 24f,
+            grid = Size(24f, 24f),
             barCenterX = floatArrayOf(4f, 8f, 12f, 16f, 20f),
             barWidth = 1.75f,
             barHeights = floatArrayOf(5.35f, 12.15f, 17.35f, 12.15f, 5.35f),
@@ -60,12 +65,24 @@ class MateWaveformShape private constructor(
          * 음성 입력 섹션 "Voice Input · Mate"(1p-T 등)의 큰 아이콘용.
          */
         val Large = MateWaveformShape(
-            gridWidth = 72f,
-            gridHeight = 72f,
+            grid = Size(72f, 72f),
             barCenterX = floatArrayOf(4f, 20f, 36f, 52f, 68f),
             barWidth = 8f,
             barHeights = floatArrayOf(26f, 46f, 62f, 42f, 26f),
             defaultSize = 72.dp,
+        )
+
+        /**
+         * `Mate Card`(`3532:5543`)의 `Wave`. 40×48 안에 3 폭 막대 다섯을 3 간격으로 세운다. 말하는 중 높이
+         * 10·18·24·16·10, 그 밖에는 8·12·16·12·8에 불투명 85%다(#320). 헤이 메이트 막대용.
+         */
+        val Panel = MateWaveformShape(
+            grid = Size(40f, 48f),
+            barCenterX = floatArrayOf(8f, 14f, 20f, 26f, 32f),
+            barWidth = 3f,
+            barHeights = floatArrayOf(10f, 18f, 24f, 16f, 10f),
+            defaultSize = 48.dp,
+            quiet = QuietBars(heights = floatArrayOf(8f, 12f, 16f, 12f, 8f), alpha = 0.85f),
         )
     }
 }
@@ -123,22 +140,21 @@ fun MateWaveform(
     }
 
     Canvas(modifier.size(size)) {
-        val unit = min(this.size.width / shape.gridWidth, this.size.height / shape.gridHeight)
-        val left = (this.size.width - shape.gridWidth * unit) / 2f
+        val unit = min(this.size.width / shape.grid.width, this.size.height / shape.grid.height)
+        val left = (this.size.width - shape.grid.width * unit) / 2f
         val cy = center.y
         val barW = shape.barWidth * unit
         val t = elapsed.floatValue
-        val lv = smoothed.floatValue
+        val lv = if (animate) smoothed.floatValue else 0f
+        val quietAlpha = shape.quiet?.alpha ?: 1f
+        val alpha = quietAlpha + (1f - quietAlpha) * lv
         for (i in shape.barCenterX.indices) {
-            val scale =
-                if (!animate) {
-                    1f
-                } else {
-                    val speak = SPEAK_MIN + (1f - SPEAK_MIN) * pulse(t, SPEAK_PERIOD_SEC, PHASE[i])
-                    1f + (speak - 1f) * lv
-                }
+            // 멈춘 높이에서 말하는 움직임으로 [lv]만큼 옮겨 간다.
+            val quiet = shape.quiet?.heights?.get(i) ?: shape.barHeights[i]
+            val speak = shape.barHeights[i] * (SPEAK_MIN + (1f - SPEAK_MIN) * pulse(t, SPEAK_PERIOD_SEC, PHASE[i]))
+            val height = quiet + (speak - quiet) * lv
             // 둥근 끝(반지름 barW/2)이 위아래로 붙으므로 선 길이는 전체 높이에서 막대 폭을 뺀 값
-            val half = max(shape.barHeights[i] * unit * scale - barW, 0f) / 2f
+            val half = max(height * unit - barW, 0f) / 2f
             val x = left + shape.barCenterX[i] * unit
             drawLine(
                 color = color,
@@ -146,6 +162,7 @@ fun MateWaveform(
                 end = Offset(x, cy + half),
                 strokeWidth = barW,
                 cap = StrokeCap.Round,
+                alpha = alpha,
             )
         }
     }
