@@ -22,26 +22,37 @@ enum class OnboardingPage(
     @StringRes val title: Int,
     @StringRes val description: Int,
     @DrawableRes val illustration: Int,
+    /** 그림의 원래 크기(dp). 시안 `Onboarding Illustration`이 단계마다 비율을 바꾸지 않고 둔다(#318). */
+    val artWidth: Int,
+    val artHeight: Int,
 ) {
     PREPARE(
         title = R.string.onboarding_prepare_title,
         description = R.string.onboarding_prepare_description,
         illustration = R.drawable.img_onboarding_prepare,
+        artWidth = 326,
+        artHeight = 326,
     ),
     POINT(
         title = R.string.onboarding_point_title,
         description = R.string.onboarding_point_description,
         illustration = R.drawable.img_onboarding_point,
+        artWidth = 342,
+        artHeight = 228,
     ),
     CARD(
         title = R.string.onboarding_card_title,
         description = R.string.onboarding_card_description,
         illustration = R.drawable.img_onboarding_card,
+        artWidth = 340,
+        artHeight = 340,
     ),
     FOLLOW(
         title = R.string.onboarding_follow_title,
         description = R.string.onboarding_follow_description,
         illustration = R.drawable.img_onboarding_follow,
+        artWidth = 307,
+        artHeight = 307,
     ),
     ;
 
