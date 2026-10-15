@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
@@ -88,7 +88,10 @@ fun MedicalMateStepRow(number: Int, text: String, modifier: Modifier = Modifier)
  * DESIGN.md의 `Illustration / Share Sheet`(`3645:2450`). 문자 앱 공유 시트 그림 160 높이.
  *
  * 받은 예약 문자 말풍선 아래에 공유 대상 네 칸이 선다. 진료메이트만 실제 로고이고 나머지는 회색
- * 스켈레톤이다. 그림이라 스크린 리더에는 읽히지 않는다 — 같은 내용을 시트의 단계 목록이 글로 적는다.
+ * 스켈레톤이다.
+ *
+ * **높이 160은 최소값이다.** 마스터는 160 고정이지만 그 값은 글자 크기 100%에서 내용(위 12 · 말풍선 60 · 12 ·
+ * 공유 줄 64 · 아래 12)이 꼭 차는 높이다. 고정으로 두면 기기 글꼴 크기를 키운 사람에게 아래 이름이 잘린다. 그림이라 스크린 리더에는 읽히지 않는다 — 같은 내용을 시트의 단계 목록이 글로 적는다.
  */
 @Composable
 fun MedicalMateShareSheetIllustration(modifier: Modifier = Modifier) {
@@ -97,7 +100,7 @@ fun MedicalMateShareSheetIllustration(modifier: Modifier = Modifier) {
         modifier =
         modifier
             .fillMaxWidth()
-            .height(IllustrationHeight)
+            .heightIn(min = IllustrationHeight)
             .clip(MedicalMateRadius.md)
             .background(colors.bgSubtle)
             .padding(MedicalMateSpace.s12)
