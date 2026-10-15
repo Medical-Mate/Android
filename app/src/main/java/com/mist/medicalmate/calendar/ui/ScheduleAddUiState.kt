@@ -10,7 +10,7 @@ import java.time.LocalTime
  *
  * 병원 · 날짜 · 시간은 골라 채우는 값이고, 카드와 할 일은 이 일정에 딸리는 목록이다.
  *
- * [hospital]과 [date]가 필수다. 나머지는 선택이다.
+ * [hospital]과 [date], 새 일정이면 고른 카드 하나가 필수다. 나머지는 선택이다.
  *
  * **시간은 필수가 아니다.** 진료 시각을 아직 모르고 날짜만 잡아 두는 일이 흔하다. 시안도
  * 그 칸에 필수 표시를 두지 않는다. 안 고르면 시각 없이 저장한다(#202) — 서버가 시간 미정을
@@ -63,7 +63,20 @@ data class ScheduleAddUiState(
     /** 고른 카드 수. 섹션 머리 오른쪽에 적는다. */
     val pickedCardCount: Int get() = cards.count { it.picked }
 
-    val canSave: Boolean get() = hospital != null && date != null
+    /**
+     * 새 일정에는 가져갈 카드가 하나 이상 있어야 한다(#312, 사용자 결정). 홈 배너의 오늘 진료와 진료 후 기록이
+     * 카드에 붙어서, 카드 없는 일정은 그 길에 들어서지 못한다. 고치러 연 일정은 카드를 보내지 않으므로 묻지
+     * 않는다.
+     */
+    val cardMissing: Boolean get() = appointmentId == null && pickedCardCount == 0
+
+    val canSave: Boolean get() = hospital != null && date != null && !cardMissing
+
+    /**
+     * 하단 `Hint Row`(예약 문자 안내)를 둘지. 시안 1r-4(병원 미등록)에만 있고 병원이 찬 1r-4-B에는 없다.
+     * 고치러 연 일정에서는 문자로 채울 일이 없다.
+     */
+    val showShareHint: Boolean get() = appointmentId == null && hospital == null
 
     /** 채우지 않은 필수 칸. [showErrors]가 서면 그 칸 아래에 안내가 붙는다. */
     val hospitalMissing: Boolean get() = showErrors && hospital == null
@@ -138,10 +151,11 @@ sealed interface ScheduleAddFocusTarget {
 internal fun ScheduleAddUiState.focusing(targets: List<ScheduleAddFocusTarget>): ScheduleAddUiState =
     if (targets.isEmpty()) this else copy(voiceFocus = ScheduleAddFocus(targets))
 
-/** 떠 있는 시트. 날짜(1r-4-D)와 시간(1r-4-T)이 같은 자리를 쓴다. */
+/** 떠 있는 시트. 날짜(1r-4-D) · 시간(1r-4-T) · 예약 문자 안내(1r-4-S)가 같은 자리를 쓴다. */
 @Keep
 enum class ScheduleAddSheet {
     NONE,
     DATE,
     TIME,
+    GUIDE,
 }

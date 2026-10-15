@@ -50,7 +50,7 @@ class ScheduleAddViewModelTest {
     }
 
     @Test
-    fun `병원과 날짜가 있어야 저장할 수 있다`() {
+    fun `병원과 날짜와 카드가 있어야 저장할 수 있다`() {
         // 시간은 필수가 아니다. 진료 시각을 아직 모르고 날짜만 잡아 두는 일이 흔하다.
         val viewModel = addViewModel()
 
@@ -60,15 +60,30 @@ class ScheduleAddViewModelTest {
         assertFalse(viewModel.uiState.value.canSave)
 
         viewModel.onDateConfirm(LocalDate.of(2026, 9, 26))
+        assertFalse(viewModel.uiState.value.canSave)
+
+        viewModel.onCardPickChange("2", true)
         assertTrue(viewModel.uiState.value.canSave)
     }
 
     @Test
-    fun `카드와 할 일은 없어도 저장할 수 있다`() {
-        // 필수는 병원과 날짜뿐이다. 나머지는 선택이다.
+    fun `새 일정은 카드 없이 저장할 수 없다`() {
+        // 오늘 진료 배너와 진료 후 기록이 카드에 붙는다(#312). 카드 없는 일정은 그 길에 들어서지 못한다.
+        val viewModel =
+            addViewModel().apply {
+                onHospitalPicked("서울OO병원 내과")
+                onDateConfirm(LocalDate.of(2026, 9, 26))
+            }
+
+        assertTrue(viewModel.uiState.value.cardMissing)
+        assertFalse(viewModel.uiState.value.canSave)
+    }
+
+    @Test
+    fun `할 일은 없어도 저장할 수 있다`() {
         val viewModel = filled()
 
-        assertTrue(viewModel.uiState.value.cards.none { it.picked })
+        assertTrue(viewModel.uiState.value.todos.isEmpty())
         assertTrue(viewModel.uiState.value.canSave)
     }
 
@@ -370,7 +385,7 @@ class ScheduleAddViewModelTest {
 
     @Test
     fun `필수 칸이 비면 어느 칸인지 알린다`() {
-        // 비활성 버튼으로 막지 않는다. 눌러야 무엇이 비었는지 알 수 있다.
+        // 화면의 버튼은 비활성이지만 말로 저장하라고 하면 이 길로 온다. 어느 칸이 비었는지 그 칸에서 알린다.
         val viewModel = addViewModel()
 
         viewModel.onSaveClick {}
@@ -409,6 +424,7 @@ class ScheduleAddViewModelTest {
         val viewModel = addViewModel(repository)
         viewModel.onHospitalPicked("서울OO병원 내과")
         viewModel.onDateConfirm(LocalDate.of(2026, 9, 26))
+        viewModel.onCardPickChange("2", true)
 
         viewModel.onSaveClick {}
 
@@ -475,11 +491,12 @@ class ScheduleAddViewModelTest {
 
     @Test
     fun `없는 일정을 가리키면 새로 만드는 화면이다`() {
-        // 그 사이 지워졌을 수 있다. 빈 화면으로 열리고 저장은 새로 만든다.
+        // 그 사이 지워졌을 수 있다. 빈 화면으로 열리고 저장은 새로 만든다. 새 일정이라 카드도 골라야 한다.
         val repository = RecordingAppointmentRepository()
         val viewModel = editViewModel(repository)
         viewModel.onHospitalPicked("마디정형외과병원")
         viewModel.onDateConfirm(LocalDate.of(2026, 9, 26))
+        viewModel.onCardPickChange("2", true)
 
         viewModel.onSaveClick {}
 
@@ -505,12 +522,13 @@ class ScheduleAddViewModelTest {
             todos = listOf(AppointmentTodo(text = "엑스레이 결과 물어보기")),
         )
 
-    /** 필수 셋을 채운 상태. */
+    /** 필수 칸(병원 · 날짜 · 카드)과 시간을 채운 상태. 카드는 병원이 없는 것이라 병원 칸을 건드리지 않는다. */
     private fun filled(repository: RecordingAppointmentRepository = RecordingAppointmentRepository()) =
         addViewModel(repository).apply {
             onHospitalPicked("서울OO병원 내과")
             onDateConfirm(LocalDate.of(2026, 9, 26))
             onTimeConfirm(LocalTime.of(10, 30))
+            onCardPickChange("2", true)
         }
 }
 private fun addViewModel(repository: RecordingAppointmentRepository = RecordingAppointmentRepository()) =

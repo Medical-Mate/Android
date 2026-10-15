@@ -53,12 +53,13 @@ class ScheduleAddRevisitTest {
     }
 
     @Test
-    fun `카드를 고르지 않으면 초진이다`() {
+    fun `카드를 고르지 않으면 만들지 않는다`() {
+        // 새 일정은 카드가 필수다(#312). 전에는 카드 없이 초진으로 만들어졌다.
         val repository = RecordingAppointmentRepository()
 
         filled(repository).onSaveClick {}
 
-        assertEquals(AppointmentOrigin.MANUAL, repository.createdOrigin)
+        assertEquals(0, repository.createCount)
     }
 
     @Test

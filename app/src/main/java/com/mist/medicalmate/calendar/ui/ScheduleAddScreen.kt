@@ -32,9 +32,10 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateAddRow
-import com.mist.medicalmate.core.designsystem.component.MedicalMateBottomCtaBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateCardPick
+import com.mist.medicalmate.core.designsystem.component.MedicalMateFooter
+import com.mist.medicalmate.core.designsystem.component.MedicalMateHintRow
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavLeading
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNotice
@@ -53,19 +54,22 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
 /**
- * 와이어프레임 1r-4. Figma `1062:3031`.
+ * 와이어프레임 1r-4. Figma `Wireframe 10-15`의 `3663:14772`(1r-4) · `3663:14869`(1r-4-B).
  *
  * 캘린더의 + 버튼과 카드만 있는 날 시트의 "이 카드로 일정 만들기"에서 들어온다. 진료 후
  * 기록에서 들어오면 병원이 이미 채워진 `1r-4-B` 상태다.
  *
- * 병원·날짜·시간이 필수다. 비운 채 저장을 누르면 그 칸 아래에 안내가 붙는다. 버튼을
- * 비활성으로 막지 않는다. 문서가 비활성만으로 필요한 행동을 숨기지 말라고 한다.
+ * 병원·날짜, 새 일정이면 가져갈 카드 하나가 필수다. 다 차기 전까지 저장하기가 비활성이다 — 10-15 시안
+ * 1r-4가 그렇게 그린다(#312). 말로 저장하라고 하면 빠진 칸 아래에 안내가 붙는다.
+ *
+ * 하단은 그림자 없는 `Footer`다. 병원이 비어 있는 동안은 버튼 위에 예약 문자 `Hint Row`가 서고, 누르면
+ * 방법 안내 시트(1r-4-S)가 뜬다.
  *
  * 병원·날짜·시간은 [MedicalMatePickerField]다. 적는 것이 아니라 골라 채우는 값이라
  * 키보드를 띄우지 않는다. 병원은 검색 화면(1m-B)으로, 날짜와 시간은 시트로 간다.
  *
- * 상단 왼쪽은 닫기다. 시안 네 장 중 셋이 ×이고 `1r-4-C` 한 장만 ‹다. 흐름 중간이 아니라
- * 따로 열리는 폼이라 ×를 따랐다. 디자인 트랙에 확인을 넘겼다.
+ * 상단 왼쪽은 ‹다. 10-15 시안 1r-4 · 1r-4-B · 1r-4-S가 모두 ‹로 그린다(DESIGN.md의 Nav Bar 조합 표는
+ * Close로 적는데, 문서보다 Figma가 우선이다).
  */
 @Composable
 fun ScheduleAddScreen(state: ScheduleAddUiState, callbacks: ScheduleAddCallbacks, modifier: Modifier = Modifier) {
@@ -77,15 +81,23 @@ fun ScheduleAddScreen(state: ScheduleAddUiState, callbacks: ScheduleAddCallbacks
     ) {
         MedicalMateNavBar(
             title = stringResource(R.string.schedule_add_title),
-            leading = MedicalMateNavLeading.CLOSE,
+            leading = MedicalMateNavLeading.BACK,
             onLeadingClick = callbacks.onCloseClick,
         )
         FormContent(state = state, callbacks = callbacks)
-        MedicalMateBottomCtaBar {
-            // 늘 누를 수 있다. 눌러야 무엇이 비었는지 알 수 있다.
+        MedicalMateFooter {
+            if (state.showShareHint) {
+                MedicalMateHintRow(
+                    icon = MedicalMateIcons.Share,
+                    label = stringResource(R.string.schedule_add_hint),
+                    onClick = { callbacks.onSheetOpen(ScheduleAddSheet.GUIDE) },
+                )
+            }
+            // 시안 1r-4가 빈 폼에서 비활성으로 그린다(#312). 말로 저장하라고 하면 빠진 칸을 알린다.
             MedicalMateButton(
                 label = stringResource(R.string.schedule_add_save),
                 onClick = callbacks.onSaveClick,
+                enabled = state.canSave,
                 modifier = Modifier.fillMaxWidth(),
             )
         }

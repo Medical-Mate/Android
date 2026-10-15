@@ -280,14 +280,11 @@ private fun NavHostController.homeCallbacks(): HomeCallbacks = HomeCallbacks(
     // 배너 링크(#312). 갈 곳은 시안 10-15의 "흐름" 메모를 따른다.
     onRecordVisitClick = { visit -> openVisitRecord(visit.cardId, visit.cardTitle, visit.date, visit.clinic) },
     onScheduleAddClick = { cardId -> navigate(ScheduleAddDestination(cardId = cardId)) },
-    onMessageGuideClick = { navigate(ScheduleAddDestination()) },
+    onMessageGuideClick = { navigate(ScheduleAddDestination(guide = true)) },
     onSaveCardClick = { cardId ->
-        if (cardId ==
-            null
-        ) {
-            navigate(BriefCardListDestination)
-        } else {
-            navigate(BriefCardDestination(cardId = cardId, export = true))
+        when (cardId) {
+            null -> navigate(BriefCardListDestination)
+            else -> navigate(BriefCardDestination(cardId, export = true))
         }
     },
 )

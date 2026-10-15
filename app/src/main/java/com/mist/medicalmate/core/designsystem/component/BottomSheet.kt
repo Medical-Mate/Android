@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
@@ -30,8 +31,11 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
  * `ModalBottomSheet` 위에 얹었다. 끌어내리기, 뒤로 가기, 스크림, 접근성 처리를 직접
  * 만들면 셋 다 빠뜨리기 쉽다.
  *
- * 위쪽 두 각만 28로 둥글다. grabber는 40x4다. 아래 여백 24는 문서가 지정한 값이고
- * 기기 inset과 중복되지 않도록 `ModalBottomSheet`의 기본 창 여백을 그대로 쓴다.
+ * 위쪽 두 각만 28로 둥글다. grabber는 36x4 `border/subtle`이다(DESIGN.md 4.0이 적은 10-15 시트 규격). 아래
+ * 여백 24는 문서가 지정한 값이고 기기 inset과 중복되지 않도록 `ModalBottomSheet`의 기본 창 여백을 그대로 쓴다.
+ *
+ * 10-15 시트에는 게시 컴포넌트가 없고 그래버 아래 간격이 시트마다 다르다(Gap 프레임). [grabberGap]으로
+ * 받는다.
  *
  * 한 화면에서 떠 있는 층은 최대 두 단계다(문서의 고도 규칙). 시트 위에 시트나 대화상자를 다시
  * 띄우지 않는다.
@@ -45,6 +49,7 @@ fun MedicalMateBottomSheet(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
     sheetState: SheetState = rememberModalBottomSheetState(),
+    grabberGap: Dp = MedicalMateSpace.s12,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     ModalBottomSheet(
@@ -54,7 +59,7 @@ fun MedicalMateBottomSheet(
         containerColor = MedicalMateTheme.colors.bgSurface,
         contentColor = MedicalMateTheme.colors.fgDefault,
         scrimColor = MedicalMateTheme.colors.bgScrim.copy(alpha = SCRIM_ALPHA),
-        dragHandle = { SheetGrabber() },
+        dragHandle = { SheetGrabber(gap = grabberGap) },
         modifier = modifier,
     ) {
         Column(
@@ -79,12 +84,12 @@ fun MedicalMateBottomSheet(
  * `ModalBottomSheet`가 그 처리를 이미 갖고 있다. 회색 막대를 읽어봐야 할 일이 없다.
  */
 @Composable
-private fun SheetGrabber() {
+private fun SheetGrabber(gap: Dp) {
     Box(
         modifier =
         Modifier
             .fillMaxWidth()
-            .padding(vertical = MedicalMateSpace.s12)
+            .padding(top = MedicalMateSpace.s12, bottom = gap)
             .clearAndSetSemantics { },
         contentAlignment = Alignment.Center,
     ) {
@@ -93,7 +98,7 @@ private fun SheetGrabber() {
             Modifier
                 .size(width = GrabberWidth, height = GrabberHeight)
                 .background(
-                    color = MedicalMateTheme.colors.borderDefault,
+                    color = MedicalMateTheme.colors.borderSubtle,
                     shape = MedicalMateRadius.full,
                 ),
         )
@@ -186,6 +191,6 @@ fun MedicalMateSheetActions(
 /** 문서의 컴포넌트 규격이 지정한 위쪽 반경 28. */
 private val SheetShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
 
-private val GrabberWidth = 40.dp
+private val GrabberWidth = 36.dp
 
 private val GrabberHeight = 4.dp

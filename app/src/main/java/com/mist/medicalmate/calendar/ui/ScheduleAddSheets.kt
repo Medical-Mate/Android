@@ -53,7 +53,7 @@ import java.time.LocalTime
 import java.time.YearMonth
 
 /**
- * 일정 추가 화면에 뜨는 두 시트. Figma 1r-4-D `1063:3131`, 1r-4-T `1063:3372`.
+ * 일정 추가 화면에 뜨는 시트. Figma 1r-4-D `1063:3131`, 1r-4-T `1063:3372`, 1r-4-S `3663:14813`.
  *
  * 고른 값은 시트 안에 둔다. 두 시트 모두 아래에 `확인`이 있어서 닫기 전까지는 정해진 값이
  * 아니다. 화면 상태로 올리면 끌어내려 닫은 것과 확인한 것이 구별되지 않는다.
@@ -75,6 +75,8 @@ internal fun ScheduleAddSheets(state: ScheduleAddUiState, callbacks: ScheduleAdd
                 onConfirm = callbacks.onTimeConfirm,
                 onDismissRequest = callbacks.onSheetDismiss,
             )
+
+        ScheduleAddSheet.GUIDE -> ScheduleAddGuideSheet(onDismissRequest = callbacks.onSheetDismiss)
     }
 }
 
