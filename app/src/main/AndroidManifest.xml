@@ -16,6 +16,10 @@
       묻는다 - 무엇을 알릴지 보이는 순간이어야 거절할지 말지를 판단할 수 있다.
     -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- 브리핑 카드를 갤러리에 저장할 때(#306). Android 10부터는 MediaStore에 넣는 데 권한이 없어 9 이하만 묻는다. -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
 
     <application
         android:name=".MedicalMateApplication"

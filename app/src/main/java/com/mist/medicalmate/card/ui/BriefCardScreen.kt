@@ -3,6 +3,7 @@ package com.mist.medicalmate.card.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,11 +12,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -40,7 +39,6 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
 import com.mist.medicalmate.core.model.MAX_BRIEF_CARD_QUESTIONS
 import com.mist.medicalmate.core.voice.rememberVoiceScrollState
 import com.mist.medicalmate.core.voice.voicePanelSpace
-import kotlinx.coroutines.launch
 
 /**
  * 와이어프레임 1e-1과 1e-1-E. Figma `404:1679`, `597:4804`.
@@ -59,11 +57,15 @@ import kotlinx.coroutines.launch
  * 보조 버튼으로 뒀고 디자인 트랙에 남겼다(#72). 시안에서는 그 프레임이 지워졌다.
  */
 @Composable
-fun BriefCardScreen(state: BriefCardUiState, callbacks: BriefCardCallbacks, modifier: Modifier = Modifier) {
+fun BriefCardScreen(
+    state: BriefCardUiState,
+    callbacks: BriefCardCallbacks,
+    modifier: Modifier = Modifier,
+    toastMessage: String? = null,
+) {
     val content = state as? BriefCardUiState.Content
     // 공유할 때 찍을 카드 본문(#275). 스크롤로 가려진 아래까지 한 장에 담는다.
-    val cardLayer = rememberGraphicsLayer()
-    val scope = rememberCoroutineScope()
+    val export = rememberBriefCardExport(rememberGraphicsLayer())
     Column(
         modifier =
         modifier
@@ -78,7 +80,7 @@ fun BriefCardScreen(state: BriefCardUiState, callbacks: BriefCardCallbacks, modi
             onActionClick = content?.let { { onNavAction(it, callbacks) } },
             // 편집 중에는 감춘다. 고치다 만 카드가 나간다.
             secondaryActionLabel = stringResource(R.string.brief_card_share).takeIf { content?.editing == false },
-            onSecondaryActionClick = { scope.launch { callbacks.onShareClick(cardLayer.toImageBitmap()) } },
+            onSecondaryActionClick = export::open,
         )
         when (state) {
             BriefCardUiState.Loading ->
@@ -90,8 +92,25 @@ fun BriefCardScreen(state: BriefCardUiState, callbacks: BriefCardCallbacks, modi
                     modifier = Modifier.weight(1f),
                 )
 
-            is BriefCardUiState.Content -> CardContent(state = state, callbacks = callbacks, cardLayer = cardLayer)
+            is BriefCardUiState.Content ->
+                CardContent(
+                    state = state,
+                    callbacks = callbacks,
+                    capture = export.capture,
+                    toastMessage = toastMessage,
+                )
         }
+    }
+    BriefCardExportSheet(export = export, onSave = callbacks.onSaveImageClick, onShare = callbacks.onShareClick)
+    if (content?.deleteRequested == true) {
+        MedicalMateDialog(
+            title = stringResource(R.string.brief_card_delete_title),
+            message = stringResource(R.string.brief_card_delete_body),
+            confirmLabel = stringResource(R.string.brief_card_delete_confirm),
+            onConfirm = callbacks.onDeleteConfirm,
+            dismissLabel = stringResource(R.string.brief_card_cancel),
+            onDismissRequest = callbacks.onDeleteDismiss,
+        )
     }
 }
 
@@ -100,8 +119,8 @@ fun BriefCardScreen(state: BriefCardUiState, callbacks: BriefCardCallbacks, modi
  *
  * 수정은 화면 안에서 모드만 바뀌므로 목적지가 아니다. 저장과 진료실 화면이 나가는 길이다.
  *
- * [onShareClick]은 찍은 카드 이미지를 받는다. 공유 시트를 띄우려면 `Context`가 있어야 해서 화면이 아니라
- * 라우트가 맡는다.
+ * [onShareClick]과 [onSaveImageClick]은 찍은 카드 이미지를 받는다. 공유 시트를 띄우고 갤러리에 쓰려면
+ * `Context`가 있어야 해서 화면이 아니라 라우트가 맡는다.
  */
 data class BriefCardCallbacks(
     val onBackClick: () -> Unit = {},
@@ -116,6 +135,7 @@ data class BriefCardCallbacks(
     val onDeleteConfirm: () -> Unit = {},
     val onRetryClick: () -> Unit = {},
     val onShareClick: (ImageBitmap) -> Unit = {},
+    val onSaveImageClick: (ImageBitmap) -> Unit = {},
 )
 
 /**
@@ -141,71 +161,64 @@ private fun onNavAction(content: BriefCardUiState.Content, callbacks: BriefCardC
 private fun ColumnScope.CardContent(
     state: BriefCardUiState.Content,
     callbacks: BriefCardCallbacks,
-    cardLayer: GraphicsLayer,
+    capture: BriefCardCapture,
+    toastMessage: String?,
 ) {
-    Column(
-        modifier =
-        Modifier
-            .fillMaxWidth()
-            .weight(1f)
-            .verticalScroll(rememberVoiceScrollState()).voicePanelSpace()
-            // 스크롤 안쪽에 둔다. 바깥에 두면 화면에 보이는 높이만 찍힌다.
-            .recordInto(cardLayer, MedicalMateTheme.colors.bgSurface)
-            .padding(
-                start = MedicalMateSize.gutter,
-                end = MedicalMateSize.gutter,
-                top = MedicalMateSpace.s12,
-                bottom = MedicalMateSpace.s16,
-            ),
-        verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s14),
-    ) {
-        BriefCardBlock(
-            card = state.card,
-            // 편집 중에는 카드 전체를 브랜드 테두리로 감싼다. 값마다 밑줄이 생기지만
-            // 밑줄만으로는 몇 줄이 열렸는지가 보이지 않는다. Figma 1e-1-E가 카드째로
-            // 테두리를 두른 이유다.
+    Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+        Column(
             modifier =
-            if (state.editing) {
-                Modifier.border(
-                    width = EditingBorderWidth,
-                    color = MedicalMateTheme.colors.borderFocus,
-                    shape = MedicalMateRadius.lg,
-                )
-            } else {
-                Modifier
-            },
-            items = state.items,
-            editing = state.editing,
-            onItemValueChange = callbacks.edit::onItemValueChange,
-            onItemDeleteClick = if (state.editing) callbacks.edit::onItemDeleteClick else null,
-        )
-        // 편집 중에는 알러지 경고를 감춘다. 지울 수 없는 항목이라 x가 붙지 않는데, x가 없는
-        // 블록이 편집 화면에 남아 있으면 왜 이것만 못 고치는지가 설명되지 않는다. 문서가
-        // 지울 수 없는 것 목록에 이 경고를 넣고 편집 모드에서 숨기라고 적었다.
-        if (!state.editing) {
-            AllergyNotice(state.card.allergies)
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberVoiceScrollState()).voicePanelSpace()
+                // 스크롤 안쪽에 둔다. 바깥에 두면 화면에 보이는 높이만 찍힌다.
+                .recordInto(capture.layer, MedicalMateTheme.colors.bgSurface)
+                .padding(
+                    start = MedicalMateSize.gutter,
+                    end = MedicalMateSize.gutter,
+                    top = MedicalMateSpace.s12,
+                    bottom = MedicalMateSpace.s16,
+                ),
+            verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s14),
+        ) {
+            BriefCardBlock(
+                card = state.card,
+                // 편집 중에는 카드 전체를 브랜드 테두리로 감싼다. 값마다 밑줄이 생기지만
+                // 밑줄만으로는 몇 줄이 열렸는지가 보이지 않는다. Figma 1e-1-E가 카드째로
+                // 테두리를 두른 이유다.
+                modifier =
+                if (state.editing) {
+                    Modifier.border(
+                        width = EditingBorderWidth,
+                        color = MedicalMateTheme.colors.borderFocus,
+                        shape = MedicalMateRadius.lg,
+                    )
+                } else {
+                    Modifier
+                },
+                items = state.items,
+                editing = state.editing,
+                onItemValueChange = callbacks.edit::onItemValueChange,
+                onItemDeleteClick = if (state.editing) callbacks.edit::onItemDeleteClick else null,
+                maskPatient = capture.maskPatient,
+            )
+            // 편집 중에는 알러지 경고를 감춘다. 지울 수 없는 항목이라 x가 붙지 않는데, x가 없는
+            // 블록이 편집 화면에 남아 있으면 왜 이것만 못 고치는지가 설명되지 않는다. 문서가
+            // 지울 수 없는 것 목록에 이 경고를 넣고 편집 모드에서 숨기라고 적었다.
+            if (!state.editing) {
+                AllergyNotice(state.card.allergies)
+            }
+            QuestionsCallout(
+                questions = state.questions,
+                edit = if (state.editing) questionEdit(callbacks, state.questions.size) else null,
+            )
+            HospitalSection(
+                hospital = state.card.hospital,
+                onChangeClick = callbacks.onHospitalChangeClick,
+            )
         }
-        QuestionsCallout(
-            questions = state.questions,
-            edit = if (state.editing) questionEdit(callbacks, state.questions.size) else null,
-        )
-        HospitalSection(
-            hospital = state.card.hospital,
-            onChangeClick = callbacks.onHospitalChangeClick,
-        )
+        BriefCardExportToast(message = toastMessage)
     }
     Footer(state = state, callbacks = callbacks)
-
-    if (state.deleteRequested) {
-        MedicalMateDialog(
-            title = stringResource(R.string.brief_card_delete_title),
-            message = stringResource(R.string.brief_card_delete_body),
-            confirmLabel = stringResource(R.string.brief_card_delete_confirm),
-            onConfirm = callbacks.onDeleteConfirm,
-            dismissLabel = stringResource(R.string.brief_card_cancel),
-            onDismissRequest = callbacks.onDeleteDismiss,
-        )
-    }
 }
 
 /** 질문 편집에 필요한 문구와 조작을 모은다. 문구는 화면이 들고 조작은 사본이 받는다. */

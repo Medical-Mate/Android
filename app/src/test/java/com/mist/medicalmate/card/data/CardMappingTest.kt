@@ -113,6 +113,15 @@ class CardMappingTest {
     }
 
     @Test
+    fun `가린 환자 줄은 성만 남기고 나이를 뺀다`() {
+        // 이미지로 내보낼 때 이름·나이 가리기를 켜면 찍히는 줄이다(#306).
+        val card = response(patient = PatientResponse(name = "홍길동", age = 32, sex = "MALE")).toBriefCard()
+
+        assertEquals("홍OO · 남 · 2026.09.04 작성", card.maskedPatientLine)
+        assertEquals("김OO · 여 · 2026.09.04 작성", response().toBriefCard().maskedPatientLine)
+    }
+
+    @Test
     fun `건강 정보와 병원은 카드 응답에 없어 비운다`() {
         // 알러지·복용약·기저질환은 화면이 프로필에서 읽어 얹는다(#167).
         val card = response().toBriefCard()
