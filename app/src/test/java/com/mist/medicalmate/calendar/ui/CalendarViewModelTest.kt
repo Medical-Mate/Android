@@ -268,6 +268,16 @@ class CalendarViewModelTest {
 
         assertEquals(1L, viewModel.uiState.value.schedules.single().dday)
     }
+
+    @Test
+    fun `말로 연 날에 볼 것이 있는지 가린다`() = kotlinx.coroutines.test.runTest {
+        // 일정이 없는 날을 말로 열면 빈 일자 화면이 떴다(#320). 없으면 열지 않고 없다고 답한다.
+        val viewModel = monthViewModel()
+
+        assertEquals(VoiceDayContent.SCHEDULE, viewModel.voiceDay(LocalDate.of(2026, 9, 12)))
+        assertEquals(VoiceDayContent.CARD_ONLY, viewModel.voiceDay(LocalDate.of(2026, 9, 4)))
+        assertEquals(VoiceDayContent.NONE, viewModel.voiceDay(LocalDate.of(2026, 9, 20)))
+    }
 }
 
 /** 9월 12일 하나를 돌려주는 저장소로 세운다. 오늘은 9월 11일이다. */

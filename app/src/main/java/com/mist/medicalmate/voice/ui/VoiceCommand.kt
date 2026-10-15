@@ -88,3 +88,17 @@ private val KEYWORDS: List<Pair<VoiceCommand, List<String>>> =
         VoiceCommand.HOME to listOf("홈", "처음", "메인", "첫화면"),
         VoiceCommand.BACK to listOf("뒤로", "이전", "돌아가", "전화면", "앞화면", "되돌아"),
     )
+
+/**
+ * 받아쓴 말 앞에 남은 호출어를 뗀다(#320). 호출어를 듣는 쪽(Vosk)과 명령을 받아쓰는 쪽(ML Kit)이 마이크를 넘겨받는
+ * 사이에 "헤이 메이트"의 끝이 명령 받아쓰기에 들어가 "A 웨이트.", "메이트"로 적혔다. 말 맨 앞에서 메이트 비슷한
+ * 낱말일 때만 뗀다.
+ */
+fun withoutWakeEcho(text: String): String = text.replace(WAKE_ECHO, "").trim()
+
+private val WAKE_ECHO =
+    Regex(
+        """^\s*(?:(?:hey|a|헤이|해이|에이|헤|해|에)[\s,.]*)?""" +
+            """(?:mate|메이트|매이트|메잇|메이드|웨이트|베이트|네이트|메이트야)[\s,.!?~]*""",
+        RegexOption.IGNORE_CASE,
+    )

@@ -247,13 +247,18 @@ internal constructor(
                 }
 
                 is SpeechChunk.Partial -> {
-                    updatePanel { it.copy(voice = MedicalMateVoiceState.LISTENING, heard = chunk.text) }
+                    updatePanel {
+                        it.copy(voice = MedicalMateVoiceState.LISTENING, heard = withoutWakeEcho(chunk.text))
+                    }
                     true
                 }
 
+                // 부른 말("헤이 메이트")이 받아쓰기에 남아 "A 웨이트."가 명령으로 읽히고 "잘 못 알아들었어요"가
+                // 떴다(#320). 떼어 내고, 그것뿐이면 아무 말도 하지 않은 것으로 보고 계속 듣는다.
                 is SpeechChunk.Final -> {
                     updatePanel { it.copy(voice = MedicalMateVoiceState.LISTENING, heard = "") }
-                    conversation.respond(chunk.text)
+                    val text = withoutWakeEcho(chunk.text)
+                    if (text.isBlank()) true else conversation.respond(text)
                 }
 
                 SpeechChunk.Failed -> {

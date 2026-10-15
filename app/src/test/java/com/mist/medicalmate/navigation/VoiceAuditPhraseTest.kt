@@ -24,6 +24,8 @@ import com.mist.medicalmate.visit.ui.parseNoteVoice
 import com.mist.medicalmate.visit.ui.parseRecordVoice
 import com.mist.medicalmate.voice.ui.VoiceCommand
 import com.mist.medicalmate.voice.ui.parseVoiceCommand
+import com.mist.medicalmate.voice.ui.splitChoices
+import com.mist.medicalmate.voice.ui.withoutWakeEcho
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -177,5 +179,29 @@ class VoiceAuditPhraseTest {
         assertEquals(HomeVoice.EXPORT_CARD, parseHomeVoice("카드 이미지로 저장해 줘"))
         assertEquals(HomeVoice.MESSAGE_GUIDE, parseHomeVoice("예약 문자로 일정 넣는 방법"))
         assertNull(parseHomeVoice("캘린더 보여 줘"))
+    }
+
+    @Test
+    fun `받아쓰기에 남은 호출어는 뗀다`() {
+        assertEquals("", withoutWakeEcho("A 웨이트."))
+        assertEquals("", withoutWakeEcho("메이트"))
+        assertEquals("홈으로 가 줘", withoutWakeEcho("헤이 메이트, 홈으로 가 줘"))
+        assertEquals("다음 진료 언제야", withoutWakeEcho("다음 진료 언제야"))
+        assertEquals("네이버", withoutWakeEcho("네이버"))
+    }
+
+    @Test
+    fun `고를 것은 물음에서 떼어 가이드 자리로 옮긴다`() {
+        val choices = splitChoices("왼쪽 팔 어디가 아프세요?\n이 중에서 말씀해 주세요\n· 어깨\n· 손목")
+        assertEquals("이 중에서 말씀해 주세요", choices.title)
+        assertEquals(listOf("어깨", "손목"), choices.items.map { it.text })
+        assertEquals("왼쪽 팔 어디가 아프세요?", choices.rest)
+
+        val questions = splitChoices("담을 질문을 골라 주세요\n1. 검사를 받아야 하나요? (담음)\n2. 약 먹어도 되나요?")
+        assertEquals("담음", questions.items.first().note)
+        assertEquals("검사를 받아야 하나요?", questions.items.first().text)
+        assertNull(questions.rest)
+
+        assertTrue(splitChoices("어느 병원에 가세요?").items.isEmpty())
     }
 }

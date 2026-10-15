@@ -11,6 +11,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
+import com.mist.medicalmate.core.voice.LocalVoiceTargets
 import com.mist.medicalmate.core.voice.VoiceDate
 import com.mist.medicalmate.core.voice.VoiceReply
 import com.mist.medicalmate.core.voice.VoiceTargetEffect
@@ -111,14 +112,28 @@ private fun CalendarMonthRoute(
 
     // "20일", "내일", "다음 주 화요일"이면 그 날을, "12월", "다음 달"이면 그 달로(#286). 다른 화면에서
     // "10월 20일 일정 보여줘"로 들어오면 그 말도 여기서 받는다.
+    val targets = LocalVoiceTargets.current
     VoiceTargetEffect(CALENDAR_MONTH_SUGGESTIONS) { text ->
-        when (val voice = parseVoiceDate(text, state.today, state.month)) {
-            is VoiceDate.Day -> {
-                onDayOpen(voice.date, null)
-                VoiceReply.Done(R.string.voice_calendar_day, listOf(voice.date.format(VOICE_DATE)))
+        val voice = parseVoiceDate(text, state.today, state.month)
+        val record = parseDayVoice(text) == DayVoice.RECORD_ADD
+        when {
+            // "진료 후 기록할래", "어제 진료 끝났어". 그 날 진료가 있을 때만 일자 화면을 열고 그 말을 넘긴다(#320).
+            record -> {
+                val date = (voice as? VoiceDate.Day)?.date ?: state.today
+                when (viewModel.voiceDay(date)) {
+                    VoiceDayContent.SCHEDULE, VoiceDayContent.RECORD -> {
+                        targets?.handOff(text)
+                        onDayOpen(date, null)
+                        VoiceReply.Done(R.string.voice_calendar_day, listOf(date.format(VOICE_DATE)))
+                    }
+
+                    else -> VoiceReply.Done(R.string.voice_calendar_no_visit, listOf(date.format(VOICE_DATE)))
+                }
             }
 
-            is VoiceDate.Month -> {
+            voice is VoiceDate.Day -> openSpokenDay(voice.date, viewModel, onDayOpen)
+
+            voice is VoiceDate.Month -> {
                 viewModel.onMonthPick(voice.month)
                 VoiceReply.Done(
                     R.string.voice_calendar_month,
@@ -127,7 +142,7 @@ private fun CalendarMonthRoute(
                 )
             }
 
-            null -> VoiceReply.NotMine
+            else -> VoiceReply.NotMine
         }
     }
 
@@ -221,4 +236,29 @@ private fun CalendarDayRoute(
 }
 
 /** 막대에 적는 달. "2026년 12월". */
+/**
+ * 말한 날을 연다(#320). 볼 것이 없는 날은 열지 않고 없다고 답한다 — 빈 일자 화면을 보이지 않는다. 카드만 쓴
+ * 날은 날을 눌렀을 때처럼 그 자리에 카드 시트를 띄운다.
+ */
+private suspend fun openSpokenDay(
+    date: LocalDate,
+    viewModel: CalendarViewModel,
+    onDayOpen: (date: LocalDate, appointmentId: Long?) -> Unit,
+): VoiceReply {
+    val day = date.format(VOICE_DATE)
+    return when (viewModel.voiceDay(date)) {
+        VoiceDayContent.SCHEDULE, VoiceDayContent.RECORD -> {
+            onDayOpen(date, null)
+            VoiceReply.Done(R.string.voice_calendar_day, listOf(day))
+        }
+
+        VoiceDayContent.CARD_ONLY -> {
+            viewModel.onDaySelect(date)
+            VoiceReply.Done(R.string.voice_calendar_card_only, listOf(day))
+        }
+
+        VoiceDayContent.NONE -> VoiceReply.Done(R.string.voice_calendar_empty_day, listOf(day))
+    }
+}
+
 private val VOICE_MONTH: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy년 M월", Locale.KOREAN)

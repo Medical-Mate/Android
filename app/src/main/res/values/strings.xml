@@ -655,9 +655,14 @@
     <string name="voice_card_opened">%1$s, 열었어요</string>
     <string name="voice_card_which">맞는 카드가 %1$s장이에요</string>
     <string name="voice_card_ask_which">몇 번째인지 말씀해 주세요\n%1$s</string>
+    <string name="voice_cards_empty">아직 만든 브리핑 카드가 없어요</string>
+    <string name="voice_cards_ask_intake">"배가 아파"처럼 말하면 증상 정리부터 시작해요</string>
     <string name="voice_card_none">그런 카드를 찾지 못했어요</string>
     <string name="voice_calendar_day">%1$s 일정을 열었어요</string>
     <string name="voice_calendar_month">%1$s로 넘겼어요</string>
+    <string name="voice_calendar_empty_day">%1$s에는 일정도 기록도 없어요</string>
+    <string name="voice_calendar_card_only">%1$s에는 일정 없이 쓴 카드만 있어요</string>
+    <string name="voice_calendar_no_visit">%1$s에는 잡아 둔 진료가 없어요</string>
     <string name="voice_calendar_ask">"20일"처럼 날짜를 말씀하시면 그 날을 열어요</string>
     <string name="voice_day_ask">진료 후 기록을 남기려면 "기록할래"라고 해 주세요</string>
     <string name="voice_day_record_start">진료 후 기록을 시작할게요</string>
@@ -684,6 +689,7 @@
     <string name="voice_record_not_ready">아직 기록을 불러오는 중이에요</string>
     <string name="voice_record_confirm_save">진료 후 기록을 저장할까요?</string>
     <string name="voice_suggest_title">이렇게 말해도 돼요</string>
+    <string name="voice_choice_title">이 중에서 말씀해 주세요</string>
     <string name="voice_suggest_quote">"%1$s"</string>
     <string name="voice_suggest_global_intake">배가 아파서 정리할래</string>
     <string name="voice_suggest_global_intake_do">증상 정리</string>

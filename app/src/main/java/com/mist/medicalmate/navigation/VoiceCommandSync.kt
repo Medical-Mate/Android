@@ -38,9 +38,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTab
 import com.mist.medicalmate.core.voice.LocalVoicePanelInset
 import com.mist.medicalmate.core.voice.LocalVoiceTargets
-import com.mist.medicalmate.core.voice.VoiceDate
 import com.mist.medicalmate.core.voice.VoiceTargets
-import com.mist.medicalmate.core.voice.parseVoiceDate
 import com.mist.medicalmate.home.ui.HomeDestination
 import com.mist.medicalmate.intake.ui.IntakeDestination
 import com.mist.medicalmate.profile.ui.MyProfileDestination
@@ -48,7 +46,6 @@ import com.mist.medicalmate.voice.ui.VoiceCommand
 import com.mist.medicalmate.voice.ui.VoiceCommandPanel
 import com.mist.medicalmate.voice.ui.VoiceCommandRequest
 import com.mist.medicalmate.voice.ui.VoiceCommandViewModel
-import java.time.LocalDate
 
 /**
  * "헤이 메이트"로 부르고 말한 대로 화면을 옮긴다(#273·#282).
@@ -157,11 +154,10 @@ private fun NavHostController.perform(request: VoiceCommandRequest, targets: Voi
 
         VoiceCommand.BACK -> if (previousBackStackEntry != null) popBackStack()
         VoiceCommand.INTAKE -> openOn(tab, IntakeDestination(null, spoken = text), targets)
+        // 캘린더가 그 날 진료가 있는지 보고 일자 화면을 연다(#320). 바로 열면 진료가 없는 날도 빈 화면이 떴다.
         VoiceCommand.VISIT_RECORD -> {
-            val today = LocalDate.now()
-            val day = (parseVoiceDate(text, today) as? VoiceDate.Day)?.date ?: today
             targets.handOff(text)
-            openOn(tab, CalendarDayDestination(date = day.toString()), targets)
+            openTabRoot(tab)
         }
 
         VoiceCommand.BRIEF_CARDS -> {
