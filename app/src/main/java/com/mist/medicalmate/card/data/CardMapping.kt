@@ -21,6 +21,7 @@ internal fun CardResponse.toBriefCard(): BriefCard = BriefCard(
     title = title ?: chiefComplaint.orEmpty(),
     status = if (status == STATUS_CONFIRMED) BriefCard.Status.CONFIRMED else BriefCard.Status.BEFORE_VISIT,
     patientLine = patientLine(),
+    maskedPatientLine = maskedPatientLine(),
     items = axes.toItems(),
     // 강도는 KV 줄이 아니라 눈금이다. 시안이 칩·낱말·NRS 등가를 한 줄로 그리고, 그 모양은
     // 줄 하나로 낼 수 없다. 그래서 축에서 빼 따로 든다.
@@ -52,6 +53,21 @@ private fun CardResponse.patientLine(): String = listOfNotNull(
     patient?.age?.let { "${it}세 ${sexLabel(patient.sex)}".trim() },
     createdAt?.let { "${OffsetDateTime.parse(it).format(WRITTEN_ON)} 작성" },
 ).joinToString(" · ")
+
+/**
+ * 이름·나이를 가린 환자 줄(#306). "김OO · 여 · 2026.09.04 작성".
+ *
+ * 이름은 성만 남긴다. 서버가 이미 "김OO"로 가려 준 이름도 같은 모양이 된다. 나이는 뺀다 — 숫자를 바꿔 적으면
+ * 틀린 정보가 찍힌다.
+ */
+private fun CardResponse.maskedPatientLine(): String = listOfNotNull(
+    patient?.name?.takeIf { it.isNotBlank() }?.let { "${it.first()}$NAME_MASK" },
+    sexLabel(patient?.sex).takeIf { it.isNotEmpty() },
+    createdAt?.let { "${OffsetDateTime.parse(it).format(WRITTEN_ON)} 작성" },
+).joinToString(" · ")
+
+/** 가린 이름에서 성 뒤에 붙는 글자. 서버가 가릴 때와 같은 모양이다. */
+private const val NAME_MASK = "OO"
 
 private fun sexLabel(sex: String?): String = when (sex) {
     "FEMALE" -> "여"

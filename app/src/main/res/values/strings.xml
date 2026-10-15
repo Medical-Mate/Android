@@ -236,6 +236,12 @@
     <string name="brief_card_edit">편집</string>
     <string name="brief_card_share">공유</string>
     <string name="brief_card_share_chooser">브리핑 카드 공유</string>
+    <string name="brief_card_export_title">브리핑 카드 내보내기</string>
+    <string name="brief_card_export_mask">이름·나이 가리기</string>
+    <string name="brief_card_export_save">이미지 저장</string>
+    <string name="brief_card_export_share">공유하기</string>
+    <string name="brief_card_export_saved">갤러리에 저장했어요</string>
+    <string name="brief_card_export_save_failed">저장하지 못했어요</string>
     <string name="brief_card_edit_done">확인</string>
     <string name="brief_card_ai_caption">AI가 말씀하신 내용을 정리했어요</string>
     <string name="brief_card_ai_tooltip">말씀하신 내용을 항목별로 정리했어요. 원문도 함께 남아요</string>

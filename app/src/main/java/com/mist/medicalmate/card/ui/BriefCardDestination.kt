@@ -3,9 +3,13 @@ package com.mist.medicalmate.card.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
@@ -21,6 +25,7 @@ import com.mist.medicalmate.core.voice.VoiceWords
 import com.mist.medicalmate.core.voice.rememberVoicePrompt
 import com.mist.medicalmate.navigation.ConsumeResult
 import com.mist.medicalmate.navigation.NavResult
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
@@ -105,6 +110,15 @@ private fun BriefCardRoute(
     BriefCardVoice(content = content, onSave = { viewModel.onSaveClick(onSaved) })
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    // 갤러리에 저장했는지 알리는 글(#306). 잠깐 띄우고 걷는다.
+    var saveResult by remember { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(saveResult) {
+        if (saveResult != null) {
+            delay(TOAST_MS)
+            saveResult = null
+        }
+    }
+    val saveImage = rememberBriefCardSaver { saved -> saveResult = saved }
 
     BriefCardScreen(
         state = state,
@@ -122,10 +136,18 @@ private fun BriefCardRoute(
             onHospitalChangeClick = { content?.card?.id?.let(onHospitalChange) },
             onRetryClick = { viewModel.open(cardId, sessionId, hospital) },
             onShareClick = { image -> scope.launch { shareBriefCard(context, image) } },
+            onSaveImageClick = saveImage,
         ),
         modifier = modifier,
+        toastMessage = saveResult?.let { stringResource(saveMessage(it)) },
     )
 }
+
+private fun saveMessage(saved: Boolean): Int =
+    if (saved) R.string.brief_card_export_saved else R.string.brief_card_export_save_failed
+
+/** 저장 결과를 띄워 두는 시간. */
+private const val TOAST_MS = 2_000L
 
 /**
  * 라우트가 들고 온 병원.

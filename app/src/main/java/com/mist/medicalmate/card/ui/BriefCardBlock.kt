@@ -52,9 +52,10 @@ internal fun BriefCardBlock(
     onItemValueChange: (Int, String) -> Unit = { _, _ -> },
     onItemDeleteClick: ((Int) -> Unit)? = null,
     showAiCaption: Boolean = true,
+    maskPatient: Boolean = false,
 ) {
     MedicalMateCard(modifier = modifier) {
-        CardHead(card = card)
+        CardHead(card = card, maskPatient = maskPatient)
         MedicalMateDivider()
         items.forEachIndexed { index, item ->
             KvLine(
@@ -122,7 +123,7 @@ private fun kvRowType(item: BriefCardItem, editing: Boolean): MedicalMateKvRowTy
  * 남기면 진입이 두 곳이 된다.
  */
 @Composable
-private fun CardHead(card: BriefCard) {
+private fun CardHead(card: BriefCard, maskPatient: Boolean) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8),
@@ -145,7 +146,8 @@ private fun CardHead(card: BriefCard) {
                 MedicalMateBadge(label = visitedLabel(card.visited), tone = visitedTone(card.visited))
             }
             Text(
-                text = card.patientLine,
+                // 이미지로 내보낼 때 가리기를 켰으면 가린 줄이다(#306). 찍는 동안만 바뀐다.
+                text = if (maskPatient) card.maskedPatientLine else card.patientLine,
                 style = MedicalMateTheme.typography.bodyS,
                 color = MedicalMateTheme.colors.fgSubtle,
             )

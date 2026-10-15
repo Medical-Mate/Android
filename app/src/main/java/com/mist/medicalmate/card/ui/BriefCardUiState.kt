@@ -33,6 +33,11 @@ data class BriefCard(
     val title: String,
     val status: Status,
     val patientLine: String,
+    /**
+     * 이름·나이를 가린 환자 줄(#306). 이미지로 내보낼 때 가리기를 켜면 [patientLine] 대신 이것이 찍힌다.
+     * 이름은 성만 남기고, 나이는 뺀다. 성별과 작성일은 남긴다.
+     */
+    val maskedPatientLine: String = patientLine,
     val items: List<BriefCardItem>,
     val severity: MedicalMateSeverity?,
     val health: List<BriefCardItem> = emptyList(),
