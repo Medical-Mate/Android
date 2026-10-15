@@ -102,6 +102,14 @@ object MedicalMateEffects {
 
     /** 사진 위 흰 아이콘. */
     val onImageIcon: ShadowSpec = ShadowSpec(OnImageShadowColor.copy(alpha = 0.5f), y = 1.dp, blur = 3.dp)
+
+    /**
+     * `Elevation/Float`의 두 겹. [MedicalMateElevation.float]은 한 겹 근사라 그대로 두고, Figma 값을 그대로
+     * 그려야 하는 10-15 컴포넌트(`Mate Card`)가 이것을 쓴다.
+     */
+    val floatWide: Shadow = Shadow(radius = 14.dp, color = Color(0x171B255A), offset = DpOffset(0.dp, 4.dp))
+
+    val floatTight: Shadow = Shadow(radius = 3.dp, color = Color(0x0F1B255A), offset = DpOffset(0.dp, 1.dp))
 }
 
 /** 아래로 [y]만큼 내리고 [blur]만큼 흐린 한 겹. 글자·아이콘처럼 모양을 따라가는 그림자에 쓴다. */

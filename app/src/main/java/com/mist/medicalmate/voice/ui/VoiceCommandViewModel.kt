@@ -112,6 +112,10 @@ internal constructor(
     val targets = VoiceTargets()
 
     init {
+        // 호출어 없이 부른다(#312). 홈 배너의 "메이트에게 말해보기"다. 호출어 설정과 상관없이 받아쓰기로 듣는다 —
+        // 배너는 호출어 모델을 받지 않은 사람에게도 보인다. 마이크 권한은 부른 화면이 방금 받았고, 그 결과가 화면
+        // 복귀(setAllowed)보다 먼저 와서 여기서는 권한 값을 보지 않는다.
+        targets.summon = { if (commandJob == null && foreground.value) onWake() }
         val setting = combine(voiceWake.enabled, voiceWake.model, ::Pair)
         val screen = combine(foreground, allowed, ::Pair)
         val idle = combine(speech.active, mutableUiState.map { it.panel != null }, ::Pair)

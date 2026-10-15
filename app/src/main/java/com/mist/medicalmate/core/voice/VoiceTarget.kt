@@ -93,6 +93,13 @@ class VoiceTargets {
     @Volatile
     var canGoBack: Boolean = true
 
+    /**
+     * 호출어 없이 메이트를 부른다(#312). 홈 배너의 "메이트에게 말해보기"가 이 길이다. 듣는 쪽(`voice`)이 채운다.
+     * 마이크 권한은 부르는 화면이 먼저 받는다.
+     */
+    @Volatile
+    var summon: () -> Unit = {}
+
     private val asked = MutableSharedFlow<VoicePrompt>(extraBufferCapacity = PROMPT_BUFFER)
 
     val current: VoiceTarget? get() = synchronized(stack) { stack.lastOrNull() }
