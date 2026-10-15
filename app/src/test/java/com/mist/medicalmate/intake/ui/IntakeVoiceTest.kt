@@ -10,6 +10,7 @@ import com.mist.medicalmate.core.voice.VoiceReply
 import com.mist.medicalmate.intake.data.IntakeSession
 import com.mist.medicalmate.intake.data.IntakeSessionMessage
 import com.mist.medicalmate.intake.data.IntakeSessionStatus
+import com.mist.medicalmate.intake.data.IntakeSeverity
 import com.mist.medicalmate.intake.data.IntakeSide
 import com.mist.medicalmate.intake.data.IntakeTurn
 import com.mist.medicalmate.intake.data.SessionRepository
@@ -110,6 +111,7 @@ class IntakeVoiceTest {
         assertEquals(QuestionVoice.Add("약을 계속 먹어도 되나요"), parseQuestionVoice("약을 계속 먹어도 되나요?"))
         assertEquals(QuestionVoice.Add("운동해도 될까요"), parseQuestionVoice("질문 추가, 운동해도 될까요"))
         assertEquals(1, (parseQuestionVoice("두 번째 질문 지워 줘") as QuestionVoice.Remove).ordinal)
+        assertEquals(QuestionVoice.Pick(1), parseQuestionVoice("두 번째 질문 담아 줘"))
         assertEquals(
             QuestionVoice.Edit(0, "술 마셔도 되나요"),
             parseQuestionVoice("첫 번째 질문 고쳐, 술 마셔도 되나요"),
@@ -144,6 +146,9 @@ class IntakeVoiceTest {
         assertEquals(listOf("오른쪽 어깨"), reply.args)
         assertEquals(BodyMapSelection("ANC:013", side = BodyMapSide.RIGHT), viewModel.uiState.value.bodyMap.focus)
 
+        // 강도가 문답 앞이다(#310). 강도에서 다음이라고 해야 문답이 열린다.
+        viewModel.handle("다음")
+        assertEquals(IntakeStep.SEVERITY, viewModel.uiState.value.step)
         viewModel.handle("다음")
         assertEquals(IntakeStep.SYMPTOM_CHAT, viewModel.uiState.value.step)
         assertEquals(listOf("SUR:051"), repository.startedCodes)
@@ -197,8 +202,8 @@ class IntakeVoiceTest {
 
     @Test
     fun `아픈 정도를 물을 때 고를 말을 읽어 준다`() {
-        val viewModel = IntakeViewModel(VoiceSessionRepository(ends = true), FakeSpeechToText()).inChat()
-        viewModel.handle("어제부터요")
+        val viewModel = IntakeViewModel(VoiceSessionRepository(), FakeSpeechToText())
+        viewModel.handle("오른쪽 명치가 아파요")
 
         val reply = viewModel.handle("다음") as VoiceReply.Done
 
@@ -255,13 +260,13 @@ class IntakeVoiceTest {
         repository.ends = true
         viewModel.handle("어제부터요")
         viewModel.handle("다음")
-        assertEquals(IntakeStep.SEVERITY, viewModel.uiState.value.step)
+        assertTrue(viewModel.uiState.value.completed)
     }
 
     @Test
-    fun `아픈 정도를 말로 고르고 뒤로라고 하면 문답으로 돌아간다`() {
-        val viewModel = IntakeViewModel(VoiceSessionRepository(ends = true), FakeSpeechToText()).inChat()
-        viewModel.handle("어제부터요")
+    fun `아픈 정도를 말로 고르고 뒤로라고 하면 부위로 돌아간다`() {
+        val viewModel = IntakeViewModel(VoiceSessionRepository(), FakeSpeechToText())
+        viewModel.handle("오른쪽 명치가 아파요")
         viewModel.handle("다음")
 
         val reply = viewModel.handle("많이 아파요") as VoiceReply.Done
@@ -269,7 +274,7 @@ class IntakeVoiceTest {
         assertEquals(MedicalMateSeverity.LEVEL_4, viewModel.uiState.value.severity)
         assertEquals(listOf("LEVEL_4"), reply.args)
         viewModel.handle("뒤로")
-        assertEquals(IntakeStep.SYMPTOM_CHAT, viewModel.uiState.value.step)
+        assertEquals(IntakeStep.BODY_PART, viewModel.uiState.value.step)
     }
 
     @Test
@@ -286,6 +291,30 @@ class IntakeVoiceTest {
 
         viewModel.handle("다음")
         assertTrue(viewModel.uiState.value.completed)
+    }
+
+    @Test
+    fun `몇 번째 추천을 말해 담는다`() {
+        val repository = VoiceSessionRepository(ends = true, candidates = listOf("검사를 받아야 하나요?", "약 먹어도 되나요?"))
+        val viewModel = IntakeViewModel(repository, FakeSpeechToText()).inQuestions()
+
+        val reply = viewModel.handle("두 번째 질문 담아 줘") as VoiceReply.Done
+
+        assertEquals(R.string.voice_intake_question_added, reply.message)
+        assertEquals(listOf("약 먹어도 되나요?"), viewModel.uiState.value.questions)
+        assertEquals(listOf(IntakeFocusTarget.Question(1)), viewModel.uiState.value.voiceFocus?.targets)
+    }
+
+    @Test
+    fun `추천을 빼면 줄은 남고 체크만 풀린다`() {
+        // 추천은 다시 담을 수 있게 남긴다. 직접 적은 줄은 지운다.
+        val repository = VoiceSessionRepository(ends = true, candidates = listOf("검사를 받아야 하나요?"))
+        val viewModel = IntakeViewModel(repository, FakeSpeechToText()).inQuestions()
+        viewModel.handle("첫 번째 질문 담아 줘")
+
+        viewModel.handle("첫 번째 질문 빼 줘")
+
+        assertEquals(listOf(IntakeQuestion("검사를 받아야 하나요?", selected = false)), viewModel.uiState.value.questionRows)
     }
 
     @Test
@@ -316,8 +345,8 @@ class IntakeVoiceTest {
 
     @Test
     fun `아픈 정도를 고르면 슬라이더를 보인다`() {
-        val viewModel = IntakeViewModel(VoiceSessionRepository(ends = true), FakeSpeechToText()).inChat()
-        viewModel.handle("어제부터요")
+        val viewModel = IntakeViewModel(VoiceSessionRepository(), FakeSpeechToText())
+        viewModel.handle("오른쪽 명치가 아파요")
         viewModel.handle("다음")
 
         viewModel.handle("7점")
@@ -345,25 +374,32 @@ class IntakeVoiceTest {
         IntakeVoiceRoutes(next = { onNext("라벨") }, severityLabel = { it.name }),
     )
 
+    /** 부위를 고르고 강도를 지나 문답에 든다. */
     private fun IntakeViewModel.inChat(): IntakeViewModel = apply {
         handle("오른쪽 명치가 아파요")
         handle("다음")
+        handle("다음")
     }
 
+    /** 한 마디로 문답을 끝내 추천 질문 고르기에 든다. 저장소가 `ends = true`여야 한다. */
     private fun IntakeViewModel.inQuestions(): IntakeViewModel = inChat().apply {
         handle("어제부터요")
-        handle("다음")
-        handle("다음")
     }
 }
 
 /** 말로 보낸 답과 연 세션을 기록한다. */
-private class VoiceSessionRepository(var ends: Boolean = false) : SessionRepository {
+private class VoiceSessionRepository(var ends: Boolean = false, private val candidates: List<String> = emptyList()) :
+    SessionRepository {
     var startedCodes: List<String>? = null
     var sentText: String? = null
     var sentByVoice = false
 
-    override suspend fun start(siteCode: String, side: IntakeSide?, siteText: String?): ApiResult<IntakeSession> {
+    override suspend fun start(
+        siteCode: String,
+        side: IntakeSide?,
+        siteText: String?,
+        severity: IntakeSeverity,
+    ): ApiResult<IntakeSession> {
         startedCodes = listOf(siteCode)
         return ApiResult.Success(session.copy(messages = listOf(IntakeSessionMessage(1, false, "언제부터요?"))))
     }
@@ -379,11 +415,12 @@ private class VoiceSessionRepository(var ends: Boolean = false) : SessionReposit
                 messages = listOf(IntakeSessionMessage(1, false, "언제부터요?"), IntakeSessionMessage(2, true, text)),
                 answered = 1,
                 total = 4,
+                questionCandidates = if (ends) candidates else emptyList(),
             ),
         )
     }
 
-    override suspend fun setSeverity(sessionId: Long, level: Int, label: String): ApiResult<IntakeSession> =
+    override suspend fun setSeverity(sessionId: Long, severity: IntakeSeverity): ApiResult<IntakeSession> =
         ApiResult.Success(session)
 
     override suspend fun setQuestions(sessionId: Long, questions: List<String>): ApiResult<IntakeSession> =

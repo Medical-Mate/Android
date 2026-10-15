@@ -28,6 +28,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -50,7 +52,7 @@ import com.mist.medicalmate.core.voice.rememberVoiceLazyListState
 import com.mist.medicalmate.core.voice.voicePanelInset
 
 /**
- * 2단계 증상 문답. Figma 1c-1 `402:1629`, 1c-2 `402:1506`.
+ * 3단계 증상 문답과 추천 질문 고르기. Figma 1c-2 `3663:7181`, 1c-3 `3663:7196`, 1c-D~D4 `3663:7218`~`3663:7276`.
  *
  * AI와 주고받는 대화다. AI는 면색도 테두리도 없이 라벨과 본문만, 환자는 유색 면에 우하
  * 꼬리다. 화면에서 유색 큰 면을 가진 유일한 요소가 환자의 말이다(문서의 컴포넌트 규격).
@@ -65,13 +67,25 @@ import com.mist.medicalmate.core.voice.voicePanelInset
  * **말로 할 때도 같다**(#190). 말하는 중인 글은 마디 수를 늘리지 않고 자라기만 하고, 음성
  * 패널은 키보드보다 높아서 입력칸일 때보다 더 가린다. 그 둘을 함께 봐야 말하는 글이 패널 뒤로
  * 들어가지 않는다.
+ *
+ * **문답이 끝나면 같은 대화 아래에 추천 질문이 선다**(#310). AI 말로 무엇을 하라는지 알리고, `Question Row`를
+ * 눌러 담을 것을 체크하며, 맨 아래 빈 칸에 직접 적는다. 하나라도 담으면 아래에 몇 개를 담는지 AI 말이 한 번 더
+ * 선다. 질문 줄이 늘거나 적기 시작하면 끝으로 보낸다.
  */
 @Composable
-internal fun ChatStep(state: IntakeUiState, modifier: Modifier = Modifier) {
+internal fun ChatStep(state: IntakeUiState, callbacks: IntakeCallbacks, modifier: Modifier = Modifier) {
     val listState = rememberVoiceLazyListState()
     val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
 
-    LaunchedEffect(state.messages.size, state.awaitingReply, state.speaking, state.inputMode, imeBottom) {
+    LaunchedEffect(
+        state.messages.size,
+        state.awaitingReply,
+        state.speaking,
+        state.inputMode,
+        imeBottom,
+        state.questionRows.size,
+        state.writingQuestion,
+    ) {
         val last = listState.layoutInfo.totalItemsCount - 1
         if (last >= 0) listState.animateScrollToItem(last)
     }
@@ -97,6 +111,7 @@ internal fun ChatStep(state: IntakeUiState, modifier: Modifier = Modifier) {
         if (state.awaitingReply) {
             item(key = TYPING_KEY) { TypingRow() }
         }
+        if (state.chatFinished) questionItems(state = state, callbacks = callbacks)
     }
 }
 
@@ -213,27 +228,32 @@ private fun TypingRow() {
 /**
  * 하단 입력. 글과 음성 두 가지다.
  *
+ * 빈 칸에 질문을 적을 때도 이 입력이다(1c-D2 · D3). 열리면 입력칸으로 바로 옮겨 키보드를 올린다. 시안의 그
+ * 입력칸에는 안내 글이 없다.
+ *
  * 음성에서도 "직접 입력할게요"가 같은 자리에 남는다. 문서의 컴포넌트 규격과 9절이 요구하는 것이고,
  * 조용한 곳이 아니거나 목소리가 잘 안 나오는 환자에게 음성만 남기면 앱을 쓸 수 없다.
  */
 @Composable
 internal fun ChatInput(state: IntakeUiState, callbacks: IntakeCallbacks) {
+    val field = remember { FocusRequester() }
+    LaunchedEffect(state.writingQuestion) {
+        if (state.writingQuestion && state.inputMode == IntakeInputMode.TEXT) field.requestFocus()
+    }
     when (state.inputMode) {
         IntakeInputMode.VOICE ->
             MedicalMateVoiceInput(
                 state = state.voice,
                 onMicClick = callbacks.onMicClick,
                 onTypeInsteadClick = callbacks.onTypeInsteadClick,
-                // 문답이 끝나면 더 할 말이 없고 남은 조작은 다음으로 가는 것뿐이다. 말로
-                // 하던 사람에게 거기서만 손을 쓰게 할 이유가 없어 그 말을 듣는다.
-                description = stringResource(R.string.voice_next_hint).takeIf { state.chatFinished },
             )
 
         IntakeInputMode.TEXT ->
             MedicalMateTextField(
                 value = state.draft,
                 onValueChange = callbacks.onDraftChange,
-                placeholder = stringResource(R.string.intake_chat_placeholder),
+                modifier = Modifier.focusRequester(field),
+                placeholder = stringResource(R.string.intake_chat_placeholder).takeUnless { state.writingQuestion },
                 onSend = callbacks.onSendClick,
                 trailing = {
                     // Actions 슬롯. 버튼끼리는 4로 붙인다.
@@ -255,7 +275,7 @@ internal fun ChatInput(state: IntakeUiState, callbacks: IntakeCallbacks) {
                             icon = MedicalMateIcons.ArrowUp,
                             contentDescription = stringResource(R.string.intake_chat_send),
                             style = MedicalMateIconButtonStyle.GHOST,
-                            enabled = state.canSend,
+                            enabled = if (state.writingQuestion) state.canAddQuestion else state.canSend,
                         )
                     }
                 },

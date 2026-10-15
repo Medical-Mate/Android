@@ -9,6 +9,7 @@ import com.mist.medicalmate.core.speech.SpeechChunk
 import com.mist.medicalmate.intake.data.IntakeSession
 import com.mist.medicalmate.intake.data.IntakeSessionMessage
 import com.mist.medicalmate.intake.data.IntakeSessionStatus
+import com.mist.medicalmate.intake.data.IntakeSeverity
 import com.mist.medicalmate.intake.data.IntakeSide
 import com.mist.medicalmate.intake.data.IntakeTurn
 import com.mist.medicalmate.intake.data.SessionRepository
@@ -32,25 +33,36 @@ import org.junit.Test
  * 세션 만들기는 여기서 늘 성공한다. 실패해도 문답이 그대로 진행된다는 것은
  * [IntakeSessionActionsTest]가 본다.
  */
-private fun intakeViewModel(
+internal fun intakeViewModel(
     repository: SessionRepository = FakeSessionRepository(),
     speech: FakeSpeechToText = FakeSpeechToText(),
 ) = IntakeViewModel(repository, speech)
 
 /** 부른 것을 기록만 한다. 시험마다 무엇을 보냈는지 확인할 수 있다. */
-private class FakeSessionRepository(
+internal class FakeSessionRepository(
     private val session: IntakeSession = savedSession,
     private val startFails: Boolean = false,
     ends: Boolean = false,
     /** 세션을 만들 때 서버가 돌려주는 것. 기본은 마디가 빈 세션이라 앱이 첫 물음을 세운다. */
     private val started: IntakeSession = session,
+    /** 문답이 끝난 턴에 실려 오는 추천 질문. */
+    private val candidates: List<String> = emptyList(),
 ) : SessionRepository {
     var startedCodes: List<String>? = null
     var startedText: String? = null
+    var startedSeverity: IntakeSeverity? = null
+    var startCount = 0
 
-    override suspend fun start(siteCode: String, side: IntakeSide?, siteText: String?): ApiResult<IntakeSession> {
+    override suspend fun start(
+        siteCode: String,
+        side: IntakeSide?,
+        siteText: String?,
+        severity: IntakeSeverity,
+    ): ApiResult<IntakeSession> {
         startedCodes = listOf(siteCode)
         startedText = siteText
+        startedSeverity = severity
+        startCount++
         return if (startFails) ApiResult.NetworkUnavailable(java.io.IOException()) else ApiResult.Success(started)
     }
 
@@ -58,8 +70,7 @@ private class FakeSessionRepository(
 
     var sentText: String? = null
     var sentByVoice: Boolean = false
-    var severityLevel: Int? = null
-    var severityLabel: String? = null
+    var savedSeverity: IntakeSeverity? = null
     var sentQuestions: List<String>? = null
     var turnEnded: Boolean = ends
 
@@ -73,13 +84,13 @@ private class FakeSessionRepository(
                     IntakeSessionMessage(100, false, "다음 질문"),
                 answered = 1,
                 total = 4,
+                questionCandidates = if (turnEnded) candidates else emptyList(),
             ),
         )
     }
 
-    override suspend fun setSeverity(sessionId: Long, level: Int, label: String): ApiResult<IntakeSession> {
-        severityLevel = level
-        severityLabel = label
+    override suspend fun setSeverity(sessionId: Long, severity: IntakeSeverity): ApiResult<IntakeSession> {
+        savedSeverity = severity
         return ApiResult.Success(savedSession)
     }
 
@@ -101,14 +112,24 @@ private val savedSession =
     )
 
 /**
- * 부위를 고르지 않으면 문답이 열리지 않는다. 문답 이후를 보는 시험은 이 헬퍼로 1단계를
+ * 부위를 고르고 강도를 지나야 문답이 열린다(#310). 문답 이후를 보는 시험은 이 헬퍼로 두 단계를
  * 지난다. 어느 부위를 고르는지는 그 시험들과 무관하다.
  */
-private fun IntakeViewModel.openChatStep() {
+internal fun IntakeViewModel.openChatStep() {
     bodyMap.onDotClick("ANC:004@CENTER")
     bodyMap.onDotClick("SUR:031@RIGHT")
     onNext("꽤 아파요")
+    onNext("꽤 아파요")
 }
+
+/** 한 마디 보내 문답을 끝낸다. 저장소가 `ends = true`여야 끝난다. */
+internal fun IntakeViewModel.finishChat() {
+    onDraftChange("그게 다예요")
+    onSend()
+}
+
+/** 추천 셋. 문답이 끝난 턴에 실려 온다. */
+internal val threeCandidates = listOf("검사를 받아야 하나요?", "진통제 계속 먹어도 되나요?", "언제 다시 와야 하나요?")
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class IntakeViewModelTest {
@@ -233,11 +254,27 @@ class IntakeViewModelTest {
     }
 
     @Test
-    fun `구역까지 고르면 부위가 정해지고 서버 마디가 없으면 앱이 첫 마디에 그 이름을 넣는다`() {
+    fun `구역까지 고르면 부위가 정해지고 강도 단계로 간다`() {
+        // 강도가 문답 앞이다(#310). 아직 세션을 열지 않는다.
+        val repository = FakeSessionRepository()
+        val viewModel = intakeViewModel(repository)
+
+        viewModel.bodyMap.onDotClick("ANC:014@LEFT")
+        viewModel.bodyMap.onDotClick("SUR:091@LEFT")
+        viewModel.onNext("꽤 아파요")
+
+        assertEquals(IntakeStep.SEVERITY, viewModel.uiState.value.step)
+        assertEquals("왼쪽 무릎", viewModel.uiState.value.bodyPart)
+        assertEquals(0, repository.startCount)
+    }
+
+    @Test
+    fun `강도를 지나면 문답이 열리고 서버 마디가 없으면 앱이 첫 마디에 그 이름을 넣는다`() {
         val viewModel = intakeViewModel()
 
         viewModel.bodyMap.onDotClick("ANC:014@LEFT")
         viewModel.bodyMap.onDotClick("SUR:091@LEFT")
+        viewModel.onNext("꽤 아파요")
         viewModel.onNext("꽤 아파요")
 
         val state = viewModel.uiState.value
@@ -399,15 +436,16 @@ class IntakeViewModelTest {
     }
 
     @Test
-    fun `문답 단계를 넘어가면 듣던 것을 멈춘다`() {
-        // 네 단계가 한 목적지 안이라 화면이 가려지지 않는다. 3단계에서도 마이크를 잡고 있으면 호출어가 듣히지 않는다(#304).
+    fun `문답 단계를 떠나면 듣던 것을 멈춘다`() {
+        // 세 단계가 한 목적지 안이라 화면이 가려지지 않는다. 강도로 돌아가서도 마이크를 잡고 있으면 호출어가
+        // 듣히지 않는다(#304).
         val speech = FakeSpeechToText(keepOpen = true)
-        val viewModel = intakeViewModel(repository = FakeSessionRepository(ends = true), speech = speech)
+        val viewModel = intakeViewModel(speech = speech)
         viewModel.openChatStep()
         viewModel.voice.onVoiceMode()
         assertTrue(speech.active.value)
 
-        viewModel.onNext("")
+        viewModel.onBack()
 
         assertEquals(IntakeStep.SEVERITY, viewModel.uiState.value.step)
         assertFalse(speech.active.value)
@@ -545,7 +583,7 @@ class IntakeViewModelTest {
         viewModel.voice.onVoiceMode()
         viewModel.voice.onMicClick()
 
-        assertEquals(IntakeStep.SEVERITY, viewModel.uiState.value.step)
+        assertTrue(viewModel.uiState.value.completed)
     }
 
     @Test
@@ -556,7 +594,7 @@ class IntakeViewModelTest {
         viewModel.voice.onVoiceMode()
         viewModel.voice.onMicClick()
 
-        assertEquals(IntakeStep.SEVERITY, viewModel.uiState.value.step)
+        assertTrue(viewModel.uiState.value.completed)
     }
 
     @Test
@@ -569,7 +607,7 @@ class IntakeViewModelTest {
         viewModel.voice.onVoiceMode()
         viewModel.voice.onMicClick()
 
-        assertEquals(IntakeStep.SYMPTOM_CHAT, viewModel.uiState.value.step)
+        assertFalse(viewModel.uiState.value.completed)
     }
 
     @Test
@@ -644,6 +682,7 @@ class IntakeViewModelTest {
         viewModel.onNext("꽤 아파요")
 
         assertEquals("코가", viewModel.uiState.value.bodyPartSubject)
+        viewModel.onNext("꽤 아파요")
         assertTrue(viewModel.uiState.value.messages.first().text.startsWith("코가 불편하시군요"))
     }
 
@@ -664,62 +703,22 @@ class IntakeViewModelTest {
     }
 
     @Test
-    fun `질문을 적어 넣고 지운다`() {
-        val viewModel = intakeViewModel()
+    fun `세 단계를 지나면 흐름이 끝난다`() {
+        val viewModel = intakeViewModel(FakeSessionRepository(ends = true))
 
-        viewModel.question.onDraftChange("검사를 받아야 하나요?")
-        viewModel.question.onAdd()
-        viewModel.question.onDraftChange("진통제를 계속 먹어도 되나요?")
-        viewModel.question.onAdd()
-
-        assertEquals(2, viewModel.uiState.value.questions.size)
-        assertEquals("", viewModel.uiState.value.questionDraft)
-
-        viewModel.question.onRemove(0)
-
-        assertEquals(listOf("진통제를 계속 먹어도 되나요?"), viewModel.uiState.value.questions)
-    }
-
-    @Test
-    fun `질문은 다섯 개까지만 들어간다`() {
-        // 서버 상한과 같다(Backend#132). 넘치는 목록을 보내면 거절되고 카드에 질문이 하나도 안 남았다(#264).
-        val viewModel = intakeViewModel()
-        repeat(6) { index ->
-            viewModel.question.onDraftChange("질문 ${index + 1}")
-            viewModel.question.onAdd()
-        }
-
-        val state = viewModel.uiState.value
-        assertEquals(5, state.questions.size)
-        assertTrue(state.questionsFull)
-        // 여섯째는 들어가지 않았고, 적어 둔 글은 지워지지 않는다.
-        assertEquals("질문 6", state.questionDraft)
-        assertFalse(state.canAddQuestion)
-    }
-
-    @Test
-    fun `빈 질문은 들어가지 않고 없는 자리를 지워도 그대로다`() {
-        val viewModel = intakeViewModel()
-
-        viewModel.question.onDraftChange("  ")
-        viewModel.question.onAdd()
-        viewModel.question.onRemove(3)
-
-        assertEquals(emptyList<String>(), viewModel.uiState.value.questions)
-    }
-
-    @Test
-    fun `네 단계를 지나면 흐름이 끝난다`() {
-        val viewModel = intakeViewModel()
-
-        viewModel.openChatStep()
+        viewModel.bodyMap.onDotClick("ANC:004@CENTER")
+        viewModel.bodyMap.onDotClick("SUR:031@RIGHT")
         viewModel.onNext("꽤 아파요")
         assertEquals(IntakeStep.SEVERITY, viewModel.uiState.value.step)
         viewModel.onNext("꽤 아파요")
-        assertEquals(IntakeStep.QUESTIONS, viewModel.uiState.value.step)
+        assertEquals(IntakeStep.SYMPTOM_CHAT, viewModel.uiState.value.step)
+
+        // 문답이 끝나기 전에는 다음이 없다.
+        viewModel.onNext("")
         assertFalse(viewModel.uiState.value.completed)
 
-        viewModel.onNext("꽤 아파요")
+        viewModel.finishChat()
+        viewModel.onNext("")
 
         assertTrue(viewModel.uiState.value.completed)
     }
@@ -727,13 +726,15 @@ class IntakeViewModelTest {
     @Test
     fun `뒤로 가면 앞 단계로 돌아가고 답이 남아 있다`() {
         val viewModel = intakeViewModel()
-        viewModel.openChatStep()
+        viewModel.bodyMap.onDotClick("ANC:004@CENTER")
+        viewModel.bodyMap.onDotClick("SUR:031@RIGHT")
         viewModel.onNext("꽤 아파요")
         viewModel.onSeverityChange(MedicalMateSeverity.LEVEL_2)
+        viewModel.onNext("은근히 아파요")
 
         viewModel.onBack()
 
-        assertEquals(IntakeStep.SYMPTOM_CHAT, viewModel.uiState.value.step)
+        assertEquals(IntakeStep.SEVERITY, viewModel.uiState.value.step)
         assertEquals(MedicalMateSeverity.LEVEL_2, viewModel.uiState.value.severity)
     }
 
@@ -792,32 +793,69 @@ class IntakeViewModelTest {
     }
 
     @Test
-    fun `강도 단계를 떠날 때 고른 값과 문구를 보낸다`() {
-        // 서버가 카피를 들고 있지 않다. 표시 문구는 앱이 보낸다.
+    fun `세션을 열 때 고른 강도와 문구를 보낸다`() {
+        // 서버가 카피를 들고 있지 않다. 표시 문구는 앱이 보낸다(Backend#169).
         val repository = FakeSessionRepository()
         val viewModel = intakeViewModel(repository)
-        viewModel.openChatStep()
+        viewModel.bodyMap.onDotClick("ANC:004@CENTER")
+        viewModel.bodyMap.onDotClick("SUR:031@RIGHT")
         viewModel.onNext("꽤 아파요")
         viewModel.onSeverityChange(MedicalMateSeverity.LEVEL_2)
 
-        viewModel.onNext("조금 아파요")
+        viewModel.onNext("은근히 아파요")
 
-        assertEquals(2, repository.severityLevel)
-        assertEquals("조금 아파요", repository.severityLabel)
+        assertEquals(IntakeSeverity(2, "은근히 아파요"), repository.startedSeverity)
+        assertEquals(1, repository.startCount)
     }
 
     @Test
-    fun `질문 단계를 떠날 때 목록을 통째로 보낸다`() {
+    fun `강도로 돌아가 다시 고르면 세션을 새로 열지 않고 그 값만 고친다`() {
         val repository = FakeSessionRepository()
         val viewModel = intakeViewModel(repository)
         viewModel.openChatStep()
-        viewModel.onNext("꽤 아파요")
-        viewModel.onNext("꽤 아파요")
-        viewModel.question.onDraftChange("검사를 받아야 하나요?")
-        viewModel.question.onAdd()
+        viewModel.onBack()
+        viewModel.onSeverityChange(MedicalMateSeverity.LEVEL_4)
+
+        viewModel.onNext("많이 아파요")
+
+        assertEquals(IntakeSeverity(4, "많이 아파요"), repository.savedSeverity)
+        assertEquals(1, repository.startCount)
+        assertEquals(IntakeStep.SYMPTOM_CHAT, viewModel.uiState.value.step)
+    }
+
+    @Test
+    fun `부위를 바꾸면 새 문답을 연다`() {
+        // 다른 부위의 대화가 이어지면 안 된다.
+        val repository = FakeSessionRepository()
+        val viewModel = intakeViewModel(repository)
+        viewModel.openChatStep()
+        viewModel.onBack()
+        viewModel.onBack()
+        // 강도에서 돌아오면 고른 부위가 확대된 채다. 한 번 더 뒤로 가 전신으로 나온다.
+        viewModel.onBack()
+        viewModel.bodyMap.onDotClick("ANC:014@LEFT")
+        viewModel.bodyMap.onDotClick("SUR:091@LEFT")
 
         viewModel.onNext("꽤 아파요")
+        assertNull(viewModel.uiState.value.sessionId)
+        viewModel.onNext("꽤 아파요")
 
-        assertEquals(listOf("검사를 받아야 하나요?"), repository.sentQuestions)
+        assertEquals(2, repository.startCount)
+        assertEquals(listOf("SUR:091"), repository.startedCodes)
+    }
+
+    @Test
+    fun `같은 부위로 다시 오면 세션을 그대로 쓴다`() {
+        val repository = FakeSessionRepository()
+        val viewModel = intakeViewModel(repository)
+        viewModel.openChatStep()
+        viewModel.onBack()
+        viewModel.onBack()
+
+        viewModel.onNext("꽤 아파요")
+        viewModel.onNext("꽤 아파요")
+
+        assertEquals(1, repository.startCount)
+        assertEquals(7L, viewModel.uiState.value.sessionId)
     }
 }

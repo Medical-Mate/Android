@@ -42,11 +42,17 @@ internal interface SessionApi {
     @POST("api/sessions/{sessionId}/messages")
     suspend fun sendMessage(@Path("sessionId") sessionId: Long, @Body request: SendMessageRequest): TurnResponse
 
-    /** 3단계(1d)의 통증 강도. 끝난 문답에도 보낼 수 있고 다시 고르면 덮어쓴다. */
+    /**
+     * 통증 강도를 고친다. 처음 고른 값은 세션을 여는 요청에 함께 간다(Backend#169). 이 경로는 문답을
+     * 연 뒤 강도 단계로 돌아가 다시 골랐을 때 쓴다. 이미 받은 질문 후보는 서버가 다시 만들지 않는다.
+     */
     @PUT("api/sessions/{sessionId}/severity")
     suspend fun putSeverity(@Path("sessionId") sessionId: Long, @Body request: SeverityRequest): SessionResponse
 
-    /** 4단계(1i)의 질문. 목록을 통째로 보낸다. 추가·편집·삭제·순서가 한 번에 처리된다. */
+    /**
+     * 브리핑 카드에 담을 질문. 문답 끝에서 체크한 줄(추천 + 직접 쓴 것)을 화면 순서대로 통째로 보낸다.
+     * 체크를 푼 줄은 보내지 않는다.
+     */
     @PUT("api/sessions/{sessionId}/questions")
     suspend fun putQuestions(@Path("sessionId") sessionId: Long, @Body request: QuestionsRequest): SessionResponse
 
@@ -140,6 +146,11 @@ internal data class TurnResponse(
     val progress: ProgressResponse? = null,
     val messages: List<MessageResponse> = emptyList(),
     val askingAxis: AskingAxisResponse? = null,
+    /**
+     * 추천 질문(Backend#169). 서버 프로필이면 [ended]가 선 턴에 실린다. 그 밖에는 빈 배열이다 — 문답 중,
+     * 온디바이스(폰이 만들어 보낸다), 후보 생성 실패.
+     */
+    val questionCandidates: List<QuestionCandidateResponse> = emptyList(),
 )
 
 /**
@@ -156,6 +167,8 @@ internal data class StartSessionRequest(
     val side: String? = null,
     val siteText: String?,
     val profile: String? = null,
+    /** 2단계에서 고른 강도(Backend#169). 문답은 강도를 묻지 않고 이 값이 질문 후보와 카드에 들어간다. */
+    val severity: SeverityRequest? = null,
 )
 
 @Serializable
@@ -171,8 +184,8 @@ internal data class SessionResponse(
     /**
      * AI가 고른 질문 후보.
      *
-     * 환자가 적어 둔 [questions]와 다르다. 이쪽은 제안이고 저쪽은 확정이다. 4단계(1i)가
-     * 후보를 목록에 채워 두고 환자가 지우거나 더한다.
+     * 환자가 체크해 둔 [questions]와 다르다. 이쪽은 제안이고 저쪽은 확정이다. 문답이 끝난 자리에
+     * 후보를 줄로 세우고 환자가 체크하거나 직접 더한다.
      */
     val questionCandidates: List<QuestionCandidateResponse> = emptyList(),
     /** 문답이 끝난 카드의 축. 폰 질문 후보의 재료다. 강도는 여기가 아니라 [severity]에 있다. */

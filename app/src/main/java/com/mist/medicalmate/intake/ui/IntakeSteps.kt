@@ -1,42 +1,27 @@
 package com.mist.medicalmate.intake.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import com.mist.medicalmate.R
-import com.mist.medicalmate.core.designsystem.MedicalMateIcons
 import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
-import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNotice
-import com.mist.medicalmate.core.designsystem.component.MedicalMateSectionHeader
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSeveritySlider
-import com.mist.medicalmate.core.designsystem.component.MedicalMateTextField
 import com.mist.medicalmate.core.model.IntakeStep
-import com.mist.medicalmate.core.model.MAX_BRIEF_CARD_QUESTIONS
 import com.mist.medicalmate.core.voice.VoiceFocusFrame
 import com.mist.medicalmate.core.voice.rememberVoiceFocus
 import com.mist.medicalmate.core.voice.rememberVoiceScrollState
@@ -45,7 +30,7 @@ import com.mist.medicalmate.core.voice.voicePanelSpace
 /**
  * 단계별 본문. [IntakeScreen]에서만 쓴다.
  *
- * 네 단계가 상단 내비와 하단 영역을 공유하고 이 파일이 그 사이를 채운다.
+ * 세 단계가 상단 내비와 하단 영역을 공유하고 이 파일이 그 사이를 채운다. 3단계 문답은 `IntakeChat.kt`에 있다.
  */
 
 /**
@@ -60,6 +45,7 @@ internal fun StepContent(
     step: IntakeStep,
     modifier: Modifier = Modifier,
     scrollKey: Any? = Unit,
+    spacing: Dp = MedicalMateSpace.s14,
     content: @Composable () -> Unit,
 ) {
     Column(
@@ -73,7 +59,7 @@ internal fun StepContent(
                 top = MedicalMateSpace.s12,
                 bottom = MedicalMateSpace.s16,
             ),
-        verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s14),
+        verticalArrangement = Arrangement.spacedBy(spacing),
     ) {
         IntakeProgress(step)
         content()
@@ -81,7 +67,7 @@ internal fun StepContent(
 }
 
 /**
- * 3단계 통증 강도. Figma 1d `402:1934`.
+ * 2단계 통증 강도. Figma 1d `3663:7170`. 블록 간격이 20이고 물음과 설명이 위 8 · 사이 8로 묶인다.
  *
  * 판독 카드는 [MedicalMateSeveritySlider]가 안에 그린다. 고른 단계의 숫자와 낱말, 상황
  * 설명이 거기 함께 나온다. 화면에서 [MedicalMateSeverityReadout]을 따로 얹지 않는다.
@@ -98,17 +84,22 @@ internal fun SeverityStep(
     modifier: Modifier = Modifier,
 ) {
     val focus = rememberVoiceFocus(state.voiceFocus)
-    StepContent(step = state.step, modifier = modifier) {
-        Text(
-            text = stringResource(R.string.intake_severity_question, state.bodyPartSubject),
-            style = MedicalMateTheme.typography.headingL,
-            color = MedicalMateTheme.colors.fgDefault,
-        )
-        Text(
-            text = stringResource(R.string.intake_severity_description),
-            style = MedicalMateTheme.typography.bodyM,
-            color = MedicalMateTheme.colors.fgSubtle,
-        )
+    StepContent(step = state.step, modifier = modifier, spacing = MedicalMateSpace.s20) {
+        Column(
+            modifier = Modifier.padding(top = MedicalMateSpace.s8),
+            verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8),
+        ) {
+            Text(
+                text = stringResource(R.string.intake_severity_question, state.bodyPartSubject),
+                style = MedicalMateTheme.typography.headingL,
+                color = MedicalMateTheme.colors.fgDefault,
+            )
+            Text(
+                text = stringResource(R.string.intake_severity_description),
+                style = MedicalMateTheme.typography.bodyM,
+                color = MedicalMateTheme.colors.fgSubtle,
+            )
+        }
         VoiceFocusFrame(focus, IntakeFocusTarget.Severity, MedicalMateRadius.md) {
             MedicalMateSeveritySlider(severity = state.severity, onSeverityChange = onSeverityChange)
         }
@@ -118,148 +109,3 @@ internal fun SeverityStep(
         )
     }
 }
-
-/**
- * 4단계 추가 질문. Figma 1i `489:5606`.
- *
- * 적은 질문이 브리핑 카드 맨 아래에 함께 담긴다. 진료실에서 잊고 못 꺼내는 것을 막는
- * 자리다.
- *
- * **더한 질문이 보이는 자리로 온다**(#228). 입력칸은 위에 있고 적은 질문은 그 아래로 쌓이는데,
- * 키보드가 올라와 있으면 방금 더한 줄이 그 뒤에 선다. 무엇이 들어갔는지 보이지 않으면 같은
- * 질문을 한 번 더 적게 된다.
- *
- * 목록이 늘어난 것만으로는 판단하지 않는다. 화면이 열릴 때 AI 후보가 그 자리에 채워지는데,
- * 그것까지 따라가면 입력칸이 화면 밖으로 밀린다. 누른 뒤의 한 번만 따라간다.
- */
-@Composable
-internal fun QuestionsStep(state: IntakeUiState, callbacks: IntakeCallbacks, modifier: Modifier = Modifier) {
-    val lastQuestion = remember { BringIntoViewRequester() }
-    var added by remember { mutableStateOf(false) }
-
-    LaunchedEffect(state.questions.size) {
-        if (added) {
-            lastQuestion.bringIntoView()
-            added = false
-        }
-    }
-
-    StepContent(step = state.step, modifier = modifier) {
-        Text(
-            text = stringResource(R.string.intake_questions_question),
-            style = MedicalMateTheme.typography.headingL,
-            color = MedicalMateTheme.colors.fgDefault,
-        )
-        Text(
-            text = stringResource(R.string.intake_questions_description),
-            style = MedicalMateTheme.typography.bodyM,
-            color = MedicalMateTheme.colors.fgSubtle,
-        )
-        MedicalMateTextField(
-            value = state.questionDraft,
-            onValueChange = callbacks.onQuestionDraftChange,
-            placeholder = stringResource(R.string.intake_questions_placeholder),
-            // 상한(#264)에 닿으면 왜 더 못 넣는지를 필드 아래에 적는다. 버튼만 꺼 두면 고장으로 읽힌다.
-            helperText =
-            if (state.questionsFull) {
-                stringResource(R.string.intake_questions_full, MAX_BRIEF_CARD_QUESTIONS)
-            } else {
-                null
-            },
-            trailing = {
-                MedicalMateIconButton(
-                    onClick = {
-                        added = true
-                        callbacks.onAddQuestionClick()
-                    },
-                    icon = MedicalMateIcons.Plus,
-                    contentDescription = stringResource(R.string.intake_questions_add),
-                    enabled = state.canAddQuestion,
-                )
-            },
-        )
-        SavedQuestions(state = state, callbacks = callbacks, last = lastQuestion)
-    }
-}
-
-/** 적어 둔 질문 목록. AI 후보도 여기 채워진다. */
-@Composable
-private fun SavedQuestions(state: IntakeUiState, callbacks: IntakeCallbacks, last: BringIntoViewRequester) {
-    if (state.questions.isEmpty()) return
-
-    // 말로 넣거나 고친 질문, 지운 뒤의 목록으로 화면이 옮겨 가고 잠깐 테를 두른다(#284).
-    val focus = rememberVoiceFocus(state.voiceFocus)
-    VoiceFocusFrame(focus, IntakeFocusTarget.Questions, MedicalMateRadius.sm) {
-        MedicalMateSectionHeader(
-            title = stringResource(R.string.intake_questions_saved),
-            caption = stringResource(R.string.intake_questions_count, state.questions.size, MAX_BRIEF_CARD_QUESTIONS),
-        )
-    }
-    Text(
-        text = stringResource(R.string.intake_questions_ai_hint),
-        style = MedicalMateTheme.typography.bodyS,
-        color = MedicalMateTheme.colors.fgSubtle,
-    )
-    state.questions.forEachIndexed { index, question ->
-        VoiceFocusFrame(focus, IntakeFocusTarget.Question(index), MedicalMateRadius.sm) {
-            QuestionRow(
-                number = index + 1,
-                question = question,
-                onRemoveClick = { callbacks.onRemoveQuestionClick(index) },
-                modifier = if (index == state.questions.lastIndex) Modifier.bringIntoViewRequester(last) else Modifier,
-            )
-        }
-    }
-}
-
-/**
- * 적어둔 질문 한 줄.
- *
- * 번호를 원 안에 둔다. 진료실에서 순서대로 꺼내는 목록이라 몇 번째인지가 보여야 한다.
- * 지우기는 아이콘만 두고 접근성 이름에 몇 번째 질문인지 담는다.
- */
-@Composable
-private fun QuestionRow(number: Int, question: String, onRemoveClick: () -> Unit, modifier: Modifier = Modifier) {
-    Row(
-        modifier =
-        modifier
-            .fillMaxWidth()
-            .background(color = MedicalMateTheme.colors.bgPrimaryFaint, shape = MedicalMateRadius.sm)
-            .padding(
-                start = MedicalMateSpace.s12,
-                end = MedicalMateSpace.s4,
-                top = MedicalMateSpace.s4,
-                bottom = MedicalMateSpace.s4,
-            ),
-        horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s10),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier =
-            Modifier
-                .size(QuestionNumberSize)
-                .background(color = MedicalMateTheme.colors.bgPrimary, shape = MedicalMateRadius.full),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = number.toString(),
-                style = MedicalMateTheme.typography.labelS,
-                color = MedicalMateTheme.colors.fgOnPrimary,
-            )
-        }
-        Text(
-            text = question,
-            style = MedicalMateTheme.typography.bodyM,
-            color = MedicalMateTheme.colors.fgDefault,
-            modifier = Modifier.weight(1f),
-        )
-        MedicalMateIconButton(
-            onClick = onRemoveClick,
-            icon = MedicalMateIcons.Close,
-            contentDescription = stringResource(R.string.intake_questions_remove, number),
-        )
-    }
-}
-
-/** 번호 원. Figma 1i의 원이 22다. */
-private val QuestionNumberSize = 22.dp

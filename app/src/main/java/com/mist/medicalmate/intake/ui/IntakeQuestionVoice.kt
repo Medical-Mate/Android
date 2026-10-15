@@ -4,7 +4,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
 import com.mist.medicalmate.core.voice.VoiceWords
 
 /*
- * 증상 정리의 3단계(1d)·4단계(1i)와 정리 완료(1c-5)에서 한 말의 풀이(#284). 부위 풀이는
+ * 증상 정리의 강도(1d)·추천 질문 고르기(1c-D)와 정리 완료(1c-5)에서 한 말의 풀이(#284). 부위 풀이는
  * BodyVoicePick.kt에 있다.
  */
 
@@ -32,9 +32,12 @@ internal fun parseSeverityVoice(text: String): MedicalMateSeverity? {
     }
 }
 
-/** 4단계(1i)에서 한 말. */
+/** 추천 질문 고르기(1c-D)에서 한 말. */
 internal sealed interface QuestionVoice {
     data class Add(val text: String) : QuestionVoice
+
+    /** "첫 번째 질문 담아 줘". 그 줄을 체크한다. @param ordinal 0부터 센다. [VoiceWords.LAST]면 마지막이다. */
+    data class Pick(val ordinal: Int) : QuestionVoice
 
     /** @param ordinal 0부터 센다. [VoiceWords.LAST]면 마지막이다. null이면 [words]로 찾는다. */
     data class Remove(val ordinal: Int?, val words: String) : QuestionVoice
@@ -59,6 +62,8 @@ internal fun parseQuestionVoice(text: String): QuestionVoice? {
         addVerb != null -> QuestionVoice.Add(trimmed.substring(addVerb.range.last + 1).clean())
         editVerb != null && heard.contains(QUESTION) ->
             QuestionVoice.Edit(ordinal, trimmed.substring(editVerb.range.last + 1).clean())
+
+        ordinal != null && PICK.containsMatchIn(trimmed) -> QuestionVoice.Pick(ordinal)
 
         REMOVE.containsMatchIn(trimmed) && heard.contains(QUESTION) ->
             QuestionVoice.Remove(
@@ -118,6 +123,9 @@ private val ADD_PREFIX = Regex("""^(?:질문\s*(?:하나\s*)?(?:추가|더|넣�
 private val EDIT = Regex("""(?:고쳐|바꿔|수정)(?:\s*줘|\s*주세요|할래|할게)?[\s,]*""")
 
 private val REMOVE = Regex("""지워|빼\s*줘|빼|없애|삭제""")
+
+/** 추천 줄을 담는 말. 몇 번째와 함께 올 때만 본다 — "넣어"만으로는 무엇을 넣으라는지 모른다. */
+private val PICK = Regex("""담아|넣어|골라|체크|선택""")
 
 /** 묻는 말의 끝. "되나요", "할까요", "괜찮은지", "뭔가요". */
 private val ASKING = Regex("""(?:나요|까요|가요|는지|은지|인지|래요|죠|니까)\??$|\?$""")

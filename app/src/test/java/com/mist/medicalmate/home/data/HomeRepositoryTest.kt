@@ -182,13 +182,13 @@ class HomeRepositoryTest {
             ),
         )
 
-        assertEquals(IntakeStep.total, 4)
-        assertEquals(2, requireNotNull(snapshot.resume).step.number)
+        assertEquals(3, IntakeStep.total)
+        assertEquals(3, requireNotNull(snapshot.resume).step.number)
     }
 
     @Test
-    fun `한 마디도 answer 안 했으면 부위까지만 답한 것이다`() = runTest {
-        // 세션은 부위를 짚어야 생긴다. 그래서 왕복이 0이어도 1단계는 끝나 있다.
+    fun `한 마디도 답하지 않았어도 3단계에 있다`() = runTest {
+        // 세션은 부위와 강도를 고른 뒤에 생긴다(#310). 왕복이 0이어도 앞의 두 단계는 끝나 있다.
         val snapshot = load(
             HomeResponse(
                 inProgressSession =
@@ -196,7 +196,7 @@ class HomeRepositoryTest {
             ),
         )
 
-        assertEquals(IntakeStep.BODY_PART, requireNotNull(snapshot.resume).step)
+        assertEquals(IntakeStep.SYMPTOM_CHAT, requireNotNull(snapshot.resume).step)
     }
 
     @Test

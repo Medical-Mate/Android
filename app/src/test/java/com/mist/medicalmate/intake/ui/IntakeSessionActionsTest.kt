@@ -7,6 +7,7 @@ import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.intake.data.IntakeSession
 import com.mist.medicalmate.intake.data.IntakeSessionMessage
 import com.mist.medicalmate.intake.data.IntakeSessionStatus
+import com.mist.medicalmate.intake.data.IntakeSeverity
 import com.mist.medicalmate.intake.data.IntakeSide
 import com.mist.medicalmate.intake.data.IntakeTurn
 import com.mist.medicalmate.intake.data.SessionRepository
@@ -24,8 +25,8 @@ import java.io.IOException
 /**
  * 임시저장을 여닫는 부분.
  *
- * 홈의 "이어서 하기"가 [IntakeSessionActions.restore]로 들어오고, 부위를 고르고 다음을
- * 누르면 [IntakeSessionActions.start]가 세션을 연다.
+ * 홈의 "이어서 하기"가 [IntakeSessionActions.restore]로 들어오고, 강도를 고르고 다음을
+ * 누르면 [IntakeSessionActions.start]가 세션을 연다(#310).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class IntakeSessionActionsTest {
@@ -34,17 +35,27 @@ class IntakeSessionActionsTest {
         val repository = RecordingRepository()
         val actions = actions(repository)
 
-        actions.start(BodyMapSelection(anchorId = "ANC:004", zoneId = "SUR:031"), "명치")
+        actions.start(BodyMapSelection(anchorId = "ANC:004", zoneId = "SUR:031"), "명치", SEVERITY)
 
         assertEquals(listOf("SUR:031"), repository.startedCodes)
         assertEquals("명치", repository.startedText)
     }
 
     @Test
+    fun `세션을 열 때 고른 강도를 함께 보낸다`() = runTest {
+        // 강도가 문답 앞으로 왔다(Backend#169).
+        val repository = RecordingRepository()
+
+        actions(repository).start(BodyMapSelection(anchorId = "ANC:002"), "목", IntakeSeverity(5, "견디기 힘들어요"))
+
+        assertEquals(IntakeSeverity(5, "견디기 힘들어요"), repository.startedSeverity)
+    }
+
+    @Test
     fun `구역이 없는 부위는 앵커 코드를 보낸다`() = runTest {
         val repository = RecordingRepository()
 
-        actions(repository).start(BodyMapSelection(anchorId = "ANC:002"), "목")
+        actions(repository).start(BodyMapSelection(anchorId = "ANC:002"), "목", SEVERITY)
 
         assertEquals(listOf("ANC:002"), repository.startedCodes)
     }
@@ -54,7 +65,7 @@ class IntakeSessionActionsTest {
         // 이 id가 임시저장의 열쇠다. 없으면 앱을 나갔다 와도 이어 할 자리가 없다.
         var state = IntakeUiState()
         actions(RecordingRepository(), update = { state = it(state) })
-            .start(BodyMapSelection(anchorId = "ANC:004", zoneId = "SUR:031"), "명치")
+            .start(BodyMapSelection(anchorId = "ANC:004", zoneId = "SUR:031"), "명치", SEVERITY)
 
         assertEquals(7L, state.sessionId)
     }
@@ -65,7 +76,7 @@ class IntakeSessionActionsTest {
         val failing = FixedRepository(ApiResult.NetworkUnavailable(IOException()))
 
         actions(failing, update = { state = it(state) })
-            .start(BodyMapSelection(anchorId = "ANC:004"), "명치")
+            .start(BodyMapSelection(anchorId = "ANC:004"), "명치", SEVERITY)
 
         assertNull(state.sessionId)
         assertEquals(IntakeStep.SYMPTOM_CHAT, state.step)
@@ -101,14 +112,14 @@ class IntakeSessionActionsTest {
     }
 
     @Test
-    fun `강도를 고르고 나갔으면 질문 단계로 돌아간다`() = runTest {
-        // 강도는 3단계에서 4단계로 넘어갈 때 저장한다. 값이 있으면 4단계까지 간 것이다.
+    fun `강도를 고른 문답도 3단계로 돌아간다`() = runTest {
+        // 세션은 강도를 고른 뒤에 생긴다. 강도 단계로 되돌려 다시 고르게 할 이유가 없다.
         var state = IntakeUiState()
         val past = savedSession.copy(status = IntakeSessionStatus.COMPLETED, severityLevel = 4)
 
         actions(FixedRepository(ApiResult.Success(past)), update = { state = it(state) }).restore(7)
 
-        assertEquals(IntakeStep.QUESTIONS, state.step)
+        assertEquals(IntakeStep.SYMPTOM_CHAT, state.step)
     }
 
     @Test
@@ -123,25 +134,30 @@ class IntakeSessionActionsTest {
     }
 
     @Test
-    fun `문답만 끝나고 나갔으면 강도 단계로 돌아간다`() = runTest {
-        var state = IntakeUiState()
-        val ended = savedSession.copy(status = IntakeSessionStatus.COMPLETED)
-
-        actions(FixedRepository(ApiResult.Success(ended)), update = { state = it(state) }).restore(7)
-
-        assertEquals(IntakeStep.SEVERITY, state.step)
-        assertTrue(state.chatFinished)
-    }
-
-    @Test
-    fun `적어 둔 질문이 있어도 그것만으로 단계를 올리지 않는다`() = runTest {
-        // 적어 둔 것이 없어도 AI 후보가 questions 자리에 들어온다. 환자가 그 단계를 봤다는
-        // 증거가 아니다.
+    fun `문답이 끝났으면 추천 질문 고르기로 돌아간다`() = runTest {
+        // 질문 고르기에서 나간 문답이다(Backend#173의 ended).
         var state = IntakeUiState()
 
         actions(FixedRepository(ApiResult.Success(withCandidates)), update = { state = it(state) }).restore(7)
 
         assertEquals(IntakeStep.SYMPTOM_CHAT, state.step)
+        assertTrue(state.chatFinished)
+    }
+
+    @Test
+    fun `추천 줄을 세우고 저장해 둔 것만 체크한다`() = runTest {
+        var state = IntakeUiState()
+
+        actions(FixedRepository(ApiResult.Success(withCandidates)), update = { state = it(state) }).restore(7)
+
+        assertEquals(
+            listOf(
+                IntakeQuestion("검사를 받아야 하나요?", selected = true),
+                IntakeQuestion("진통제 계속 먹어도 되나요?", selected = false),
+                IntakeQuestion("공복으로 가야 하나요?", selected = true, custom = true),
+            ),
+            state.questionRows,
+        )
     }
 
     @Test
@@ -189,26 +205,21 @@ class IntakeSessionActionsTest {
     }
 
     @Test
-    fun `강도를 보내면 응답의 질문 후보가 화면에 온다`() = runTest {
-        // 문답이 끝나면 서버가 AI 후보를 세션에 얹고 모든 응답에 함께 싣는다. 3단계를 지나는
-        // 이 호출이 4단계 직전의 마지막 왕복이다.
-        var state = IntakeUiState()
+    fun `강도를 다시 고르면 그 값만 보낸다`() = runTest {
+        val repository = RecordingRepository()
 
-        actions(FixedRepository(ApiResult.Success(withCandidates)), update = { state = it(state) })
-            .saveSeverity(IntakeUiState(sessionId = 7), label = "꽤 아파요")
+        actions(repository).saveSeverity(IntakeUiState(sessionId = 7), IntakeSeverity(2, "은근히 아파요"))
 
-        assertEquals(listOf("검사를 받아야 하나요?"), state.questions)
+        assertEquals(IntakeSeverity(2, "은근히 아파요"), repository.savedSeverity)
     }
 
     @Test
-    fun `이미 적은 질문은 후보로 덮지 않는다`() = runTest {
-        // 덮으면 환자가 지운 질문이 되살아난다.
-        var state = IntakeUiState(questions = listOf("내가 적은 것"))
+    fun `세션이 없으면 강도를 보내지 않는다`() = runTest {
+        val repository = RecordingRepository()
 
-        actions(FixedRepository(ApiResult.Success(withCandidates)), update = { state = it(state) })
-            .saveSeverity(IntakeUiState(sessionId = 7), label = "꽤 아파요")
+        actions(repository).saveSeverity(IntakeUiState(), IntakeSeverity(2, "은근히 아파요"))
 
-        assertEquals(listOf("내가 적은 것"), state.questions)
+        assertNull(repository.savedSeverity)
     }
 
     private fun TestScope.actions(
@@ -219,10 +230,18 @@ class IntakeSessionActionsTest {
     private class RecordingRepository : SessionRepository {
         var startedCodes: List<String>? = null
         var startedText: String? = null
+        var startedSeverity: IntakeSeverity? = null
+        var savedSeverity: IntakeSeverity? = null
 
-        override suspend fun start(siteCode: String, side: IntakeSide?, siteText: String?): ApiResult<IntakeSession> {
+        override suspend fun start(
+            siteCode: String,
+            side: IntakeSide?,
+            siteText: String?,
+            severity: IntakeSeverity,
+        ): ApiResult<IntakeSession> {
             startedCodes = listOf(siteCode)
             startedText = siteText
+            startedSeverity = severity
             return ApiResult.Success(savedSession)
         }
 
@@ -231,20 +250,24 @@ class IntakeSessionActionsTest {
         override suspend fun send(sessionId: Long, text: String, byVoice: Boolean) =
             ApiResult.Success(IntakeTurn(ended = false, messages = emptyList(), answered = 0, total = 0))
 
-        override suspend fun setSeverity(sessionId: Long, level: Int, label: String) = ApiResult.Success(savedSession)
+        override suspend fun setSeverity(sessionId: Long, severity: IntakeSeverity): ApiResult<IntakeSession> {
+            savedSeverity = severity
+            return ApiResult.Success(savedSession)
+        }
 
         override suspend fun setQuestions(sessionId: Long, questions: List<String>) = ApiResult.Success(savedSession)
     }
 
     private class FixedRepository(private val result: ApiResult<IntakeSession>) : SessionRepository {
-        override suspend fun start(siteCode: String, side: IntakeSide?, siteText: String?) = result
+        override suspend fun start(siteCode: String, side: IntakeSide?, siteText: String?, severity: IntakeSeverity) =
+            result
 
         override suspend fun load(sessionId: Long) = result
 
         override suspend fun send(sessionId: Long, text: String, byVoice: Boolean) =
             ApiResult.Success(IntakeTurn(ended = false, messages = emptyList(), answered = 0, total = 0))
 
-        override suspend fun setSeverity(sessionId: Long, level: Int, label: String) = result
+        override suspend fun setSeverity(sessionId: Long, severity: IntakeSeverity) = result
 
         override suspend fun setQuestions(sessionId: Long, questions: List<String>) = result
     }
@@ -265,7 +288,15 @@ class IntakeSessionActionsTest {
                 ),
             )
 
-        /** 문답이 끝나 후보가 실린 세션. 저장소가 후보를 questions 자리에 넣어 준다. */
-        val withCandidates = savedSession.copy(questions = listOf("검사를 받아야 하나요?"))
+        /** 문답이 끝나 추천이 실린 세션. 추천 하나와 직접 적은 하나를 체크해 저장해 뒀다. */
+        val withCandidates =
+            savedSession.copy(
+                status = IntakeSessionStatus.COMPLETED,
+                severityLevel = 3,
+                questionCandidates = listOf("검사를 받아야 하나요?", "진통제 계속 먹어도 되나요?"),
+                questions = listOf("검사를 받아야 하나요?", "공복으로 가야 하나요?"),
+            )
+
+        val SEVERITY = IntakeSeverity(3, "꽤 아파요")
     }
 }

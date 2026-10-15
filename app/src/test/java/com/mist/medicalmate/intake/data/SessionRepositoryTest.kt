@@ -17,7 +17,8 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class SessionRepositoryTest {
     @Test
-    fun `적어 둔 질문이 없으면 AI 후보를 채운다`() = runTest {
+    fun `AI 추천을 체크해 둔 질문과 따로 담는다`() = runTest {
+        // 이어서 할 때 화면이 추천 줄을 세우고 저장해 둔 것만 체크한다(#310). 섞으면 무엇을 골랐는지 사라진다.
         val session =
             load(
                 SessionResponse(
@@ -32,8 +33,9 @@ class SessionRepositoryTest {
 
         assertEquals(
             listOf("정밀 검사를 받아야 하나요?", "지금 진통제 계속 먹어도 되나요?"),
-            session.questions,
+            session.questionCandidates,
         )
+        assertTrue(session.questions.isEmpty())
     }
 
     @Test
@@ -51,12 +53,12 @@ class SessionRepositoryTest {
                 ),
             )
 
-        assertEquals(listOf("먼저 것", "나중 것"), session.questions)
+        assertEquals(listOf("먼저 것", "나중 것"), session.questionCandidates)
     }
 
     @Test
-    fun `한 번이라도 적었으면 후보로 덮지 않는다`() = runTest {
-        // 덮으면 환자가 지운 질문이 되살아난다.
+    fun `체크해 둔 질문은 추천과 섞지 않는다`() = runTest {
+        // 섞으면 체크를 푼 추천이 되살아난다.
         val session =
             load(
                 SessionResponse(
@@ -67,11 +69,15 @@ class SessionRepositoryTest {
             )
 
         assertEquals(listOf("내가 적은 것"), session.questions)
+        assertEquals(listOf("AI가 고른 것"), session.questionCandidates)
     }
 
     @Test
-    fun `후보도 적어 둔 것도 없으면 비어 있다`() = runTest {
-        assertTrue(load(SessionResponse(sessionId = 1)).questions.isEmpty())
+    fun `추천도 체크해 둔 것도 없으면 비어 있다`() = runTest {
+        val session = load(SessionResponse(sessionId = 1))
+
+        assertTrue(session.questions.isEmpty())
+        assertTrue(session.questionCandidates.isEmpty())
     }
 
     private suspend fun load(response: SessionResponse): IntakeSession {

@@ -30,7 +30,7 @@ internal val BODY_PART_SUGGESTIONS =
         ),
     )
 
-/** 증상 정리 2단계(1c). 말한 것은 모두 답이다. */
+/** 증상 정리 3단계 문답(1c). 말한 것은 모두 답이다. */
 internal val CHAT_SUGGESTIONS =
     listOf(
         VoiceSuggestion(
@@ -50,7 +50,7 @@ internal val CHAT_SUGGESTIONS =
         ),
     )
 
-/** 증상 정리 3단계(1d). */
+/** 증상 정리 2단계(1d). */
 internal val SEVERITY_SUGGESTIONS =
     listOf(
         VoiceSuggestion(
@@ -70,7 +70,7 @@ internal val SEVERITY_SUGGESTIONS =
         ),
     )
 
-/** 증상 정리 4단계(1i). */
+/** 증상 정리 3단계에서 문답이 끝난 뒤의 추천 질문 고르기(1c-D). */
 internal val QUESTIONS_SUGGESTIONS =
     listOf(
         VoiceSuggestion(
@@ -101,10 +101,9 @@ internal val INTAKE_DONE_SUGGESTIONS =
         ),
     )
 
-/** 지금 단계의 추천. 네 단계가 한 목적지라 단계마다 다르다. */
+/** 지금 단계의 추천. 세 단계가 한 목적지라 단계마다 다르다. 문답이 끝나면 질문 고르기 추천이다. */
 internal fun IntakeUiState.voiceSuggestions(): List<VoiceSuggestion> = when (step) {
     IntakeStep.BODY_PART -> BODY_PART_SUGGESTIONS
-    IntakeStep.SYMPTOM_CHAT -> CHAT_SUGGESTIONS
     IntakeStep.SEVERITY -> SEVERITY_SUGGESTIONS
-    IntakeStep.QUESTIONS -> QUESTIONS_SUGGESTIONS
+    IntakeStep.SYMPTOM_CHAT -> if (chatFinished) QUESTIONS_SUGGESTIONS else CHAT_SUGGESTIONS
 }

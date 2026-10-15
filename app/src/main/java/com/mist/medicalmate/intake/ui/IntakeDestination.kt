@@ -24,12 +24,12 @@ import com.mist.medicalmate.core.voice.rememberVoicePrompt
 import kotlinx.serialization.Serializable
 
 /**
- * 와이어프레임 1l·1c·1d·1i. 증상 정리 네 단계가 한 목적지 안에서 넘어간다.
+ * 증상 정리 세 단계(부위 · 1d · 1c)가 한 목적지 안에서 넘어간다(#310).
  *
  * 홈의 "증상 정리 시작하기"와 "이어서 하기"가 이 목적지로 들어온다.
  *
  * @param sessionId 이어서 할 문답. 홈의 `inProgressSession`에서 온다. `null`이면 새로
- *   시작하는 것이고, 부위를 고르고 다음을 누를 때 세션이 만들어진다.
+ *   시작하는 것이고, 강도를 고르고 다음을 누를 때 세션이 만들어진다.
  * @param spoken "오른쪽 어깨가 아파"처럼 증상 정리를 연 말(#284). 그 속의 부위를 바로 고른다.
  */
 @Serializable
@@ -47,7 +47,7 @@ internal data class IntakeDoneDestination(val sessionId: Long? = null)
 /**
  * 그래프 등록.
  *
- * [onCompleted]는 네 단계를 마쳤을 때다. 정리 완료(1c-5)로 간다. 전에는 브리핑 카드로 바로
+ * [onCompleted]는 세 단계를 마쳤을 때다. 정리 완료(1c-5)로 간다. 전에는 브리핑 카드로 바로
  * 갔는데, 시안이 그 사이에 카드와 병원 찾기로 갈리는 화면을 뒀다. [onExit]는 첫 단계에서
  * 뒤로 갈 때다.
  */
@@ -151,9 +151,8 @@ private fun IntakeRoute(
             onMicClick = askMic,
             onTypeInsteadClick = { viewModel.onInputModeChange(IntakeInputMode.TEXT) },
             onSeverityChange = viewModel::onSeverityChange,
-            onQuestionDraftChange = viewModel.question::onDraftChange,
-            onAddQuestionClick = viewModel.question::onAdd,
-            onRemoveQuestionClick = viewModel.question::onRemove,
+            onQuestionToggle = viewModel.question::onToggle,
+            onQuestionAddClick = viewModel.question::onAddClick,
         ),
         modifier = modifier,
     )
@@ -188,7 +187,7 @@ private fun IntakeVoice(state: IntakeUiState, spoken: String?, viewModel: Intake
     val chatting = state.step == IntakeStep.SYMPTOM_CHAT && !state.awaitingReply
     LaunchedEffect(asked?.id, chatting, state.chatFinished) {
         if (asked == null || !chatting) return@LaunchedEffect
-        val next = if (state.chatFinished) R.string.voice_intake_ask_chat_next else R.string.voice_intake_ask_answer
+        val next = if (state.chatFinished) R.string.voice_intake_ask_questions else R.string.voice_intake_ask_answer
         prompt(
             VoicePrompt(
                 message = VoiceText(R.string.voice_intake_ai_says, listOf(asked.text)),
