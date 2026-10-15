@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,8 +31,9 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 /**
  * DESIGN.md의 `Export Preview / Long Image`(`3610:10245`). 1e-1-X 시트의 미리보기 300 높이.
  *
- * `bg/subtle` 면(반경 16) 가운데에 축소 카드(`Card Thumbnail / Long Image`, 160×250)를 두고, 그 오른쪽 아래에
- * `Chip Type=Info`("긴 이미지 1장")를 겹친다. 카드 전체가 긴 이미지 한 장으로 나간다는 것을 모양으로 보이는
+ * `bg/subtle` 면(반경 16) 가운데에 축소 카드(`Card Thumbnail / Long Image`, 160×250)를 두고, 면의 오른쪽 아래
+ * (오른쪽 14 · 아래 12)에 `Chip Type=Info`("긴 이미지 1장")를 둔다. 칩은 축소 카드가 아니라 면에 붙는다 — 화면이
+ * 360보다 넓어 면이 넓어져도 칩은 면 모서리에 남는다. 카드 전체가 긴 이미지 한 장으로 나간다는 것을 모양으로 보이는
  * 그림이다. 제목과 환자 줄만 글이고 나머지는 회색 막대다.
  *
  * 축소 카드의 값(글자 9.492 · 8.136, 막대 폭 131.525 같은 것)은 마스터가 실제 카드를 0.678배로 줄여 그린
@@ -52,13 +52,14 @@ fun MedicalMateExportPreview(title: String, patientLine: String, chipLabel: Stri
             .clearAndSetSemantics { },
         contentAlignment = Alignment.Center,
     ) {
-        Box {
-            CardThumbnail(title = title, patientLine = patientLine)
-            MedicalMateInfoChip(
-                label = chipLabel,
-                modifier = Modifier.offset(x = ThumbnailWidth - ChipInsetX, y = ThumbnailHeight - ChipInsetY),
-            )
-        }
+        CardThumbnail(title = title, patientLine = patientLine)
+        MedicalMateInfoChip(
+            label = chipLabel,
+            modifier =
+            Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = MedicalMateSpace.s14, bottom = MedicalMateSpace.s12),
+        )
     }
 }
 
@@ -153,8 +154,3 @@ private val PreviewHeight = 300.dp
 private val ThumbnailWidth = 160.dp
 
 private val ThumbnailHeight = 250.dp
-
-/** 칩이 축소 카드 오른쪽 아래에 걸치는 자리. 마스터에서 칩의 왼쪽 위가 카드 오른쪽 끝 12 안 · 아래 끝 11 위다. */
-private val ChipInsetX = 12.dp
-
-private val ChipInsetY = 11.dp
