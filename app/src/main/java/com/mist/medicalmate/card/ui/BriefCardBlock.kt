@@ -9,8 +9,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
 import com.mist.medicalmate.R
+import com.mist.medicalmate.core.designsystem.MedicalMateIcons
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateBadge
@@ -20,6 +22,8 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateCalloutEdit
 import com.mist.medicalmate.core.designsystem.component.MedicalMateCard
 import com.mist.medicalmate.core.designsystem.component.MedicalMateDivider
 import com.mist.medicalmate.core.designsystem.component.MedicalMateEditingKvRow
+import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButton
+import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButtonSize
 import com.mist.medicalmate.core.designsystem.component.MedicalMateKvRow
 import com.mist.medicalmate.core.designsystem.component.MedicalMateKvRowType
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNotice
@@ -53,9 +57,10 @@ internal fun BriefCardBlock(
     onItemDeleteClick: ((Int) -> Unit)? = null,
     showAiCaption: Boolean = true,
     maskPatient: Boolean = false,
+    export: BriefCardHeadExport? = null,
 ) {
     MedicalMateCard(modifier = modifier) {
-        CardHead(card = card, maskPatient = maskPatient)
+        CardHead(card = card, maskPatient = maskPatient, export = export)
         MedicalMateDivider()
         items.forEachIndexed { index, item ->
             KvLine(
@@ -123,7 +128,7 @@ private fun kvRowType(item: BriefCardItem, editing: Boolean): MedicalMateKvRowTy
  * 남기면 진입이 두 곳이 된다.
  */
 @Composable
-private fun CardHead(card: BriefCard, maskPatient: Boolean) {
+private fun CardHead(card: BriefCard, maskPatient: Boolean, export: BriefCardHeadExport?) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8),
@@ -133,17 +138,25 @@ private fun CardHead(card: BriefCard, maskPatient: Boolean) {
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4),
         ) {
+            // 시안의 `Title Row`. 제목 · 배지가 붙어 서고 남는 폭 끝에 내보내기(Icon Button S)가 선다(#314).
             Row(
                 horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = card.title,
-                    style = MedicalMateTheme.typography.headingM,
-                    color = MedicalMateTheme.colors.fgDefault,
+                Row(
                     modifier = Modifier.weight(1f),
-                )
-                MedicalMateBadge(label = visitedLabel(card.visited), tone = visitedTone(card.visited))
+                    horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = card.title,
+                        style = MedicalMateTheme.typography.headingM,
+                        color = MedicalMateTheme.colors.fgDefault,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    MedicalMateBadge(label = visitedLabel(card.visited), tone = visitedTone(card.visited))
+                }
+                export?.let { ExportButton(it) }
             }
             Text(
                 // 이미지로 내보낼 때 가리기를 켰으면 가린 줄이다(#306). 찍는 동안만 바뀐다.
@@ -153,6 +166,23 @@ private fun CardHead(card: BriefCard, maskPatient: Boolean) {
             )
         }
     }
+}
+
+/**
+ * 카드 머리의 내보내기. [onClick]이 시트(1e-1-X)를 연다. [hidden]이면 자리는 두고 그리지 않는다 — 이미지로
+ * 찍는 그 한 프레임에 버튼이 함께 찍히지 않게 한다.
+ */
+internal class BriefCardHeadExport(val onClick: () -> Unit, val hidden: Boolean = false)
+
+@Composable
+private fun ExportButton(export: BriefCardHeadExport) {
+    MedicalMateIconButton(
+        onClick = export.onClick,
+        icon = MedicalMateIcons.Export,
+        contentDescription = stringResource(R.string.brief_card_export_open),
+        size = MedicalMateIconButtonSize.S,
+        modifier = Modifier.alpha(if (export.hidden) 0f else 1f),
+    )
 }
 
 /**

@@ -1,5 +1,6 @@
 package com.mist.medicalmate.card.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -11,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
@@ -28,6 +30,7 @@ import com.mist.medicalmate.navigation.NavResult
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
+import java.time.LocalDate
 
 /**
  * 와이어프레임 1e-1. 문답을 마치거나 홈·기록에서 카드를 눌러 들어온다.
@@ -57,12 +60,28 @@ internal data class BriefCardDestination(
     val export: Boolean = false,
 )
 
-internal fun NavGraphBuilder.briefCardDestination(
-    onSaved: () -> Unit,
-    onDeleted: () -> Unit,
-    onHospitalChange: (String) -> Unit,
-    onExit: () -> Unit,
-) {
+/**
+ * 카드에서 나가는 길들(#314).
+ *
+ * [onHome]은 증상 정리에서 막 만든 카드를 저장한 뒤의 뒤로 가기다. 그 아래에는 문답 화면이 쌓여 있어서 그냥
+ * 되돌아가면 끝난 문답이 다시 열린다. 전에는 저장하기가 곧 홈으로 나가기였다.
+ */
+internal class BriefCardRoutes(
+    val onHome: () -> Unit,
+    val onDeleted: () -> Unit,
+    val onHospitalChange: (String) -> Unit,
+    val onExit: () -> Unit,
+    val schedule: BriefCardScheduleRoutes,
+)
+
+/** 하단 버튼 셋이 가는 곳(#314). 일정 추가 · 일자 화면 · 진료 후 기록(1m-12)이다. */
+internal class BriefCardScheduleRoutes(
+    val onScheduleAdd: (cardId: String) -> Unit,
+    val onViewSchedule: (date: LocalDate, appointmentId: String) -> Unit,
+    val onRecordVisit: (cardId: String, cardTitle: String, date: LocalDate, clinic: String?) -> Unit,
+)
+
+internal fun NavGraphBuilder.briefCardDestination(routes: BriefCardRoutes) {
     composable<BriefCardDestination> { entry ->
         val route = entry.toRoute<BriefCardDestination>()
         BriefCardRoute(
@@ -72,10 +91,7 @@ internal fun NavGraphBuilder.briefCardDestination(
             sessionId = route.sessionId,
             hospital = briefCardHospital(route),
             export = route.export,
-            onSaved = onSaved,
-            onDeleted = onDeleted,
-            onHospitalChange = onHospitalChange,
-            onExit = onExit,
+            routes = routes,
         )
     }
 }
@@ -96,10 +112,7 @@ private fun BriefCardRoute(
     sessionId: Long?,
     hospital: BriefCardHospital?,
     export: Boolean,
-    onSaved: () -> Unit,
-    onDeleted: () -> Unit,
-    onHospitalChange: (String) -> Unit,
-    onExit: () -> Unit,
+    routes: BriefCardRoutes,
     modifier: Modifier = Modifier,
     viewModel: BriefCardViewModel = hiltViewModel(),
 ) {
@@ -110,8 +123,18 @@ private fun BriefCardRoute(
     // 병원 `변경`에서 골라 돌아온 값. 엔트리가 살아 있어서 편집 중이던 값이 남는다.
     entry.ConsumeResult(NavResult.HOSPITAL_NAME, NavResult.HOSPITAL_ADDRESS, viewModel::onHospitalPicked)
 
+    // 일정 추가에서 돌아오면 하단이 `진료 일정 보기`로 바뀌어야 한다(#314).
+    LifecycleResumeEffect(Unit) {
+        viewModel.refreshSchedule()
+        onPauseOrDispose {}
+    }
+
     val content = state as? BriefCardUiState.Content
-    BriefCardVoice(content = content, onSave = { viewModel.onSaveClick(onSaved) })
+    BriefCardVoice(content = content, onSave = viewModel::onSaveClick)
+    // 문답에서 막 만든 카드를 저장했으면 뒤로 가기가 홈이다. 아래에 끝난 문답이 쌓여 있다.
+    val toHome = sessionId != null && content?.card?.status == BriefCard.Status.CONFIRMED
+    val exit = if (toHome) routes.onHome else routes.onExit
+    BackHandler(enabled = toHome, onBack = routes.onHome)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     // 갤러리에 저장했는지 알리는 글(#306). 잠깐 띄우고 걷는다.
@@ -128,25 +151,44 @@ private fun BriefCardRoute(
         state = state,
         callbacks =
         BriefCardCallbacks(
-            onBackClick = onExit,
+            onBackClick = exit,
             onEditClick = viewModel::onEditClick,
             onEditDoneClick = viewModel::onEditDoneClick,
             onCancelClick = viewModel::onCancelClick,
             edit = viewModel.editActions,
-            onSaveClick = { viewModel.onSaveClick(onSaved) },
+            onSaveClick = viewModel::onSaveClick,
             onDeleteClick = viewModel::onDeleteClick,
-            onDeleteDismiss = viewModel::onDeleteDismiss,
-            onDeleteConfirm = { viewModel.onDeleteConfirm(onDeleted) },
-            onHospitalChangeClick = { content?.card?.id?.let(onHospitalChange) },
+            onOverlayDismiss = viewModel::onOverlayDismiss,
+            onDeleteConfirm = { viewModel.onDeleteConfirm(routes.onDeleted) },
+            onHospitalChangeClick = { content?.card?.id?.let(routes.onHospitalChange) },
             onRetryClick = { viewModel.open(cardId, sessionId, hospital) },
             onShareClick = { image -> scope.launch { shareBriefCard(context, image) } },
             onSaveImageClick = saveImage,
-        ),
+        ).withSchedule(card = content?.card, routes = routes.schedule, closeSheet = viewModel::onOverlayDismiss),
         modifier = modifier,
         toastMessage = saveResult?.let { stringResource(saveMessage(it)) },
         openExport = export,
     )
 }
+
+/**
+ * 하단 버튼 셋(#314)이 가는 곳을 붙인다. `진료 일정 잡기`는 저장 직후 시트에서도 누르므로 시트를 닫고 간다 —
+ * 돌아왔을 때 다시 떠 있으면 안 된다. 진료 후 기록의 병원은 일정에 적은 것, 없으면 카드의 병원이다.
+ */
+private fun BriefCardCallbacks.withSchedule(
+    card: BriefCard?,
+    routes: BriefCardScheduleRoutes,
+    closeSheet: () -> Unit,
+): BriefCardCallbacks = copy(
+    onScheduleClick = {
+        closeSheet()
+        card?.id?.let(routes.onScheduleAdd)
+    },
+    onViewScheduleClick = { routes.onViewSchedule(it.date, it.id) },
+    onRecordVisitClick = { appointment ->
+        card?.let { routes.onRecordVisit(it.id, it.title, appointment.date, appointment.clinic ?: it.hospital?.name) }
+    },
+)
 
 private fun saveMessage(saved: Boolean): Int =
     if (saved) R.string.brief_card_export_saved else R.string.brief_card_export_save_failed

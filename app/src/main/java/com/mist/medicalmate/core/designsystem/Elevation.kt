@@ -110,6 +110,11 @@ object MedicalMateEffects {
     val floatWide: Shadow = Shadow(radius = 14.dp, color = Color(0x171B255A), offset = DpOffset(0.dp, 4.dp))
 
     val floatTight: Shadow = Shadow(radius = 3.dp, color = Color(0x0F1B255A), offset = DpOffset(0.dp, 1.dp))
+
+    /** `Elevation/Card`의 두 겹. 내보내기 미리보기의 축소 카드(`Card Thumbnail / Long Image`)가 쓴다. */
+    val cardWide: Shadow = Shadow(radius = 10.dp, color = Color(0x141B255A), offset = DpOffset(0.dp, 3.dp))
+
+    val cardTight: Shadow = Shadow(radius = 2.dp, color = Color(0x0D1B255A), offset = DpOffset(0.dp, 1.dp))
 }
 
 /** 아래로 [y]만큼 내리고 [blur]만큼 흐린 한 겹. 글자·아이콘처럼 모양을 따라가는 그림자에 쓴다. */

@@ -65,6 +65,9 @@ object MedicalMateIcons {
     // 액션
     val Edit = R.drawable.ic_edit
     val Share = R.drawable.ic_share
+
+    /** 이미지로 저장 · 공유. 브리핑 카드 머리의 내보내기다(4.0, `3434:3096`). 예약 문자 안내의 공유는 [Share]다. */
+    val Export = R.drawable.ic_export
     val Copy = R.drawable.ic_copy
     val Trash = R.drawable.ic_trash
     val Search = R.drawable.ic_search

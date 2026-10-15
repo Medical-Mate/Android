@@ -218,25 +218,36 @@ fun MedicalMateToggle(
             style = MedicalMateTheme.typography.bodyL,
             color = if (enabled) colors.fgDefault else colors.fgDisabled,
         )
-        Switch(
-            checked = checked,
-            // 행이 toggleable을 갖고 있어 스위치 자체는 눌리지 않게 둔다.
-            // 둘 다 반응하면 한 번 눌렀는데 두 번 바뀔 수 있다.
-            onCheckedChange = null,
-            enabled = enabled,
-            colors =
-            SwitchDefaults.colors(
-                checkedThumbColor = colors.fgOnPrimary,
-                checkedTrackColor = colors.bgPrimary,
-                // 꺼진 트랙은 `border/strong`을 면으로 쓴다. Figma의 Toggle 마스터가 쓰는
-                // 토큰이 흰색·`border/strong`·`bg/primary` 셋뿐이다. 옅은 면에 테두리를
-                // 두르면 꺼진 것과 비활성이 구분되지 않는다.
-                uncheckedThumbColor = colors.bgSurface,
-                uncheckedTrackColor = colors.borderStrong,
-                uncheckedBorderColor = colors.borderStrong,
-            ),
-        )
+        MedicalMateSwitch(checked = checked, enabled = enabled)
     }
+}
+
+/**
+ * `Toggle` 마스터(`334:1155`)의 스위치 하나. 52×32다. 마스터가 라벨을 컴포넌트 밖에 두라고 해서, 시안마다
+ * 라벨 글자와 행 높이가 다른 자리(1e-1-X의 `Body/M` 줄)는 행을 직접 짜고 이것만 얹는다.
+ *
+ * 스위치 자체는 눌리지 않는다. 행이 `toggleable`을 갖는다 — 둘 다 반응하면 한 번 눌렀는데 두 번 바뀔 수 있다.
+ */
+@Composable
+fun MedicalMateSwitch(checked: Boolean, modifier: Modifier = Modifier, enabled: Boolean = true) {
+    val colors = MedicalMateTheme.colors
+    Switch(
+        checked = checked,
+        onCheckedChange = null,
+        enabled = enabled,
+        modifier = modifier,
+        colors =
+        SwitchDefaults.colors(
+            checkedThumbColor = colors.fgOnPrimary,
+            checkedTrackColor = colors.bgPrimary,
+            // 꺼진 트랙은 `border/strong`을 면으로 쓴다. Figma의 Toggle 마스터가 쓰는
+            // 토큰이 흰색·`border/strong`·`bg/primary` 셋뿐이다. 옅은 면에 테두리를
+            // 두르면 꺼진 것과 비활성이 구분되지 않는다.
+            uncheckedThumbColor = colors.bgSurface,
+            uncheckedTrackColor = colors.borderStrong,
+            uncheckedBorderColor = colors.borderStrong,
+        ),
+    )
 }
 
 /** 문서의 Checkbox·Radio 행 높이 54. */

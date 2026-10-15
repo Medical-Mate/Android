@@ -33,7 +33,11 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateStepRow
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ScheduleAddGuideSheet(onDismissRequest: () -> Unit) {
-    MedicalMateBottomSheet(onDismissRequest = onDismissRequest, grabberGap = MedicalMateSpace.s14) {
+    MedicalMateBottomSheet(
+        onDismissRequest = onDismissRequest,
+        grabberGap = MedicalMateSpace.s14,
+        grabberColor = MedicalMateTheme.colors.borderSubtle,
+    ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Column(verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4)) {
                 Text(

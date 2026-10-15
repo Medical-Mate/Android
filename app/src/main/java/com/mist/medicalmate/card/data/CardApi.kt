@@ -117,6 +117,19 @@ internal data class CardResponse(
      * 안 골랐으면 없다 — 1m-B에 건너뛰기가 있어서 정상 상태다.
      */
     val clinic: ClinicResponse? = null,
+    /**
+     * 이 카드로 잡은 일정. 안 지난 것 중 가장 가까운 것, 다 지났으면 가장 최근 것이다(홈이 읽는 같은 값).
+     * 없으면 일정을 잡지 않은 카드다. 하단 버튼이 이 값으로 갈린다(#314).
+     */
+    val appointment: CardAppointmentResponse? = null,
+)
+
+/** 카드에 잡힌 일정. [scheduledOn]은 `yyyy-MM-dd`다. */
+@Serializable
+internal data class CardAppointmentResponse(
+    val appointmentId: Long,
+    val scheduledOn: String,
+    val clinicName: String? = null,
 )
 
 /** 병원 이름과 주소. */

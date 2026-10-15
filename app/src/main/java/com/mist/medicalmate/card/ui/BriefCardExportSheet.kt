@@ -3,8 +3,12 @@ package com.mist.medicalmate.card.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
@@ -27,61 +32,90 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateBottomSheet
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonType
+import com.mist.medicalmate.core.designsystem.component.MedicalMateExportPreview
+import com.mist.medicalmate.core.designsystem.component.MedicalMateSwitch
 import com.mist.medicalmate.core.designsystem.component.MedicalMateToast
-import com.mist.medicalmate.core.designsystem.component.MedicalMateToggle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 /**
- * 상단 바의 `공유`를 누르면 뜨는 시트(#306). 카드 전체를 이미지로 갤러리에 저장하거나 다른 앱으로 보낸다.
+ * 카드 머리의 내보내기를 누르면 뜨는 시트. Figma 1e-1-X `3663:7463`(#306 · #314).
+ *
+ * 그래버 아래 14 · 제목 · 4 · 설명 · 16 · 미리보기(300) · 8 · 가리기 줄 · 8 · `이미지 저장`(Primary) · 8 ·
+ * `공유하기`(Outline)다. 시트 본체의 자식 간격 12를 받지 않도록 한 묶음으로 둔다.
  *
  * **이름·나이를 가릴지 고른다.** 켜면 내보내는 이미지의 환자 줄에서 이름은 성만 남고 나이가 빠진다. 화면의
- * 카드는 그대로다. 카드를 남에게 보이거나 갤러리에 남길 때 고르는 것이라 저장과 공유에 함께 걸린다.
+ * 카드는 그대로이고 미리보기의 환자 줄만 함께 바뀐다. 저장과 공유에 함께 걸린다.
  *
- * 디자인 트랙의 시트가 오기 전이라 있는 컴포넌트로만 짰다. 시안이 오면 모양을 맞춘다.
+ * 가리기 줄은 `Toggle` 마스터가 라벨을 밖에 두라고 해서 직접 짠다 — `Body/M` 글자와 위아래 8이다.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun BriefCardExportSheet(
     export: BriefCardExport,
+    card: BriefCard?,
     onSave: (ImageBitmap) -> Unit,
     onShare: (ImageBitmap) -> Unit,
 ) {
-    if (!export.opened) return
-    MedicalMateBottomSheet(onDismissRequest = export::close) {
-        Column(
-            modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(
-                    start = MedicalMateSize.gutter,
-                    end = MedicalMateSize.gutter,
-                    bottom = MedicalMateSpace.s20,
-                ),
-            verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12),
-        ) {
-            Text(
-                text = stringResource(R.string.brief_card_export_title),
-                style = MedicalMateTheme.typography.headingM,
-                color = MedicalMateTheme.colors.fgDefault,
+    if (!export.opened || card == null) return
+    MedicalMateBottomSheet(onDismissRequest = export::close, grabberGap = MedicalMateSpace.s14) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            SheetHead(
+                title = stringResource(R.string.brief_card_export_title),
+                body = stringResource(R.string.brief_card_export_body),
             )
-            MedicalMateToggle(
-                checked = export.maskPatient,
-                onCheckedChange = { export.maskPatient = it },
-                label = stringResource(R.string.brief_card_export_mask),
+            Spacer(modifier = Modifier.height(MedicalMateSpace.s16))
+            MedicalMateExportPreview(
+                title = card.title,
+                patientLine = if (export.maskPatient) card.maskedPatientLine else card.patientLine,
+                chipLabel = stringResource(R.string.brief_card_export_chip),
             )
+            Spacer(modifier = Modifier.height(MedicalMateSpace.s8))
+            MaskRow(checked = export.maskPatient, onCheckedChange = { export.maskPatient = it })
+            Spacer(modifier = Modifier.height(MedicalMateSpace.s8))
             MedicalMateButton(
                 onClick = { export.send(onSave) },
                 label = stringResource(R.string.brief_card_export_save),
                 modifier = Modifier.fillMaxWidth(),
-                type = MedicalMateButtonType.TONAL,
             )
+            Spacer(modifier = Modifier.height(MedicalMateSpace.s8))
             MedicalMateButton(
                 onClick = { export.send(onShare) },
                 label = stringResource(R.string.brief_card_export_share),
                 modifier = Modifier.fillMaxWidth(),
+                type = MedicalMateButtonType.OUTLINE,
             )
         }
+    }
+}
+
+/** 10-15 시트 머리. `Heading/M` 제목 아래 4 띄워 `Body/M` `fg/subtle` 설명이다. 1e-1-S도 같다. */
+@Composable
+internal fun SheetHead(title: String, body: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4)) {
+        Text(text = title, style = MedicalMateTheme.typography.headingM, color = MedicalMateTheme.colors.fgDefault)
+        Text(text = body, style = MedicalMateTheme.typography.bodyM, color = MedicalMateTheme.colors.fgSubtle)
+    }
+}
+
+/** 이름·나이 가리기 줄. 줄 전체가 스위치다. */
+@Composable
+private fun MaskRow(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        modifier =
+        Modifier
+            .fillMaxWidth()
+            .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange)
+            .padding(vertical = MedicalMateSpace.s8),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.brief_card_export_mask),
+            style = MedicalMateTheme.typography.bodyM,
+            color = MedicalMateTheme.colors.fgDefault,
+        )
+        MedicalMateSwitch(checked = checked)
     }
 }
 
@@ -104,8 +138,11 @@ internal class BriefCardExport(private val layer: GraphicsLayer, private val sco
     /** 찍는 동안만 켠다. 카드가 이 값으로 환자 줄을 고른다. */
     private var capturingMasked by mutableStateOf(false)
 
+    /** 찍는 동안인지. 카드 머리의 내보내기 버튼이 이미지에 찍히지 않게 그 한 프레임만 감춘다(#314). */
+    private var capturing by mutableStateOf(false)
+
     /** 카드 본문이 그려 넣을 층과, 지금 가린 줄로 그리는 중인지. */
-    val capture: BriefCardCapture get() = BriefCardCapture(layer, capturingMasked)
+    val capture: BriefCardCapture get() = BriefCardCapture(layer, capturingMasked, capturing)
 
     fun open() {
         opened = true
@@ -119,11 +156,13 @@ internal class BriefCardExport(private val layer: GraphicsLayer, private val sco
     fun send(to: (ImageBitmap) -> Unit) {
         scope.launch {
             capturingMasked = maskPatient
+            capturing = true
             // 바꾼 줄이 그려져 층에 다시 담길 때까지 두 프레임을 기다린다.
             withFrameNanos {}
             withFrameNanos {}
             val image = layer.toImageBitmap()
             capturingMasked = false
+            capturing = false
             opened = false
             to(image)
         }
@@ -131,7 +170,7 @@ internal class BriefCardExport(private val layer: GraphicsLayer, private val sco
 }
 
 /** 내보낼 때 찍을 층과, 지금 가린 줄로 그리는 중인지. */
-internal class BriefCardCapture(val layer: GraphicsLayer, val maskPatient: Boolean)
+internal class BriefCardCapture(val layer: GraphicsLayer, val maskPatient: Boolean, val capturing: Boolean = false)
 
 @Composable
 internal fun rememberBriefCardExport(layer: GraphicsLayer): BriefCardExport {

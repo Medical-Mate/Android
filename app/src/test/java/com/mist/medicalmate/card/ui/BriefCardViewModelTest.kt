@@ -196,7 +196,7 @@ class BriefCardViewModelTest {
         val viewModel = editing()
         viewModel.onDeleteClick()
 
-        viewModel.onDeleteDismiss()
+        viewModel.onOverlayDismiss()
 
         val content = viewModel.content()
         assertFalse(content.deleteRequested)
@@ -395,7 +395,7 @@ class BriefCardViewModelTest {
         val viewModel = BriefCardViewModel(repository)
         viewModel.open(1)
 
-        viewModel.onSaveClick(onSaved = {})
+        viewModel.onSaveClick()
 
         val content = viewModel.uiState.value as BriefCardUiState.Content
         assertEquals(BriefCard.Status.CONFIRMED, content.card.status)
@@ -408,12 +408,10 @@ class BriefCardViewModelTest {
         val repository = FakeCardRepository()
         val viewModel = BriefCardViewModel(repository)
         viewModel.open(1)
-        var left = false
 
-        viewModel.onSaveClick(onSaved = { left = true })
+        viewModel.onSaveClick()
 
         assertEquals(1L, repository.confirmedId)
-        assertTrue(left)
     }
 
     @Test
@@ -422,28 +420,25 @@ class BriefCardViewModelTest {
         val repository = FakeCardRepository(card = testCard.copy(status = BriefCard.Status.CONFIRMED))
         val viewModel = BriefCardViewModel(repository)
         viewModel.open(1)
-        var left = false
 
-        viewModel.onSaveClick(onSaved = { left = true })
+        viewModel.onSaveClick()
 
         assertNull(repository.confirmedId)
-        assertTrue(left)
     }
 
     @Test
-    fun `확정이 거절되면 화면을 나가지 않고 알린다`() {
-        // 나가 버리면 저장되지 않은 것을 저장된 것으로 알게 된다.
+    fun `확정이 거절되면 알리고 일정 시트를 띄우지 않는다`() {
+        // 저장되지 않은 카드에 일정을 잡으라고 하면 저장된 것으로 알게 된다.
         val repository = FakeCardRepository()
         repository.confirmFails = true
         val viewModel = BriefCardViewModel(repository)
         viewModel.open(1)
-        var left = false
 
-        viewModel.onSaveClick(onSaved = { left = true })
+        viewModel.onSaveClick()
 
         val content = viewModel.uiState.value as BriefCardUiState.Content
         assertTrue(content.saveFailed)
-        assertFalse(left)
+        assertFalse(content.scheduleSheet)
     }
 
     private fun editing(): BriefCardViewModel {
@@ -607,7 +602,8 @@ class BriefCardDeleteTest {
 }
 
 internal class FakeCardRepository(
-    private val card: BriefCard = testCard,
+    /** 다시 읽을 때 바뀐 값을 줘야 하는 시험이 있다(#314). */
+    var card: BriefCard = testCard,
     private val result: ApiResult<BriefCard>? = null,
     /** 고치면 서버가 내주는 새 버전. 확정한 카드를 고칠 때의 모양이다. */
     private val nextVersion: BriefCard? = null,

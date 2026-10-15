@@ -246,9 +246,17 @@
     <string name="brief_card_status_confirmed">진료 완료</string>
     <!-- Nav 우측 액션. 문서의 CRUD 규칙이 한 자리에서 이름만 바꾼다. -->
     <string name="brief_card_edit">편집</string>
-    <string name="brief_card_share">공유</string>
     <string name="brief_card_share_chooser">브리핑 카드 공유</string>
-    <string name="brief_card_export_title">브리핑 카드 내보내기</string>
+    <string name="brief_card_export_title">카드를 이미지로 내보내요</string>
+    <string name="brief_card_export_body">카드 전체가 긴 이미지 한 장으로 만들어져요.</string>
+    <string name="brief_card_export_chip">긴 이미지 1장</string>
+    <string name="brief_card_export_open">이미지로 내보내기</string>
+    <string name="brief_card_schedule">진료 일정 잡기</string>
+    <string name="brief_card_view_schedule">진료 일정 보기</string>
+    <string name="brief_card_record_visit">진료 후 기록하기</string>
+    <string name="brief_card_schedule_sheet_title">진료 날짜가 정해졌나요?</string>
+    <string name="brief_card_schedule_sheet_body">일정에 넣어두면 진료 전과 진료 뒤에 알려드려요.</string>
+    <string name="brief_card_schedule_sheet_later">아직 안 정했어요</string>
     <string name="brief_card_export_mask">이름·나이 가리기</string>
     <string name="brief_card_export_save">이미지 저장</string>
     <string name="brief_card_export_share">공유하기</string>

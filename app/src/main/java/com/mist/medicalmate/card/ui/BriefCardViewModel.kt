@@ -105,7 +105,7 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
 
         viewModelScope.launch {
             when (
-                val result = patch(
+                val result = repository.patch(
                     cardId,
                     axes = emptyList(),
                     questions = state.card.questions,
@@ -119,27 +119,6 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
                     mutableUiState.value = state.copy(saveFailed = true)
             }
         }
-    }
-
-    /**
-     * 카드를 고친다. 서버가 "이미 고친 카드"라고 막으면 최신 카드로 갈아타고 한 번만 다시
-     * 보낸다(Backend#117).
-     *
-     * 옛 id를 들고 있을 길은 #219에서 막았다. 그래도 못 찾은 경로가 남아 있으면 여기서
-     * 드러나고, 조용히 버전이 가지를 치는 대신 고친 값이 최신 카드에 얹힌다.
-     *
-     * 한 번만 따라간다. 두 번째도 막히면 그대로 실패로 알린다 — 계속 따라가면 어디서 멈출지
-     * 알 수 없고, 그 사이에 다른 사람이 고치고 있는 것이라면 덮어쓰기를 반복하게 된다.
-     */
-    private suspend fun patch(
-        cardId: Long,
-        axes: List<AxisEdit>,
-        questions: List<String>,
-        clinic: BriefCardHospital? = null,
-    ): ApiResult<BriefCard> {
-        val first = repository.update(cardId, axes, questions, clinic)
-        val latest = (first as? ApiResult.Rejected)?.latestCardId() ?: return first
-        return repository.update(latest, axes, questions, clinic)
     }
 
     /** Nav 우측 `편집`. 카드 안의 모든 값을 한 번에 연다. */
@@ -168,7 +147,7 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
         if (draft == null || cardId == null) return
 
         viewModelScope.launch {
-            when (val result = patch(cardId, state.changedAxes(), draft.questions)) {
+            when (val result = repository.patch(cardId, state.changedAxes(), draft.questions)) {
                 is ApiResult.Success ->
                     mutableUiState.value =
                         BriefCardUiState.Content(
@@ -198,24 +177,21 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
      *
      * 이미 확정한 카드는 다시 부르지 않는다. 두 번 확정하면 400이다.
      *
-     * [onSaved]는 화면 이동이다. 확정에 실패하면 부르지 않는다 — 나가 버리면 저장되지 않은
-     * 것을 저장된 것으로 알게 된다.
+     * **저장해도 화면을 나가지 않는다**(#314). 시안 1e-1-S가 저장한 카드 위에 "진료 날짜가 정해졌나요?" 시트를
+     * 띄운다. 그 카드로 잡은 일정이 이미 있으면 띄우지 않는다. 확정에 실패하면 하단에 이유를 적는다.
      */
-    fun onSaveClick(onSaved: () -> Unit) {
+    fun onSaveClick() {
         val state = mutableUiState.value as? BriefCardUiState.Content ?: return
-        // 확정할 것이 없으면 나가기만 한다. 이미 확정했거나 부를 수 없는 id다.
-        val cardId = state.card.id.toLongOrNull()?.takeIf { state.card.status != BriefCard.Status.CONFIRMED }
-        if (cardId == null) {
-            onSaved()
-            return
-        }
+        // 이미 확정했거나 부를 수 없는 id면 할 일이 없다.
+        val cardId =
+            state.card.id.toLongOrNull()?.takeIf { state.card.status != BriefCard.Status.CONFIRMED } ?: return
 
         viewModelScope.launch {
             when (val result = repository.confirm(cardId)) {
                 is ApiResult.Success -> {
+                    val card = result.value.copy(hospital = state.card.hospital)
                     mutableUiState.value =
-                        BriefCardUiState.Content(card = result.value.copy(hospital = state.card.hospital))
-                    onSaved()
+                        BriefCardUiState.Content(card = card, scheduleSheet = card.appointment == null)
                 }
 
                 is ApiResult.Rejected, is ApiResult.NetworkUnavailable ->
@@ -242,9 +218,36 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
         }
     }
 
-    fun onDeleteDismiss() {
+    /** 떠 있는 것을 닫는다. 삭제 확인 대화상자와 저장 직후 일정 시트(1e-1-S)는 함께 뜨지 않는다. */
+    fun onOverlayDismiss() {
         mutableUiState.update { state ->
-            if (state !is BriefCardUiState.Content) state else state.copy(deleteRequested = false)
+            if (state !is BriefCardUiState.Content) {
+                state
+            } else {
+                state.copy(
+                    deleteRequested = false,
+                    scheduleSheet = false,
+                )
+            }
+        }
+    }
+
+    /**
+     * 화면에 돌아왔을 때 그 카드로 잡은 일정만 다시 읽는다(#314). 하단의 "진료 일정 잡기"로 일정을 잡고 오면
+     * "진료 일정 보기"로 바뀌어야 한다. 고치는 중이면 건드리지 않고, 못 읽으면 그대로 둔다.
+     */
+    fun refreshSchedule() {
+        val state = mutableUiState.value as? BriefCardUiState.Content ?: return
+        val cardId = state.card.id.toLongOrNull()?.takeIf { !state.editing } ?: return
+        viewModelScope.launch {
+            val fresh = (repository.card(cardId) as? ApiResult.Success)?.value ?: return@launch
+            mutableUiState.update { current ->
+                if (current !is BriefCardUiState.Content || current.card.id != state.card.id) {
+                    current
+                } else {
+                    current.copy(card = current.card.copy(appointment = fresh.appointment))
+                }
+            }
         }
     }
 
@@ -272,4 +275,25 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
             if (repository.delete(cardId) is ApiResult.Success) onDeleted()
         }
     }
+}
+
+/**
+ * 카드를 고친다. 서버가 "이미 고친 카드"라고 막으면 최신 카드로 갈아타고 한 번만 다시
+ * 보낸다(Backend#117).
+ *
+ * 옛 id를 들고 있을 길은 #219에서 막았다. 그래도 못 찾은 경로가 남아 있으면 여기서
+ * 드러나고, 조용히 버전이 가지를 치는 대신 고친 값이 최신 카드에 얹힌다.
+ *
+ * 한 번만 따라간다. 두 번째도 막히면 그대로 실패로 알린다 — 계속 따라가면 어디서 멈출지
+ * 알 수 없고, 그 사이에 다른 사람이 고치고 있는 것이라면 덮어쓰기를 반복하게 된다.
+ */
+private suspend fun CardRepository.patch(
+    cardId: Long,
+    axes: List<AxisEdit>,
+    questions: List<String>,
+    clinic: BriefCardHospital? = null,
+): ApiResult<BriefCard> {
+    val first = update(cardId, axes, questions, clinic)
+    val latest = (first as? ApiResult.Rejected)?.latestCardId() ?: return first
+    return update(latest, axes, questions, clinic)
 }
