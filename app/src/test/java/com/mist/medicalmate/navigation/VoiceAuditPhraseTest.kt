@@ -7,8 +7,14 @@ import com.mist.medicalmate.card.ui.parseBriefCardVoice
 import com.mist.medicalmate.core.voice.VoiceDate
 import com.mist.medicalmate.core.voice.VoiceScroll
 import com.mist.medicalmate.core.voice.VoiceWords
+import com.mist.medicalmate.core.voice.parseVoiceClock
 import com.mist.medicalmate.core.voice.parseVoiceDate
 import com.mist.medicalmate.core.voice.parseVoiceScroll
+import com.mist.medicalmate.home.ui.HomeVoice
+import com.mist.medicalmate.home.ui.parseHomeVoice
+import com.mist.medicalmate.profile.ui.AppSetting
+import com.mist.medicalmate.profile.ui.ProfileVoice
+import com.mist.medicalmate.profile.ui.parseProfileVoice
 import com.mist.medicalmate.visit.ui.HospitalPickVoice
 import com.mist.medicalmate.visit.ui.NoteVoice
 import com.mist.medicalmate.visit.ui.RecordVoice
@@ -25,6 +31,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.YearMonth
 
 /**
@@ -133,5 +140,42 @@ class VoiceAuditPhraseTest {
         assertEquals(BriefCardVoiceAction.RECORD_VISIT, parseBriefCardVoice("진료 후 기록할래"))
         assertEquals(BriefCardVoiceAction.LATER, parseBriefCardVoice("아직 안 정했어요"))
         assertEquals(BriefCardVoiceAction.SAVE, parseBriefCardVoice("저장해 줘"))
+    }
+
+    @Test
+    fun `내 정보에서 알림을 켜고 끄고 알림 시간과 건강 정보를 연다`() {
+        assertEquals(
+            ProfileVoice.Toggle(listOf(AppSetting.RECORD_REMINDER), false),
+            parseProfileVoice("진료 후 기록 알림 꺼 줘"),
+        )
+        assertEquals(ProfileVoice.Toggle(listOf(AppSetting.VISIT_REMINDER), true), parseProfileVoice("진료 전 알림 켜"))
+        assertEquals(
+            ProfileVoice.Toggle(listOf(AppSetting.VISIT_REMINDER, AppSetting.RECORD_REMINDER), false),
+            parseProfileVoice("알림 다 꺼 줘"),
+        )
+        assertEquals(ProfileVoice.ReminderTime, parseProfileVoice("알림 시간 바꿀래"))
+        assertEquals(ProfileVoice.ReminderTime, parseProfileVoice("알림 8시로 바꿔 줘"))
+        assertEquals(ProfileVoice.HealthEdit, parseProfileVoice("먹는 약 바꿀래"))
+        assertEquals(ProfileVoice.ByHand, parseProfileVoice("로그아웃 해 줘"))
+        assertNull(parseProfileVoice("알림 설정"))
+    }
+
+    @Test
+    fun `알림 시각을 숫자와 우리말 수로 읽는다`() {
+        assertEquals(LocalTime.of(20, 0), parseVoiceClock("오후 8시로 해 줘"))
+        assertEquals(LocalTime.of(20, 0), parseVoiceClock("여덟 시"))
+        assertEquals(LocalTime.of(19, 30), parseVoiceClock("저녁 일곱 시 반"))
+        assertEquals(LocalTime.of(9, 0), parseVoiceClock("아침 9시"))
+        assertEquals(LocalTime.of(21, 30), parseVoiceClock("9시 삼십 분"))
+    }
+
+    @Test
+    fun `홈에서 이어 하기와 다음 진료와 배너 링크를 말로 부른다`() {
+        assertEquals(HomeVoice.RESUME, parseHomeVoice("이어서 할래"))
+        assertEquals(HomeVoice.NEXT_VISIT, parseHomeVoice("다음 진료 언제야"))
+        assertEquals(HomeVoice.TOMORROW_CARD, parseHomeVoice("내일 가져갈 카드 보여 줘"))
+        assertEquals(HomeVoice.EXPORT_CARD, parseHomeVoice("카드 이미지로 저장해 줘"))
+        assertEquals(HomeVoice.MESSAGE_GUIDE, parseHomeVoice("예약 문자로 일정 넣는 방법"))
+        assertNull(parseHomeVoice("캘린더 보여 줘"))
     }
 }
