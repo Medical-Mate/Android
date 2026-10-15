@@ -48,6 +48,8 @@ data class IntakeUiState(
     val bodyMap: BodyMapUiState = BodyMapUiState(),
     val messages: List<IntakeMessage> = emptyList(),
     val draft: String = "",
+    /** 음성을 켜기 전에 손으로 적어 둔 글(#318). 받아쓰는 동안 입력칸은 이 글을 보이고, 패널이 닫히면 이 글로 돌아간다. */
+    val typedBefore: String = "",
     val inputMode: IntakeInputMode = IntakeInputMode.TEXT,
     val voice: MedicalMateVoiceState = MedicalMateVoiceState.IDLE,
     /**

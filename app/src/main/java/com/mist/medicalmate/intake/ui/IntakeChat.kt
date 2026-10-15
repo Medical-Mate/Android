@@ -1,6 +1,7 @@
 package com.mist.medicalmate.intake.ui
 
 import android.provider.Settings
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.StartOffset
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -50,6 +51,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButtonStyle
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTextField
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceInputMate
+import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
 import com.mist.medicalmate.core.voice.rememberVoiceLazyListState
 import com.mist.medicalmate.core.voice.voicePanelInset
 
@@ -230,10 +232,15 @@ private fun TypingRow() {
 /**
  * 하단 입력. 시안 1c-2 · 1c-3의 `Text Field` 하나이고, 안쪽 오른쪽에 마이크와 보내기가 선다.
  *
- * **받아쓰는 중에는 입력칸 위에 `Voice Input · Mate` 카드가 선다**(#318). 시안에 문답의 듣는 중 화면이 없어 진료 후
- * 메모(1p-T)와 같은 카드를 쓴다(사용자 결정). 입력칸은 그대로 남는다 — 마이크를 한 번 더 누르거나 카드를 누르면
- * 듣기를 끝내고, 입력칸을 누르면 받아쓰기를 끝내고 손으로 적는다. 조용한 곳이 아니거나 목소리가 잘 안 나오는
- * 환자에게 음성만 남기면 앱을 쓸 수 없다.
+ * **받아쓰는 중에는 입력칸 위에 `Voice Input · Mate` 카드가 선다**(#318, 시안 1c-2 음성 입력 `3663:7181`). 카드 아래
+ * 끝과 입력칸 사이는 28이다 — 시안이 카드를 Content 아래 16에 띄우고 Footer가 위 12를 둔다. 받아쓴 말은 입력칸에
+ * 적지 않고(사용자 결정) 대화에 미리 세운다. 입력칸은 음성을 켜기 전에 적어 둔 글을 그대로 보이고, 누르면 받아쓰기를
+ * 끝내고 손으로 적는다. 글은 "말씀해 주세요" · "듣고 있어요"로 고정이다 — 말이 들려도 바뀌지 않고, 들리는지는
+ * 파형의 움직임이 보인다.
+ *
+ * **기기 뒤로 가기는 받아쓰기를 끈다**(#318). 카드가 떠 있을 때 뒤로 가면 화면을 나가지 않고 입력칸으로 돌아온다.
+ * 카드가 없을 때만 원래대로 뒤로 간다. 말이 1초 끊기면 보내고, 듣기 시작하고 5초 동안 아무 말이 없으면 카드가
+ * 닫힌다([IntakeVoiceActions]).
  *
  * 빈 칸에 질문을 적을 때도 이 입력이다(1c-D2 · D3). 열리면 입력칸으로 바로 옮겨 키보드를 올린다. 시안의 그
  * 입력칸에는 안내 글이 없다.
@@ -242,29 +249,47 @@ private fun TypingRow() {
 internal fun ChatInput(state: IntakeUiState, callbacks: IntakeCallbacks) {
     val field = remember { FocusRequester() }
     val listening = state.inputMode == IntakeInputMode.VOICE
+    BackHandler(enabled = listening, onBack = callbacks.onTypeInsteadClick)
     LaunchedEffect(state.writingQuestion) {
         if (state.writingQuestion && !listening) field.requestFocus()
     }
-    Column(verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s16)) {
+    Column(verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s16 + MedicalMateSpace.s12)) {
         if (listening) {
-            MedicalMateVoiceInputMate(state = state.voice, onClick = callbacks.onMicClick)
+            val waiting = state.voice == MedicalMateVoiceState.IDLE || state.voice == MedicalMateVoiceState.LISTENING
+            MedicalMateVoiceInputMate(
+                state = state.voice,
+                onClick = callbacks.onMicClick,
+                title = stringResource(R.string.voice_idle_title).takeIf { waiting },
+                description = stringResource(R.string.voice_listening_title).takeIf { waiting },
+                speaking = state.speaking.orEmpty(),
+            )
         }
-        MedicalMateTextField(
-            value = state.draft,
-            onValueChange = callbacks.onDraftChange,
-            modifier =
-            Modifier
-                .focusRequester(field)
-                .onFocusChanged { if (it.isFocused && listening) callbacks.onTypeInsteadClick() },
-            placeholder = stringResource(R.string.intake_chat_placeholder).takeUnless { state.writingQuestion },
-            onSend = callbacks.onSendClick,
-            trailing = { ChatInputActions(state = state, listening = listening, callbacks = callbacks) },
-        )
+        ChatTextField(state = state, field = field, listening = listening, callbacks = callbacks)
     }
 }
 
+@Composable
+private fun ChatTextField(
+    state: IntakeUiState,
+    field: FocusRequester,
+    listening: Boolean,
+    callbacks: IntakeCallbacks,
+) {
+    MedicalMateTextField(
+        value = if (listening) state.typedBefore else state.draft,
+        onValueChange = callbacks.onDraftChange,
+        modifier =
+        Modifier
+            .focusRequester(field)
+            .onFocusChanged { if (it.isFocused && listening) callbacks.onTypeInsteadClick() },
+        placeholder = stringResource(R.string.intake_chat_placeholder).takeUnless { state.writingQuestion },
+        onSend = callbacks.onSendClick,
+        trailing = { ChatInputActions(state = state, listening = listening, callbacks = callbacks) },
+    )
+}
+
 /**
- * 입력칸 안쪽의 `Actions` 슬롯. 버튼끼리는 4로 붙인다. 듣는 중에는 마이크가 "말하기 끝내기"다.
+ * 입력칸 안쪽의 `Actions` 슬롯. 버튼끼리는 4로 붙인다. 듣는 중에 마이크를 누르면 받아쓰기를 끈다.
  *
  * 음성을 쓸 수 없는 기기에서는 마이크를 그리지 않는다. 직접 입력은 그대로라 막히는 흐름이 없다.
  */
@@ -276,11 +301,9 @@ private fun ChatInputActions(state: IntakeUiState, listening: Boolean, callbacks
     ) {
         if (state.voiceAvailable) {
             MedicalMateIconButton(
-                onClick = if (listening) callbacks.onMicClick else callbacks.onVoiceClick,
+                onClick = if (listening) callbacks.onTypeInsteadClick else callbacks.onVoiceClick,
                 icon = MedicalMateIcons.Mic,
-                contentDescription = stringResource(
-                    if (listening) R.string.intake_chat_voice_stop else R.string.intake_chat_voice,
-                ),
+                contentDescription = stringResource(R.string.intake_chat_voice),
             )
         }
         MedicalMateIconButton(

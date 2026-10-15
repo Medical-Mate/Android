@@ -325,7 +325,6 @@
     <string name="intake_chat_placeholder">메시지 입력</string>
     <string name="intake_chat_send">보내기</string>
     <string name="intake_chat_voice">음성으로 답하기</string>
-    <string name="intake_chat_voice_stop">말하기 끝내기</string>
     <string name="intake_chat_waiting">답변을 준비하고 있어요</string>
 
     <string name="intake_severity_question">%1$s 얼마나 아프세요?</string>

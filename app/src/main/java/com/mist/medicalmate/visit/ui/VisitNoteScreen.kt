@@ -161,7 +161,7 @@ private fun NoteContent(state: VisitNoteUiState, callbacks: VisitNoteCallbacks) 
         // 받아쓰는 중에는 적던 글 아래에 `Voice Input · Mate`가 선다(1p-T, #318). 카드를 누르면 듣기를 끝낸다 —
         // 마이크 FAB는 그동안 감춘다. 증상 문답도 같은 카드다.
         state.voice?.let { voice ->
-            MedicalMateVoiceInputMate(state = voice, onClick = callbacks.onMicClick)
+            MedicalMateVoiceInputMate(state = voice, onClick = callbacks.onMicClick, speaking = state.note)
         }
     }
 }

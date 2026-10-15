@@ -15,7 +15,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
-/** 말이 1초 끊기면 보낸다(#318). 전에는 다 말하고 패널을 한 번 더 눌러야 보내졌다. */
+/** 말이 1초 끊기면 보낸다(#318). 전에는 다 말하고 패널을 한 번 더 눌러야 보내졌다. 5초 동안 말이 없으면 패널을 닫는다. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class IntakeVoiceSilenceTest {
     private val dispatcher = UnconfinedTestDispatcher()
@@ -90,6 +90,46 @@ class IntakeVoiceSilenceTest {
         assertFalse(viewModel.uiState.value.completed)
     }
 
+    @Test
+    fun `5초 동안 아무 말이 없으면 패널을 닫는다`() {
+        val viewModel = silent()
+
+        dispatcher.scheduler.advanceTimeBy(CLOSE + 1)
+
+        assertEquals(IntakeInputMode.TEXT, viewModel.uiState.value.inputMode)
+    }
+
+    @Test
+    fun `5초가 지나기 전에는 닫지 않는다`() {
+        val viewModel = silent()
+
+        dispatcher.scheduler.advanceTimeBy(CLOSE - 100)
+
+        assertEquals(IntakeInputMode.VOICE, viewModel.uiState.value.inputMode)
+    }
+
+    @Test
+    fun `받아쓴 말은 입력칸에 남지 않고 켜기 전에 적은 글로 돌아간다`() {
+        val speech = FakeSpeechToText(chunks = listOf(SpeechChunk.Partial("배가")), keepOpen = true)
+        val viewModel = intakeViewModel(speech = speech)
+        viewModel.openChatStep()
+        viewModel.onDraftChange("어제부터")
+        viewModel.voice.onVoiceMode()
+        assertEquals("어제부터", viewModel.uiState.value.typedBefore)
+
+        viewModel.onInputModeChange(IntakeInputMode.TEXT)
+
+        assertEquals("어제부터", viewModel.uiState.value.draft)
+    }
+
+    private fun silent(): IntakeViewModel {
+        val speech = FakeSpeechToText(chunks = emptyList(), keepOpen = true)
+        val viewModel = intakeViewModel(repository = FakeSessionRepository(), speech = speech)
+        viewModel.openChatStep()
+        viewModel.voice.onVoiceMode()
+        return viewModel
+    }
+
     private fun listening(repository: FakeSessionRepository, chunk: SpeechChunk): IntakeViewModel {
         val speech = FakeSpeechToText(chunks = listOf(chunk), keepOpen = true)
         val viewModel = intakeViewModel(repository = repository, speech = speech)
@@ -100,5 +140,6 @@ class IntakeVoiceSilenceTest {
 
     private companion object {
         const val SILENCE = 1_000L
+        const val CLOSE = 5_000L
     }
 }

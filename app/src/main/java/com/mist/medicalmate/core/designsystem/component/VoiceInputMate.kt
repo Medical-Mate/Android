@@ -3,13 +3,9 @@ package com.mist.medicalmate.core.designsystem.component
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -19,7 +15,6 @@ import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -38,13 +33,19 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
  *
  * 마스터 설명이 "다 말씀하시면 한 번 더 눌러주세요"라 카드 전체를 눌러도 듣기를 끝낸다([onClick]). 진료 후
  * 메모(1p-T)에서는 마이크 FAB가 카드에 자리를 내주어 이것이 끝내는 자리다.
+ *
+ * **파형이 움직인다**(#318). 디자인 트랙이 넘긴 [MateWaveform]의 `Large` 모양이다 — 듣는 중에는 천천히 숨 쉬고,
+ * [speaking](받아쓰는 글)이 새로 들어오면 말하는 움직임으로 바뀐다. 기기에서 애니메이션을 껐으면 시안 모양 그대로
+ * 멈춘다. 화면이 [title]·[description]으로 글을 고정할 수 있다.
  */
 @Composable
 fun MedicalMateVoiceInputMate(
     state: MedicalMateVoiceState,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    title: String? = null,
     description: String? = null,
+    speaking: String = "",
 ) {
     val colors = MedicalMateTheme.colors
     val shape = MedicalMateRadius.xl
@@ -66,14 +67,14 @@ fun MedicalMateVoiceInputMate(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s16),
     ) {
-        Waveform()
+        MateWaveform(level = rememberSpeechActivityLevel(partialText = speaking), shape = MateWaveformShape.Large)
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4),
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
         ) {
             Text(
-                text = stringResource(state.titleRes),
+                text = title ?: stringResource(state.titleRes),
                 style = MedicalMateTheme.typography.headingS,
                 color = colors.fgDefault,
                 textAlign = TextAlign.Center,
@@ -88,31 +89,4 @@ fun MedicalMateVoiceInputMate(
     }
 }
 
-/** `Waveform`(`3539:5606`) Size=L · 말하는 중. 72 안에 8 폭 막대 다섯이 8 간격 · 반경 4로 선다. */
-@Composable
-private fun Waveform() {
-    Row(
-        modifier = Modifier.size(WaveformSize).clearAndSetSemantics { },
-        horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8, Alignment.CenterHorizontally),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        BarHeights.forEach { height ->
-            Box(
-                modifier =
-                Modifier
-                    .size(width = BarWidth, height = height)
-                    .background(MedicalMateTheme.colors.bgPrimary, BarShape),
-            )
-        }
-    }
-}
-
 private val TopPadding = 28.dp
-
-private val WaveformSize = 72.dp
-
-private val BarWidth = 8.dp
-
-private val BarShape = RoundedCornerShape(4.dp)
-
-private val BarHeights = listOf(26.dp, 46.dp, 62.dp, 42.dp, 26.dp)
