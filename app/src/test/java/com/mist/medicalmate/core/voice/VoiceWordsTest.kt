@@ -32,6 +32,9 @@ class VoiceWordsTest {
         listOf("그만", "닫아 줘", "끝", "됐어").forEach { assertTrue(it, VoiceWords.isStop(it)) }
         // 긴 문장 속의 "끝"은 닫으라는 말이 아니다.
         assertFalse(VoiceWords.isStop("끝나고 약 먹을 때 물어볼 질문 추가"))
+        // 묻는 말은 닫기가 아니다(#320).
+        assertFalse(VoiceWords.isStop("그만 먹어도 되나요?"))
+        assertFalse(VoiceWords.isStop("끝나면 와야 하나요"))
     }
 
     @Test

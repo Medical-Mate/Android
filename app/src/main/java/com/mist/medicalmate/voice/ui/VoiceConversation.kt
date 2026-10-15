@@ -158,4 +158,6 @@ private fun VoiceCommand.movedMessage(): Int = when (this) {
     VoiceCommand.VISIT_RECORD -> R.string.voice_moved_visit_record
     VoiceCommand.BRIEF_CARDS -> R.string.voice_moved_brief_cards
     VoiceCommand.SCHEDULE_ADD -> R.string.voice_moved_schedule_add
+    // 홈이 이어서 답한다. 옮긴 곳만 적는다.
+    VoiceCommand.RESUME, VoiceCommand.NEXT_VISIT -> R.string.voice_moved_home
 }

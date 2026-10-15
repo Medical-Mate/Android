@@ -26,11 +26,16 @@ object VoiceWords {
         return NO.any { heard.startsWith(it) } || NO_ANYWHERE.any { it in heard }
     }
 
-    /** 막대를 닫으라는 짧은 말. "그만", "닫아 줘", "됐어". 긴 문장 속의 "끝"은 아니다. */
-    fun isStop(text: String): Boolean {
-        val heard = compact(text)
-        return STOP.any { heard.startsWith(it) } && heard.length <= STOP_MAX_LENGTH
-    }
+    /**
+     * 막대를 닫으라는 짧은 말. "그만", "닫아 줘", "됐어". 긴 문장 속의 "끝"은 아니다.
+     *
+     * **말 전체가 닫자는 말일 때만이다**(#320). 전에는 "그만"·"끝"으로 시작하는 짧은 말이면 닫아서, 의사에게 물을
+     * "그만 먹어도 되나요?", 메모에 적을 "끝났대요", 굴리는 말 "끝까지"가 막대를 닫았다.
+     */
+    fun isStop(text: String): Boolean = !isAsking(text) && STOP.matches(compact(text))
+
+    /** 묻는 말인지. 물음표로 끝나거나 "…나요", "…까요", "…되죠"처럼 끝난다. */
+    fun isAsking(text: String): Boolean = text.trim().endsWith("?") || ASKING_END.containsMatchIn(compact(text))
 
     /**
      * 막대에 띄운 것을 다시 보여 달라는 말(#284). "다시 보여 줘", "뭐였지", "못 봤어". 목록을 미처 못
@@ -76,7 +81,7 @@ object VoiceWords {
 
     private const val PUNCTUATION = ".,?!~"
 
-    private const val STOP_MAX_LENGTH = 8
+    private val ASKING_END = Regex("""(?:나요|까요|가요|는지|은지|인지|니까|되죠|하죠|있죠)$""")
 
     private const val REPEAT_MAX_LENGTH = 14
 
@@ -95,7 +100,11 @@ object VoiceWords {
     /** 문장 어디에 있어도 아니요인 말. "음 하지 마", "그건 안 할래". */
     private val NO_ANYWHERE = listOf("하지마", "안할래", "안해도", "하지말")
 
-    private val STOP = listOf("그만", "닫아", "끝", "종료", "됐어", "됐다", "이제됐", "꺼줘", "멈춰")
+    private val STOP =
+        Regex(
+            "(?:이제)?(?:그만|닫아|닫기|끝|끝내|종료|됐어|됐다|됐어요|됐습니다|꺼줘|꺼|멈춰|멈춰줘)" +
+                "(?:요|해|해요|할래|할게|하자|해줘|줘|주세요|닫아|닫아줘|이야|이에요)?",
+        )
 
     private val SAVE =
         listOf(

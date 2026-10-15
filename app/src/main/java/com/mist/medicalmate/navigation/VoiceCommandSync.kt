@@ -26,6 +26,7 @@ import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.toRoute
 import com.mist.medicalmate.auth.ui.SessionUiState
 import com.mist.medicalmate.calendar.ui.CalendarDayDestination
 import com.mist.medicalmate.calendar.ui.CalendarDestination
@@ -155,22 +156,33 @@ private fun NavHostController.perform(request: VoiceCommandRequest, targets: Voi
             }
 
         VoiceCommand.BACK -> if (previousBackStackEntry != null) popBackStack()
-        VoiceCommand.INTAKE -> openOn(tab, IntakeDestination(null, spoken = text))
+        VoiceCommand.INTAKE -> openOn(tab, IntakeDestination(null, spoken = text), targets)
         VoiceCommand.VISIT_RECORD -> {
             val today = LocalDate.now()
             val day = (parseVoiceDate(text, today) as? VoiceDate.Day)?.date ?: today
             targets.handOff(text)
-            openOn(tab, CalendarDayDestination(date = day.toString()))
+            openOn(tab, CalendarDayDestination(date = day.toString()), targets)
         }
 
         VoiceCommand.BRIEF_CARDS -> {
             targets.handOff(text)
-            openOn(tab, BriefCardListDestination)
+            openOn(tab, BriefCardListDestination, targets)
         }
 
-        VoiceCommand.PROFILE -> openOn(tab, MyProfileDestination)
+        // 내 정보가 그 말로 알림을 켜고 끄거나 알림 시간을 연다(#320).
+        VoiceCommand.PROFILE -> {
+            targets.handOff(text)
+            openOn(tab, MyProfileDestination, targets)
+        }
+
         VoiceCommand.SCHEDULE_ADD ->
-            openOn(tab, ScheduleAddDestination(sharedText = text.takeIf(::mentionsSchedule), voice = true))
+            openOn(tab, ScheduleAddDestination(sharedText = text.takeIf(::mentionsSchedule), voice = true), targets)
+
+        // 하던 정리와 다음 진료는 홈이 안다(#320). 홈이 그 말을 받아 답한다.
+        VoiceCommand.RESUME, VoiceCommand.NEXT_VISIT -> {
+            targets.handOff(text)
+            openTabRoot(tab)
+        }
     }
 }
 
@@ -178,8 +190,16 @@ private fun NavHostController.perform(request: VoiceCommandRequest, targets: Voi
  * [tab]의 첫 화면으로 돌아간 뒤 [destination]을 연다. 이미 [destination]과 같은 화면이 맨 위에 있으면 그대로
  * 둔다 — 쓰던 것을 버리고 새로 열지 않는다.
  */
-private fun NavHostController.openOn(tab: MedicalMateTab, destination: Any) {
-    if (currentDestination?.hasRoute(destination::class) == true) return
+private fun NavHostController.openOn(tab: MedicalMateTab, destination: Any, targets: VoiceTargets) {
+    // 일자 화면은 날짜가 다르면 다른 화면이다(#320). 10월 15일을 보다가 "어제 진료 기록할래"라고 하면 어제를 연다.
+    val sameDay =
+        destination !is CalendarDayDestination ||
+            currentBackStackEntry?.toRoute<CalendarDayDestination>()?.date == destination.date
+    if (currentDestination?.hasRoute(destination::class) == true && sameDay) {
+        // 옮겨 가지 않으니 넘긴 말을 거둔다. 남겨 두면 나중에 등록하는 엉뚱한 화면이 받는다.
+        targets.takeHandoff()
+        return
+    }
     openTabRoot(tab)
     navigate(destination) { launchSingleTop = true }
 }

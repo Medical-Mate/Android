@@ -576,27 +576,30 @@ class IntakeViewModelTest {
     }
 
     @Test
-    fun `문답이 끝나면 다음이라고 말해 넘어간다`() {
-        // 더 할 말이 없는 자리라 남은 조작이 다음으로 가는 것뿐이다. 말로 하던 사람에게
-        // 거기서만 손을 쓰게 할 이유가 없다.
+    fun `문답이 끝나면 받아쓰기를 접는다`() {
+        // 마지막 답 뒤에는 하단이 다음 버튼으로 바뀌어 카드가 보이지 않는다(#320). 전에는 다시 듣기 시작해 마이크가
+        // 남았고, 그 사이 "다음"이라고 하면 정리가 끝났다. 이제 다음으로 가는 것은 버튼이나 헤이 메이트다.
         val speech = FakeSpeechToText(chunks = listOf(SpeechChunk.Final("다음")), keepOpen = true)
         val viewModel = intakeViewModel(repository = FakeSessionRepository(ends = true), speech = speech)
         viewModel.openChatStep()
         viewModel.voice.onVoiceMode()
         viewModel.voice.onMicClick()
 
-        assertTrue(viewModel.uiState.value.completed)
+        val state = viewModel.uiState.value
+        assertTrue(state.chatFinished)
+        assertEquals(IntakeInputMode.TEXT, state.inputMode)
+        assertFalse(state.completed)
     }
 
     @Test
-    fun `조사가 붙어도 다음으로 듣는다`() {
-        val speech = FakeSpeechToText(chunks = listOf(SpeechChunk.Final("다음이요")), keepOpen = true)
-        val viewModel = intakeViewModel(repository = FakeSessionRepository(ends = true), speech = speech)
-        viewModel.openChatStep()
-        viewModel.voice.onVoiceMode()
-        viewModel.voice.onMicClick()
-
-        assertTrue(viewModel.uiState.value.completed)
+    fun `넘어가자는 말만 다음으로 듣는다`() {
+        // 전에는 "다음"·"계속"·"없어"로 시작하는 짧은 말을 다 받아 질문이 정리를 끝냈다(#320).
+        listOf("다음", "다음이요", "다음으로 가 줘", "넘어가자", "다 됐어요", "없어요").forEach {
+            assertTrue(it, isNextVoice(it))
+        }
+        listOf("계속 먹어도 되나요?", "다음에 와야 하나요", "없어도 되나요", "계속 아파요").forEach {
+            assertFalse(it, isNextVoice(it))
+        }
     }
 
     @Test

@@ -60,9 +60,14 @@ internal class IntakeVoiceCommands(
 
     /** 앞 단계로. 첫 화면에서는 전역 "뒤로"가 증상 정리를 나간다. */
     private fun goBack(): VoiceReply {
-        if (!state().canGoBack) return VoiceReply.NotMine
+        // 빈 칸에 적던 중이면 적던 것만 거둔다. 단계는 그대로라 "이전으로 돌아갔어요"가 아니다(#320).
+        val message = when {
+            state().writingQuestion -> R.string.voice_intake_writing_cancelled
+            state().canGoBack -> R.string.voice_intake_back
+            else -> return VoiceReply.NotMine
+        }
         back()
-        return VoiceReply.Done(R.string.voice_intake_back, question = state().voiceQuestion(labels))
+        return VoiceReply.Done(message, question = state().voiceQuestion(labels))
     }
 
     private fun body(text: String, routes: IntakeVoiceRoutes): VoiceReply {
@@ -224,7 +229,7 @@ internal class IntakeVoiceCommands(
 internal fun IntakeUiState.voiceQuestion(labels: (MedicalMateSeverity) -> String = { it.name }): VoiceText? =
     when (step) {
         IntakeStep.BODY_PART -> bodyMap.focus.bodyVoiceQuestion()
-        IntakeStep.SYMPTOM_CHAT -> if (chatFinished) VoiceText(R.string.voice_intake_ask_questions) else null
+        IntakeStep.SYMPTOM_CHAT -> if (chatFinished) questionsVoiceQuestion() else null
         // 어떻게 말해야 할지 모르는 사람에게 화면의 다섯 낱말을 고를 말로 읽어 준다.
         IntakeStep.SEVERITY ->
             VoiceText(
@@ -246,6 +251,19 @@ private fun BodyMapSelection?.bodyVoiceQuestion(): VoiceText {
     }
     val zones = bodyVoiceZones(anchorId).voiceList()
     return VoiceText(R.string.voice_intake_ask_zone, listOf(title(), zones))
+}
+
+/**
+ * 추천 질문을 고르라고 묻는다(#320). 줄을 번호와 함께 읽어 주어 "두 번째 담아 줘"로 고를 수 있다. 전에는 "물어볼 게
+ * 있으면 말씀해 주세요"만 물어서 추천 줄이 있는 줄도 몰랐다. 담은 줄에는 "(담음)"을 붙인다.
+ */
+private fun IntakeUiState.questionsVoiceQuestion(): VoiceText {
+    val rows = questionRows.mapIndexed { index, row -> "${index + 1}. ${row.text}" + if (row.selected) " (담음)" else "" }
+    return if (rows.isEmpty()) {
+        VoiceText(R.string.voice_intake_ask_questions_empty)
+    } else {
+        VoiceText(R.string.voice_intake_ask_questions, listOf(rows.joinToString("\n")))
+    }
 }
 
 /** 막대에 한 줄에 하나씩 적는다. 한 줄에 늘어놓으면 아홉 개가 이어져 읽기 어렵다. */

@@ -35,7 +35,8 @@ internal fun parseHospitalPickVoice(text: String): HospitalPickVoice? {
     return when {
         ordinal != null -> HospitalPickVoice.Pick(ordinal)
         asked -> query.takeIf { it.isNotEmpty() }?.let(HospitalPickVoice::Search)
-        SUBMIT.any { compact.startsWith(it) || it in compact } -> HospitalPickVoice.Submit
+        // "다시 골라"는 마치라는 말이 아니다(#320).
+        !compact.contains("다시") && SUBMIT.any { compact.startsWith(it) || it in compact } -> HospitalPickVoice.Submit
         query.isNotEmpty() && HOSPITAL_ENDING.containsMatchIn(query) -> HospitalPickVoice.Search(query)
         else -> null
     }

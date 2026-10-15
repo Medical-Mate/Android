@@ -44,9 +44,9 @@ internal val CHAT_SUGGESTIONS =
             MedicalMateIcons.Info,
         ),
         VoiceSuggestion(
-            R.string.voice_suggest_chat_next,
-            R.string.voice_suggest_chat_next_do,
-            MedicalMateIcons.ArrowRight,
+            R.string.voice_suggest_chat_back,
+            R.string.voice_suggest_chat_back_do,
+            MedicalMateIcons.ChevronLeft,
         ),
     )
 
@@ -74,14 +74,14 @@ internal val SEVERITY_SUGGESTIONS =
 internal val QUESTIONS_SUGGESTIONS =
     listOf(
         VoiceSuggestion(
+            R.string.voice_suggest_questions_pick,
+            R.string.voice_suggest_questions_pick_do,
+            MedicalMateIcons.Check,
+        ),
+        VoiceSuggestion(
             R.string.voice_suggest_questions_add,
             R.string.voice_suggest_questions_add_do,
             MedicalMateIcons.Plus,
-        ),
-        VoiceSuggestion(
-            R.string.voice_suggest_questions_remove,
-            R.string.voice_suggest_questions_remove_do,
-            MedicalMateIcons.Trash,
         ),
         VoiceSuggestion(
             R.string.voice_suggest_questions_next,

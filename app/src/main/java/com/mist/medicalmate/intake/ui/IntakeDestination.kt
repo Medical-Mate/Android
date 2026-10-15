@@ -187,13 +187,8 @@ private fun IntakeVoice(state: IntakeUiState, spoken: String?, viewModel: Intake
     val chatting = state.step == IntakeStep.SYMPTOM_CHAT && !state.awaitingReply
     LaunchedEffect(asked?.id, chatting, state.chatFinished) {
         if (asked == null || !chatting) return@LaunchedEffect
-        val next = if (state.chatFinished) R.string.voice_intake_ask_questions else R.string.voice_intake_ask_answer
-        prompt(
-            VoicePrompt(
-                message = VoiceText(R.string.voice_intake_ai_says, listOf(asked.text)),
-                question = VoiceText(next),
-            ),
-        )
+        val next = state.voiceQuestion { labels.getValue(it) } ?: VoiceText(R.string.voice_intake_ask_answer)
+        prompt(VoicePrompt(message = VoiceText(R.string.voice_intake_ai_says, listOf(asked.text)), question = next))
     }
 
     LaunchedEffect(Unit) {

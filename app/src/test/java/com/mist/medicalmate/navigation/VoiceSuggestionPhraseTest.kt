@@ -11,6 +11,8 @@ import com.mist.medicalmate.core.voice.parseVoiceScroll
 import com.mist.medicalmate.intake.ui.BodyVoicePick
 import com.mist.medicalmate.intake.ui.IntakeDoneChoice
 import com.mist.medicalmate.intake.ui.QuestionVoice
+import com.mist.medicalmate.intake.ui.isBackVoice
+import com.mist.medicalmate.intake.ui.isNextVoice
 import com.mist.medicalmate.intake.ui.isUnsureVoice
 import com.mist.medicalmate.intake.ui.parseDoneVoice
 import com.mist.medicalmate.intake.ui.parseQuestionVoice
@@ -74,7 +76,9 @@ class VoiceSuggestionPhraseTest {
         assertEquals(MedicalMateSeverity.LEVEL_4, parseSeverityVoice("많이 아파요"))
         assertEquals(MedicalMateSeverity.LEVEL_4, parseSeverityVoice("7점"))
         assertTrue(parseQuestionVoice("약 계속 먹어도 되나요?") is QuestionVoice.Add)
-        assertTrue(parseQuestionVoice("첫 번째 질문 지워 줘") is QuestionVoice.Remove)
+        assertEquals(QuestionVoice.Pick(1), parseQuestionVoice("두 번째 담아 줘"))
+        assertTrue(isNextVoice("다음"))
+        assertTrue(isBackVoice("뒤로"))
         assertEquals(IntakeDoneChoice.CARD, parseDoneVoice("카드 만들어 줘"))
         assertEquals(IntakeDoneChoice.HOSPITAL, parseDoneVoice("병원부터 찾을래"))
     }

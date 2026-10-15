@@ -38,7 +38,10 @@ internal class VisitRecordVoiceActions(private val state: () -> VisitRecordUiSta
             null -> VoiceReply.NotMine
             RecordVoice.BY_HAND -> VoiceReply.Done(R.string.voice_by_hand)
             RecordVoice.SAVE ->
-                if (content == null || content.editing) {
+                if (content == null) {
+                    // 불러오는 중이거나 못 불러왔다. 고치라는 말이 아니라 "화면에서 직접"이 틀린 답이었다(#320).
+                    VoiceReply.Done(R.string.voice_record_not_ready)
+                } else if (content.editing) {
                     VoiceReply.Done(R.string.voice_by_hand)
                 } else {
                     VoiceReply.Confirm(R.string.voice_record_confirm_save, onConfirm = save)
@@ -47,4 +50,5 @@ internal class VisitRecordVoiceActions(private val state: () -> VisitRecordUiSta
     }
 }
 
-private val BY_HAND = Regex("""바꿔|바꿀래|고쳐|고칠래|수정|지워|지울래|빼\s*줘|없애|삭제""")
+/** 고치라는 말. "편집할래"도 그렇다(#320) — 화면이 "편집해 주세요"라고 적는데 그 말을 못 알아들었다. */
+private val BY_HAND = Regex("""바꿔|바꿀래|고쳐|고칠래|수정|지워|지울래|빼\s*줘|없애|삭제|편집""")
