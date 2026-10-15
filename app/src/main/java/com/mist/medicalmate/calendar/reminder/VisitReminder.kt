@@ -2,6 +2,7 @@ package com.mist.medicalmate.calendar.reminder
 
 import com.mist.medicalmate.calendar.data.Appointment
 import com.mist.medicalmate.calendar.data.AppointmentStatus
+import com.mist.medicalmate.core.model.ReminderSettings
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -18,32 +19,63 @@ internal data class VisitReminder(
     val on: LocalDate,
     val time: LocalTime?,
     val fireAt: LocalDateTime,
+    val kind: VisitReminderKind = VisitReminderKind.BEFORE_VISIT,
+    /** 알림 본문 앞에 적을 병원과 진료과. 없으면 본문이 할 일만 적는다. */
+    val clinic: String? = null,
 )
 
+/** 진료 전 알림과 진료 후 기록 알림(#316). */
+internal enum class VisitReminderKind { BEFORE_VISIT, AFTER_VISIT }
+
 /**
- * 일정에서 걸 알림을 고른다.
+ * 일정에서 걸 알림을 고른다(#316, Backend#176).
  *
- * **진료 전날 저녁 8시에 뜬다.** 진료 시각을 기준으로 24시간 전에 걸면 시간 미정 일정은
- * 걸 자리가 없고, 오전 9시 진료면 전날 아침 9시라 하루를 다 보내고 나서 잊는다. 저녁에
- * 받으면 브리핑 카드를 챙기고 다음 날 나갈 준비를 할 수 있다.
+ * | | 시각 있는 일정 | 시간 미정 |
+ * | -- | -- | -- |
+ * | 진료 전 | 진료 24시간 전 | 전날 [ReminderSettings.beforeVisitTime] |
+ * | 진료 후 기록 | 진료 2시간 뒤 | 당일 [ReminderSettings.afterVisitTime] |
  *
- * 이미 지난 시각은 뺀다. 저녁 8시가 지나서 내일 일정을 잡았으면 그 일정은 알림이 없다 —
- * 방금 직접 적은 것을 바로 알려 줄 이유가 없다.
+ * 전에는 진료 전날 저녁 8시 하나뿐이었다. 시각을 정한 일정은 그 시각에 맞춰 알리고, 미정이면 사용자가 정한 시각에
+ * 알린다. 꺼 둔 쪽은 걸지 않는다.
  *
- * 예정인 것만 건다. 다녀왔거나 취소한 일정에 "내일 진료"가 오면 안 된다.
+ * 이미 지난 시각은 뺀다. 방금 잡은 일정을 바로 알려 줄 이유가 없다. 예정인 것만 건다 — 다녀왔거나 취소한 일정에
+ * 알림이 오면 안 된다. 일정 하나에 알림이 둘이라 같은 일정이 두 번 나온다.
  */
-internal fun planVisitReminders(appointments: List<Appointment>, now: LocalDateTime): List<VisitReminder> = appointments
+internal fun planVisitReminders(
+    appointments: List<Appointment>,
+    settings: ReminderSettings,
+    now: LocalDateTime,
+): List<VisitReminder> = appointments
     .filter { it.status == AppointmentStatus.SCHEDULED }
-    .map { appointment ->
-        VisitReminder(
-            appointmentId = appointment.id,
-            title = appointment.title,
-            on = appointment.on,
-            time = appointment.time,
-            fireAt = appointment.on.minusDays(1).atTime(REMINDER_TIME),
+    .flatMap { appointment ->
+        listOfNotNull(
+            appointment.reminder(VisitReminderKind.BEFORE_VISIT, beforeVisitAt(appointment, settings))
+                .takeIf { settings.beforeVisit },
+            appointment.reminder(VisitReminderKind.AFTER_VISIT, afterVisitAt(appointment, settings))
+                .takeIf { settings.afterVisit },
         )
     }.filter { it.fireAt.isAfter(now) }
 
-private const val REMINDER_HOUR = 20
+private fun beforeVisitAt(appointment: Appointment, settings: ReminderSettings): LocalDateTime =
+    appointment.time?.let { appointment.on.atTime(it).minusHours(BEFORE_VISIT_HOURS) }
+        ?: appointment.on.minusDays(1).atTime(settings.beforeVisitTime)
 
-internal val REMINDER_TIME: LocalTime = LocalTime.of(REMINDER_HOUR, 0)
+private fun afterVisitAt(appointment: Appointment, settings: ReminderSettings): LocalDateTime =
+    appointment.time?.let { appointment.on.atTime(it).plusHours(AFTER_VISIT_HOURS) }
+        ?: appointment.on.atTime(settings.afterVisitTime)
+
+private fun Appointment.reminder(kind: VisitReminderKind, fireAt: LocalDateTime) = VisitReminder(
+    appointmentId = id,
+    title = title,
+    on = on,
+    time = time,
+    fireAt = fireAt,
+    kind = kind,
+    clinic = clinic,
+)
+
+/** 시각을 정한 일정의 진료 전 알림. 24시간 전이다. */
+private const val BEFORE_VISIT_HOURS = 24L
+
+/** 시각을 정한 일정의 진료 후 기록 알림. 2시간 뒤다. */
+private const val AFTER_VISIT_HOURS = 2L

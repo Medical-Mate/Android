@@ -2,33 +2,36 @@ package com.mist.medicalmate.profile.ui
 
 import androidx.annotation.StringRes
 import com.mist.medicalmate.R
+import com.mist.medicalmate.core.model.DEFAULT_UNTIMED_REMINDER
 import com.mist.medicalmate.profile.data.HealthField
+import java.time.LocalTime
 
 /**
- * 내 정보 화면의 상태. Figma 1s-1 `407:2375`.
+ * 내 정보 화면의 상태. 10-15 시안 1s-1 `3663:15766`(#316).
  *
- * 프로필, 건강 정보 요약, 설정 세 덩이다. 서버 연동에서는
- * `GET /api/me/health-profile` 한 번으로 앞의 둘이 채워진다.
+ * 프로필, 건강 정보 요약, 알림, 메이트 네 덩이다. `GET /api/me/health-profile` 한 번으로 앞의 둘이 채워지고,
+ * 알림은 `GET /api/me/settings`에서 온다.
+ *
+ * [untimedReminderTime]은 시간 미정 일정의 알림 시각이다. 알림 카드의 `알림 시간` 줄과 두 토글의 설명이 이
+ * 값을 적는다.
  */
 data class MyProfileUiState(
     val profile: MyProfile = MyProfile(),
     val health: HealthSummary = HealthSummary(),
     val settings: Map<AppSetting, Boolean> = DefaultSettings,
+    val untimedReminderTime: LocalTime = DEFAULT_UNTIMED_REMINDER,
     val voiceWake: VoiceWakeUi = VoiceWakeUi(),
     val onDevice: OnDeviceUi = OnDeviceUi(),
 ) {
     fun isOn(setting: AppSetting): Boolean = settings[setting] == true
 
-    /** 그릴 토글. 음성 호출과 휴대폰 정리는 이 기기에서 켤 수 있을 때만 있다. */
-    val visibleSettings: List<AppSetting>
+    /** 메이트 카드에 그릴 토글. 음성 호출과 휴대폰 정리는 이 기기에서 켤 수 있을 때만 있다. */
+    val mateSettings: List<AppSetting>
         get() =
-            AppSetting.entries.filter {
-                when (it) {
-                    AppSetting.VOICE_WAKE -> voiceWake.supported
-                    AppSetting.ON_DEVICE -> onDevice.supported
-                    else -> true
-                }
-            }
+            listOfNotNull(
+                AppSetting.VOICE_WAKE.takeIf { voiceWake.supported },
+                AppSetting.ON_DEVICE.takeIf { onDevice.supported },
+            )
 
     /** "정리 모델 지우기"를 둘지. 꺼 둔 채 모델이 남아 있을 때만이다. */
     val canDeleteOnDeviceModel: Boolean
@@ -42,19 +45,17 @@ data class MyProfileUiState(
 /**
  * "헤이 메이트"로 부르기(#273)의 자리.
  *
- * 다른 토글과 달리 켜는 데 단계가 있다. 내려받을 크기를 알리고(확인 창) 마이크 권한을 받은
- * 뒤에야 켜진다. 켜진 뒤에도 모델을 다 받기 전까지는 듣지 않아서 그 사이를 적는다.
+ * 켜려면 마이크 권한을 받아야 한다. 확인 창은 걷어냈다(#316, 사용자 결정). 켜진 뒤에도 모델을 다 받기
+ * 전까지는 듣지 않아서 그 사이를 적는다.
  *
  * 꺼도 받아 둔 모델은 남는다(#280). 그래서 꺼 둔 채 모델이 있으면 지우는 버튼을 둔다. 켜져
  * 있을 때 지우면 듣던 것이 끊기므로 그때는 두지 않는다.
  *
  * @param supported 이 기기에서 켤 수 있는지. 아니면 토글을 그리지 않는다.
- * @param confirming 켜려고 눌러 확인 창이 떠 있다. 아직 켜지지 않았다.
  * @param modelReady 받아 둔 모델이 있다. 켤 때 다시 받지 않는다.
  */
 data class VoiceWakeUi(
     val supported: Boolean = false,
-    val confirming: Boolean = false,
     val status: VoiceWakeStatus = VoiceWakeStatus.Idle,
     val modelReady: Boolean = false,
 )
@@ -72,17 +73,14 @@ sealed interface VoiceWakeStatus {
 }
 
 /**
- * 설정의 초기값. 앞의 셋은 시안 1s-1이 그린 대로다.
+ * 설정의 초기값. 읽어 오기 전까지만 쓰인다.
  *
- * 읽어 오기 전까지만 쓰인다. 알림은 계정에서, 나머지는 이 기기에서 읽어 덮는다(#187).
- * 서버의 기본값도 켜짐이라 알림은 값이 같다. 음성 호출과 휴대폰 정리는 켜면 모델을 받으므로 꺼진 채
- * 시작한다.
+ * 알림 둘은 서버의 기본값과 같은 켜짐이다. 음성 호출과 휴대폰 정리는 켜면 모델을 받으므로 꺼진 채 시작한다.
  */
 private val DefaultSettings =
     mapOf(
         AppSetting.VISIT_REMINDER to true,
-        AppSetting.CARD_AUTO_SAVE to true,
-        AppSetting.HANDOFF_BRIGHTNESS to false,
+        AppSetting.RECORD_REMINDER to true,
         AppSetting.VOICE_WAKE to false,
         AppSetting.ON_DEVICE to false,
     )
@@ -136,16 +134,21 @@ data class HealthSummary(
  *
  * 문구를 상태에 담지 않고 리소스 id로 둔다. 상태가 문자열을 들면 지금이 어느 설정인지
  * 코드가 알 수 없고, 문구를 다듬을 때마다 테스트가 깨진다(홈의 오늘 한 줄과 같은 이유).
+ *
+ * 앞의 둘이 계정 설정(#316)이고 뒤의 둘이 이 기기의 기능이다. 예전의 "브리핑 카드 자동 저장" ·
+ * "진료실 화면 밝기 최대"는 시안에서 빠졌고 어디서도 값을 읽지 않아 걷어냈다(사용자 결정).
  */
 enum class AppSetting(@StringRes val labelRes: Int) {
     VISIT_REMINDER(R.string.my_profile_setting_visit_reminder),
-    CARD_AUTO_SAVE(R.string.my_profile_setting_card_auto_save),
-    HANDOFF_BRIGHTNESS(R.string.my_profile_setting_handoff_brightness),
+    RECORD_REMINDER(R.string.my_profile_setting_record_reminder),
 
-    /** 시안에 없는 줄이다(#273). 이 기기에서 켤 수 있을 때만 그린다. */
+    /** 메이트 카드의 첫 줄(#316). 이 기기에서 켤 수 있을 때만 그린다. */
     VOICE_WAKE(R.string.my_profile_setting_voice_wake),
 
-    /** 시안에 없는 줄이다(#289). NPU가 잡히는 기기에서만 그린다. */
+    /**
+     * 시안에 없는 줄이다(#289). 온디바이스를 확정할 때까지 시험용으로 메이트 카드 둘째 줄에 둔다(#316, 사용자
+     * 결정). NPU가 잡히는 기기에서만 그린다.
+     */
     ON_DEVICE(R.string.my_profile_setting_on_device),
 }
 

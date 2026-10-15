@@ -55,12 +55,12 @@ constructor(
 
     /** [refresh]의 본체. 시험이 기다릴 수 있게 따로 둔다. */
     internal suspend fun sync() = mutex.withLock {
-        val enabled = (setting.enabled() as? ApiResult.Success)?.value ?: return@withLock
-        if (!enabled) {
+        val settings = (setting.settings() as? ApiResult.Success)?.value ?: return@withLock
+        if (!settings.beforeVisit && !settings.afterVisit) {
             scheduler.cancelAll()
             return@withLock
         }
         val upcoming = (appointments.get().upcoming() as? ApiResult.Success)?.value ?: return@withLock
-        scheduler.replaceAll(planVisitReminders(upcoming, LocalDateTime.now(clock)))
+        scheduler.replaceAll(planVisitReminders(upcoming, settings, LocalDateTime.now(clock)))
     }
 }

@@ -1,8 +1,5 @@
 package com.mist.medicalmate.profile.ui
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -14,20 +11,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.mist.medicalmate.R
-import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
-import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
-import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonType
+import com.mist.medicalmate.core.designsystem.component.MedicalMateSettingCard
+import com.mist.medicalmate.core.designsystem.component.MedicalMateSettingNavigationRow
 
 /**
- * 계정에서 나가는 두 가지. Figma 1s-1의 하단.
- *
- * 홈 화면에 임시로 붙어 있던 것을 여기로 옮겼다. 설정 화면이 생기면 옮기기로 한 것이고
- * 1s-1이 그 자리다.
- *
- * **회원탈퇴는 시안에 없다.** 1s-1 하단에는 로그아웃만 있다. 그렇다고 홈에 남겨 두면
- * 로그아웃과 탈퇴가 다른 화면에 흩어지므로 로그아웃 아래에 텍스트로 뒀다. 자리를 정하면
- * 그대로 옮긴다(#85).
+ * 계정 카드. 10-15 시안 1s-1의 `계정` 구역이다(#316). 로그아웃과 회원탈퇴가 `Setting Row` Navigation 두 줄이다.
  *
  * 탈퇴는 되돌릴 수 없어 확인 대화상자를 거친다. 실수로 한 번 눌러서 계정이 사라지면
  * 복구 수단이 없다.
@@ -36,23 +25,16 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonType
 internal fun AccountActions(accountActions: AccountActionCallbacks, modifier: Modifier = Modifier) {
     var confirmingWithdraw by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4),
-    ) {
-        MedicalMateButton(
+    MedicalMateSettingCard(modifier = modifier) {
+        MedicalMateSettingNavigationRow(
+            title = stringResource(R.string.account_logout),
             onClick = accountActions.onLogoutClick,
-            label = stringResource(R.string.account_logout),
-            type = MedicalMateButtonType.OUTLINE,
             enabled = accountActions.enabled,
-            modifier = Modifier.fillMaxWidth(),
         )
-        MedicalMateButton(
+        MedicalMateSettingNavigationRow(
+            title = stringResource(R.string.account_withdraw),
             onClick = { confirmingWithdraw = true },
-            label = stringResource(R.string.account_withdraw),
-            type = MedicalMateButtonType.GHOST,
             enabled = accountActions.enabled,
-            modifier = Modifier.fillMaxWidth(),
         )
     }
 

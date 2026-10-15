@@ -10,14 +10,12 @@ import com.mist.medicalmate.core.speech.WakeWordModelState
 import com.mist.medicalmate.profile.data.HealthField
 import com.mist.medicalmate.profile.data.HealthProfile
 import com.mist.medicalmate.profile.data.HealthProfileRepository
-import com.mist.medicalmate.profile.data.LocalSettingsStore
 import com.mist.medicalmate.profile.data.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -35,10 +33,10 @@ import kotlinx.coroutines.launch
  * 로그인 수단은 읽지 않는다. 서버의 사용자 식별자가 `kakaoId` 단독이라 카카오 하나뿐이고,
  * 그 줄은 문자열 리소스에 고정으로 있다.
  *
- * **설정 토글 셋 중 하나만 계정에 붙는다**(#187). 진료 하루 전 알림은 받을지 말지가 기기
- * 취향이 아니라 그 사람의 선택이라 `GET`·`PATCH /api/me/settings`에 있다. 기기를 바꾸거나
- * 앱을 다시 깔면 "안 받겠다"고 한 사람에게 알림이 다시 가기 때문이다. 나머지 둘은 이 기기에서
- * 어떻게 보일지의 문제라 `DataStore`에 둔다.
+ * **알림 토글 둘은 계정에 붙는다**(#187 · #316). 진료 전 알림과 진료 후 기록 알림은 받을지 말지가 기기
+ * 취향이 아니라 그 사람의 선택이라 `GET`·`PATCH /api/me/settings`에 있다. 기기를 바꾸거나 앱을 다시 깔면
+ * "안 받겠다"고 한 사람에게 알림이 다시 가기 때문이다. 시간 미정 일정의 알림 시각도 같은 응답에서 읽어
+ * `알림 시간` 줄과 토글 설명에 적는다. 고치는 것은 알림 시간 화면(1s-3)이다.
  *
  * **알림을 예약하는 것은 여전히 앱이다.** 그 값은 예약할지 말지를 정한다. 저장되면 예약을
  * 다시 맞춘다 — 끄면 걸린 것이 지워지고 켜면 다가오는 일정으로 다시 걸린다(#268).
@@ -46,8 +44,8 @@ import kotlinx.coroutines.launch
  * 토글을 누르면 화면을 먼저 바꾸고 저장을 보낸다. 왕복을 기다리면 누른 뒤에 잠깐 안 바뀐
  * 것처럼 보인다. 실패하면 되돌린다.
  *
- * **음성 호출(#273)만 바로 켜지지 않는다.** 41MB를 받는 일이라 확인 창을 거치고, 화면이
- * 마이크 권한을 받은 뒤에 [onVoiceWakeConfirmed]로 켠다. 토글의 값은 [VoiceWake.enabled]를
+ * **음성 호출(#273)은 마이크 권한을 받은 뒤에 켠다.** 화면이 권한을 묻고 받으면 켜기를 보낸다. 켤 때의
+ * 확인 창은 걷어냈다(#316, 사용자 결정). 토글의 값은 [VoiceWake.enabled]를
  * 따라간다 — 받다가 실패하면 그쪽이 내리고 화면도 따라 내려간다.
  */
 @HiltViewModel
@@ -56,7 +54,6 @@ class MyProfileViewModel
 internal constructor(
     private val repository: HealthProfileRepository,
     private val settings: SettingsRepository,
-    private val localSettings: LocalSettingsStore,
     private val reminders: VisitReminders,
     private val voiceWake: VoiceWake,
     onDevice: OnDeviceModel,
@@ -110,24 +107,21 @@ internal constructor(
     }
 
     /**
-     * 토글 셋을 각자의 자리에서 읽는다.
+     * 알림 설정을 계정에서 읽는다. 못 읽으면 지금 값으로 둔다 — 화면 전체를 막을 값이 아니다.
      *
-     * 알림은 계정, 나머지 둘은 이 기기다. 알림을 못 읽으면 그 토글만 지금 값으로 둔다 —
-     * 화면 전체를 막을 값이 아니다.
+     * 알림 시간 화면(1s-3)에서 고치고 돌아오면 이 화면이 다시 보이며 새 시각을 읽는다.
      */
     private suspend fun loadSettings() {
-        val reminder = (settings.visitReminder() as? ApiResult.Success)?.value
-        val cardAutoSave = localSettings.cardAutoSave.first()
-        val brightness = localSettings.handoffBrightness.first()
+        val reminders = (settings.reminders() as? ApiResult.Success)?.value ?: return
         mutableUiState.update { state ->
             state.copy(
                 settings =
                 state.settings +
-                    listOfNotNull(
-                        reminder?.let { AppSetting.VISIT_REMINDER to it },
-                        AppSetting.CARD_AUTO_SAVE to cardAutoSave,
-                        AppSetting.HANDOFF_BRIGHTNESS to brightness,
+                    mapOf(
+                        AppSetting.VISIT_REMINDER to reminders.beforeVisit,
+                        AppSetting.RECORD_REMINDER to reminders.afterVisit,
                     ),
+                untimedReminderTime = reminders.beforeVisitTime,
             )
         }
     }
@@ -136,8 +130,7 @@ internal constructor(
      * 토글을 눌렀다.
      *
      * 화면을 먼저 바꾸고 저장을 보낸다. 알림은 계정이라 실패하면 되돌린다 — 안 받겠다고 한
-     * 것이 서버에 안 남았는데 화면만 꺼져 있으면 알림이 계속 온다. 나머지 둘은 이 기기에만
-     * 쓰는 값이라 되돌릴 실패가 없다.
+     * 것이 서버에 안 남았는데 화면만 꺼져 있으면 알림이 계속 온다.
      */
     fun onSettingChange(setting: AppSetting, enabled: Boolean) {
         if (setting == AppSetting.VOICE_WAKE) {
@@ -149,30 +142,21 @@ internal constructor(
             return
         }
         mutableUiState.update { it.copy(settings = it.settings + (setting to enabled)) }
-        viewModelScope.launch {
-            when (setting) {
-                AppSetting.VISIT_REMINDER -> saveReminder(enabled)
-                AppSetting.CARD_AUTO_SAVE -> localSettings.setCardAutoSave(enabled)
-                AppSetting.HANDOFF_BRIGHTNESS -> localSettings.setHandoffBrightness(enabled)
-                AppSetting.VOICE_WAKE, AppSetting.ON_DEVICE -> Unit
-            }
-        }
+        viewModelScope.launch { saveReminder(setting, enabled) }
     }
 
-    /** 켜려고 누르면 확인 창부터 띄운다. 끄면 바로 끈다. 받아 둔 모델은 남긴다(#280). */
+    /**
+     * 켜면 모델을 받기 시작하고 끄면 바로 끈다. 받아 둔 모델은 남긴다(#280). 켜기는 화면이 마이크 권한을 받은
+     * 뒤에만 보낸다.
+     */
     private fun onVoiceWakeChange(enabled: Boolean) {
         if (enabled) {
-            updateVoiceWake { it.copy(confirming = true, status = VoiceWakeStatus.Idle) }
+            updateVoiceWake { it.copy(status = VoiceWakeStatus.Idle) }
+            viewModelScope.launch { voiceWake.enable() }
             return
         }
         mutableUiState.update { it.copy(settings = it.settings + (AppSetting.VOICE_WAKE to false)) }
         viewModelScope.launch { voiceWake.disable() }
-    }
-
-    /** 확인 창에서 켜기를 눌렀고 마이크 권한도 받았다. */
-    fun onVoiceWakeConfirmed() {
-        updateVoiceWake { it.copy(confirming = false) }
-        viewModelScope.launch { voiceWake.enable() }
     }
 
     /** "음성 모델 지우기"를 눌렀다. 꺼 둔 상태에서만 버튼이 있다. */
@@ -180,26 +164,28 @@ internal constructor(
         viewModelScope.launch { voiceWake.deleteModel() }
     }
 
-    /** 확인 창을 닫았다. 아무것도 바뀌지 않는다. */
-    fun onVoiceWakeCancel() {
-        updateVoiceWake { it.copy(confirming = false) }
-    }
-
     /** 켜려 했는데 마이크 권한을 거부했다. 듣지 못하는 호출어를 켜 둘 수 없다. */
     fun onVoiceWakeDenied() {
-        updateVoiceWake { it.copy(confirming = false, status = VoiceWakeStatus.Denied) }
+        updateVoiceWake { it.copy(status = VoiceWakeStatus.Denied) }
     }
 
     private fun updateVoiceWake(change: (VoiceWakeUi) -> VoiceWakeUi) {
         mutableUiState.update { it.copy(voiceWake = change(it.voiceWake)) }
     }
 
-    private suspend fun saveReminder(enabled: Boolean) {
-        if (settings.setVisitReminder(enabled) is ApiResult.Success) {
+    /** 바꾼 알림 하나만 보낸다. 서버가 보낸 필드만 바꾼다(Backend#176). */
+    private suspend fun saveReminder(setting: AppSetting, enabled: Boolean) {
+        val result =
+            when (setting) {
+                AppSetting.VISIT_REMINDER -> settings.update(beforeVisit = enabled)
+                AppSetting.RECORD_REMINDER -> settings.update(afterVisit = enabled)
+                AppSetting.VOICE_WAKE, AppSetting.ON_DEVICE -> return
+            }
+        if (result is ApiResult.Success) {
             reminders.refresh()
             return
         }
-        mutableUiState.update { it.copy(settings = it.settings + (AppSetting.VISIT_REMINDER to !enabled)) }
+        mutableUiState.update { it.copy(settings = it.settings + (setting to !enabled)) }
     }
 }
 

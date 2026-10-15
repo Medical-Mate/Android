@@ -5,6 +5,7 @@ import com.mist.medicalmate.calendar.data.AppointmentEdit
 import com.mist.medicalmate.calendar.data.AppointmentRepository
 import com.mist.medicalmate.calendar.data.AppointmentStatus
 import com.mist.medicalmate.calendar.data.NewAppointment
+import com.mist.medicalmate.core.model.ReminderSettings
 import com.mist.medicalmate.core.model.VisitReminderSetting
 import com.mist.medicalmate.core.network.ApiResult
 import kotlinx.coroutines.test.runTest
@@ -31,7 +32,8 @@ class DefaultVisitRemindersTest {
     fun `다가오는 일정으로 갈아끼운다`() = runTest {
         reminders(upcoming = ApiResult.Success(listOf(appointment(1), appointment(2)))).sync()
 
-        assertEquals(listOf(1L, 2L), scheduler.replaced?.map { it.appointmentId })
+        // 일정마다 진료 전 · 진료 후 기록 알림 둘이다(#316).
+        assertEquals(listOf(1L, 1L, 2L, 2L), scheduler.replaced?.map { it.appointmentId })
     }
 
     @Test
@@ -43,11 +45,21 @@ class DefaultVisitRemindersTest {
     }
 
     @Test
-    fun `토글이 꺼져 있으면 모두 지운다`() = runTest {
-        reminders(enabled = ApiResult.Success(false)).sync()
+    fun `알림 둘 다 꺼져 있으면 모두 지운다`() = runTest {
+        reminders(settings = ApiResult.Success(ReminderSettings(beforeVisit = false, afterVisit = false))).sync()
 
         assertEquals(1, scheduler.cancels)
         assertNull(scheduler.replaced)
+    }
+
+    @Test
+    fun `하나만 꺼져 있으면 남은 쪽만 건다`() = runTest {
+        reminders(
+            settings = ApiResult.Success(ReminderSettings(beforeVisit = false)),
+            upcoming = ApiResult.Success(listOf(appointment(1))),
+        ).sync()
+
+        assertEquals(listOf(VisitReminderKind.AFTER_VISIT), scheduler.replaced?.map { it.kind })
     }
 
     @Test
@@ -61,7 +73,7 @@ class DefaultVisitRemindersTest {
     @Test
     fun `토글을 못 읽으면 걸린 것을 그대로 둔다`() = runTest {
         // 끈 것인지 모르는 채로 지우지 않는다.
-        reminders(enabled = OFFLINE).sync()
+        reminders(settings = OFFLINE).sync()
 
         assertNull(scheduler.replaced)
         assertEquals(0, scheduler.cancels)
@@ -69,8 +81,8 @@ class DefaultVisitRemindersTest {
 
     @Test
     fun `지금 시각을 기준으로 지난 알림을 뺀다`() = runTest {
-        // 15일 일정의 알림은 14일 20시다. 그 뒤에 맞추면 걸 것이 없다.
-        val clock = Clock.fixed(LocalDateTime.of(2026, 10, 14, 21, 0).atZone(ZONE).toInstant(), ZONE)
+        // 15일 시간 미정 일정의 알림은 14일 19시와 15일 19시다. 15일 20시에 맞추면 걸 것이 없다.
+        val clock = Clock.fixed(LocalDateTime.of(2026, 10, 15, 20, 0).atZone(ZONE).toInstant(), ZONE)
 
         reminders(upcoming = ApiResult.Success(listOf(appointment(1))), clock = clock).sync()
 
@@ -78,12 +90,12 @@ class DefaultVisitRemindersTest {
     }
 
     private fun reminders(
-        enabled: ApiResult<Boolean> = ApiResult.Success(true),
+        settings: ApiResult<ReminderSettings> = ApiResult.Success(ReminderSettings()),
         upcoming: ApiResult<List<Appointment>> = ApiResult.Success(emptyList()),
         clock: Clock = Clock.fixed(LocalDateTime.of(2026, 10, 8, 12, 0).atZone(ZONE).toInstant(), ZONE),
     ) = DefaultVisitReminders(
         appointments = { UpcomingOnly(upcoming) },
-        setting = VisitReminderSetting { enabled },
+        setting = VisitReminderSetting { settings },
         scheduler = scheduler,
         clock = clock,
     )

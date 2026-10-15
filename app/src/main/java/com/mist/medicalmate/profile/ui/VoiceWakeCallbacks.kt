@@ -11,49 +11,9 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonSize
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonType
-import com.mist.medicalmate.core.designsystem.component.MedicalMateDialog
-import com.mist.medicalmate.core.designsystem.component.MedicalMateDialogTone
 
-/**
- * 음성 호출을 켤 때의 확인 창(#273).
- *
- * @param onConfirm 켜기를 눌렀다. 화면이 마이크 권한을 묻고, 받으면 켠다.
- * @param onDeleteModel "음성 모델 지우기"를 눌렀다(#280).
- */
-data class VoiceWakeCallbacks(
-    val onConfirm: () -> Unit = {},
-    val onCancel: () -> Unit = {},
-    val onDeleteModel: () -> Unit = {},
-)
-
-/**
- * 받을 크기와 쓰일 공간을 먼저 알린다.
- *
- * 토글 하나에 41MB가 걸려 있다. 데이터 요금제에서 모르고 켜면 안 된다. 소리가 기기 밖으로
- * 나가지 않는다는 것도 여기서 말한다 — 늘 듣는 기능에서 사람들이 가장 먼저 묻는 것이다.
- * **시안에 없는 창이라 디자인 트랙 확인이 필요하다.**
- *
- * 받아 둔 모델이 있으면(꺼도 남는다, #280) 받는다는 문장을 빼고 그대로 쓴다고 적는다.
- */
-@Composable
-internal fun VoiceWakeConfirmDialog(modelReady: Boolean, callbacks: VoiceWakeCallbacks) {
-    MedicalMateDialog(
-        title = stringResource(R.string.my_profile_voice_wake_confirm_title),
-        message =
-        stringResource(
-            if (modelReady) {
-                R.string.my_profile_voice_wake_confirm_message_ready
-            } else {
-                R.string.my_profile_voice_wake_confirm_message
-            },
-        ),
-        confirmLabel = stringResource(R.string.my_profile_voice_wake_confirm),
-        onConfirm = callbacks.onConfirm,
-        dismissLabel = stringResource(R.string.my_profile_voice_wake_cancel),
-        onDismissRequest = callbacks.onCancel,
-        tone = MedicalMateDialogTone.NEUTRAL,
-    )
-}
+/** @param onDeleteModel "음성 모델 지우기"를 눌렀다(#280). */
+data class VoiceWakeCallbacks(val onDeleteModel: () -> Unit = {})
 
 /**
  * 설정 카드 아래 한 줄. 할 말이 없으면 그리지 않는다.

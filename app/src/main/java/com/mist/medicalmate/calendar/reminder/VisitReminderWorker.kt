@@ -20,7 +20,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
- * 진료 전날 알림을 띄운다.
+ * 진료 알림을 띄운다. 진료 전 알림과 진료 후 기록 알림(#316)이 같은 일꾼이다.
  *
  * 띄울 내용을 예약할 때 입력으로 실어 둔다. 뜰 때 서버를 다시 읽지 않는 이유는 그 시각에
  * 연결이 있다는 보장이 없어서다. 예약 뒤에 일정이 바뀌면 그 자리에서 예약이 갈아끼워지므로
@@ -35,13 +35,16 @@ internal class VisitReminderWorker(context: Context, params: WorkerParameters) :
     override suspend fun doWork(): Result {
         val appointmentId = inputData.getLong(KEY_APPOINTMENT_ID, 0L)
         val date = inputData.getString(KEY_DATE)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
-        val title = inputData.getString(KEY_TITLE).orEmpty()
+        val clinic = inputData.getString(KEY_CLINIC)?.takeIf { it.isNotBlank() }
         val time = inputData.getString(KEY_TIME)?.let { runCatching { LocalTime.parse(it) }.getOrNull() }
-        show(appointmentId, date, title, time)
+        val kind =
+            VisitReminderKind.entries.firstOrNull { it.name == inputData.getString(KEY_KIND) }
+                ?: VisitReminderKind.BEFORE_VISIT
+        show(appointmentId, date, kind, text(applicationContext, kind, clinic, time))
         return Result.success()
     }
 
-    private fun show(appointmentId: Long, date: LocalDate?, title: String, time: LocalTime?) {
+    private fun show(appointmentId: Long, date: LocalDate?, kind: VisitReminderKind, text: Pair<String, String>) {
         val context = applicationContext
         // lint가 권한 확인을 알아보려면 호출과 같은 함수 안에 있어야 한다.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
@@ -55,33 +58,65 @@ internal class VisitReminderWorker(context: Context, params: WorkerParameters) :
             NotificationCompat
                 .Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_bell)
-                .setContentTitle(context.getString(R.string.visit_reminder_title))
-                .setContentText(body(context, title, time))
-                .setContentIntent(openDay(context, appointmentId, date))
+                .setContentTitle(text.first)
+                .setContentText(text.second)
+                .setContentIntent(openDay(context, appointmentId, date, notificationId(appointmentId, kind)))
                 .setAutoCancel(true)
                 .setCategory(NotificationCompat.CATEGORY_REMINDER)
                 .build()
-        NotificationManagerCompat.from(context).notify(appointmentId.hashCode(), notification)
+        NotificationManagerCompat.from(context).notify(notificationId(appointmentId, kind), notification)
     }
 
     internal companion object {
         const val KEY_APPOINTMENT_ID = "appointmentId"
         const val KEY_DATE = "date"
-        const val KEY_TITLE = "title"
         const val KEY_TIME = "time"
+        const val KEY_KIND = "kind"
+        const val KEY_CLINIC = "clinic"
     }
 }
 
 /**
- * 알림 본문. "서울OO병원 내과 재진 · 오전 10:30"이다.
+ * 알림 제목과 본문(#316). 디자인 트랙이 넘긴 네 가지 문구다.
  *
- * 제목이 비면 병원도 카드도 없이 만든 일정이다. 그때는 무엇인지 적을 수 없어 일정을 열어
- * 보라고만 적는다. 시간 미정이면 시각을 빼고 일정 이름만 적는다.
+ * | | 시각 있음 | 시간 미정 |
+ * | -- | -- | -- |
+ * | 진료 전 | 내일 오전 10:30 진료예요 | 내일 진료가 있어요 |
+ * | 진료 후 기록 | 진료 잘 다녀오셨어요? | 오늘 진료 다녀오셨어요? |
+ *
+ * 본문은 "서울OO병원 내과 · 일정 확인하기", 진료 후 기록은 "… · 들은 말 남기기"다. 병원이 없으면 할 일만 적는다.
  */
-private fun body(context: Context, title: String, time: LocalTime?): String {
-    val name = title.ifBlank { context.getString(R.string.visit_reminder_untitled) }
-    return if (time == null) name else context.getString(R.string.visit_reminder_body_timed, name, time.format(TIME))
+private fun text(context: Context, kind: VisitReminderKind, clinic: String?, time: LocalTime?): Pair<String, String> {
+    val title =
+        when (kind) {
+            VisitReminderKind.BEFORE_VISIT ->
+                time?.let { context.getString(R.string.visit_reminder_title_timed, it.format(TIME)) }
+                    ?: context.getString(R.string.visit_reminder_title)
+            VisitReminderKind.AFTER_VISIT ->
+                context.getString(
+                    if (time !=
+                        null
+                    ) {
+                        R.string.visit_record_reminder_title_timed
+                    } else {
+                        R.string.visit_record_reminder_title
+                    },
+                )
+        }
+    val action =
+        context.getString(
+            if (kind == VisitReminderKind.BEFORE_VISIT) {
+                R.string.visit_reminder_action
+            } else {
+                R.string.visit_record_reminder_action
+            },
+        )
+    return title to (clinic?.let { context.getString(R.string.visit_reminder_body, it, action) } ?: action)
 }
+
+/** 일정 하나에 알림이 둘이라 종류마다 번호를 달리한다. 같으면 뒤에 뜬 것이 앞의 것을 덮는다. */
+private fun notificationId(appointmentId: Long, kind: VisitReminderKind): Int =
+    (appointmentId * 2 + kind.ordinal).hashCode()
 
 /**
  * 알림을 누르면 그 일정의 일자 화면(1r-2)을 연다.
@@ -96,7 +131,7 @@ private fun body(context: Context, title: String, time: LocalTime?): String {
  *
  * 날짜를 못 읽은 예약이면 앱만 연다. 세션 확인을 거쳐 홈으로 간다.
  */
-private fun openDay(context: Context, appointmentId: Long, date: LocalDate?): PendingIntent? {
+private fun openDay(context: Context, appointmentId: Long, date: LocalDate?, requestCode: Int): PendingIntent? {
     val launch = context.packageManager.getLaunchIntentForPackage(context.packageName) ?: return null
     val intent =
         launch.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP).also { intent ->
@@ -104,7 +139,7 @@ private fun openDay(context: Context, appointmentId: Long, date: LocalDate?): Pe
         }
     return PendingIntent.getActivity(
         context,
-        appointmentId.hashCode(),
+        requestCode,
         intent,
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
