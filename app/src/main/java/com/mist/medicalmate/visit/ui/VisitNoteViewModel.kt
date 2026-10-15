@@ -10,6 +10,8 @@ import com.mist.medicalmate.core.voice.VoiceReply
 import com.mist.medicalmate.core.voice.VoiceText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,8 +27,7 @@ import java.time.LocalDate
  * 카드 제목은 이 기록이 붙을 카드다. 둘 다 라우트를 타고 따라오므로 서버를 다시 부르지
  * 않는다.
  *
- * **메모를 나누는 일은 여기서 하지 않는다**(#183). "AI로 정리하기" 칩과 하단 저장하기가 둘 다
- * 1q-1로 보내고, `POST /api/visits/classify`는 결과를 그리는 그 화면이 부른다. 축 맵을 라우트에
+ * **메모를 나누는 일은 여기서 하지 않는다**(#183). 하단 저장하기가 1q-1로 보내고, `POST /api/visits/classify`는 결과를 그리는 그 화면이 부른다. 축 맵을 라우트에
  * 실어 나르지 않아도 된다.
  *
  * 원문을 지우지 않는다. 1q-1이 원문을 그대로 보여주므로 흐름 끝까지 남아 있어야 한다.
@@ -114,12 +115,6 @@ constructor(private val clock: Clock, private val speech: SpeechToText) : ViewMo
     }
 
     /**
-     * 우하단 마이크. 음성 패널을 열고 닫는다.
-     *
-     * **받아쓰기는 아직 없다.** 패널과 상태까지가 지금 범위이고, 실제 인식은 증상 문답과 함께
-     * 붙인다. 그래서 듣는 중에서 글이 들어오지 않는다.
-     */
-    /**
      * 받아쓰기.
      *
      * 받아쓴 글은 적던 메모 뒤에 붙는다. 말하는 중에 부분 결과가 계속 갱신되므로 누를 때의
@@ -130,8 +125,27 @@ constructor(private val clock: Clock, private val speech: SpeechToText) : ViewMo
             speech = speech,
             scope = viewModelScope,
             onVoice = { voice -> mutableUiState.update { it.copy(voice = voice) } },
-            onDictated = { note, _ -> mutableUiState.update { it.copy(note = note) } },
+            onDictated = { note, _ ->
+                mutableUiState.update { it.copy(note = note) }
+                closeAfterSilence()
+            },
         )
+
+    /** 조용한 시간을 세는 일(#318). 받아쓴 글이 들어올 때마다 처음부터 다시 센다. */
+    private var silence: Job? = null
+
+    /**
+     * **5초 동안 아무 말이 없으면 패널을 닫는다**(#318, 사용자 결정 — 증상 문답과 같다). 켜 둔 채 잊은 마이크가 계속
+     * 듣지 않게 한다. 받아쓴 글은 메모에 남는다.
+     */
+    private fun closeAfterSilence() {
+        silence?.cancel()
+        silence =
+            viewModelScope.launch {
+                delay(SILENCE_CLOSE_MS)
+                onTypeInsteadClick()
+            }
+    }
 
     /**
      * 우하단 마이크. 권한이 확인된 뒤에 불린다.
@@ -141,12 +155,9 @@ constructor(private val clock: Clock, private val speech: SpeechToText) : ViewMo
      */
     fun onVoiceClick() {
         mutableUiState.update { it.copy(voice = MedicalMateVoiceState.IDLE) }
+        // 닫기를 먼저 건다. 듣자마자 말이 오면 그 말이 다시 센다.
+        closeAfterSilence()
         dictation.start(mutableUiState.value.note)
-    }
-
-    /** 패널 안의 마이크. 듣는 중이면 멈추고 아니면 다시 듣는다. */
-    fun onMicClick() {
-        dictation.toggle(mutableUiState.value.note)
     }
 
     /** 마이크 권한을 거부했다. */
@@ -169,12 +180,17 @@ constructor(private val clock: Clock, private val speech: SpeechToText) : ViewMo
      * 내주고 쉬어서 "헤이 메이트"가 듣히지 않았다. 패널은 그대로 두고, 돌아와 마이크를 누르면 다시 듣는다.
      */
     fun onScreenHidden() {
+        silence?.cancel()
         dictation.stop()
     }
 
     /** 음성 패널의 "직접 입력할게요". 패널을 닫고 적던 글로 돌아간다. */
     fun onTypeInsteadClick() {
+        silence?.cancel()
         dictation.stop()
         mutableUiState.update { it.copy(voice = null) }
     }
 }
+
+/** 아무 말이 없을 때 패널을 닫기까지 기다리는 시간(#318, 사용자 결정). */
+private const val SILENCE_CLOSE_MS = 5_000L

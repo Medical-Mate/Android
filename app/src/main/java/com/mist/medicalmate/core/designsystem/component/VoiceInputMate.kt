@@ -31,8 +31,8 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
  * 띄워 `Heading/S` 제목과 `Body/S` 설명이 4 간격으로 선다. 마스터는 `Listening` 하나뿐이라 다른 상태(듣기 전 ·
  * 정리 중 · 권한 없음)도 같은 모양에 글만 바꾼다. 권한이 없으면 설명이 `fg/danger`다.
  *
- * 마스터 설명이 "다 말씀하시면 한 번 더 눌러주세요"라 카드 전체를 눌러도 듣기를 끝낸다([onClick]). 진료 후
- * 메모(1p-T)에서는 마이크 FAB가 카드에 자리를 내주어 이것이 끝내는 자리다.
+ * [onClick]이 있으면 카드 전체를 눌러 듣기를 끝낸다(증상 문답). 진료 후 메모(1p-T)는 눌러도 아무 일이 없다(#318,
+ * 사용자 결정) — 누를 때마다 상태 글이 바뀌어 듣기가 끊긴 것처럼 보였다.
  *
  * **파형은 말이 들릴 때만 움직인다**(#318). 디자인 트랙이 넘긴 [MateWaveform]의 `Large` 모양이다 — [speaking](받아쓰는
  * 글)이 새로 들어오면 움직이고, 들리지 않으면 시안 모양 그대로 멈춰 있다. 기기에서 애니메이션을 껐으면 늘 멈춘다. 화면이 [title]·[description]으로 글을 고정할 수 있다.
@@ -40,7 +40,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 @Composable
 fun MedicalMateVoiceInputMate(
     state: MedicalMateVoiceState,
-    onClick: () -> Unit,
+    onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
     title: String? = null,
     description: String? = null,
@@ -56,7 +56,17 @@ fun MedicalMateVoiceInputMate(
             .dropShadow(shape, MedicalMateEffects.cardTight)
             .clip(shape)
             .background(colors.bgSurface)
-            .clickable(enabled = state != MedicalMateVoiceState.PROCESSING, role = Role.Button, onClick = onClick)
+            .then(
+                if (onClick == null) {
+                    Modifier
+                } else {
+                    Modifier.clickable(
+                        enabled = state != MedicalMateVoiceState.PROCESSING,
+                        role = Role.Button,
+                        onClick = onClick,
+                    )
+                },
+            )
             .padding(
                 start = MedicalMateSpace.s20,
                 end = MedicalMateSpace.s20,

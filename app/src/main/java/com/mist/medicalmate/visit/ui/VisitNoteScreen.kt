@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -36,15 +37,14 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateCard
 import com.mist.medicalmate.core.designsystem.component.MedicalMateCardEmphasis
-import com.mist.medicalmate.core.designsystem.component.MedicalMateChip
 import com.mist.medicalmate.core.designsystem.component.MedicalMateDivider
 import com.mist.medicalmate.core.designsystem.component.MedicalMateFab
 import com.mist.medicalmate.core.designsystem.component.MedicalMateFooter
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTextArea
-import com.mist.medicalmate.core.designsystem.component.MedicalMateTooltip
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceInputMate
+import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
 import com.mist.medicalmate.core.voice.rememberVoiceScrollState
 import com.mist.medicalmate.core.voice.voicePanelSpace
 import java.time.format.DateTimeFormatter
@@ -56,8 +56,8 @@ import java.util.Locale
  * 진료실에서 들은 말을 정리하지 않고 그대로 받는다. 형식을 물으면 기억이 먼저 흐려진다.
  * 나누는 일은 다음 화면에서 AI가 한다.
  *
- * "AI로 정리하기"는 지금 넘어가는 조작이 아니라 적은 것을 다듬는 조작이다. 옆의 툴팁이
- * 무엇을 하는지 알린다. 저장하기를 누르면 분류 결과(1q-1)로 간다.
+ * 저장하기를 누르면 분류 결과(1q-1)로 간다. 적는 칸 아래의 "AI로 정리하기" 칩과 툴팁은 10-15 시안(1p · 1p-T)에서
+ * 빠져 걷어냈다(#318). 둘 다 저장하기와 같은 곳으로 가던 진입점이었다.
  *
  * 마이크는 본문 흐름이 아니라 우하단에 뜬다. 적는 도중 어디까지 썼든 손이 닿는 자리에
  * 있어야 하는 조작인데, 본문 끝에 두면 스크롤을 내려야 나온다. 캘린더의 일정 추가와 같은
@@ -108,7 +108,6 @@ data class VisitNoteCallbacks(
     val onBackClick: () -> Unit = {},
     val onNoteChange: (String) -> Unit = {},
     val onVoiceClick: () -> Unit = {},
-    val onMicClick: () -> Unit = {},
     val onTypeInsteadClick: () -> Unit = {},
     val onSaveClick: () -> Unit = {},
 )
@@ -139,31 +138,42 @@ private fun NoteContent(state: VisitNoteUiState, callbacks: VisitNoteCallbacks) 
     ) {
         Heading()
         VisitCard(state.visit)
-        MedicalMateTextArea(
-            value = state.note,
-            onValueChange = callbacks.onNoteChange,
-            // 듣는 중에 적는 칸을 누르면 받아쓰기를 끝내고 손으로 적는다. 직접 입력 대안이 같은 자리에 남는다.
-            modifier = Modifier.onFocusChanged {
-                if (it.isFocused &&
-                    state.voice != null
-                ) {
-                    callbacks.onTypeInsteadClick()
-                }
-            },
-            placeholder = stringResource(R.string.visit_note_placeholder),
-            maxLength = NOTE_MAX_LENGTH,
-        )
-        OrganizeRow(
-            state = state,
-            onOrganizeClick = callbacks.onSaveClick,
-            modifier = Modifier.bringIntoViewRequester(bottomOfBox),
-        )
-        // 받아쓰는 중에는 적던 글 아래에 `Voice Input · Mate`가 선다(1p-T, #318). 카드를 누르면 듣기를 끝낸다 —
-        // 마이크 FAB는 그동안 감춘다. 증상 문답도 같은 카드다.
+        // 칸의 아랫변 바로 아래를 시야로 부르는 표지. 칸 사이 간격을 더하지 않도록 칸과 한 묶음에 둔다.
+        Column {
+            NoteArea(state = state, callbacks = callbacks)
+            Spacer(modifier = Modifier.bringIntoViewRequester(bottomOfBox))
+        }
+        // 받아쓰는 중에는 적던 글 아래에 `Voice Input · Mate`가 선다(1p-T, #318). 글은 시안대로 "선생님이 뭐라고
+        // 하셨나요?" · "듣고 있어요"로 고정이고 눌러도 아무 일이 없다(사용자 결정). 마이크 FAB는 그동안 감춘다.
         state.voice?.let { voice ->
-            MedicalMateVoiceInputMate(state = voice, onClick = callbacks.onMicClick, speaking = state.note)
+            val waiting = voice == MedicalMateVoiceState.IDLE || voice == MedicalMateVoiceState.LISTENING
+            MedicalMateVoiceInputMate(
+                state = voice,
+                onClick = null,
+                title = stringResource(R.string.visit_note_voice_title).takeIf { waiting },
+                description = stringResource(R.string.voice_listening_title).takeIf { waiting },
+                speaking = state.note,
+            )
         }
     }
+}
+
+@Composable
+private fun NoteArea(state: VisitNoteUiState, callbacks: VisitNoteCallbacks) {
+    MedicalMateTextArea(
+        value = state.note,
+        onValueChange = callbacks.onNoteChange,
+        // 듣는 중에 적는 칸을 누르면 받아쓰기를 끝내고 손으로 적는다. 직접 입력 대안이 같은 자리에 남는다.
+        modifier = Modifier.onFocusChanged {
+            if (it.isFocused &&
+                state.voice != null
+            ) {
+                callbacks.onTypeInsteadClick()
+            }
+        },
+        placeholder = stringResource(R.string.visit_note_placeholder),
+        maxLength = NOTE_MAX_LENGTH,
+    )
 }
 
 @Composable
@@ -256,40 +266,6 @@ private val IconBoxShape = RoundedCornerShape(14.dp)
 
 /** 헤드라인의 날짜. 시안이 "9월 12일"로 적는다. */
 private val HeadlineDate: DateTimeFormatter = DateTimeFormatter.ofPattern("M월 d일", Locale.KOREAN)
-
-/**
- * AI로 정리하기.
- *
- * 칩으로 둔다. 화면의 주 행동은 저장하기이고, 이것은 적은 글을 다듬는 보조 조작이다.
- * 눌러도 화면이 바뀌지 않으므로 선택 상태가 아니라 누르는 조작으로 쓴다.
- */
-/**
- * AI로 정리하기 칩.
- *
- * **하단 저장하기와 같은 자리로 간다**(#183). 둘 다 메모를 분류로 보내는 같은 동작이고,
- * 나누는 것은 결과를 그리는 1q-1이 부른다. 칩이 따로 하는 일은 없고 시안이 그 자리에 둔
- * 진입점이다.
- */
-@Composable
-private fun OrganizeRow(state: VisitNoteUiState, onOrganizeClick: () -> Unit, modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        MedicalMateChip(
-            label = stringResource(R.string.visit_note_organize),
-            selected = false,
-            onClick = onOrganizeClick,
-            enabled = state.canSave,
-        )
-        // 툴팁 트리거는 블록 우측 끝에 둔다(Figma 툴팁 배치 규칙).
-        MedicalMateTooltip(
-            text = stringResource(R.string.visit_note_organize_tooltip),
-            contentDescription = stringResource(R.string.visit_note_organize_tooltip_label),
-        )
-    }
-}
 
 /** 시안의 카운터가 `71 / 300`이다. */
 private const val NOTE_MAX_LENGTH = 300

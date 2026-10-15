@@ -308,7 +308,6 @@ private fun VisitNoteRoute(
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.onScreenHidden() }
 
     // 권한은 마이크를 누를 때 묻는다. 화면을 열자마자 묻지 않는다.
-    val askMic = rememberMicPermission(onGranted = viewModel::onMicClick, onDenied = viewModel::onMicDenied)
     val askVoice = rememberMicPermission(onGranted = viewModel::onVoiceClick, onDenied = viewModel::onMicDenied)
 
     // 막대가 메모를 받아 적는다(#288). "다 했어"면 적은 원문을 들고 1q-1로 간다.
@@ -320,7 +319,6 @@ private fun VisitNoteRoute(
         state = state,
         callbacks =
         VisitNoteCallbacks(
-            onMicClick = askMic,
             onVoiceClick = askVoice,
             onBackClick = onExit,
             onNoteChange = viewModel::onNoteChange,

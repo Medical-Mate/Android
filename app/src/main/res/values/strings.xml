@@ -99,9 +99,7 @@
     <string name="visit_note_description">기억나는 대로 편하게 적어주세요.</string>
     <!-- 지시문이 아니라 예시 문장이다. 무엇을 어느 정도로 적으면 되는지가 그 편이 잘 전해진다. -->
     <string name="visit_note_placeholder">3일치 약 처방을 받았어요</string>
-    <string name="visit_note_organize">AI로 정리하기</string>
-    <string name="visit_note_organize_tooltip">적은 내용을 소견·검사·약·재방문으로 나눠드려요</string>
-    <string name="visit_note_organize_tooltip_label">AI 정리 설명</string>
+    <string name="visit_note_voice_title">선생님이 뭐라고 하셨나요?</string>
     <string name="visit_note_voice">음성으로 적기</string>
     <string name="visit_note_save">저장하기</string>
     <string name="visit_record_title">진료 후 기록</string>
