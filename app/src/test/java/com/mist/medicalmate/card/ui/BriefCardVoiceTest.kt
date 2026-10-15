@@ -34,6 +34,9 @@ class BriefCardVoiceTest {
     fun `몇 번째나 제목의 낱말이나 병원으로 찾는다`() {
         assertEquals(listOf("2"), CARDS.findByVoice("두 번째 카드 열어 줘", TODAY)?.map { it.id })
         assertEquals(listOf("3"), CARDS.findByVoice("마지막 거", TODAY)?.map { it.id })
+        // 최근 카드는 맨 위다. 새로 만들자는 말은 찾는 말이 아니라 전역 명령(증상 정리)이다(#320).
+        assertEquals(listOf("1"), CARDS.findByVoice("최근 카드 보여 줘", TODAY)?.map { it.id })
+        assertEquals(null, CARDS.findByVoice("새 카드 만들래", TODAY))
         assertEquals(listOf("1", "3"), CARDS.findByVoice("두통 카드", TODAY)?.map { it.id })
         assertEquals(listOf("2"), CARDS.findByVoice("오른쪽 어깨 카드 보여 줘", TODAY)?.map { it.id })
         assertEquals(listOf("1"), CARDS.findByVoice("고려튼튼 거", TODAY)?.map { it.id })

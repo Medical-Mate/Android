@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -19,12 +20,6 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.mist.medicalmate.R
-import com.mist.medicalmate.core.voice.VoicePrompt
-import com.mist.medicalmate.core.voice.VoiceReply
-import com.mist.medicalmate.core.voice.VoiceTargetEffect
-import com.mist.medicalmate.core.voice.VoiceText
-import com.mist.medicalmate.core.voice.VoiceWords
-import com.mist.medicalmate.core.voice.rememberVoicePrompt
 import com.mist.medicalmate.navigation.ConsumeResult
 import com.mist.medicalmate.navigation.NavResult
 import kotlinx.coroutines.delay
@@ -130,7 +125,8 @@ private fun BriefCardRoute(
     }
 
     val content = state as? BriefCardUiState.Content
-    BriefCardVoice(content = content, onSave = viewModel::onSaveClick)
+    // 말로 내보내기 시트를 연다(#320). 누를 때마다 하나씩 늘려 화면이 시트를 띄운다.
+    var exportRequest by remember { mutableIntStateOf(0) }
     // 문답에서 막 만든 카드를 저장했으면 뒤로 가기가 홈이다. 아래에 끝난 문답이 쌓여 있다.
     val toHome = sessionId != null && content?.card?.status == BriefCard.Status.CONFIRMED
     val exit = if (toHome) routes.onHome else routes.onExit
@@ -147,9 +143,7 @@ private fun BriefCardRoute(
     }
     val saveImage = rememberBriefCardSaver { saved -> saveResult = saved }
 
-    BriefCardScreen(
-        state = state,
-        callbacks =
+    val callbacks =
         BriefCardCallbacks(
             onBackClick = exit,
             onEditClick = viewModel::onEditClick,
@@ -164,10 +158,25 @@ private fun BriefCardRoute(
             onRetryClick = { viewModel.open(cardId, sessionId, hospital) },
             onShareClick = { image -> scope.launch { shareBriefCard(context, image) } },
             onSaveImageClick = saveImage,
-        ).withSchedule(card = content?.card, routes = routes.schedule, closeSheet = viewModel::onOverlayDismiss),
+        ).withSchedule(card = content?.card, routes = routes.schedule, closeSheet = viewModel::onOverlayDismiss)
+    BriefCardVoice(
+        content = content,
+        routes =
+        BriefCardVoiceRoutes(
+            onSave = viewModel::onSaveClick,
+            onExport = { exportRequest++ },
+            onLater = viewModel::onOverlayDismiss,
+            callbacks = { callbacks },
+            onBackHome = routes.onHome.takeIf { toHome },
+        ),
+    )
+    BriefCardScreen(
+        state = state,
+        callbacks = callbacks,
         modifier = modifier,
         toastMessage = saveResult?.let { stringResource(saveMessage(it)) },
         openExport = export,
+        exportRequest = exportRequest,
     )
 }
 
@@ -205,26 +214,4 @@ private const val TOAST_MS = 2_000L
 private fun briefCardHospital(route: BriefCardDestination): BriefCardHospital? {
     val name = route.hospitalName ?: return null
     return BriefCardHospital(name = name, address = route.hospitalAddress)
-}
-
-/**
- * 말로 저장한다(#284). 증상 정리를 말로 마치고 만든 카드를 말로 저장하는 자리다.
- *
- * 저장이 곧 확정이라 한 번 묻는다. 고치는 중이면 저장할 자리가 아니어서 받지 않는다. 아직 저장하지
- * 않은 카드가 열리면 저장하라고 막대에 묻는다.
- */
-@Composable
-private fun BriefCardVoice(content: BriefCardUiState.Content?, onSave: () -> Unit) {
-    val saved = content?.card?.status == BriefCard.Status.CONFIRMED
-    VoiceTargetEffect(BRIEF_CARD_SUGGESTIONS) { text ->
-        when {
-            content == null || content.editing || !VoiceWords.isSave(text) -> VoiceReply.NotMine
-            saved -> VoiceReply.Done(R.string.voice_card_already_saved)
-            else -> VoiceReply.Confirm(R.string.voice_card_confirm_save, onConfirm = onSave)
-        }
-    }
-    val prompt = rememberVoicePrompt()
-    LaunchedEffect(content?.card?.id, saved) {
-        if (content != null && !saved) prompt(VoicePrompt(question = VoiceText(R.string.voice_card_ask_save)))
-    }
 }

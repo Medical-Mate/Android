@@ -2,6 +2,8 @@ package com.mist.medicalmate.navigation
 
 import com.mist.medicalmate.calendar.ui.DayVoice
 import com.mist.medicalmate.calendar.ui.parseDayVoice
+import com.mist.medicalmate.card.ui.BriefCardVoiceAction
+import com.mist.medicalmate.card.ui.parseBriefCardVoice
 import com.mist.medicalmate.core.voice.VoiceDate
 import com.mist.medicalmate.core.voice.VoiceScroll
 import com.mist.medicalmate.core.voice.VoiceWords
@@ -118,5 +120,18 @@ class VoiceAuditPhraseTest {
     @Test
     fun `기록 확인에서 편집하자는 말은 화면에서 하라고 한다`() {
         assertEquals(RecordVoice.BY_HAND, parseRecordVoice("편집할래"))
+    }
+
+    @Test
+    fun `브리핑 카드는 일정과 내보내기를 저장보다 먼저 본다`() {
+        // 전에는 저장하라는 말만 알아들어 "진료 일정 잡아 줘"와 "이미지로 저장해 줘"가 카드 저장이 됐다.
+        assertEquals(BriefCardVoiceAction.SCHEDULE, parseBriefCardVoice("진료 일정 잡아 줘"))
+        assertEquals(BriefCardVoiceAction.SCHEDULE, parseBriefCardVoice("일정 추가해 줘"))
+        assertEquals(BriefCardVoiceAction.EXPORT, parseBriefCardVoice("이미지로 저장해 줘"))
+        assertEquals(BriefCardVoiceAction.EXPORT, parseBriefCardVoice("공유해 줘"))
+        assertEquals(BriefCardVoiceAction.VIEW_SCHEDULE, parseBriefCardVoice("진료 일정 보여 줘"))
+        assertEquals(BriefCardVoiceAction.RECORD_VISIT, parseBriefCardVoice("진료 후 기록할래"))
+        assertEquals(BriefCardVoiceAction.LATER, parseBriefCardVoice("아직 안 정했어요"))
+        assertEquals(BriefCardVoiceAction.SAVE, parseBriefCardVoice("저장해 줘"))
     }
 }

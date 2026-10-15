@@ -15,8 +15,16 @@ import java.time.YearMonth
  * 단서가 하나도 없으면 null이다. "카드 보여 줘"는 찾으라는 말이 아니다. 카드를 가리키지 않은 말의 낱말이
  * 아무 카드에도 없을 때도 null이다 — 전역 명령으로 넘긴다.
  */
-internal fun List<CardListItem>.findByVoice(text: String, today: LocalDate): List<CardListItem>? {
-    val ordinal = VoiceWords.ordinal(text)
+internal fun List<CardListItem>.findByVoice(text: String, today: LocalDate): List<CardListItem>? =
+    // 새로 만들자는 말은 찾는 말이 아니다(#320). 전역 명령이 증상 정리를 연다 — 빈 목록의 유일한 길이다.
+    if (CREATE.containsMatchIn(VoiceWords.compact(text))) null else findCard(text, today)
+
+/** "최근 카드", "방금 만든 거"는 맨 위 카드다(#320). 목록이 최근 것부터 선다. */
+private fun cardOrdinal(text: String): Int? =
+    VoiceWords.ordinal(text) ?: 0.takeIf { RECENT.any { VoiceWords.compact(text).contains(it) } }
+
+private fun List<CardListItem>.findCard(text: String, today: LocalDate): List<CardListItem>? {
+    val ordinal = cardOrdinal(text)
     val written = writtenOf(text, today)
     val words = cardWordsOf(text)
     if (ordinal == null && written == null && words.isEmpty()) return null
@@ -103,11 +111,16 @@ private val DATE_PHRASE =
 /** 낱말 끝의 조사와 군말. "두통이" → "두통", "어깨거" → "어깨". */
 private val PARTICLE_TAIL = Regex("""(?:에서|으로|이랑|하고|이|가|을|를|은|는|의|에|로|요|거|것|꺼)+$""")
 
+private val CREATE = Regex("""만들|작성할|작성해|새카드|새로운카드|새로""")
+
+private val RECENT = listOf("최근", "방금", "최신", "제일늦게", "마지막에만든", "마지막에쓴")
+
 /** 찾을 낱말이 아닌 말. */
 private val FILLER =
     setOf(
         "브리핑", "카드", "브리핑카드", "줘", "주세요", "좀", "그", "이거", "저거", "그거", "하나", "중", "중에", "다시",
-        "작성", "작성한", "쓴", "만든", "병원", "목록", "것", "거", "꺼", "에서", "내", "제",
+        "작성", "작성한", "쓴", "만든", "병원", "목록", "것", "거", "꺼", "에서", "내", "제", "최근", "최근에", "방금",
+        "가장", "제일", "최신",
     )
 
 /** 이 말로 시작하면 동사다. "열어 줘", "보여 줘", "찾아 줘". */

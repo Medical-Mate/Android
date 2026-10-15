@@ -9,26 +9,6 @@ import com.mist.medicalmate.core.voice.VoiceSuggestion
  * 시험으로 본다.
  */
 
-/** 브리핑 카드(1e-1). */
-internal val BRIEF_CARD_SUGGESTIONS =
-    listOf(
-        VoiceSuggestion(
-            R.string.voice_suggest_card_save,
-            R.string.voice_suggest_card_save_do,
-            MedicalMateIcons.CheckCircle,
-        ),
-        VoiceSuggestion(
-            R.string.voice_suggest_card_down,
-            R.string.voice_suggest_card_down_do,
-            MedicalMateIcons.ChevronDown,
-        ),
-        VoiceSuggestion(
-            R.string.voice_suggest_card_back,
-            R.string.voice_suggest_card_back_do,
-            MedicalMateIcons.ChevronLeft,
-        ),
-    )
-
 /** 브리핑 카드 목록(1j-4). */
 internal val CARD_LIST_SUGGESTIONS =
     listOf(
