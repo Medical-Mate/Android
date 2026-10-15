@@ -67,6 +67,9 @@ class MedicalMateBannerLink(val label: String, val page: String, val onClick: ()
  *
  * 사진은 칸을 채우고 아래에 맞춘다(마스터의 `object-bottom`). 기기 폭이 360보다 넓으면 위아래가 조금 더
  * 잘린다.
+ *
+ * [extendTop]만큼 위로 사진을 더 그린다. 홈이 상태바 뒤까지 사진을 잇는 자리다. 글과 링크는 아래에 붙어 있어
+ * 자리가 그대로이고, 상태바 아래의 배너는 시안 높이 그대로다.
  */
 @Composable
 fun MedicalMateHomeBannerPage(
@@ -75,12 +78,13 @@ fun MedicalMateHomeBannerPage(
     body: String,
     link: MedicalMateBannerLink?,
     modifier: Modifier = Modifier,
+    extendTop: Dp = 0.dp,
 ) {
     Box(
         modifier =
         modifier
             .fillMaxWidth()
-            .height(if (link == null) BannerHeightWelcome else BannerHeight)
+            .height((if (link == null) BannerHeightWelcome else BannerHeight) + extendTop)
             .background(MedicalMateTheme.colors.bgInverse),
     ) {
         Image(
@@ -272,7 +276,10 @@ private fun ShadowSpec.toTextShadow(density: Density): Shadow =
     with(density) { Shadow(color = color, offset = Offset(0f, y.toPx()), blurRadius = blur.toPx()) }
 
 /** 배너 높이. `CTA=Link` 400, `CTA=None` 334. */
-private val BannerHeight = 400.dp
+/** `CTA=Link` 배너 높이. 홈이 상태바 아이콘 색을 언제 바꿀지 이 값으로 잰다. */
+val MedicalMateHomeBannerHeight = 400.dp
+
+private val BannerHeight = MedicalMateHomeBannerHeight
 private val BannerHeightWelcome = 334.dp
 
 /** 글 묶음 아래 여백 56. 시트가 28 겹쳐 올라오는 자리를 비운다. */

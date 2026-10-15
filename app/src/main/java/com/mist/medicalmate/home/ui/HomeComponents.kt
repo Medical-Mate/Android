@@ -152,7 +152,7 @@ private fun Modifier.overlapUp(by: Dp): Modifier = layout { measurable, constrai
     layout(placeable.width, (placeable.height - extra).coerceAtLeast(0)) { placeable.place(0, -extra) }
 }
 
-private val SheetOverlap = 28.dp
+internal val SheetOverlap = 28.dp
 private val SheetPaddingTop = 28.dp
 
 /** `Elevation/Sheet` 두 겹. 위로 4 · blur 24 · 10%, 제자리 blur 2 · 5%. */

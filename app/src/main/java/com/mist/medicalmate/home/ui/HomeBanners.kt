@@ -6,6 +6,7 @@ import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
@@ -14,6 +15,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.component.MedicalMateBannerLink
 import com.mist.medicalmate.core.designsystem.component.MedicalMateHomeBannerHeader
@@ -33,7 +36,12 @@ import java.time.LocalTime
  * 저절로 넘기지 않는다. 한 장뿐이면(처음 온 사람) 넘기지 않는다.
  */
 @Composable
-internal fun HomeBannerPager(content: HomeUiState.Content, callbacks: HomeCallbacks, modifier: Modifier = Modifier) {
+internal fun HomeBannerPager(
+    content: HomeUiState.Content,
+    callbacks: HomeCallbacks,
+    modifier: Modifier = Modifier,
+    statusBar: Dp = 0.dp,
+) {
     val banners = content.banners
     val looping = banners.size > 1
     val pager =
@@ -60,9 +68,12 @@ internal fun HomeBannerPager(content: HomeUiState.Content, callbacks: HomeCallba
                 banner = banners[index],
                 page = stringResource(R.string.home_banner_page, index + 1, banners.size),
                 callbacks = callbacks,
+                statusBar = statusBar,
             )
         }
+        // 사진은 상태바 뒤까지 잇고 헤더는 상태바 아래에 둔다.
         MedicalMateHomeBannerHeader(
+            modifier = Modifier.padding(top = statusBar),
             userInitial = content.userInitial,
             notificationLabel =
             stringResource(
@@ -77,10 +88,11 @@ internal fun HomeBannerPager(content: HomeUiState.Content, callbacks: HomeCallba
 
 /** 배너 한 장. 문구와 사진과 링크를 고른다. */
 @Composable
-private fun BannerPage(banner: HomeBanner, page: String, callbacks: HomeCallbacks) {
+private fun BannerPage(banner: HomeBanner, page: String, callbacks: HomeCallbacks, statusBar: Dp) {
     val copy = bannerCopy(banner)
     MedicalMateHomeBannerPage(
         image = banner.image(),
+        extendTop = statusBar,
         title = copy.title,
         body = copy.body,
         link = copy.link?.let {

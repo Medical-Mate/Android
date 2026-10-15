@@ -9,8 +9,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
@@ -139,11 +143,21 @@ private fun FailedContent(onRetryClick: () -> Unit, modifier: Modifier = Modifie
     }
 }
 
-/** 1n-1. 배너와 시트가 함께 스크롤한다. */
+/**
+ * 1n-1. 배너와 시트가 함께 스크롤한다. 사진은 상태바 뒤까지 이어지고, 사진이 상태바 뒤에 있는 동안만 상태바
+ * 아이콘이 흰색이다. 시트가 올라와 흰 면이 상태바 뒤에 오면 어두운 아이콘으로 돌아간다.
+ */
 @Composable
 private fun HomeContent(content: HomeUiState.Content, today: LocalDate, callbacks: HomeCallbacks) {
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberVoiceScrollState()).voicePanelSpace()) {
-        HomeBannerPager(content = content, callbacks = callbacks)
+    val statusBar = statusBarTop()
+    val scroll = rememberVoiceScrollState()
+    val photoLimit = with(LocalDensity.current) { PhotoUnderStatusBarScroll.roundToPx() }
+    val onPhoto by remember { derivedStateOf { scroll.value < photoLimit } }
+    HomeStatusBarIcons(light = onPhoto)
+    Column(
+        modifier = Modifier.underStatusBar(statusBar).fillMaxSize().verticalScroll(scroll).voicePanelSpace(),
+    ) {
+        HomeBannerPager(content = content, callbacks = callbacks, statusBar = statusBar)
         HomeSheet {
             SheetTop(content = content, callbacks = callbacks)
             if (content.savedCards.isNotEmpty()) {
@@ -182,8 +196,10 @@ private fun HomeContent(content: HomeUiState.Content, today: LocalDate, callback
  */
 @Composable
 private fun FirstHomeContent(content: HomeUiState.Content, callbacks: HomeCallbacks) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        HomeBannerPager(content = content, callbacks = callbacks)
+    val statusBar = statusBarTop()
+    HomeStatusBarIcons(light = true)
+    Column(modifier = Modifier.underStatusBar(statusBar).fillMaxSize()) {
+        HomeBannerPager(content = content, callbacks = callbacks, statusBar = statusBar)
         HomeSheet(modifier = Modifier.weight(1f)) {
             SheetTop(content = content, callbacks = callbacks)
             MedicalMateEmptyState(
