@@ -10,12 +10,12 @@ import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 
 /** Input 묶음 컴포넌트 Preview. 렌더링만 하는 코드라 이것이 유일한 확인 수단이다. */
-@Preview(showBackground = true, name = "Voice Input - State", widthDp = 390)
+@Preview(showBackground = true, name = "Voice Input · Mate - State", widthDp = 360)
 @Composable
-private fun VoiceInputPreview() {
+private fun VoiceInputMatePreview() {
     ComponentPreviewSurface(gap = MedicalMateSpace.s16) {
         MedicalMateVoiceState.entries.forEach { state ->
-            MedicalMateVoiceInput(state = state, onMicClick = {}, onTypeInsteadClick = {})
+            MedicalMateVoiceInputMate(state = state, onClick = {})
         }
     }
 }

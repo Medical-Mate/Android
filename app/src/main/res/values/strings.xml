@@ -325,6 +325,7 @@
     <string name="intake_chat_placeholder">메시지 입력</string>
     <string name="intake_chat_send">보내기</string>
     <string name="intake_chat_voice">음성으로 답하기</string>
+    <string name="intake_chat_voice_stop">말하기 끝내기</string>
     <string name="intake_chat_waiting">답변을 준비하고 있어요</string>
 
     <string name="intake_severity_question">%1$s 얼마나 아프세요?</string>
@@ -608,12 +609,11 @@
     <string name="voice_idle_title">말씀해 주세요</string>
     <string name="voice_idle_description">편하게 말씀하시면 제가 정리할게요</string>
     <string name="voice_listening_title">듣고 있어요</string>
-    <string name="voice_listening_description">다 말씀하시면 버튼을 다시 눌러주세요</string>
+    <string name="voice_listening_description">다 말씀하시면 한 번 더 눌러주세요</string>
     <string name="voice_processing_title">정리하는 중이에요</string>
     <string name="voice_processing_description">잠시만 기다려 주세요</string>
     <string name="voice_denied_title">마이크를 쓸 수 없어요</string>
     <string name="voice_denied_description">설정에서 마이크 권한을 켜주세요</string>
-    <string name="voice_type_instead">직접 입력할게요</string>
     <string name="voice_mic_start">말하기 시작</string>
     <string name="voice_mic_stop">말하기 끝내기</string>
     <!-- "헤이 메이트"로 부르면 뜨는 음성 명령 막대(#273·#282). 시안에 없는 문구다. -->

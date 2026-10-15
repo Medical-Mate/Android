@@ -22,6 +22,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -32,18 +33,18 @@ import com.mist.medicalmate.core.designsystem.MedicalMateScreenPreviews
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
-import com.mist.medicalmate.core.designsystem.component.MedicalMateBottomCtaBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateCard
 import com.mist.medicalmate.core.designsystem.component.MedicalMateCardEmphasis
 import com.mist.medicalmate.core.designsystem.component.MedicalMateChip
 import com.mist.medicalmate.core.designsystem.component.MedicalMateDivider
 import com.mist.medicalmate.core.designsystem.component.MedicalMateFab
+import com.mist.medicalmate.core.designsystem.component.MedicalMateFooter
 import com.mist.medicalmate.core.designsystem.component.MedicalMateNavBar
 import com.mist.medicalmate.core.designsystem.component.MedicalMateSurfaceStyle
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTextArea
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTooltip
-import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceInput
+import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceInputMate
 import com.mist.medicalmate.core.voice.rememberVoiceScrollState
 import com.mist.medicalmate.core.voice.voicePanelSpace
 import java.time.format.DateTimeFormatter
@@ -91,7 +92,7 @@ fun VisitNoteScreen(state: VisitNoteUiState, callbacks: VisitNoteCallbacks, modi
                 )
             }
         }
-        MedicalMateBottomCtaBar {
+        MedicalMateFooter {
             MedicalMateButton(
                 label = stringResource(R.string.visit_note_save),
                 onClick = callbacks.onSaveClick,
@@ -141,6 +142,14 @@ private fun NoteContent(state: VisitNoteUiState, callbacks: VisitNoteCallbacks) 
         MedicalMateTextArea(
             value = state.note,
             onValueChange = callbacks.onNoteChange,
+            // 듣는 중에 적는 칸을 누르면 받아쓰기를 끝내고 손으로 적는다. 직접 입력 대안이 같은 자리에 남는다.
+            modifier = Modifier.onFocusChanged {
+                if (it.isFocused &&
+                    state.voice != null
+                ) {
+                    callbacks.onTypeInsteadClick()
+                }
+            },
             placeholder = stringResource(R.string.visit_note_placeholder),
             maxLength = NOTE_MAX_LENGTH,
         )
@@ -149,14 +158,10 @@ private fun NoteContent(state: VisitNoteUiState, callbacks: VisitNoteCallbacks) 
             onOrganizeClick = callbacks.onSaveClick,
             modifier = Modifier.bringIntoViewRequester(bottomOfBox),
         )
-        // 음성 패널은 적던 글 아래에 선다. 증상 문답(1c-3·1c-4)과 같은 컴포넌트다. 그쪽은
-        // 입력 자리를 통째로 갈아끼우지만 여기는 적어 둔 글이 그대로 남아야 한다.
+        // 받아쓰는 중에는 적던 글 아래에 `Voice Input · Mate`가 선다(1p-T, #318). 카드를 누르면 듣기를 끝낸다 —
+        // 마이크 FAB는 그동안 감춘다. 증상 문답도 같은 카드다.
         state.voice?.let { voice ->
-            MedicalMateVoiceInput(
-                state = voice,
-                onMicClick = callbacks.onMicClick,
-                onTypeInsteadClick = callbacks.onTypeInsteadClick,
-            )
+            MedicalMateVoiceInputMate(state = voice, onClick = callbacks.onMicClick)
         }
     }
 }

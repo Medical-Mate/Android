@@ -9,6 +9,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -30,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -47,7 +49,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateChip
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButtonStyle
 import com.mist.medicalmate.core.designsystem.component.MedicalMateTextField
-import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceInput
+import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceInputMate
 import com.mist.medicalmate.core.voice.rememberVoiceLazyListState
 import com.mist.medicalmate.core.voice.voicePanelInset
 
@@ -226,60 +228,68 @@ private fun TypingRow() {
 }
 
 /**
- * 하단 입력. 글과 음성 두 가지다.
+ * 하단 입력. 시안 1c-2 · 1c-3의 `Text Field` 하나이고, 안쪽 오른쪽에 마이크와 보내기가 선다.
+ *
+ * **받아쓰는 중에는 입력칸 위에 `Voice Input · Mate` 카드가 선다**(#318). 시안에 문답의 듣는 중 화면이 없어 진료 후
+ * 메모(1p-T)와 같은 카드를 쓴다(사용자 결정). 입력칸은 그대로 남는다 — 마이크를 한 번 더 누르거나 카드를 누르면
+ * 듣기를 끝내고, 입력칸을 누르면 받아쓰기를 끝내고 손으로 적는다. 조용한 곳이 아니거나 목소리가 잘 안 나오는
+ * 환자에게 음성만 남기면 앱을 쓸 수 없다.
  *
  * 빈 칸에 질문을 적을 때도 이 입력이다(1c-D2 · D3). 열리면 입력칸으로 바로 옮겨 키보드를 올린다. 시안의 그
  * 입력칸에는 안내 글이 없다.
- *
- * 음성에서도 "직접 입력할게요"가 같은 자리에 남는다. 문서의 컴포넌트 규격과 9절이 요구하는 것이고,
- * 조용한 곳이 아니거나 목소리가 잘 안 나오는 환자에게 음성만 남기면 앱을 쓸 수 없다.
  */
 @Composable
 internal fun ChatInput(state: IntakeUiState, callbacks: IntakeCallbacks) {
     val field = remember { FocusRequester() }
+    val listening = state.inputMode == IntakeInputMode.VOICE
     LaunchedEffect(state.writingQuestion) {
-        if (state.writingQuestion && state.inputMode == IntakeInputMode.TEXT) field.requestFocus()
+        if (state.writingQuestion && !listening) field.requestFocus()
     }
-    when (state.inputMode) {
-        IntakeInputMode.VOICE ->
-            MedicalMateVoiceInput(
-                state = state.voice,
-                onMicClick = callbacks.onMicClick,
-                onTypeInsteadClick = callbacks.onTypeInsteadClick,
-            )
+    Column(verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s16)) {
+        if (listening) {
+            MedicalMateVoiceInputMate(state = state.voice, onClick = callbacks.onMicClick)
+        }
+        MedicalMateTextField(
+            value = state.draft,
+            onValueChange = callbacks.onDraftChange,
+            modifier =
+            Modifier
+                .focusRequester(field)
+                .onFocusChanged { if (it.isFocused && listening) callbacks.onTypeInsteadClick() },
+            placeholder = stringResource(R.string.intake_chat_placeholder).takeUnless { state.writingQuestion },
+            onSend = callbacks.onSendClick,
+            trailing = { ChatInputActions(state = state, listening = listening, callbacks = callbacks) },
+        )
+    }
+}
 
-        IntakeInputMode.TEXT ->
-            MedicalMateTextField(
-                value = state.draft,
-                onValueChange = callbacks.onDraftChange,
-                modifier = Modifier.focusRequester(field),
-                placeholder = stringResource(R.string.intake_chat_placeholder).takeUnless { state.writingQuestion },
-                onSend = callbacks.onSendClick,
-                trailing = {
-                    // Actions 슬롯. 버튼끼리는 4로 붙인다.
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4),
-                    ) {
-                        // 음성을 쓸 수 없는 기기에서는 그리지 않는다. 직접 입력은 그대로라
-                        // 막히는 흐름이 없다.
-                        if (state.voiceAvailable) {
-                            MedicalMateIconButton(
-                                onClick = callbacks.onVoiceClick,
-                                icon = MedicalMateIcons.Mic,
-                                contentDescription = stringResource(R.string.intake_chat_voice),
-                            )
-                        }
-                        MedicalMateIconButton(
-                            onClick = callbacks.onSendClick,
-                            icon = MedicalMateIcons.ArrowUp,
-                            contentDescription = stringResource(R.string.intake_chat_send),
-                            style = MedicalMateIconButtonStyle.GHOST,
-                            enabled = if (state.writingQuestion) state.canAddQuestion else state.canSend,
-                        )
-                    }
-                },
+/**
+ * 입력칸 안쪽의 `Actions` 슬롯. 버튼끼리는 4로 붙인다. 듣는 중에는 마이크가 "말하기 끝내기"다.
+ *
+ * 음성을 쓸 수 없는 기기에서는 마이크를 그리지 않는다. 직접 입력은 그대로라 막히는 흐름이 없다.
+ */
+@Composable
+private fun ChatInputActions(state: IntakeUiState, listening: Boolean, callbacks: IntakeCallbacks) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4),
+    ) {
+        if (state.voiceAvailable) {
+            MedicalMateIconButton(
+                onClick = if (listening) callbacks.onMicClick else callbacks.onVoiceClick,
+                icon = MedicalMateIcons.Mic,
+                contentDescription = stringResource(
+                    if (listening) R.string.intake_chat_voice_stop else R.string.intake_chat_voice,
+                ),
             )
+        }
+        MedicalMateIconButton(
+            onClick = callbacks.onSendClick,
+            icon = MedicalMateIcons.ArrowUp,
+            contentDescription = stringResource(R.string.intake_chat_send),
+            style = MedicalMateIconButtonStyle.GHOST,
+            enabled = if (state.writingQuestion) state.canAddQuestion else state.canSend,
+        )
     }
 }
 
