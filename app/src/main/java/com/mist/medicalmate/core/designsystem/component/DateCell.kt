@@ -109,7 +109,7 @@ fun MedicalMateDateCell(
 
 /** 날짜와 상태를 한 번에 읽는다. 점만 두면 스크린 리더에 표시의 뜻이 전달되지 않는다. */
 @Composable
-private fun dateCellDescription(day: Int, isToday: Boolean, marker: MedicalMateDateMarker): String {
+internal fun dateCellDescription(day: Int, isToday: Boolean, marker: MedicalMateDateMarker): String {
     val todayLabel = stringResource(R.string.date_cell_today)
     val markerLabel =
         when (marker) {

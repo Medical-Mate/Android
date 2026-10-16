@@ -1,8 +1,6 @@
 package com.mist.medicalmate.calendar.ui
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
@@ -20,10 +17,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
-import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateScreenPreviews
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
@@ -31,10 +26,8 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateBadgeTone
 import com.mist.medicalmate.core.designsystem.component.MedicalMateBottomSheet
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
-import com.mist.medicalmate.core.designsystem.component.MedicalMateCard
-import com.mist.medicalmate.core.designsystem.component.MedicalMateDateCell
-import com.mist.medicalmate.core.designsystem.component.MedicalMateDateCellSize
-import com.mist.medicalmate.core.designsystem.component.MedicalMateDateMarker
+import com.mist.medicalmate.core.designsystem.component.MedicalMateCalendarDayState
+import com.mist.medicalmate.core.designsystem.component.MedicalMateCalendarGrid
 import com.mist.medicalmate.core.designsystem.component.MedicalMateFab
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateListRow
@@ -212,7 +205,13 @@ private fun MonthContent(
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberVoiceScrollState()).voicePanelSpace()
-            .padding(horizontal = MedicalMateSize.gutter, vertical = MedicalMateSpace.s12),
+            // 1r-1의 Content가 위 8 · 아래 16이다(#326).
+            .padding(
+                start = MedicalMateSize.gutter,
+                end = MedicalMateSize.gutter,
+                top = MedicalMateSpace.s8,
+                bottom = MedicalMateSpace.s16,
+            ),
         verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s14),
     ) {
         MonthHeader(
@@ -225,11 +224,12 @@ private fun MonthContent(
     }
 }
 
-/** 월 이동. 가운데에 연·월을 두고 좌우에 화살표다. */
+/** 월 이동. 가운데에 연·월을 두고 좌우에 화살표다. 사이가 8이다. */
 @Composable
 private fun MonthHeader(month: YearMonth, onPreviousMonthClick: () -> Unit, onNextMonthClick: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s8),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         MedicalMateIconButton(
@@ -239,7 +239,8 @@ private fun MonthHeader(month: YearMonth, onPreviousMonthClick: () -> Unit, onNe
         )
         Text(
             text = stringResource(R.string.calendar_month, month.year, month.monthValue),
-            style = MedicalMateTheme.typography.headingS,
+            // 1r-1의 Month Head 제목이 `Heading/M` 20이다(#326).
+            style = MedicalMateTheme.typography.headingM,
             color = MedicalMateTheme.colors.fgDefault,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             modifier = Modifier.weight(1f),
@@ -253,115 +254,23 @@ private fun MonthHeader(month: YearMonth, onPreviousMonthClick: () -> Unit, onNe
 }
 
 /**
- * 월 격자.
- *
- * 한 주가 일요일에서 시작한다. 첫 주의 빈 칸은 그 달 1일의 요일만큼 비운다.
- *
- * 날짜 칸은 [MedicalMateDateCell]이 그린다. 오늘, 고른 날, 일정 있는 날의 표시가 그
- * 컴포넌트에 있다.
+ * 월 격자. 10-15의 `Calendar Grid`다(#326). 고른 날은 채움, 오늘은 옅은 면과 테두리, 점은 기록 · 예정이다.
  */
 @Composable
 private fun MonthGrid(state: CalendarUiState, onDayClick: (LocalDate) -> Unit) {
-    val firstDayOffset = state.month.atDay(1).dayOfWeek.value % DAYS_IN_WEEK
-    val lastDay = state.month.lengthOfMonth()
-
-    MedicalMateCard {
-        Row(modifier = Modifier.fillMaxWidth()) {
-            weekdayLabels().forEach { label ->
-                Text(
-                    text = label,
-                    style = MedicalMateTheme.typography.labelS,
-                    color = MedicalMateTheme.colors.fgSubtle,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    modifier = Modifier.weight(1f),
-                )
+    MedicalMateCalendarGrid(
+        month = state.month,
+        onDayClick = onDayClick,
+        stateOf = { date ->
+            when (date) {
+                state.selected -> MedicalMateCalendarDayState.SELECTED
+                state.today -> MedicalMateCalendarDayState.TODAY
+                else -> MedicalMateCalendarDayState.DEFAULT
             }
-        }
-        var day = 1 - firstDayOffset
-        while (day <= lastDay) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                repeat(DAYS_IN_WEEK) { index ->
-                    val current = day + index
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        if (current in 1..lastDay) {
-                            val date = state.month.atDay(current)
-                            MedicalMateDateCell(
-                                day = current,
-                                selected = date == state.selected,
-                                isToday = date == state.today,
-                                marker = state.markerOn(current),
-                                onClick = { onDayClick(date) },
-                            )
-                        } else {
-                            // 빈 칸도 자리를 차지해야 요일이 어긋나지 않는다.
-                            Box(modifier = Modifier.size(MedicalMateDateCellSize))
-                        }
-                    }
-                }
-            }
-            day += DAYS_IN_WEEK
-        }
-        MonthLegend()
-    }
+        },
+        markerOf = { date -> state.markerOn(date.dayOfMonth) },
+    )
 }
-
-/**
- * 범례. 채운 점과 빈 원이 각각 무엇인지 적는다.
- *
- * 두 표시가 5px이라 모양 차이만으로는 처음 보는 사람이 알 수 없다. 시안이 격자와 같은
- * 판 안에 두었다.
- */
-@Composable
-private fun MonthLegend() {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(top = MedicalMateSpace.s8),
-        horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        LegendItem(marker = MedicalMateDateMarker.RECORD, labelRes = R.string.calendar_legend_record)
-        LegendItem(marker = MedicalMateDateMarker.PLANNED, labelRes = R.string.calendar_legend_planned)
-    }
-}
-
-@Composable
-private fun LegendItem(marker: MedicalMateDateMarker, @StringRes labelRes: Int) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier =
-            Modifier
-                .size(LegendDotSize)
-                .then(
-                    if (marker == MedicalMateDateMarker.PLANNED) {
-                        Modifier.border(
-                            width = LegendRingWidth,
-                            color = MedicalMateTheme.colors.bgPrimary,
-                            shape = MedicalMateRadius.full,
-                        )
-                    } else {
-                        Modifier.background(
-                            color = MedicalMateTheme.colors.bgPrimary,
-                            shape = MedicalMateRadius.full,
-                        )
-                    },
-                ),
-        )
-        Text(
-            text = stringResource(labelRes),
-            style = MedicalMateTheme.typography.labelS,
-            color = MedicalMateTheme.colors.fgSubtle,
-        )
-    }
-}
-
-/** 날짜 칸의 표시와 같은 크기여야 같은 것으로 읽힌다. */
-private val LegendDotSize = 5.dp
-private val LegendRingWidth = 1.dp
 
 /**
  * 고른 날의 일정.
@@ -408,8 +317,6 @@ private fun ColumnScope.SelectedDay(state: CalendarUiState, onScheduleClick: (St
  */
 @Composable
 internal fun weekdayLabels(): List<String> = stringArrayResource(R.array.calendar_weekdays).toList()
-
-private const val DAYS_IN_WEEK = 7
 
 /** "9월 12일 (금)" 형식. 홈의 일정 줄과 같은 형식이다. */
 private val dayFormat = DateTimeFormatter.ofPattern("M월 d일 (E)")

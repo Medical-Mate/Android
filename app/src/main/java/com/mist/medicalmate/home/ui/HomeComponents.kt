@@ -18,14 +18,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.R
-import com.mist.medicalmate.core.designsystem.MedicalMateElevation
 import com.mist.medicalmate.core.designsystem.MedicalMateRadius
 import com.mist.medicalmate.core.designsystem.MedicalMateSize
 import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.ShadowTint
 import com.mist.medicalmate.core.designsystem.component.MedicalMateBadgeTone
-import com.mist.medicalmate.core.designsystem.component.MedicalMateDivider
 import com.mist.medicalmate.core.designsystem.component.MedicalMateListRow
 import com.mist.medicalmate.core.designsystem.component.MedicalMateListRowType
 import com.mist.medicalmate.core.designsystem.component.MedicalMateScheduleCard
@@ -67,21 +65,14 @@ internal fun HomeSheet(modifier: Modifier = Modifier, content: @Composable Colum
 }
 
 /**
- * 최근 브리핑 카드 묶음. 카드 한 장(반경 20 · `Elevation/Card`) 안에 줄을 담고 `Divider`로 가른다(1n-1). 줄의
- * 배지는 브리핑 카드 전체(1j-4)와 같은 규칙이다(사용자 결정).
+ * 최근 브리핑 카드 묶음. 줄마다 따로 뜬 `List Row`이고 사이가 12다(1n-1, #326). 전에는 카드 한 장 안에 줄을 담고
+ * `Divider`로 갈랐는데 10-15 시안이 줄을 떼어 띄웠다. 줄의 배지는 브리핑 카드 전체(1j-4)와 같은 규칙이다(사용자
+ * 결정).
  */
 @Composable
 internal fun BriefingList(cards: List<SavedCardSummary>, onCardClick: (String) -> Unit) {
-    Column(
-        modifier =
-        Modifier
-            .fillMaxWidth()
-            .dropShadow(MedicalMateRadius.lg, CardShadow)
-            .clip(MedicalMateRadius.lg)
-            .background(MedicalMateTheme.colors.bgSurface),
-    ) {
-        cards.forEachIndexed { index, card ->
-            if (index > 0) MedicalMateDivider()
+    Column(verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s12)) {
+        cards.forEach { card ->
             val written = card.writtenOn.format(cardDate)
             MedicalMateListRow(
                 title = card.title,
@@ -92,7 +83,6 @@ internal fun BriefingList(cards: List<SavedCardSummary>, onCardClick: (String) -
                 badgeTone = card.status.tone(),
                 type = MedicalMateListRowType.BADGE,
                 onClick = { onCardClick(card.id) },
-                floating = false,
             )
         }
     }
@@ -159,10 +149,6 @@ private val SheetPaddingTop = 28.dp
 private val SheetShadowWide =
     Shadow(radius = 24.dp, color = ShadowTint.copy(alpha = 0.10f), offset = DpOffset(0.dp, (-4).dp))
 private val SheetShadowTight = Shadow(radius = 2.dp, color = ShadowTint.copy(alpha = 0.05f))
-
-/** 최근 브리핑 카드 묶음의 `Elevation/Card`. 앞의 겹(y3 blur10 8%)을 쓴다. */
-private val CardShadow =
-    Shadow(radius = 10.dp, color = ShadowTint.copy(alpha = 0.08f), offset = DpOffset(0.dp, MedicalMateElevation.card))
 
 /** 카드 메타용 "2026.09.18". */
 private val cardDate = DateTimeFormatter.ofPattern("yyyy.MM.dd")
