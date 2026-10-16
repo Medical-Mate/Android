@@ -360,15 +360,44 @@ class VoiceCommandViewModelTest {
     }
 
     @Test
-    fun `아무것도 들리지 않아도 닫지 않는다`() = runTest {
-        // 전에는 12초 동안 들린 것이 없으면 닫았다(#324, 사용자 결정으로 걷어냈다).
+    fun `12초 동안 아무것도 들리지 않으면 닫는다`() = runTest {
         val speech = FakeSpeechToText(usable = true, keepOpen = true)
         val viewModel = viewModel(speech = speech).ready()
         detector.wake()
+        assertNotNull(viewModel.uiState.value.panel)
 
-        advanceTimeBy(60_000)
+        advanceTimeBy(11_999)
+        assertNotNull(viewModel.uiState.value.panel)
+        advanceTimeBy(2)
+
+        assertNull(viewModel.uiState.value.panel)
+    }
+
+    @Test
+    fun `받아쓰기를 다시 열어도 12초는 이어서 센다`() = runTest {
+        // 말한 뒤 받아쓰기가 끝나 다시 열어도 그때부터 새로 세지 않는다. 마지막으로 들린 때부터 센다.
+        val speech = FakeSpeechToText(usable = true, chunks = listOf(SpeechChunk.Final("홈")), once = true)
+        val viewModel = viewModel(speech = speech).ready()
+        detector.wake()
+
+        advanceTimeBy(12_001)
+
+        assertNull(viewModel.uiState.value.panel)
+    }
+
+    @Test
+    fun `화면이 말을 걸면 12초를 다시 센다`() = runTest {
+        // 물어 놓고 바로 닫히면 답할 틈이 없다.
+        val viewModel = viewModel(speech = FakeSpeechToText(usable = true, keepOpen = true)).ready()
+        detector.wake()
+
+        advanceTimeBy(10_000)
+        viewModel.targets.ask(VoicePrompt(question = VoiceText(R.string.voice_ask_date)))
+        advanceTimeBy(10_000)
 
         assertNotNull(viewModel.uiState.value.panel)
+        advanceTimeBy(2_001)
+        assertNull(viewModel.uiState.value.panel)
     }
 
     @Test
@@ -383,6 +412,20 @@ class VoiceCommandViewModelTest {
         viewModel.setForeground(true)
 
         assertNotNull(viewModel.uiState.value.panel)
+    }
+
+    @Test
+    fun `앱을 나갔다 돌아오면 막대를 다시 열지 않는다`() = runTest {
+        // 홈 화면이나 다른 앱으로 가면 꺼진 채로 둔다(#324, 사용자 결정).
+        val speech = FakeSpeechToText(usable = true, keepOpen = true)
+        val viewModel = viewModel(speech = speech).ready()
+        detector.wake()
+
+        viewModel.setForeground(false)
+        viewModel.setForeground(false, leftApp = true)
+        viewModel.setForeground(true)
+
+        assertNull(viewModel.uiState.value.panel)
     }
 
     @Test
