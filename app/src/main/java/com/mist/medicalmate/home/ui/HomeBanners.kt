@@ -12,6 +12,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -22,6 +23,9 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateBannerLink
 import com.mist.medicalmate.core.designsystem.component.MedicalMateHomeBannerHeader
 import com.mist.medicalmate.core.designsystem.component.MedicalMateHomeBannerPage
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import java.time.LocalTime
 
 /*
@@ -51,13 +55,20 @@ internal fun HomeBannerPager(
     val animated = rememberAnimationsEnabled()
 
     if (looping && animated) {
-        LaunchedEffect(pager.settledPage, pager.isScrollInProgress) {
-            if (pager.isScrollInProgress) return@LaunchedEffect
-            delay(BANNER_DWELL_MILLIS)
-            pager.animateScrollToPage(
-                pager.currentPage + 1,
-                animationSpec = tween(BANNER_SLIDE_MILLIS, easing = MotionEasing),
-            )
+        // 자리 잡은 장이 바뀔 때마다 처음부터 센다. 전에는 넘기는 중인지까지 키로 걸어서, 넘기기 시작하는 순간 키가
+        // 바뀌어 넘기던 것을 스스로 취소했다 — 배너가 넘어가지 않았다(#322). 손으로 끄는 중이면 놓을 때까지 기다린다.
+        LaunchedEffect(pager) {
+            snapshotFlow { pager.settledPage }.collectLatest {
+                delay(BANNER_DWELL_MILLIS)
+                snapshotFlow { pager.isScrollInProgress }.first { scrolling -> !scrolling }
+                // 넘기는 중에 손이 닿으면 페이저가 이 동작을 취소한다. 자식으로 두어 그 취소가 세는 일까지 끝내지 않게 한다.
+                launch {
+                    pager.animateScrollToPage(
+                        pager.currentPage + 1,
+                        animationSpec = tween(BANNER_SLIDE_MILLIS, easing = MotionEasing),
+                    )
+                }
+            }
         }
     }
 
