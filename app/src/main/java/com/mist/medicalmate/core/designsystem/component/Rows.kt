@@ -22,7 +22,6 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
@@ -199,9 +198,6 @@ enum class MedicalMateListRowType {
  *
  * [badgeTone]은 배지가 무엇을 뜻하는지에 따라 고른다. 완료는 Success, 남은 일수처럼
  * 브랜드 정보는 Brand다. 기본은 중립이다.
- *
- * [floating]을 끄면 줄의 면과 그림자를 그리지 않는다. 홈의 최근 브리핑 카드(1n-1)처럼 줄 여럿을 카드 한 장에
- * 담고 `Divider`로 가르는 자리다 — 그 카드가 면과 고도를 갖는다.
  */
 @Composable
 fun MedicalMateListRow(
@@ -212,7 +208,6 @@ fun MedicalMateListRow(
     badgeTone: MedicalMateBadgeTone = MedicalMateBadgeTone.NEUTRAL,
     type: MedicalMateListRowType = MedicalMateListRowType.DEFAULT,
     onClick: (() -> Unit)? = null,
-    floating: Boolean = true,
 ) {
     val colors = MedicalMateTheme.colors
     val typography = MedicalMateTheme.typography
@@ -267,33 +262,23 @@ fun MedicalMateListRow(
         }
     }
 
-    RowSurface(onClick = onClick, modifier = modifier, floating = floating, content = row)
+    RowSurface(onClick = onClick, modifier = modifier, content = row)
 }
 
-/** 줄의 면. 마스터가 카드 모양으로 띄운다 — 반경 16에 `Elevation/Card`다. 띄우지 않으면 면만 깐다. */
+/** 줄의 면. 마스터가 카드 모양으로 띄운다 — 반경 16에 `Elevation/Card`다. */
 @Composable
-private fun RowSurface(
-    onClick: (() -> Unit)?,
-    modifier: Modifier,
-    floating: Boolean,
-    content: @Composable () -> Unit,
-) {
+private fun RowSurface(onClick: (() -> Unit)?, modifier: Modifier, content: @Composable () -> Unit) {
     val colors = MedicalMateTheme.colors
-    // 담는 카드가 반경을 갖는다. 줄이 반경을 가지면 누를 때 번지는 면이 모서리에서 둥글게 잘린다.
-    val shape = if (floating) MedicalMateRadius.md else RectangleShape
+    val shape = MedicalMateRadius.md
     val surface =
-        if (floating) {
-            modifier
-                .fillMaxWidth()
-                .shadow(
-                    elevation = MedicalMateElevation.card,
-                    shape = MedicalMateRadius.md,
-                    ambientColor = ShadowTint,
-                    spotColor = ShadowTint,
-                )
-        } else {
-            modifier.fillMaxWidth()
-        }
+        modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = MedicalMateElevation.card,
+                shape = shape,
+                ambientColor = ShadowTint,
+                spotColor = ShadowTint,
+            )
 
     if (onClick == null) {
         Surface(
