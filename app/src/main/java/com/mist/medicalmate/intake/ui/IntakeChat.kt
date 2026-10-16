@@ -80,6 +80,7 @@ import com.mist.medicalmate.core.voice.voicePanelInset
 internal fun ChatStep(state: IntakeUiState, callbacks: IntakeCallbacks, modifier: Modifier = Modifier) {
     val listState = rememberVoiceLazyListState()
     val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
+    val panelInset = voicePanelInset()
 
     LaunchedEffect(
         state.messages.size,
@@ -89,6 +90,8 @@ internal fun ChatStep(state: IntakeUiState, callbacks: IntakeCallbacks, modifier
         imeBottom,
         state.questionRows.size,
         state.writingQuestion,
+        // 막대가 뜨거나 높이가 바뀌어도 다시 끝으로 보낸다(#324). 빠져 있어서 질문 줄이 막대 뒤에 남았다.
+        panelInset,
     ) {
         val last = listState.layoutInfo.totalItemsCount - 1
         if (last >= 0) listState.animateScrollToItem(last)

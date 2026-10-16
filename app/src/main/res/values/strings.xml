@@ -619,6 +619,7 @@
     <string name="voice_command_close">닫기</string>
     <string name="voice_command_yes_no">"네"나 "아니요"로 답해 주세요</string>
     <string name="voice_command_cancelled">알겠어요, 안 할게요</string>
+    <string name="voice_command_confirmed">네, 했어요</string>
     <string name="voice_command_confirm_again">잘 못 들었어요. "네"나 "아니요"로 답해 주세요</string>
     <string name="voice_moved_home">홈으로 왔어요</string>
     <string name="voice_moved_calendar">캘린더를 열었어요</string>
@@ -721,6 +722,12 @@
     <string name="voice_suggest_body_focus_do">큰 부위부터</string>
     <string name="voice_suggest_body_unsure">잘 모르겠어요</string>
     <string name="voice_suggest_body_unsure_do">고를 곳 듣기</string>
+    <string name="voice_suggest_body_next">다음</string>
+    <string name="voice_suggest_body_next_do">아픈 정도로</string>
+    <string name="voice_suggest_body_flip">반대쪽</string>
+    <string name="voice_suggest_body_flip_do">좌우 바꾸기</string>
+    <string name="voice_suggest_body_reset">다시 고를래</string>
+    <string name="voice_suggest_body_reset_do">부위 다시 고르기</string>
     <string name="voice_suggest_chat_answer">사흘 전부터 아팠어요</string>
     <string name="voice_suggest_chat_answer_do">답하기</string>
     <string name="voice_suggest_chat_repeat">다시 보여 줘</string>
@@ -813,6 +820,17 @@
     <string name="voice_home_no_tomorrow">내일은 잡힌 진료가 없어요</string>
     <string name="voice_home_export">카드 내보내기를 열었어요</string>
     <string name="voice_home_guide">예약 문자로 일정을 채우는 방법을 열었어요</string>
+    <string name="voice_records_ask">어떤 기록을 열까요? 몇 번째인지, 날짜나 병원으로 말씀해 주세요</string>
+    <string name="voice_record_none">아직 남긴 진료 기록이 없어요</string>
+    <string name="voice_record_count">진료 기록이 %1$s건 있어요</string>
+    <string name="voice_record_not_found">그런 기록을 찾지 못했어요</string>
+    <string name="voice_record_which">맞는 기록이 %1$s건이에요</string>
+    <string name="voice_suggest_record_recent">최근 기록 보여 줘</string>
+    <string name="voice_suggest_record_recent_do">최근 기록</string>
+    <string name="voice_suggest_record_ordinal">두 번째 기록 열어 줘</string>
+    <string name="voice_suggest_record_ordinal_do">순서로 열기</string>
+    <string name="voice_suggest_record_date">10월 2일 기록</string>
+    <string name="voice_suggest_record_date_do">날짜로 열기</string>
     <string name="voice_scroll_down">내렸어요</string>
     <string name="voice_scroll_up">올렸어요</string>
     <string name="voice_scroll_bottom">맨 아래예요</string>
@@ -822,7 +840,7 @@
     <string name="voice_scroll_none">이 화면은 더 볼 내용이 없어요</string>
     <string name="voice_intake_ask_part">어디가 아프세요? 이 중에서 말씀해 주세요\n%1$s</string>
     <string name="voice_intake_picked">%1$s, 골랐어요</string>
-    <string name="voice_intake_ask_next_part">맞으면 "다음"이라고 해 주세요</string>
+    <string name="voice_intake_ask_next_part">맞으면 "다음"이라고 해 주세요. 다른 곳이면 "다시 고를래"라고 해 주세요</string>
     <string name="voice_intake_part_focus">%1$s 쪽을 볼게요</string>
     <string name="voice_intake_ask_zone">%1$s 어디가 아프세요? 이 중에서 말씀해 주세요\n%2$s</string>
     <string name="voice_intake_part_list">이 중에서 가장 가까운 곳을 골라 주세요</string>
@@ -845,7 +863,7 @@
     <string name="voice_intake_flipped">%1$s, 바꿨어요</string>
     <string name="voice_intake_flip_none">지금은 바꿀 쪽이 없어요</string>
     <string name="voice_intake_ask_next_severity">맞으면 "다음"이라고 해 주세요. 다른 걸 말씀하시면 바꿀게요</string>
-    <string name="voice_intake_ask_questions">카드에 담을 질문을 "두 번째 담아 줘"처럼 골라 주세요\n%1$s\n더 물어볼 게 있으면 그대로 말씀하세요</string>
+    <string name="voice_intake_ask_questions">카드에 담을 질문을 "두 번째 담아 줘"처럼 번호로 골라 주세요</string>
     <string name="voice_intake_ask_questions_empty">의사에게 물어볼 게 있으면 그대로 말씀해 주세요. 없으면 "다음"이라고 해 주세요</string>
     <string name="voice_intake_ask_more_questions">더 담을 게 있으면 말씀해 주세요. 다 됐으면 "다음"이라고 해 주세요</string>
     <string name="voice_intake_confirm_no_questions">아직 담은 질문이 없어요. 질문 없이 마칠까요?</string>

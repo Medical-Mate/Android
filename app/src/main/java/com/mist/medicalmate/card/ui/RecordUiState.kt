@@ -65,6 +65,8 @@ data class RecordItem(
     val meta: String,
     val detail: String? = null,
     val resumeLabel: String? = null,
+    /** 진료한 날. 말로 "10월 2일 기록"을 찾을 때 쓴다(#324). 카드 목록 줄에는 없다. */
+    val visitedOn: java.time.LocalDate? = null,
 ) {
     enum class Status { DRAFT, BEFORE_VISIT, CONFIRMED }
 }

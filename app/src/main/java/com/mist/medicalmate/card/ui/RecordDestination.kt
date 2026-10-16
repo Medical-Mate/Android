@@ -40,6 +40,8 @@ private fun RecordRoute(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) { viewModel.load() }
+    // 말로 기록을 찾아 연다(#324).
+    RecordVoiceTarget(uiState = viewModel.uiState, onOpen = { item -> onItemClick(item.id) })
 
     RecordScreen(
         state = state,

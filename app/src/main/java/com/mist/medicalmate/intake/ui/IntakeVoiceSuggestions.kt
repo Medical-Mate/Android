@@ -101,9 +101,29 @@ internal val INTAKE_DONE_SUGGESTIONS =
         ),
     )
 
+/** 증상 정리 1단계에서 부위를 고른 뒤(#324). 고를 곳을 또 권하지 않고 다음 · 반대쪽 · 다시 고르기를 권한다. */
+internal val BODY_PICKED_SUGGESTIONS =
+    listOf(
+        VoiceSuggestion(
+            R.string.voice_suggest_body_next,
+            R.string.voice_suggest_body_next_do,
+            MedicalMateIcons.ArrowRight,
+        ),
+        VoiceSuggestion(
+            R.string.voice_suggest_body_flip,
+            R.string.voice_suggest_body_flip_do,
+            MedicalMateIcons.BodyPoint,
+        ),
+        VoiceSuggestion(
+            R.string.voice_suggest_body_reset,
+            R.string.voice_suggest_body_reset_do,
+            MedicalMateIcons.BodyPoint,
+        ),
+    )
+
 /** 지금 단계의 추천. 세 단계가 한 목적지라 단계마다 다르다. 문답이 끝나면 질문 고르기 추천이다. */
 internal fun IntakeUiState.voiceSuggestions(): List<VoiceSuggestion> = when (step) {
-    IntakeStep.BODY_PART -> BODY_PART_SUGGESTIONS
+    IntakeStep.BODY_PART -> if (canLeaveBodyPart) BODY_PICKED_SUGGESTIONS else BODY_PART_SUGGESTIONS
     IntakeStep.SEVERITY -> SEVERITY_SUGGESTIONS
     IntakeStep.SYMPTOM_CHAT -> if (chatFinished) QUESTIONS_SUGGESTIONS else CHAT_SUGGESTIONS
 }

@@ -16,24 +16,23 @@ import com.mist.medicalmate.core.voice.VoiceTargets
 import com.mist.medicalmate.core.voice.VoiceText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.takeWhile
-import kotlinx.coroutines.flow.timeout
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.time.Duration.Companion.milliseconds
 
 /** 막대에 적을 한 줄. 화면이 돌려주는 [VoiceText]와 같은 것이다. */
 typealias VoiceMessage = VoiceText
@@ -131,21 +130,41 @@ internal constructor(
         }
     }
 
-    /** 앱이 화면에 올라오거나 내려갔다. 내려가면 듣던 명령도 거둔다. */
-    fun setForeground(value: Boolean) {
-        foreground.value = value
-        if (!value) dismiss()
-    }
+    /** 시스템 창이나 다른 앱 때문에 화면에서 내려가며 닫은 막대. 돌아오면 다시 연다(#324). */
+    private var reopen = false
 
     /**
-     * 홈에 갈 수 있는 세션인지와 마이크 권한이 있는지. 둘 다 있어야 듣는다. 로그아웃하면 듣던
-     * 명령도 거둔다. 로그에서 어느 쪽이 빠졌는지 보이도록 따로 받는다.
+     * 앱이 화면에 올라오거나 내려갔다. 내려가면 마이크를 놓는다 — 화면 밖에서 듣지 않는다.
+     *
+     * **앱 위에 잠깐 뜬 시스템 창 뒤에는 막대를 다시 연다**(#324). 말로 일정을 저장하면 알림 권한 창이 뜨는데, 그 창이
+     * 앱을 내려 막대가 닫혔다. 앱을 나가거나 홈 화면으로 갔으면([leftApp]) 다시 열지 않는다(사용자 결정).
      */
+    fun setForeground(value: Boolean, leftApp: Boolean = false) {
+        foreground.value = value
+        when {
+            value && reopen -> {
+                reopen = false
+                targets.summon()
+            }
+
+            value -> Unit
+            // 앱을 나가거나 홈 화면으로 갔다(ON_STOP). 시스템 창은 앱을 멈추게만 해 여기로 오지 않는다.
+            leftApp -> reopen = false
+            else -> {
+                reopen = commandJob != null
+                dismiss()
+            }
+        }
+    }
+
     fun setAllowed(signedIn: Boolean, micGranted: Boolean) {
         trace.log { "세션: 홈에 갈 수 있음=$signedIn · 마이크 권한=$micGranted" }
         val value = signedIn && micGranted
         allowed.value = value
-        if (!value) dismiss()
+        if (!value) {
+            reopen = false
+            dismiss()
+        }
     }
 
     /** 패널을 닫았다. 마이크를 누른 것도 같다 — 듣는 중의 마이크는 "말하기 끝내기"다. */
@@ -176,7 +195,7 @@ internal constructor(
         trace.log { "호출됨. 대화를 시작한다" }
         val detecting = detectorJob
         detecting?.cancel()
-        mutableUiState.update { it.copy(panel = VoicePanel(suggestions = suggestionsHere())) }
+        mutableUiState.update { it.copy(panel = VoicePanel(suggestions = targets.suggestionsHere())) }
         commandJob =
             viewModelScope.launch {
                 detecting?.join()
@@ -188,16 +207,18 @@ internal constructor(
     }
 
     /**
-     * 말이 끊길 때까지 듣고 답한다.
+     * 듣고 답한다.
      *
-     * 받아쓰기가 실패하거나, [IDLE_TIMEOUT_MS] 동안 아무것도 안 들리거나, 그만하라고 하거나,
-     * 확인한 일을 마치면 끝난다.
+     * **닫히는 것은 정해진 경우뿐이다**(#324, 사용자 결정) — "그만"이라고 하거나, 닫기를 누르거나, 앱을 나가거나,
+     * [IDLE_TIMEOUT_MS] 동안 아무것도 들리지 않을 때다. 전에는 확인한 일을 마치거나 받아쓰기가 스스로 끝나거나 실패해도
+     * 닫혀서 브리핑 카드를 저장하다가 막대가 꺼졌다. 이제 받아쓰기가 끝나면 다시 듣고, 다른 화면이 받아쓰는 중이면 그것이
+     * 끝나기를 기다렸다가 다시 듣는다. 다시 들어도 12초는 이어서 센다. 받아쓰기가 [MAX_FAILURES]번 잇달아 실패하면 쓸
+     * 수 없는 것으로 보고 닫는다.
      *
      * **화면이 먼저 건 말도 함께 받는다**(#282). 병원 찾기가 결과를 받아 "같은 이름이 3곳 있어요"라고
      * 묻는 것처럼, 사용자가 말하지 않았는데 막대에 적을 것이 생긴다. 그것도 들린 것처럼 쳐서
      * 12초를 다시 센다. 물어 놓고 바로 닫히면 답할 틈이 없다.
      */
-    @OptIn(FlowPreview::class)
     private suspend fun converse() {
         val conversation =
             VoiceConversation(
@@ -213,19 +234,57 @@ internal constructor(
                         )
                     }
                 },
-                suggest = { updatePanel { it.copy(suggestions = suggestionsHere()) } },
+                suggest = { updatePanel { it.copy(suggestions = targets.suggestionsHere()) } },
                 command = { request -> mutableUiState.update { it.copy(command = request) } },
                 shown = { mutableUiState.value.panel },
             )
-        val heard = speech.listen().map<SpeechChunk, Heard>(Heard::Spoken).onCompletion { emit(Heard.Ended) }
-        merge(heard, targets.prompts.map(Heard::Asked))
-            .timeout(IDLE_TIMEOUT_MS.milliseconds)
-            .catch { error ->
-                if (error !is TimeoutCancellationException) throw error
-                trace.log { "대화: ${IDLE_TIMEOUT_MS}ms 동안 들린 것이 없어 닫는다" }
-            }
-            .takeWhile { event -> hear(event, conversation) }
-            .collect()
+        // 들린 것(말 · 화면이 건 말)이 있을 때마다 늘린다. 이것이 12초 동안 그대로면 닫는다.
+        val heardAt = MutableStateFlow(0)
+        coroutineScope {
+            val talk = launch { listen(conversation) { heardAt.value++ } }
+            val idle =
+                launch {
+                    heardAt.collectLatest {
+                        delay(IDLE_TIMEOUT_MS)
+                        trace.log { "대화: ${IDLE_TIMEOUT_MS}ms 동안 들린 것이 없어 닫는다" }
+                        talk.cancel()
+                    }
+                }
+            talk.join()
+            idle.cancel()
+        }
+    }
+
+    /** 받아쓰기를 열고, 끝나면 다시 연다. 말할 거리가 끝나면(그만 · 실패) 돌아온다. */
+    private suspend fun listen(conversation: VoiceConversation, onHeard: () -> Unit) {
+        var failures = 0
+        while (failures < MAX_FAILURES) {
+            var open = true
+            var failed = false
+            val heard = speech.listen().map<SpeechChunk, Heard>(Heard::Spoken).onCompletion { emit(Heard.Ended) }
+            merge(heard, targets.prompts.map(Heard::Asked))
+                .takeWhile { event ->
+                    when {
+                        event == Heard.Ended -> false
+                        event is Heard.Spoken && event.chunk == SpeechChunk.Failed -> {
+                            failed = true
+                            false
+                        }
+
+                        else -> {
+                            onHeard()
+                            hear(event, conversation).also { open = it }
+                        }
+                    }
+                }.collect()
+            if (!open) return
+            failures = if (failed) failures + 1 else 0
+            trace.log { "대화: 받아쓰기가 ${if (failed) "실패해" else "끝나"} 다시 듣는다" }
+            // 다른 화면이 마이크를 잡았으면 놓을 때까지 기다린다. 같이 열면 둘 다 끊긴다.
+            speech.active.first { dictating -> !dictating }
+            delay(RELISTEN_DELAY_MS)
+        }
+        trace.log { "대화: 받아쓰기가 ${MAX_FAILURES}번 잇달아 실패해 닫는다" }
     }
 
     /** 들린 것 하나를 막대에 옮기고 답한다. 대화를 이어 갈지 돌려준다. */
@@ -233,12 +292,16 @@ internal constructor(
         is Heard.Asked -> {
             val prompt = event.prompt
             updatePanel {
-                it.copy(message = prompt.message ?: it.message, question = prompt.question, suggestions = emptyList())
+                it.copy(
+                    message = prompt.message ?: it.message,
+                    question = prompt.question,
+                    suggestions = if (prompt.suggest) targets.suggestionsHere() else emptyList(),
+                )
             }
             true
         }
 
-        Heard.Ended -> false
+        Heard.Ended -> true
         is Heard.Spoken ->
             when (val chunk = event.chunk) {
                 SpeechChunk.Preparing -> {
@@ -263,17 +326,10 @@ internal constructor(
 
                 SpeechChunk.Failed -> {
                     trace.log { "대화: 받아쓰기 실패" }
-                    false
+                    true
                 }
             }
     }
-
-    /**
-     * 지금 화면이 추천하는 말. 화면이 따로 두지 않았으면 공통 예시다(#292). 세 줄까지만 보인다 — 더 늘면
-     * 막대가 화면 아래를 너무 가리고, 읽을 것이 많으면 고르기가 더 어렵다.
-     */
-    private fun suggestionsHere(): List<VoiceSuggestion> =
-        targets.suggestions.ifEmpty { GLOBAL_SUGGESTIONS }.take(MAX_SUGGESTIONS)
 
     /** 대화가 듣는 것. 받아쓴 말, 화면이 건 말, 받아쓰기가 끝난 것. */
     private sealed interface Heard {
@@ -311,10 +367,23 @@ internal constructor(
     }
 
     private companion object {
-        /** 이만큼 아무것도 들리지 않으면 닫는다. 말하는 중의 글도 들린 것으로 친다. */
+        /** 이만큼 아무것도 들리지 않으면 닫는다. 말하는 중의 글과 화면이 건 말도 들린 것으로 친다. */
         const val IDLE_TIMEOUT_MS = 12_000L
+
+        /** 받아쓰기가 끝난 뒤 다시 열기까지. 엔진이 마이크를 놓을 틈이다. */
+        const val RELISTEN_DELAY_MS = 300L
+
+        /** 받아쓰기가 이만큼 잇달아 실패하면 이 기기에서 쓸 수 없는 것으로 보고 닫는다. */
+        const val MAX_FAILURES = 3
     }
 }
+
+/**
+ * 지금 화면이 추천하는 말. 화면이 따로 두지 않았으면 공통 예시다(#292). 세 줄까지만 보인다 — 더 늘면
+ * 막대가 화면 아래를 너무 가리고, 읽을 것이 많으면 고르기가 더 어렵다.
+ */
+private fun VoiceTargets.suggestionsHere(): List<VoiceSuggestion> =
+    suggestions.ifEmpty { GLOBAL_SUGGESTIONS }.take(MAX_SUGGESTIONS)
 
 /** 막대 위에 세우는 추천 말의 최대 줄 수. */
 internal const val MAX_SUGGESTIONS = 3

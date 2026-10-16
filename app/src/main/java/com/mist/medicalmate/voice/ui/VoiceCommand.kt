@@ -84,7 +84,7 @@ private val KEYWORDS: List<Pair<VoiceCommand, List<String>>> =
         VoiceCommand.PROFILE to
             listOf("내정보", "나의정보", "제정보", "설정", "프로필", "마이페이지", "내계정", "건강정보", "먹는약", "복용약"),
         VoiceCommand.CALENDAR to listOf("캘린더", "달력", "일정", "예약", "스케줄"),
-        VoiceCommand.RECORD to listOf("기록", "히스토리", "진료내역", "다녀온"),
+        VoiceCommand.RECORD to listOf("기록", "히스토리", "진료내역", "다녀온", "지난진료", "갔던병원", "다녀왔던"),
         VoiceCommand.HOME to listOf("홈", "처음", "메인", "첫화면"),
         VoiceCommand.BACK to listOf("뒤로", "이전", "돌아가", "전화면", "앞화면", "되돌아"),
     )

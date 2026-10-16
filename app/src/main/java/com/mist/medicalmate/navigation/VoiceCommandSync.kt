@@ -19,6 +19,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
@@ -86,6 +88,8 @@ internal fun VoiceCommandHost(
         viewModel.setForeground(true)
         onPauseOrDispose { viewModel.setForeground(false) }
     }
+    // 앱을 나가거나 홈 화면으로 가면 막대를 다시 열지 않는다(#324). 시스템 창은 여기로 오지 않는다.
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.setForeground(false, leftApp = true) }
 
     // 돌아갈 화면이 있는지 알려 준다(#298). 첫 화면의 "뒤로"에 "돌아갔어요"라고 하지 않으려는 것이다.
     val entry by navController.currentBackStackEntryAsState()
@@ -143,7 +147,12 @@ private fun NavHostController.perform(request: VoiceCommandRequest, targets: Voi
     val tab = voiceTabOf(command)
     val text = request.text
     when (command) {
-        VoiceCommand.HOME, VoiceCommand.RECORD -> selectTab(tab)
+        VoiceCommand.HOME -> selectTab(tab)
+        // "10월 2일 기록 보여 줘", "최근 기록 열어 줘"는 기록 탭이 그 말로 기록을 연다(#324).
+        VoiceCommand.RECORD -> {
+            targets.handOff(text)
+            selectTab(tab)
+        }
         VoiceCommand.CALENDAR ->
             if (DATE_HINT.containsMatchIn(text)) {
                 targets.handOff(text)

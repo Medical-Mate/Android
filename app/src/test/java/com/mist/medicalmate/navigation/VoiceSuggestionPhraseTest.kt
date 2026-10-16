@@ -13,6 +13,8 @@ import com.mist.medicalmate.intake.ui.IntakeDoneChoice
 import com.mist.medicalmate.intake.ui.QuestionVoice
 import com.mist.medicalmate.intake.ui.isBackVoice
 import com.mist.medicalmate.intake.ui.isNextVoice
+import com.mist.medicalmate.intake.ui.isOppositeVoice
+import com.mist.medicalmate.intake.ui.isResetVoice
 import com.mist.medicalmate.intake.ui.isUnsureVoice
 import com.mist.medicalmate.intake.ui.parseDoneVoice
 import com.mist.medicalmate.intake.ui.parseQuestionVoice
@@ -73,6 +75,9 @@ class VoiceSuggestionPhraseTest {
         assertTrue(pickBodyPartByVoice("오른쪽 어깨", null) is BodyVoicePick.Picked)
         assertTrue(pickBodyPartByVoice("다리가 아파요", null) is BodyVoicePick.AskSide)
         assertTrue(isUnsureVoice("잘 모르겠어요"))
+        // 부위를 고른 뒤의 추천(#324)
+        assertTrue(isOppositeVoice("반대쪽"))
+        assertTrue(isResetVoice("다시 고를래"))
         assertEquals(MedicalMateSeverity.LEVEL_4, parseSeverityVoice("많이 아파요"))
         assertEquals(MedicalMateSeverity.LEVEL_4, parseSeverityVoice("7점"))
         assertTrue(parseQuestionVoice("약 계속 먹어도 되나요?") is QuestionVoice.Add)

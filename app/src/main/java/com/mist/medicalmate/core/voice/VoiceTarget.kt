@@ -69,7 +69,12 @@ sealed interface VoiceReply {
  * @param message 막대 윗줄. 비우면 지금 줄을 그대로 둔다.
  * @param question 막대 아랫줄의 물음.
  */
-data class VoicePrompt(val message: VoiceText? = null, val question: VoiceText? = null)
+data class VoicePrompt(
+    val message: VoiceText? = null,
+    val question: VoiceText? = null,
+    /** 추천 말을 함께 세울지(#324). 무엇을 말하면 되는지 목록이 화면에 있는 자리에서 쓴다. */
+    val suggest: Boolean = false,
+)
 
 /**
  * 등록된 화면들. 맨 나중에 등록한 것이 지금 화면이다.
