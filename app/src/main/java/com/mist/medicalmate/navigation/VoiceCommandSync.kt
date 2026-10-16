@@ -143,7 +143,12 @@ private fun NavHostController.perform(request: VoiceCommandRequest, targets: Voi
     val tab = voiceTabOf(command)
     val text = request.text
     when (command) {
-        VoiceCommand.HOME, VoiceCommand.RECORD -> selectTab(tab)
+        VoiceCommand.HOME -> selectTab(tab)
+        // "10월 2일 기록 보여 줘", "최근 기록 열어 줘"는 기록 탭이 그 말로 기록을 연다(#324).
+        VoiceCommand.RECORD -> {
+            targets.handOff(text)
+            selectTab(tab)
+        }
         VoiceCommand.CALENDAR ->
             if (DATE_HINT.containsMatchIn(text)) {
                 targets.handOff(text)

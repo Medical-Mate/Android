@@ -128,6 +128,7 @@ private fun VisitListItem.toRow() = RecordItem(
     title = cardTitle,
     status = RecordItem.Status.CONFIRMED,
     meta = listOfNotNull(visitedOn.format(VISITED_ON) + " 진료", clinic).joinToString(" · "),
+    visitedOn = visitedOn,
 )
 
 private val MONTH_LABEL: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy년 M월", Locale.KOREAN)
