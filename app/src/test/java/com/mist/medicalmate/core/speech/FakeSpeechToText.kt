@@ -18,8 +18,14 @@ internal class FakeSpeechToText(
     private val usable: Boolean = false,
     private val chunks: List<SpeechChunk> = emptyList(),
     private val keepOpen: Boolean = false,
+    /** [chunks]를 처음 들을 때만 낸다. 다시 들으면 아무 말 없이 열려 있다 — 사람이 말을 마친 뒤의 침묵이다. */
+    private val once: Boolean = false,
 ) : SpeechToText {
     var stopped = false
+
+    /** 받아쓰기를 연 횟수. */
+    var listens = 0
+        private set
 
     override val active = MutableStateFlow(false)
 
@@ -27,9 +33,10 @@ internal class FakeSpeechToText(
 
     override fun listen(): Flow<SpeechChunk> = flow {
         active.value = true
+        val first = listens++ == 0
         try {
-            chunks.forEach { emit(it) }
-            if (keepOpen) awaitCancellation()
+            if (first || !once) chunks.forEach { emit(it) }
+            if (keepOpen || (once && !first)) awaitCancellation()
         } finally {
             active.value = false
         }

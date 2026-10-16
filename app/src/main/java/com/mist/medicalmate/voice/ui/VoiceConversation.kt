@@ -100,13 +100,17 @@ internal class VoiceConversation(
         return true
     }
 
-    /** "할까요?"에 대한 답. 네면 하고 대화를 마친다. 아니면 하지 않고 계속 듣는다. */
+    /**
+     * "할까요?"에 대한 답. 네면 하고, 아니면 하지 않는다. 어느 쪽이든 계속 듣는다 — 전에는 네면 대화를 마쳐 브리핑
+     * 카드를 저장하자 막대가 꺼졌다(#324). 그 다음 화면(일정 시트 등)이 이어서 묻는다.
+     */
     private fun answer(text: String, asking: VoiceReply.Confirm): Boolean = when {
         VoiceWords.isYes(text) -> {
             trace.log { "대화: \"$text\" → 확인" }
             pending = null
             asking.onConfirm()
-            false
+            say(VoiceMessage(R.string.voice_command_confirmed), false, null)
+            true
         }
 
         VoiceWords.isNo(text) -> {

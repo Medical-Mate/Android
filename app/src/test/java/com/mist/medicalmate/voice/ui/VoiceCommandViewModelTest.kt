@@ -155,13 +155,17 @@ class VoiceCommandViewModelTest {
     }
 
     @Test
-    fun `명령을 마치면 다시 듣는다`() = runTest {
-        val speech = FakeSpeechToText(usable = true, chunks = listOf(SpeechChunk.Final("홈")))
-        viewModel(speech = speech).ready()
+    fun `받아쓰기가 끝나도 막대를 닫지 않고 다시 듣는다`() = runTest {
+        // 사용자가 끄기 전에는 꺼지지 않는다(#324). 전에는 받아쓰기가 끝나면 막대를 닫고 호출어로 돌아갔다.
+        val speech = FakeSpeechToText(usable = true, chunks = listOf(SpeechChunk.Final("홈")), once = true)
+        val viewModel = viewModel(speech = speech).ready()
 
         detector.wake()
+        advanceTimeBy(1_000)
 
-        assertEquals(1, detector.listeners)
+        assertNotNull(viewModel.uiState.value.panel)
+        assertEquals(2, speech.listens)
+        assertEquals(0, detector.listeners)
     }
 
     @Test
@@ -190,11 +194,15 @@ class VoiceCommandViewModelTest {
     }
 
     @Test
-    fun `받아쓰기가 실패하면 패널을 닫는다`() = runTest {
+    fun `받아쓰기가 세 번 잇달아 실패하면 패널을 닫는다`() = runTest {
+        // 한 번 실패로는 닫지 않고 다시 듣는다(#324). 잇달아 실패하면 이 기기에서 쓸 수 없는 것으로 본다.
         val speech = FakeSpeechToText(usable = true, chunks = listOf(SpeechChunk.Failed), keepOpen = true)
         val viewModel = viewModel(speech = speech).ready()
 
         detector.wake()
+        advanceTimeBy(1_000)
+
+        assertEquals(3, speech.listens)
 
         assertNull(viewModel.uiState.value.panel)
         assertNull(viewModel.uiState.value.command)
@@ -285,7 +293,7 @@ class VoiceCommandViewModelTest {
     }
 
     @Test
-    fun `저장처럼 묻는 일은 네라고 해야 하고 하고 나면 닫는다`() = runTest {
+    fun `저장처럼 묻는 일은 네라고 해야 하고 하고 나서도 계속 듣는다`() = runTest {
         val speech =
             FakeSpeechToText(
                 usable = true,
@@ -298,9 +306,10 @@ class VoiceCommandViewModelTest {
 
         detector.wake()
 
+        // 전에는 하고 나면 닫아 브리핑 카드를 저장하다가 막대가 꺼졌다(#324).
         assertEquals(1, saved)
-        assertNull(viewModel.uiState.value.panel)
-        assertTrue(speech.stopped)
+        assertEquals(VoiceMessage(R.string.voice_command_confirmed), viewModel.uiState.value.panel?.message)
+        assertFalse(speech.stopped)
     }
 
     @Test
@@ -351,17 +360,29 @@ class VoiceCommandViewModelTest {
     }
 
     @Test
-    fun `12초 동안 아무것도 들리지 않으면 닫는다`() = runTest {
+    fun `아무것도 들리지 않아도 닫지 않는다`() = runTest {
+        // 전에는 12초 동안 들린 것이 없으면 닫았다(#324, 사용자 결정으로 걷어냈다).
         val speech = FakeSpeechToText(usable = true, keepOpen = true)
         val viewModel = viewModel(speech = speech).ready()
         detector.wake()
-        assertNotNull(viewModel.uiState.value.panel)
 
-        advanceTimeBy(11_999)
-        assertNotNull(viewModel.uiState.value.panel)
-        advanceTimeBy(2)
+        advanceTimeBy(60_000)
 
+        assertNotNull(viewModel.uiState.value.panel)
+    }
+
+    @Test
+    fun `시스템 창 때문에 화면에서 내려갔다 돌아오면 막대를 다시 연다`() = runTest {
+        // 말로 일정을 저장하면 알림 권한 창이 떠 앱이 내려가며 막대가 닫혔다(#324).
+        val speech = FakeSpeechToText(usable = true, keepOpen = true)
+        val viewModel = viewModel(speech = speech).ready()
+        detector.wake()
+
+        viewModel.setForeground(false)
         assertNull(viewModel.uiState.value.panel)
+        viewModel.setForeground(true)
+
+        assertNotNull(viewModel.uiState.value.panel)
     }
 
     @Test
@@ -399,21 +420,6 @@ class VoiceCommandViewModelTest {
         val panel = viewModel.uiState.value.panel
         assertEquals(VoiceText(R.string.voice_hospital_found_same, listOf("2")), panel?.message)
         assertEquals(VoiceText(R.string.voice_hospital_ask_which), panel?.question)
-    }
-
-    @Test
-    fun `화면이 말을 걸면 12초를 다시 센다`() = runTest {
-        // 물어 놓고 바로 닫히면 답할 틈이 없다.
-        val viewModel = viewModel(speech = FakeSpeechToText(usable = true, keepOpen = true)).ready()
-        detector.wake()
-
-        advanceTimeBy(10_000)
-        viewModel.targets.ask(VoicePrompt(question = VoiceText(R.string.voice_ask_date)))
-        advanceTimeBy(10_000)
-
-        assertNotNull(viewModel.uiState.value.panel)
-        advanceTimeBy(2_001)
-        assertNull(viewModel.uiState.value.panel)
     }
 
     @Test
