@@ -212,7 +212,9 @@ internal constructor(private val repository: HospitalRepository) : ViewModel() {
         when (val voice = parseHospitalPickVoice(text)) {
             null -> byArea(text, submit)
             is HospitalPickVoice.Pick -> {
-                val results = mutableUiState.value.results
+                // 되물은 뒤면 되물은 후보 안에서 센다(#320). 전체 결과로 세면 "이름이 같은 병원이 2곳이에요"에
+                // "두 번째"라고 했을 때 목록의 두 번째 다른 병원이 골라졌다.
+                val results = mutableUiState.value.let { it.voiceCandidates.ifEmpty { it.results } }
                 val hospital = if (voice.ordinal ==
                     VoiceWords.LAST
                 ) {
@@ -232,7 +234,7 @@ internal constructor(private val repository: HospitalRepository) : ViewModel() {
             HospitalPickVoice.Submit -> {
                 val selected = mutableUiState.value.selected
                 if (selected == null) {
-                    VoiceReply.Done(R.string.voice_hospital_no_row)
+                    VoiceReply.Done(R.string.voice_hospital_none_selected)
                 } else {
                     submit(selected)
                     VoiceReply.Done(R.string.voice_hospital_picked, listOf(selected.name))

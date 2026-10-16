@@ -88,6 +88,14 @@ class VoiceTargets {
     private var handoff: Pair<String, Long>? = null
 
     /**
+     * 지금 받는 말이 다른 화면에서 넘겨받은 말인지(#320). 말로 연 화면이 볼 것이 없으면 빈 화면을 남기지 않고
+     * 돌아가는 데 쓴다. 넘겨받은 말을 처리하는 동안만 참이다.
+     */
+    @Volatile
+    var handingOff: Boolean = false
+        internal set
+
+    /**
      * 돌아갈 화면이 있는지(#298). 그래프가 화면을 옮길 때마다 알려 준다. 알려 주기 전에는 있다고 본다.
      */
     @Volatile
@@ -188,7 +196,12 @@ fun VoiceTargetEffect(suggestions: List<VoiceSuggestion> = emptyList(), target: 
     // 이 화면을 연 말이 넘어왔으면 받아 처리하고 그 답을 막대에 건다(#286).
     LaunchedEffect(targets) {
         val text = targets.takeHandoff() ?: return@LaunchedEffect
-        val reply = latest.handle(text) as? VoiceReply.Done ?: return@LaunchedEffect
+        targets.handingOff = true
+        val reply = try {
+            latest.handle(text)
+        } finally {
+            targets.handingOff = false
+        } as? VoiceReply.Done ?: return@LaunchedEffect
         targets.ask(VoicePrompt(message = VoiceText(reply.message, reply.args), question = reply.question))
     }
 }

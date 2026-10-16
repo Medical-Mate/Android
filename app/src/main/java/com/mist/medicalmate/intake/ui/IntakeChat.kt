@@ -261,7 +261,7 @@ internal fun ChatInput(state: IntakeUiState, callbacks: IntakeCallbacks) {
                 onClick = callbacks.onMicClick,
                 title = stringResource(R.string.voice_idle_title).takeIf { waiting },
                 description = stringResource(R.string.voice_listening_title).takeIf { waiting },
-                speaking = state.speaking.orEmpty(),
+                speaking = state.draft,
             )
         }
         ChatTextField(state = state, field = field, listening = listening, callbacks = callbacks)
@@ -276,7 +276,8 @@ private fun ChatTextField(
     callbacks: IntakeCallbacks,
 ) {
     MedicalMateTextField(
-        value = if (listening) state.typedBefore else state.draft,
+        // 빈 칸에 질문을 적을 때는 받아쓴 말이 입력칸에 선다 — 대화에 미리 세울 자리가 없다(#320).
+        value = if (listening && !state.writingQuestion) state.typedBefore else state.draft,
         onValueChange = callbacks.onDraftChange,
         modifier =
         Modifier

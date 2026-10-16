@@ -20,6 +20,12 @@ enum class VoiceCommand {
     VISIT_RECORD,
     BRIEF_CARDS,
     SCHEDULE_ADD,
+
+    /** 하던 증상 정리를 이어 한다(#320). 홈의 "이어서 하기"와 같다. 홈이 그 정리를 안다. */
+    RESUME,
+
+    /** 다음 진료가 언제인지 묻는다(#320). 홈 배너가 "다음 진료가 언제인지 물을 수 있어요"라고 적는다. */
+    NEXT_VISIT,
 }
 
 /**
@@ -40,6 +46,8 @@ fun parseVoiceCommand(text: String): VoiceCommand? {
     val keyword = KEYWORDS.firstOrNull { (_, words) -> words.any { it in heard } }?.first
     return when {
         heard.isEmpty() -> null
+        // 알림 설정은 내 정보에 있다(#320). "진료 후 기록 알림 꺼 줘"가 "진료후기록"으로 기록을 시작했다.
+        heard.contains("알림") -> VoiceCommand.PROFILE
         keyword != VoiceCommand.SCHEDULE_ADD && CREATE_CARD.containsMatchIn(heard) -> VoiceCommand.INTAKE
         else -> keyword
     }
@@ -50,6 +58,11 @@ private val CREATE_CARD = Regex("""(?:카드|브리핑).{0,3}(?:만들|작성|�
 
 private const val PUNCTUATION = ".,?!~"
 
+/*
+ * 차례가 곧 우선순위다. "뒤로"는 맨 끝이다(#320) — "이전 기록 보여 줘"가 "이전"으로 뒤로 갔고, "홈으로 돌아가"가
+ * "돌아가"로 뒤로 갔다. 이어 하기는 증상보다 먼저다 — "증상 정리 이어서 할래"가 새 정리를 열었다. 일정 추가는 그보다 먼저다 — "다음 진료
+ * 일정 잡아 줘"는 묻는 말이 아니다.
+ */
 private val KEYWORDS: List<Pair<VoiceCommand, List<String>>> =
     listOf(
         VoiceCommand.SCHEDULE_ADD to
@@ -57,16 +70,35 @@ private val KEYWORDS: List<Pair<VoiceCommand, List<String>>> =
                 "일정추가", "일정등록", "일정잡", "일정만들", "일정넣", "예약추가", "예약등록", "예약잡", "예약넣",
                 "스케줄추가", "스케줄잡", "진료잡", "진료예약잡",
             ),
+        VoiceCommand.RESUME to listOf("이어서", "이어하", "이어할", "이어서할", "하던거", "하던정리", "하다만"),
+        VoiceCommand.NEXT_VISIT to
+            listOf("다음진료", "다음예약", "다음일정언제", "진료언제", "진료가언제", "병원언제", "언제가야", "진료날언제"),
         VoiceCommand.BRIEF_CARDS to listOf("브리핑", "카드"),
-        VoiceCommand.INTAKE to listOf("증상", "아파", "아픈", "아프", "문진", "불편해"),
+        VoiceCommand.INTAKE to
+            listOf("증상", "아파", "아픈", "아프", "아퍼", "문진", "불편해", "결려", "결리", "저려", "저리", "쑤셔", "쑤시"),
         VoiceCommand.VISIT_RECORD to
             listOf(
                 "진료후기록", "기록할", "기록하기", "기록남", "기록쓸", "기록써", "기록적", "기록해", "진료끝", "진료다녀",
-                "진료받고왔", "진료봤",
+                "진료받고왔", "진료받았", "진료봤", "병원다녀왔", "들은말", "들은거",
             ),
-        VoiceCommand.PROFILE to listOf("내정보", "설정", "프로필", "마이페이지", "내계정", "건강정보"),
-        VoiceCommand.BACK to listOf("뒤로", "이전", "돌아가", "전화면", "앞화면", "되돌아"),
+        VoiceCommand.PROFILE to
+            listOf("내정보", "나의정보", "제정보", "설정", "프로필", "마이페이지", "내계정", "건강정보", "먹는약", "복용약"),
         VoiceCommand.CALENDAR to listOf("캘린더", "달력", "일정", "예약", "스케줄"),
         VoiceCommand.RECORD to listOf("기록", "히스토리", "진료내역", "다녀온"),
         VoiceCommand.HOME to listOf("홈", "처음", "메인", "첫화면"),
+        VoiceCommand.BACK to listOf("뒤로", "이전", "돌아가", "전화면", "앞화면", "되돌아"),
+    )
+
+/**
+ * 받아쓴 말 앞에 남은 호출어를 뗀다(#320). 호출어를 듣는 쪽(Vosk)과 명령을 받아쓰는 쪽(ML Kit)이 마이크를 넘겨받는
+ * 사이에 "헤이 메이트"의 끝이 명령 받아쓰기에 들어가 "A 웨이트.", "메이트"로 적혔다. 말 맨 앞에서 메이트 비슷한
+ * 낱말일 때만 뗀다.
+ */
+fun withoutWakeEcho(text: String): String = text.replace(WAKE_ECHO, "").trim()
+
+private val WAKE_ECHO =
+    Regex(
+        """^\s*(?:(?:hey|a|헤이|해이|에이|헤|해|에)[\s,.]*)?""" +
+            """(?:mate|메이트|매이트|메잇|메이드|웨이트|베이트|네이트|메이트야)[\s,.!?~]*""",
+        RegexOption.IGNORE_CASE,
     )

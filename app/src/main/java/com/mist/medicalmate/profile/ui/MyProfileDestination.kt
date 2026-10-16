@@ -18,6 +18,7 @@ import androidx.navigation.compose.composable
 import com.mist.medicalmate.BuildConfig
 import com.mist.medicalmate.core.notification.rememberNotificationPermission
 import com.mist.medicalmate.core.speech.rememberMicPermission
+import com.mist.medicalmate.core.voice.LocalVoiceTargets
 import kotlinx.serialization.Serializable
 
 /** 와이어프레임 1s-1. 홈 헤더의 아바타에서 들어온다. */
@@ -59,6 +60,7 @@ internal fun NavGraphBuilder.reminderTimeDestination(onExit: () -> Unit) {
 private fun ReminderTimeRoute(onExit: () -> Unit, viewModel: ReminderTimeViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { viewModel.load() }
+    ReminderTimeVoice(onTimeChange = viewModel::onTimeChange, onConfirm = { viewModel.onConfirm(onExit) })
     ReminderTimeScreen(
         state = state,
         onBackClick = onExit,
@@ -101,6 +103,28 @@ private fun MyProfileRoute(
         notificationsBlocked = !NotificationManagerCompat.from(context).areNotificationsEnabled()
     }
 
+    val onSettingChange = { setting: AppSetting, enabled: Boolean ->
+        // 켜는 순간이 알림이 왜 필요한지 보이는 자리다.
+        if (setting.isReminder && enabled) requestNotificationPermission()
+        if (setting == AppSetting.VOICE_WAKE && enabled) {
+            requestMicPermission()
+        } else {
+            viewModel.onSettingChange(setting, enabled)
+        }
+    }
+    // 말로 알림을 켜고 끄고 알림 시간 · 건강 정보를 연다(#320). "알림 8시로 바꿔"는 알림 시간이 그 말을 받는다.
+    val targets = LocalVoiceTargets.current
+    MyProfileVoice(
+        ProfileVoiceRoutes(
+            onSettingChange = onSettingChange,
+            onReminderTime = { spoken ->
+                targets?.handOff(spoken)
+                onReminderTime()
+            },
+            onHealthEdit = onHealthEdit,
+        ),
+    )
+
     MyProfileScreen(
         state = state,
         accountActions = accountActions,
@@ -109,15 +133,7 @@ private fun MyProfileRoute(
             onBackClick = onExit,
             onHealthEditClick = onHealthEdit,
             onReminderTimeClick = onReminderTime,
-            onSettingChange = { setting, enabled ->
-                // 켜는 순간이 알림이 왜 필요한지 보이는 자리다.
-                if (setting.isReminder && enabled) requestNotificationPermission()
-                if (setting == AppSetting.VOICE_WAKE && enabled) {
-                    requestMicPermission()
-                } else {
-                    viewModel.onSettingChange(setting, enabled)
-                }
-            },
+            onSettingChange = onSettingChange,
             notificationsBlocked = notificationsBlocked,
             appVersion = BuildConfig.VERSION_NAME,
         ),

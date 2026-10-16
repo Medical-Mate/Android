@@ -328,6 +328,72 @@ class IntakeVoiceTest {
         assertEquals(MAX_BRIEF_CARD_QUESTIONS, viewModel.uiState.value.questions.size)
     }
 
+    @Test
+    fun `추천을 하나도 안 담고 다음이라고 하면 먼저 묻는다`() {
+        // 추천은 체크하지 않은 채 선다. "다음"만 하면 질문 없는 카드가 됐다(#320).
+        val repository = VoiceSessionRepository(ends = true, candidates = listOf("검사를 받아야 하나요?"))
+        val viewModel = IntakeViewModel(repository, FakeSpeechToText()).inQuestions()
+
+        val reply = viewModel.handle("다음") as VoiceReply.Confirm
+
+        assertEquals(R.string.voice_intake_confirm_no_questions, reply.prompt)
+        assertFalse(viewModel.uiState.value.completed)
+        reply.onConfirm()
+        assertTrue(viewModel.uiState.value.completed)
+    }
+
+    @Test
+    fun `추천을 다 담고 몇 번째 체크를 풀어 뺀다`() {
+        val repository =
+            VoiceSessionRepository(ends = true, candidates = listOf("검사를 받아야 하나요?", "약 먹어도 되나요?"))
+        val viewModel = IntakeViewModel(repository, FakeSpeechToText()).inQuestions()
+
+        viewModel.handle("다 담아 줘")
+        assertEquals(listOf("검사를 받아야 하나요?", "약 먹어도 되나요?"), viewModel.uiState.value.questions)
+
+        // "체크"가 들어 있어도 푸는 말이다. 전에는 담기로 읽혔다.
+        viewModel.handle("두 번째 체크 풀어 줘")
+        assertEquals(listOf("검사를 받아야 하나요?"), viewModel.uiState.value.questions)
+        viewModel.handle("첫 번째 빼 줘")
+        assertEquals(emptyList<String>(), viewModel.uiState.value.questions)
+    }
+
+    @Test
+    fun `고칠 글을 동사 앞에 말해도 고친다`() {
+        val viewModel = IntakeViewModel(VoiceSessionRepository(ends = true), FakeSpeechToText()).inQuestions()
+        viewModel.handle("약을 계속 먹어도 되나요")
+
+        viewModel.handle("첫 번째 질문을 공복으로 가야 하나요로 바꿔 줘")
+
+        assertEquals(listOf("공복으로 가야 하나요"), viewModel.uiState.value.questions)
+    }
+
+    @Test
+    fun `질문 속의 다음 계속 뒤로는 명령이 아니다`() {
+        val viewModel = IntakeViewModel(VoiceSessionRepository(ends = true), FakeSpeechToText()).inQuestions()
+
+        viewModel.handle("계속 먹어도 되나요?")
+        viewModel.handle("다음에 또 와야 하나요")
+
+        assertEquals(listOf("계속 먹어도 되나요", "다음에 또 와야 하나요"), viewModel.uiState.value.questions)
+        assertFalse(viewModel.uiState.value.completed)
+        assertFalse(isBackVoice("이전에도 그랬어"))
+        assertFalse(isBackVoice("뒤로 숙이면 아파요"))
+        assertTrue(isBackVoice("이전으로 돌아가 줘"))
+    }
+
+    @Test
+    fun `아픈 정도를 몇 번째와 우리말 수와 화면 설명으로도 고른다`() {
+        assertEquals(MedicalMateSeverity.LEVEL_3, parseSeverityVoice("세 번째"))
+        assertEquals(MedicalMateSeverity.LEVEL_5, parseSeverityVoice("마지막 거"))
+        assertEquals(MedicalMateSeverity.LEVEL_4, parseSeverityVoice("칠 점"))
+        assertEquals(MedicalMateSeverity.LEVEL_5, parseSeverityVoice("다섯 단계"))
+        assertEquals(MedicalMateSeverity.LEVEL_5, parseSeverityVoice("잠도 못 자요"))
+        assertEquals(MedicalMateSeverity.LEVEL_1, parseSeverityVoice("신경 쓰이는 정도예요"))
+        // "점점"의 "이점"을 2점으로 읽지 않는다.
+        assertNull(parseSeverityVoice("통증이 점점"))
+    }
+
     // 말로 바뀐 자리 보이기
 
     @Test

@@ -15,6 +15,7 @@ import com.mist.medicalmate.voice.ui.VoiceCommand
 internal fun voiceTabOf(command: VoiceCommand): MedicalMateTab = when (command) {
     VoiceCommand.CALENDAR, VoiceCommand.SCHEDULE_ADD, VoiceCommand.VISIT_RECORD -> MedicalMateTab.CALENDAR
     VoiceCommand.RECORD -> MedicalMateTab.RECORD
-    VoiceCommand.HOME, VoiceCommand.PROFILE, VoiceCommand.INTAKE, VoiceCommand.BRIEF_CARDS, VoiceCommand.BACK ->
-        MedicalMateTab.HOME
+    VoiceCommand.HOME, VoiceCommand.PROFILE, VoiceCommand.INTAKE, VoiceCommand.BRIEF_CARDS, VoiceCommand.BACK,
+    VoiceCommand.RESUME, VoiceCommand.NEXT_VISIT,
+    -> MedicalMateTab.HOME
 }

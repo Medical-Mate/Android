@@ -18,17 +18,57 @@ internal class IntakeQuestionVoiceCommands(
 ) {
     fun handle(text: String, routes: IntakeVoiceRoutes): VoiceReply {
         val more = VoiceText(R.string.voice_intake_ask_more_questions)
-        if (isNextVoice(text)) {
-            routes.next()
-            return VoiceReply.Done(R.string.voice_intake_finished)
-        }
+        if (isNextVoice(text)) return finish(routes)
         return when (val voice = parseQuestionVoice(text)) {
             null -> VoiceReply.NotMine
             is QuestionVoice.Add -> addQuestion(voice.text, more)
+            QuestionVoice.PickAll -> pickAll(more)
             is QuestionVoice.Pick -> pickQuestion(voice, more)
             is QuestionVoice.Edit -> editQuestion(voice, more)
             is QuestionVoice.Remove -> removeQuestion(voice, more)
         }
+    }
+
+    /**
+     * "다음"으로 정리를 마친다.
+     *
+     * **담은 질문이 없으면 먼저 묻는다**(#320). 추천 질문은 체크하지 않은 채 서서, 말로 하던 사람이 "다음"만 하면
+     * 질문 없는 카드가 됐다. 빈 칸에 적는 중이면 적던 것부터 보내게 한다 — 그때는 화면에 다음 버튼이 없다.
+     */
+    private fun finish(routes: IntakeVoiceRoutes): VoiceReply {
+        val current = state()
+        return when {
+            current.writingQuestion -> VoiceReply.Done(R.string.voice_intake_writing_first)
+            current.questions.isEmpty() && current.questionRows.isNotEmpty() ->
+                VoiceReply.Confirm(R.string.voice_intake_confirm_no_questions) { routes.next() }
+
+            else -> {
+                routes.next()
+                VoiceReply.Done(R.string.voice_intake_finished)
+            }
+        }
+    }
+
+    /** "다 담아 줘". 위에서부터 상한까지 담는다. */
+    private fun pickAll(more: VoiceText): VoiceReply {
+        update { current ->
+            var room = MAX_BRIEF_CARD_QUESTIONS - current.questionRows.count { it.selected }
+            current.copy(
+                questionRows = current.questionRows.map { row ->
+                    if (!row.selected && room > 0) {
+                        room--
+                        row.copy(selected = true)
+                    } else {
+                        row
+                    }
+                },
+            ).focusing(IntakeFocusTarget.Questions)
+        }
+        return VoiceReply.Done(
+            R.string.voice_intake_question_all,
+            listOf(state().questions.size.toString()),
+            question = more,
+        )
     }
 
     /** 글이 비면 더하지 않고 무엇을 물을지 묻는다. 다 찼으면 그 사실을 알린다. 직접 적은 것이라 체크된 채 붙는다. */

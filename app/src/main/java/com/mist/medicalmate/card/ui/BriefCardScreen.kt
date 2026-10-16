@@ -66,6 +66,7 @@ fun BriefCardScreen(
     modifier: Modifier = Modifier,
     toastMessage: String? = null,
     openExport: Boolean = false,
+    exportRequest: Int = 0,
     today: LocalDate = remember { LocalDate.now() },
 ) {
     val content = state as? BriefCardUiState.Content
@@ -79,6 +80,10 @@ fun BriefCardScreen(
             exportShown = true
             export.open()
         }
+    }
+    // 말로 "이미지로 저장해 줘"라고 하면 시트를 띄운다(#320).
+    LaunchedEffect(exportRequest) {
+        if (exportRequest > 0 && content != null) export.open()
     }
     Column(
         modifier =

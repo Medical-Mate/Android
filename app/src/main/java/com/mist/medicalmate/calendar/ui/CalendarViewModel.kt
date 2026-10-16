@@ -49,20 +49,21 @@ internal constructor(
     val uiState: StateFlow<CalendarUiState> = mutableUiState.asStateFlow()
 
     fun load() {
-        loadMonth(mutableUiState.value.month)
+        onMonthPick(mutableUiState.value.month)
     }
 
     fun onPreviousMonth() {
-        loadMonth(mutableUiState.value.month.minusMonths(1))
+        onMonthPick(mutableUiState.value.month.minusMonths(1))
     }
 
     fun onNextMonth() {
-        loadMonth(mutableUiState.value.month.plusMonths(1))
+        onMonthPick(mutableUiState.value.month.plusMonths(1))
     }
 
-    /** 말한 달로 넘긴다(#286). "12월", "다음 달". */
+    /** 그 달로 넘겨 읽는다. 말한 달("12월", "다음 달", #286)도 이 길이다. */
     fun onMonthPick(month: YearMonth) {
-        loadMonth(month)
+        mutableUiState.update { it.copy(month = month, today = LocalDate.now(clock)) }
+        viewModelScope.launch { fetchMonth(month) }
     }
 
     /**
@@ -112,18 +113,32 @@ internal constructor(
         mutableUiState.update { it.copy(cardSheet = null) }
     }
 
-    private fun loadMonth(month: YearMonth) {
-        val today = LocalDate.now(clock)
-        mutableUiState.update { it.copy(month = month, today = today) }
-        viewModelScope.launch {
-            val appointments = (repository.month(month) as? ApiResult.Success)?.value.orEmpty()
-            val cards = (cardRepository.cards() as? ApiResult.Success)?.value.orEmpty()
-            // 확정하지 않은 재방문도 달력에 찍는다. 뽑아 두기만 한 날은 일정에 없다(#186).
-            val revisits = (visitRepository.visits() as? ApiResult.Success)?.value.orEmpty()
-            mutableUiState.update { it.withMonth(appointments, cards, revisits, month, today) }
-            // 떠 있던 시트를 새 값으로 다시 세웠다. 그 항목 수도 다시 채운다.
-            fillCardItemCount()
+    /**
+     * 말로 연 날에 볼 것이 무엇인지(#320). 그 달로 넘겨 다 읽은 뒤에 본다. 일정이 없는 날을 말로 열면 빈 일자
+     * 화면이 떴다 — 볼 것이 없으면 열지 않고 없다고 답한다.
+     */
+    suspend fun voiceDay(date: LocalDate): VoiceDayContent {
+        val month = YearMonth.from(date)
+        mutableUiState.update { it.copy(month = month, today = LocalDate.now(clock)) }
+        fetchMonth(month)
+        val state = mutableUiState.value
+        return when {
+            state.appointments.any { it.on == date } -> VoiceDayContent.SCHEDULE
+            date.dayOfMonth in state.recordDays && state.cards.none { it.writtenOn == date } -> VoiceDayContent.RECORD
+            state.cards.any { it.writtenOn == date } -> VoiceDayContent.CARD_ONLY
+            else -> VoiceDayContent.NONE
         }
+    }
+
+    private suspend fun fetchMonth(month: YearMonth) {
+        val today = LocalDate.now(clock)
+        val appointments = (repository.month(month) as? ApiResult.Success)?.value.orEmpty()
+        val cards = (cardRepository.cards() as? ApiResult.Success)?.value.orEmpty()
+        // 확정하지 않은 재방문도 달력에 찍는다. 뽑아 두기만 한 날은 일정에 없다(#186).
+        val revisits = (visitRepository.visits() as? ApiResult.Success)?.value.orEmpty()
+        mutableUiState.update { it.withMonth(appointments, cards, revisits, month, today) }
+        // 떠 있던 시트를 새 값으로 다시 세웠다. 그 항목 수도 다시 채운다.
+        fillCardItemCount()
     }
 }
 
@@ -216,3 +231,18 @@ private fun Appointment.toSchedule(today: LocalDate) = CalendarSchedule(
 
 /** 시안의 "오전 10:30". 기기 언어가 한국어가 아니어도 한 줄 안에서 언어가 갈리지 않게 한다. */
 private val TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)
+
+/** 말로 연 날에 있는 것(#320). */
+enum class VoiceDayContent {
+    /** 잡아 둔 일정이 있다. 일자 화면을 연다. */
+    SCHEDULE,
+
+    /** 일정 없이 진료 후 기록만 있다. 일자 화면이 그 기록을 세운다. */
+    RECORD,
+
+    /** 그 날 쓴 카드만 있다. 날을 눌렀을 때처럼 카드 시트를 띄운다. */
+    CARD_ONLY,
+
+    /** 아무것도 없다. 열지 않는다. */
+    NONE,
+}

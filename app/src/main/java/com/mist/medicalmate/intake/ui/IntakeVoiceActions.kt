@@ -61,7 +61,8 @@ class IntakeVoiceActions(
      * 해도 걸리지 않는다.
      */
     private fun onDictated(text: String, latest: String) {
-        if (state().chatFinished && latest.isNextCommand()) {
+        // 빈 칸에 질문을 적는 중이면 "다음"도 질문의 글이다.
+        if (state().chatFinished && !state().writingQuestion && latest.isNextCommand()) {
             stop()
             onCommand(VoiceCommand.NEXT)
             return
@@ -82,7 +83,8 @@ class IntakeVoiceActions(
      */
     private fun armSilence(heardSpeech: Boolean) {
         silence?.cancel()
-        if (heardSpeech && state().chatFinished) return
+        // 문답이 끝난 뒤에는 빈 칸에 질문을 적을 때만 보낸다(#320). 그 말이 질문으로 붙는다.
+        if (heardSpeech && state().chatFinished && !state().writingQuestion) return
         silence =
             scope.launch {
                 delay(if (heardSpeech) SILENCE_SEND_MS else SILENCE_CLOSE_MS)
@@ -143,6 +145,13 @@ class IntakeVoiceActions(
     fun onReplied() {
         // 답이 늦게 와서 그 사이 문답 단계를 떠났으면 듣지 않는다(#304).
         if (!shown || state().step != IntakeStep.SYMPTOM_CHAT || state().inputMode != IntakeInputMode.VOICE) return
+        // 마지막 답이었으면 받아쓰기를 접는다(#320). 하단이 다음 버튼으로 바뀌어 카드가 보이지 않는데 마이크가 남아
+        // "헤이 메이트"가 듣히지 않았고, 그 사이 "다음"이라고 하면 정리가 끝났다.
+        if (state().chatFinished) {
+            stop()
+            onCommand(VoiceCommand.CLOSE)
+            return
+        }
         armSilence(heardSpeech = false)
         dictation.start("")
     }

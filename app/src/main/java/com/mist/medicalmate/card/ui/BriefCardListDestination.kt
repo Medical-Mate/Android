@@ -9,7 +9,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.mist.medicalmate.R
+import com.mist.medicalmate.core.voice.LocalVoiceTargets
 import com.mist.medicalmate.core.voice.VoicePrompt
+import com.mist.medicalmate.core.voice.VoiceReply
 import com.mist.medicalmate.core.voice.VoiceTargetEffect
 import com.mist.medicalmate.core.voice.VoiceText
 import com.mist.medicalmate.core.voice.rememberVoicePrompt
@@ -47,11 +49,21 @@ private fun BriefCardListRoute(
     LaunchedEffect(Unit) { viewModel.load() }
 
     // "두 번째", "두통 카드", "9월 4일 카드"로 찾아 연다(#286). 들어오면 무엇을 열지 묻는다.
+    // 말로 열었는데 카드가 하나도 없으면 빈 목록을 남기지 않고 돌아가서 없다고 답한다(#320).
+    val targets = LocalVoiceTargets.current
     VoiceTargetEffect(CARD_LIST_SUGGESTIONS) { text ->
-        viewModel.onVoice(text, LocalDate.now()) { id -> onCardClick(id) }
+        if (targets?.handingOff == true && viewModel.awaitEmpty()) {
+            onExit()
+            VoiceReply.Done(R.string.voice_cards_empty, question = VoiceText(R.string.voice_cards_ask_intake))
+        } else {
+            viewModel.onVoice(text, LocalDate.now()) { id -> onCardClick(id) }
+        }
     }
     val prompt = rememberVoicePrompt()
-    LaunchedEffect(Unit) { prompt(VoicePrompt(question = VoiceText(R.string.voice_card_ask))) }
+    // 고를 카드가 있을 때만 무엇을 열지 묻는다.
+    LaunchedEffect(Unit) {
+        if (!viewModel.awaitEmpty()) prompt(VoicePrompt(question = VoiceText(R.string.voice_card_ask)))
+    }
 
     BriefCardListScreen(
         state = state,

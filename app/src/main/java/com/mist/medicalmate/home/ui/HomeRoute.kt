@@ -38,10 +38,14 @@ fun HomeRoute(
     val targets = LocalVoiceTargets.current
     val summonMate = rememberMicPermission(onGranted = { targets?.summon?.invoke() }, onDenied = {})
 
+    val homeCallbacks = callbacks.copy(onRetryClick = viewModel::refresh, onMateClick = summonMate)
+    // 이어서 하기 · 다음 진료 · 배너 링크를 말로 부른다(#320).
+    HomeVoiceTarget(uiState = viewModel.uiState, callbacks = homeCallbacks)
+
     HomeScreen(
         state = state,
         today = today,
-        callbacks = callbacks.copy(onRetryClick = viewModel::refresh, onMateClick = summonMate),
+        callbacks = homeCallbacks,
         modifier = modifier,
         onTabSelect = onTabSelect,
     )

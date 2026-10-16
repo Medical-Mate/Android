@@ -89,6 +89,7 @@ private val MONTH = Regex("""(\d{1,2})월(?!요일)""")
 
 private val DAY = Regex("""(?<!\d)(\d{1,2})일(?!요일)""")
 
-private val LAST_MONTH = listOf("지난달", "저번달")
+/** 지난달. "이전 달", "전 달"도 받는다(#320) — 그 말이 "이전"으로 뒤로 가기가 됐다. */
+private val LAST_MONTH = listOf("지난달", "저번달", "이전달", "전달", "앞달")
 
 private const val MONTHS = 12

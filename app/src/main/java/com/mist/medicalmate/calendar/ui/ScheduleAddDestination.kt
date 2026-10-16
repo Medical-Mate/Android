@@ -15,6 +15,7 @@ import com.mist.medicalmate.core.notification.rememberNotificationPermission
 import com.mist.medicalmate.core.voice.VoicePrompt
 import com.mist.medicalmate.core.voice.VoiceReply
 import com.mist.medicalmate.core.voice.VoiceTargetEffect
+import com.mist.medicalmate.core.voice.VoiceWords
 import com.mist.medicalmate.core.voice.rememberVoicePrompt
 import com.mist.medicalmate.navigation.ConsumeResult
 import com.mist.medicalmate.navigation.NavResult
@@ -190,6 +191,7 @@ private fun ScheduleAddRoute(
             openHospital = { onHospitalPick(state.hospital, false) },
             newCard = onCardNew,
         ),
+        onGuide = { viewModel.onSheetOpen(ScheduleAddSheet.GUIDE) },
     )
 
     ScheduleAddScreen(
@@ -219,12 +221,26 @@ private fun ScheduleAddRoute(
  * 잘못 넣은 것을 말로 고치고 지우는 것은 그대로다.
  */
 @Composable
-private fun ScheduleAddVoiceTarget(editing: Boolean, voice: ScheduleAddVoiceActions, routes: ScheduleAddVoiceRoutes) {
+private fun ScheduleAddVoiceTarget(
+    editing: Boolean,
+    voice: ScheduleAddVoiceActions,
+    routes: ScheduleAddVoiceRoutes,
+    onGuide: () -> Unit,
+) {
     VoiceTargetEffect(if (editing) emptyList() else SCHEDULE_ADD_SUGGESTIONS) { text ->
         when {
+            // "예약 문자 방법 보여 줘"는 칸 위 안내 줄(Hint Row)과 같다(#320). 전에는 "예약"으로 캘린더가 열렸다.
+            !editing && GUIDE.containsMatchIn(VoiceWords.compact(text)) -> {
+                onGuide()
+                VoiceReply.Done(R.string.voice_schedule_guide)
+            }
+
             !editing -> voice.handle(text, routes)
             parseScheduleAddVoice(text) == null -> VoiceReply.NotMine
             else -> VoiceReply.Done(R.string.voice_by_hand)
         }
     }
 }
+
+/** 예약 문자로 채우는 방법을 보자는 말. "예약 문자 방법 보여 줘", "문자로 어떻게 넣어". */
+private val GUIDE = Regex("""문자.{0,6}(?:방법|어떻게|넣|채우|보여)|방법.{0,4}(?:보여|알려)""")

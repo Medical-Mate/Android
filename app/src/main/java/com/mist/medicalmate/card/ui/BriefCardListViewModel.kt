@@ -101,6 +101,12 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
      *
      * 화면을 연 말이 넘어오면 목록을 받기 전일 수 있어 받을 때까지 기다린다. 고르는 중(편집)이면 받지 않는다.
      */
+    /** 카드가 하나도 없는지. 다 읽을 때까지 기다린다. 못 읽었으면 없다고 하지 않는다. */
+    internal suspend fun awaitEmpty(): Boolean {
+        val state = withTimeoutOrNull(VOICE_WAIT_MS) { uiState.first { it !is BriefCardListUiState.Loading } }
+        return state is BriefCardListUiState.Content && state.groups.all { it.items.isEmpty() }
+    }
+
     internal suspend fun onVoice(text: String, today: LocalDate, open: (String) -> Unit): VoiceReply {
         val state = withTimeoutOrNull(VOICE_WAIT_MS) { uiState.first { it !is BriefCardListUiState.Loading } }
         val pool = candidates.ifEmpty { cards }
