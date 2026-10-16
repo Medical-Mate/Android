@@ -228,7 +228,10 @@ internal class IntakeVoiceCommands(
  */
 internal fun IntakeUiState.voiceQuestion(labels: (MedicalMateSeverity) -> String = { it.name }): VoiceText? =
     when (step) {
-        IntakeStep.BODY_PART -> bodyMap.focus.bodyVoiceQuestion()
+        // 이미 골랐으면 고를 곳을 다시 읽지 않고 다음으로 갈지 묻는다(#324). "왼쪽 손목이 아파"로 바로 고르면 화면이
+        // 팔로 들어가는데, 그 화면이 바뀌며 건 물음이 "왼쪽 팔 어디가 아프세요?"로 고른 것을 덮었다.
+        IntakeStep.BODY_PART ->
+            if (canLeaveBodyPart) VoiceText(R.string.voice_intake_ask_next_part) else bodyMap.focus.bodyVoiceQuestion()
         IntakeStep.SYMPTOM_CHAT -> if (chatFinished) questionsVoiceQuestion() else null
         // 어떻게 말해야 할지 모르는 사람에게 화면의 다섯 낱말을 고를 말로 읽어 준다.
         IntakeStep.SEVERITY ->
@@ -254,17 +257,12 @@ private fun BodyMapSelection?.bodyVoiceQuestion(): VoiceText {
 }
 
 /**
- * 추천 질문을 고르라고 묻는다(#320). 줄을 번호와 함께 읽어 주어 "두 번째 담아 줘"로 고를 수 있다. 전에는 "물어볼 게
- * 있으면 말씀해 주세요"만 물어서 추천 줄이 있는 줄도 몰랐다. 담은 줄에는 "(담음)"을 붙인다.
+ * 추천 질문을 고르라고 묻는다(#320). 줄은 막대에 다시 적지 않는다(#324, 사용자 결정) — 화면에 번호가 붙어 선 줄을
+ * 막대가 또 늘어놓으면 막대가 화면을 덮는다. 번호로 고르라고만 하고 할 수 있는 말은 추천 말이 보인다.
  */
-private fun IntakeUiState.questionsVoiceQuestion(): VoiceText {
-    val rows = questionRows.mapIndexed { index, row -> "${index + 1}. ${row.text}" + if (row.selected) " (담음)" else "" }
-    return if (rows.isEmpty()) {
-        VoiceText(R.string.voice_intake_ask_questions_empty)
-    } else {
-        VoiceText(R.string.voice_intake_ask_questions, listOf(rows.joinToString("\n")))
-    }
-}
+private fun IntakeUiState.questionsVoiceQuestion(): VoiceText = VoiceText(
+    if (questionRows.isEmpty()) R.string.voice_intake_ask_questions_empty else R.string.voice_intake_ask_questions,
+)
 
 /** 막대에 한 줄에 하나씩 적는다. 한 줄에 늘어놓으면 아홉 개가 이어져 읽기 어렵다. */
 private fun List<Pair<String, String>>.voiceList(): String = joinToString("\n") { "· ${it.second}" }

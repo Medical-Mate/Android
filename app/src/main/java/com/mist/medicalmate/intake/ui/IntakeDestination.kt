@@ -188,7 +188,14 @@ private fun IntakeVoice(state: IntakeUiState, spoken: String?, viewModel: Intake
     LaunchedEffect(asked?.id, chatting, state.chatFinished) {
         if (asked == null || !chatting) return@LaunchedEffect
         val next = state.voiceQuestion { labels.getValue(it) } ?: VoiceText(R.string.voice_intake_ask_answer)
-        prompt(VoicePrompt(message = VoiceText(R.string.voice_intake_ai_says, listOf(asked.text)), question = next))
+        prompt(
+            VoicePrompt(
+                message = VoiceText(R.string.voice_intake_ai_says, listOf(asked.text)),
+                question = next,
+                // 추천 질문 고르기에서는 할 수 있는 말을 함께 보인다(#324).
+                suggest = state.chatFinished,
+            ),
+        )
     }
 
     LaunchedEffect(Unit) {

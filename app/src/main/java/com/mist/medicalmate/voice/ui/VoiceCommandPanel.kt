@@ -313,8 +313,8 @@ private const val MARKED_NOTE = "담음"
 /** 고를 것이 이보다 많으면 그 안에서 굴린다. */
 private const val MAX_CHOICE_ROWS = 3
 
-/** 문장 끝 뒤의 띄어쓰기. 닫는 따옴표가 붙어 있어도 본다. "…해 주세요." 다음 줄. */
-private val SENTENCE_GAP = Regex("""(?<=[.?!]["”']?)[ \t]+""")
+/** 문장 끝 뒤의 띄어쓰기. 닫는 따옴표가 붙어 있어도 본다. "…해 주세요." 다음 줄. "1. "의 번호 뒤는 아니다(#324). */
+private val SENTENCE_GAP = Regex("""(?<![0-9]\.)(?<=[.?!]["”']?)[ \t]+""")
 
 private const val HEARD_MAX_LINES = 3
 

@@ -394,6 +394,29 @@ class IntakeVoiceTest {
         assertNull(parseSeverityVoice("통증이 점점"))
     }
 
+    @Test
+    fun `세부 부위를 바로 고르면 고를 곳 대신 다음으로 갈지 묻고 추천도 바뀐다`() {
+        // 손목을 고르면 화면이 팔로 들어가는데, 그때 건 물음이 팔의 세부 부위 목록으로 고른 것을 덮었다(#324).
+        val viewModel = IntakeViewModel(VoiceSessionRepository(), FakeSpeechToText())
+
+        viewModel.handle("왼쪽 손목이 아파요")
+
+        val state = viewModel.uiState.value
+        assertEquals(R.string.voice_intake_ask_next_part, state.voiceQuestion()?.text)
+        assertEquals(BODY_PICKED_SUGGESTIONS, state.voiceSuggestions())
+    }
+
+    @Test
+    fun `큰 부위만 말하면 세부 부위를 묻고 고를 곳 추천을 둔다`() {
+        val viewModel = IntakeViewModel(VoiceSessionRepository(), FakeSpeechToText())
+
+        viewModel.handle("왼쪽 팔이 아파요")
+
+        val state = viewModel.uiState.value
+        assertEquals(R.string.voice_intake_ask_zone, state.voiceQuestion()?.text)
+        assertEquals(BODY_PART_SUGGESTIONS, state.voiceSuggestions())
+    }
+
     // 말로 바뀐 자리 보이기
 
     @Test
