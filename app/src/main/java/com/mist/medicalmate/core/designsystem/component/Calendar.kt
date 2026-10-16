@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -98,13 +99,14 @@ fun MedicalMateCalendarDay(
             modifier =
             Modifier
                 .size(CalendarDayFace)
-                .clip(MedicalMateRadius.dateCell)
                 .background(
+                    color =
                     when {
                         selected -> colors.bgPrimary
                         today -> colors.bgPrimaryFaint
                         else -> Color.Transparent
                     },
+                    shape = MedicalMateRadius.dateCell,
                 )
                 .then(
                     if (today) {
@@ -117,7 +119,7 @@ fun MedicalMateCalendarDay(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s2),
         ) {
-            Text(text = day.toString(), style = MedicalMateTheme.typography.bodyMStrong, color = number)
+            CalendarNumber(day = day, color = number)
             if (marker != MedicalMateDateMarker.NONE) {
                 Box(
                     modifier =
@@ -127,6 +129,23 @@ fun MedicalMateCalendarDay(
                 )
             }
         }
+    }
+}
+
+/**
+ * 날짜 숫자. 자리는 글꼴 배율과 상관없이 24다(#326) — 글자 줄 높이를 따르면 배율 1.15에서 27.6이 되어 점이 면
+ * 바닥에 닿아 잘렸다. 글자는 그 자리 가운데에 그리고 넘쳐도 자르지 않는다.
+ */
+@Composable
+private fun CalendarNumber(day: Int, color: Color) {
+    Box(modifier = Modifier.height(CalendarNumberHeight), contentAlignment = Alignment.Center) {
+        Text(
+            text = day.toString(),
+            style = MedicalMateTheme.typography.bodyMStrong,
+            color = color,
+            maxLines = 1,
+            modifier = Modifier.wrapContentHeight(unbounded = true),
+        )
     }
 }
 
@@ -253,6 +272,7 @@ private const val DISABLED_DOT_ALPHA = 0.4f
 private val CalendarDayHeight = 46.dp
 private val CalendarDayFace = 42.dp
 private val CalendarDayTop = 7.dp
+private val CalendarNumberHeight = 24.dp
 private val CalendarDotSize = 5.dp
 private val CalendarTodayBorder = 1.dp
 private val LegendDotSize = 6.dp
