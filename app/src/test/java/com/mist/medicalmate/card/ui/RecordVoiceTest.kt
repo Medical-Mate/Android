@@ -43,6 +43,25 @@ class RecordVoiceTest {
     }
 
     @Test
+    fun `기록을 가리키지 않은 말은 다른 화면으로 넘긴다`() {
+        // 낱말이 남는다고 다 기록을 찾는 말이 아니다(#333). 전엔 "그런 기록을 찾지 못했어요"가 됐다.
+        listOf("캘린더 보여 줘", "증상 정리할래", "일정 추가해 줘", "내 정보 열어 줘", "진료 끝났어").forEach {
+            assertNull(it, records.findRecordByVoice(it, today))
+        }
+    }
+
+    @Test
+    fun `다른 화면의 것을 가리키면 날짜나 몇 번째가 있어도 넘긴다`() {
+        assertNull(records.findRecordByVoice("10월 2일 일정 보여 줘", today))
+        assertNull(records.findRecordByVoice("두 번째 카드 열어 줘", today))
+    }
+
+    @Test
+    fun `기록을 가리키면 없어도 찾지 못했다고 답한다`() {
+        assertEquals(emptyList<String>(), records.findRecordByVoice("치과 기록", today)?.map { it.id })
+    }
+
+    @Test
     fun `몇 건인지 묻는 말과 지우라는 말을 가린다`() {
         assertEquals(RecordVoiceIntent.COUNT, parseRecordIntent("기록 몇 개야"))
         assertEquals(RecordVoiceIntent.DELETE, parseRecordIntent("두 번째 기록 지워 줘"))

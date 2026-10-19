@@ -8,6 +8,13 @@ import org.junit.Test
 
 class VoiceWordsTest {
     @Test
+    fun `시트를 닫자는 말을 가린다`() {
+        // 시트가 떠 있을 때 "뒤로"가 화면째 빠지지 않게 한다(#334). "닫아"만 말하면 막대를 닫는다.
+        listOf("뒤로", "뒤로 가", "창 닫아", "취소", "안 볼래", "나중에 할래").forEach { assertTrue(it, VoiceWords.isClose(it)) }
+        listOf("닫아", "카드 취소하고 다시 볼래", "뒤로 가서 기록 보여 줘").forEach { assertFalse(it, VoiceWords.isClose(it)) }
+    }
+
+    @Test
     fun `네로 답한 말을 알아듣는다`() {
         listOf("네", "네.", "응 저장해 줘", "그래", "좋아요", "저장", "예").forEach { assertTrue(it, VoiceWords.isYes(it)) }
     }

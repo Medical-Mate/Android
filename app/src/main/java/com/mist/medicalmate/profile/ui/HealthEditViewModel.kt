@@ -96,6 +96,25 @@ internal constructor(private val repository: HealthProfileRepository) : ViewMode
         mutableUiState.update { it.copy(draft = draft) }
     }
 
+    /** 말로 칩을 고르거나 푼다(#334). 누를 때와 달리 뒤집지 않는다 — "고혈압 체크해 줘"를 두 번 말해도 골라진 채다. */
+    fun onVoiceChoose(step: ProfileSetupStep, option: String, chosen: Boolean) {
+        mutableUiState.update { state ->
+            val current = state.chosenIn(step)
+            state.copy(chosen = state.chosen + (step to if (chosen) current + option else current - option))
+        }
+    }
+
+    /** 말로 목록에 없는 것을 넣는다(#334). "직접 추가"에 적고 넣은 것과 같다. 넣은 것은 골라진 채로 선다. */
+    fun onVoiceAdd(step: ProfileSetupStep, value: String) {
+        mutableUiState.update { state ->
+            val extras = state.extrasIn(step)
+            state.copy(
+                extras = if (value in extras) state.extras else state.extras + (step to extras + value),
+                chosen = state.chosen + (step to state.chosenIn(step) + value),
+            )
+        }
+    }
+
     /** 빈 값과 이미 있는 항목은 넣지 않는다. 같은 칩이 두 개 생기면 어느 쪽이 골라졌는지 알 수 없다. */
     fun onDraftSubmit() {
         mutableUiState.update { state ->

@@ -16,6 +16,7 @@ import com.mist.medicalmate.core.voice.VoiceDate
 import com.mist.medicalmate.core.voice.VoiceReply
 import com.mist.medicalmate.core.voice.VoiceTargetEffect
 import com.mist.medicalmate.core.voice.VoiceText
+import com.mist.medicalmate.core.voice.VoiceWords
 import com.mist.medicalmate.core.voice.parseVoiceDate
 import kotlinx.serialization.Serializable
 import java.time.LocalDate
@@ -117,6 +118,13 @@ private fun CalendarMonthRoute(
         val voice = parseVoiceDate(text, state.today, state.month)
         val record = parseDayVoice(text) == DayVoice.RECORD_ADD
         when {
+            // 시트가 떠 있으면 "뒤로"·"취소"는 시트만 닫는다(#334). 캘린더는 탭의 첫 화면이라 안 보면 "더 돌아갈 화면이
+            // 없어요"가 됐다.
+            state.cardSheet != null && VoiceWords.isClose(text) -> {
+                viewModel.onCardSheetDismiss()
+                VoiceReply.Done(R.string.voice_sheet_closed)
+            }
+
             // "진료 후 기록할래", "어제 진료 끝났어". 그 날 진료가 있을 때만 일자 화면을 열고 그 말을 넘긴다(#320).
             record -> {
                 val date = (voice as? VoiceDate.Day)?.date ?: state.today

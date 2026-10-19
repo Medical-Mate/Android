@@ -2,6 +2,8 @@ package com.mist.medicalmate.navigation
 
 import com.mist.medicalmate.calendar.ui.DayVoice
 import com.mist.medicalmate.calendar.ui.parseDayVoice
+import com.mist.medicalmate.card.ui.ExportVoice
+import com.mist.medicalmate.card.ui.parseExportVoice
 import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
 import com.mist.medicalmate.core.voice.VoiceDate
 import com.mist.medicalmate.core.voice.VoiceScroll
@@ -20,6 +22,9 @@ import com.mist.medicalmate.intake.ui.parseDoneVoice
 import com.mist.medicalmate.intake.ui.parseQuestionVoice
 import com.mist.medicalmate.intake.ui.parseSeverityVoice
 import com.mist.medicalmate.intake.ui.pickBodyPartByVoice
+import com.mist.medicalmate.profile.ui.HealthEditVoice
+import com.mist.medicalmate.profile.ui.ProfileSetupStep
+import com.mist.medicalmate.profile.ui.parseHealthEditVoice
 import com.mist.medicalmate.visit.ui.HospitalPickVoice
 import com.mist.medicalmate.visit.ui.NoteVoice
 import com.mist.medicalmate.visit.ui.RecordVoice
@@ -86,6 +91,21 @@ class VoiceSuggestionPhraseTest {
         assertTrue(isBackVoice("뒤로"))
         assertEquals(IntakeDoneChoice.CARD, parseDoneVoice("카드 만들어 줘"))
         assertEquals(IntakeDoneChoice.HOSPITAL, parseDoneVoice("병원부터 찾을래"))
+    }
+
+    @Test
+    fun `건강 정보 수정과 내보내기 시트의 예시를 알아듣는다`() {
+        val options =
+            mapOf(
+                ProfileSetupStep.CONDITIONS to listOf("고혈압"),
+                ProfileSetupStep.ALLERGIES to listOf("페니실린"),
+            )
+        assertTrue(parseHealthEditVoice("고혈압 체크해 줘", options) is HealthEditVoice.Choose)
+        assertTrue(parseHealthEditVoice("알러지에 복숭아 추가해 줘", options) is HealthEditVoice.Add)
+        assertEquals(HealthEditVoice.Save, parseHealthEditVoice("저장해 줘", options))
+        assertEquals(ExportVoice.SAVE, parseExportVoice("이미지로 저장해 줘"))
+        assertEquals(ExportVoice.MASK_ON, parseExportVoice("이름 가려 줘"))
+        assertEquals(ExportVoice.SHARE, parseExportVoice("공유해 줘"))
     }
 
     @Test

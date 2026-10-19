@@ -43,13 +43,18 @@ fun parseVoiceDate(text: String, today: LocalDate, shown: YearMonth = YearMonth.
     }
 }
 
-/** 말한 달. 숫자로 말한 달은 보고 있는 해다. */
+/**
+ * 말한 달. 숫자로 말한 달은 보고 있는 해다.
+ *
+ * **"다음 달" · "지난달"은 보고 있는 달에서 센다**(#334). 캘린더가 달을 넘기는 말이라, 오늘에서 세면 11월을 보며
+ * "다음 달"이라고 해도 11월에 머물렀다. 캘린더 밖에서는 보고 있는 달이 이번 달이라 같다. "이번 달"은 오늘의 달이다.
+ */
 private fun monthOf(heard: String, today: LocalDate, shown: YearMonth): YearMonth? {
     val number = MONTH.find(heard)?.groupValues?.get(1)?.toInt()?.takeIf { it in 1..MONTHS }
     return when {
         number != null -> YearMonth.of(shown.year, number)
-        heard.contains("다음달") -> YearMonth.from(today).plusMonths(1)
-        LAST_MONTH.any { heard.contains(it) } -> YearMonth.from(today).minusMonths(1)
+        heard.contains("다음달") -> shown.plusMonths(1)
+        LAST_MONTH.any { heard.contains(it) } -> shown.minusMonths(1)
         heard.contains("이번달") -> YearMonth.from(today)
         else -> null
     }

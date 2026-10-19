@@ -1,10 +1,13 @@
 package com.mist.medicalmate.card.ui
+import com.mist.medicalmate.R
 import com.mist.medicalmate.card.data.CardListItem
 import com.mist.medicalmate.core.network.ApiResult
+import com.mist.medicalmate.core.voice.VoiceReply
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -50,6 +53,18 @@ class BriefCardListViewModelTest {
 
         assertEquals(listOf("2026년 9월", "2026년 8월"), content.groups.map { it.monthLabel })
         assertEquals(listOf(2, 1), content.groups.map { it.items.size })
+    }
+
+    @Test
+    fun `카드를 지우라는 말은 열지 않고 화면에서 하라고 한다`() = runTest {
+        // 완성된 카드는 말로 지우지 않는다(#296). 전엔 "두 번째 카드 지워 줘"가 그 카드를 열었다(#333).
+        val viewModel = loaded()
+        var opened: String? = null
+
+        val reply = viewModel.onVoice("두 번째 카드 지워 줘", LocalDate.of(2026, 10, 19)) { opened = it }
+
+        assertNull(opened)
+        assertEquals(VoiceReply.Done(R.string.voice_by_hand), reply)
     }
 
     @Test

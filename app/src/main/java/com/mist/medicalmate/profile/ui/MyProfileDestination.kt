@@ -159,6 +159,9 @@ private fun HealthEditRoute(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) { viewModel.load() }
+    HealthEditVoiceTarget(uiState = viewModel.uiState, viewModel = viewModel, onSave = {
+        viewModel.onSaveClick(onSaved)
+    })
 
     HealthEditScreen(
         state = state,
