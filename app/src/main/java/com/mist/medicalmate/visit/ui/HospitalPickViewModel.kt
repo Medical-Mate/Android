@@ -241,6 +241,17 @@ internal constructor(private val repository: HospitalRepository) : ViewModel() {
                 }
             }
 
+            // 버튼과 같다(#333). 병원을 안 골랐어도 카드로 간다 — 버튼도 그렇다. 진료 전이 아니면 이 화면의 말이 아니다.
+            HospitalPickVoice.MakeCard -> {
+                val state = mutableUiState.value
+                if (state.purpose != HospitalPickPurpose.BEFORE_VISIT || state.forExistingCard) {
+                    VoiceReply.NotMine
+                } else {
+                    submit(state.selected)
+                    VoiceReply.Done(R.string.voice_hospital_make_card)
+                }
+            }
+
             // 말로 다시 찾으면 결과가 오는 대로 고르거나 되묻는다. 입력 대기 없이 바로 찾는다.
             is HospitalPickVoice.Search -> {
                 searchJob?.cancel()

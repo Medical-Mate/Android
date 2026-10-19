@@ -81,6 +81,31 @@ class HospitalPickVoiceTest {
     }
 
     @Test
+    fun `카드를 만들자는 말을 가린다`() {
+        assertEquals(HospitalPickVoice.MakeCard, parseHospitalPickVoice("브리핑 카드 만들어 줘"))
+        assertEquals(HospitalPickVoice.MakeCard, parseHospitalPickVoice("카드 만들자"))
+    }
+
+    @Test
+    fun `진료 전에는 카드를 만들자는 말이 버튼처럼 넘어간다`() = runTest(dispatcher) {
+        // 화면이 받지 않으면 전역 명령이 새 증상 정리를 열어 하던 흐름을 버렸다(#333). 병원은 안 골라도 된다.
+        val viewModel = HospitalPickViewModel(SearchRepository()).apply { load(HospitalPickPurpose.BEFORE_VISIT) }
+        var submitted = false
+
+        val reply = viewModel.onVoice("브리핑 카드 만들어 줘") { submitted = true }
+
+        assertTrue(submitted)
+        assertEquals(VoiceReply.Done(R.string.voice_hospital_make_card), reply)
+    }
+
+    @Test
+    fun `진료 후에는 카드를 만들자는 말을 받지 않는다`() = runTest(dispatcher) {
+        val viewModel = HospitalPickViewModel(SearchRepository()).apply { load(HospitalPickPurpose.AFTER_VISIT) }
+
+        assertEquals(VoiceReply.NotMine, viewModel.onVoice("카드 만들어 줘") {})
+    }
+
+    @Test
     fun `몇 번째를 말하면 그 병원을 고르고 마친다`() = runTest(dispatcher) {
         val viewModel = searched()
         var submitted: Hospital? = null

@@ -910,6 +910,7 @@
     <string name="voice_hospital_picked">%1$s, 골랐어요</string>
     <string name="voice_hospital_no_row">목록에 그 번호가 없어요</string>
     <string name="voice_hospital_none_selected">아직 고른 병원이 없어요. 몇 번째인지 말씀해 주세요</string>
+    <string name="voice_hospital_make_card">브리핑 카드를 만들게요</string>
     <string name="voice_hospital_auto_picked">%1$s, 여기로 정했어요</string>
     <string name="voice_hospital_found_same">이름이 같은 병원이 %1$s곳이에요</string>
     <string name="voice_hospital_found_many">%1$s곳이 나왔어요</string>

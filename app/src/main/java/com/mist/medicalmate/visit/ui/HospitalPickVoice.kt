@@ -20,6 +20,9 @@ internal sealed interface HospitalPickVoice {
     data object Submit : HospitalPickVoice
 
     data class Search(val query: String) : HospitalPickVoice
+
+    /** 진료 전(1m-B)의 "브리핑 카드 만들기" 버튼(#333). */
+    data object MakeCard : HospitalPickVoice
 }
 
 /**
@@ -33,6 +36,8 @@ internal fun parseHospitalPickVoice(text: String): HospitalPickVoice? {
     val asked = SEARCH_WORDS.containsMatchIn(text) || compact.contains("말고")
     val query = text.substringAfter("말고").replace(SEARCH_WORDS, " ").trim { it in TRIM }
     return when {
+        // 진료 전(1m-B)의 버튼 "브리핑 카드 만들기"(#333). 이 화면이 받지 않으면 전역 명령이 새 증상 정리를 연다.
+        MAKE_CARD.containsMatchIn(compact) -> HospitalPickVoice.MakeCard
         ordinal != null -> HospitalPickVoice.Pick(ordinal)
         asked -> query.takeIf { it.isNotEmpty() }?.let(HospitalPickVoice::Search)
         // "다시 골라"는 마치라는 말이 아니다(#320).
@@ -43,6 +48,9 @@ internal fun parseHospitalPickVoice(text: String): HospitalPickVoice? {
 }
 
 private const val TRIM = " .,!?~"
+
+/** "브리핑 카드 만들어 줘", "카드 만들자", "카드로 넘어가". */
+private val MAKE_CARD = Regex("""(?:카드|브리핑).{0,3}(?:만들|작성|넘어|가자|갈래)""")
 
 private val SUBMIT =
     listOf("이걸로", "이거로", "이거요", "이거", "이곳", "여기로", "여기요", "거기로", "그걸로", "그거로", "이병원", "완료", "선택", "골라", "맞아")
