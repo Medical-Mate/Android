@@ -19,6 +19,14 @@ internal fun List<CardListItem>.findByVoice(text: String, today: LocalDate): Lis
     // 새로 만들자는 말은 찾는 말이 아니다(#320). 전역 명령이 증상 정리를 연다 — 빈 목록의 유일한 길이다.
     if (CREATE.containsMatchIn(VoiceWords.compact(text))) null else findCard(text, today)
 
+/**
+ * 카드를 지우라는 말인지(#333). 말로는 지우지 않는다 — 완성된 카드다(#296). 묻지 않으면 "두 번째 카드 지워 줘"가
+ * 그 카드를 열었다. 기록 탭과 같은 낱말이다.
+ */
+internal fun isCardDeleteRequest(text: String): Boolean = DELETE.any { VoiceWords.compact(text).contains(it) }
+
+private val DELETE = listOf("지워", "삭제", "없애", "빼줘")
+
 /** "최근 카드", "방금 만든 거"는 맨 위 카드다(#320). 목록이 최근 것부터 선다. */
 private fun cardOrdinal(text: String): Int? =
     VoiceWords.ordinal(text) ?: 0.takeIf { RECENT.any { VoiceWords.compact(text).contains(it) } }

@@ -113,7 +113,9 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
         val found = pool.findByVoice(text, today)?.ifEmpty { cards.findByVoice(text, today).orEmpty() }
         val card = found?.singleOrNull()
         return when {
-            state !is BriefCardListUiState.Content || state.editing || found == null -> VoiceReply.NotMine
+            state !is BriefCardListUiState.Content || state.editing -> VoiceReply.NotMine
+            isCardDeleteRequest(text) -> VoiceReply.Done(R.string.voice_by_hand)
+            found == null -> VoiceReply.NotMine
             card != null -> {
                 candidates = emptyList()
                 open(card.id)
