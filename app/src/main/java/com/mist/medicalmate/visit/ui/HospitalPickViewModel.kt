@@ -232,8 +232,13 @@ internal constructor(private val repository: HospitalRepository) : ViewModel() {
             }
 
             HospitalPickVoice.Submit -> {
-                val selected = mutableUiState.value.selected
-                if (selected == null) {
+                val state = mutableUiState.value
+                val selected = state.selected
+                if (selected == null && state.canSubmit) {
+                    // 진료 전 · 일정 추가는 병원 없이도 버튼이 눌린다(#336). 말도 같다. 진료 후는 병원이 있어야 한다.
+                    submit(null)
+                    VoiceReply.Done(R.string.voice_hospital_skipped)
+                } else if (selected == null) {
                     VoiceReply.Done(R.string.voice_hospital_none_selected)
                 } else {
                     submit(selected)

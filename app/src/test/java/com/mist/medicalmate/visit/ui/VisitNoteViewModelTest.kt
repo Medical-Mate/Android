@@ -1,8 +1,11 @@
 package com.mist.medicalmate.visit.ui
 
+import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
 import com.mist.medicalmate.core.speech.FakeSpeechToText
 import com.mist.medicalmate.core.speech.SpeechChunk
+import com.mist.medicalmate.core.voice.VoiceNavigation
+import com.mist.medicalmate.core.voice.VoiceReply
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -291,6 +294,30 @@ class VisitNoteViewModelTest {
         viewModel.load(clinic = null, cardTitle = null, visitedOn = LocalDate.of(2026, 9, 12))
 
         assertTrue(viewModel.uiState.value.visit.today)
+    }
+
+    @Test
+    fun `짧은 이동 명령은 적던 메모가 있으면 나갈지 묻는다`() {
+        // 메모 칸이 모든 말을 받아 "홈으로 가"도 메모가 됐다(#336, 사용자 결정).
+        val viewModel = viewModel()
+        val moved = mutableListOf<String>()
+        val navigation =
+            object : VoiceNavigation {
+                override fun isNavigation(text: String) = text == "홈으로 가"
+
+                override fun navigate(text: String) {
+                    moved += text
+                }
+            }
+
+        assertEquals(VoiceReply.NotMine, viewModel.onVoiceNote("홈으로 가", {}, navigation))
+
+        viewModel.onNoteChange("위염이래요")
+        val reply = viewModel.onVoiceNote("홈으로 가", {}, navigation) as VoiceReply.Confirm
+        assertEquals(R.string.voice_note_confirm_leave, reply.prompt)
+        assertEquals("위염이래요", viewModel.uiState.value.note)
+        reply.onConfirm()
+        assertEquals(listOf("홈으로 가"), moved)
     }
 
     private fun viewModel(speech: FakeSpeechToText = FakeSpeechToText()) =

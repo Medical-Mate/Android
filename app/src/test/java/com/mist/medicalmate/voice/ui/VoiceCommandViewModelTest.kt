@@ -671,6 +671,19 @@ class VoiceCommandViewModelTest {
         assertEquals(VoiceMessage(R.string.voice_moved_back), viewModel.uiState.value.panel?.message)
     }
 
+    @Test
+    fun `화면을 옮기는 짧은 말만 이동 명령으로 본다`() = runTest {
+        // 메모 칸이 이것으로 이동 명령과 메모를 가른다(#336). 대화가 열려야 걸린다.
+        val viewModel = viewModel(speech = FakeSpeechToText(usable = true, keepOpen = true)).ready()
+        detector.wake()
+        val navigation = viewModel.targets.navigation
+
+        assertTrue(navigation.isNavigation("홈으로 가"))
+        assertTrue(navigation.isNavigation("캘린더 열어 줘"))
+        assertFalse(navigation.isNavigation("다음 주에 다시 오래요"))
+        assertFalse(navigation.isNavigation("위염이래요 약은 일주일 치 받았어요 홈에서 쉬래요"))
+    }
+
     private fun viewModel(
         wake: FakeVoiceWake = FakeVoiceWake(usable = true, enabled = true, model = WakeWordModelState.Ready),
         speech: FakeSpeechToText = FakeSpeechToText(usable = true),

@@ -2,6 +2,7 @@ package com.mist.medicalmate.voice.ui
 
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.speech.VoiceWakeTrace
+import com.mist.medicalmate.core.voice.VoiceNavigation
 import com.mist.medicalmate.core.voice.VoiceReply
 import com.mist.medicalmate.core.voice.VoiceScroll
 import com.mist.medicalmate.core.voice.VoiceTargets
@@ -32,6 +33,17 @@ internal class VoiceConversation(
 ) {
     /** 아직 "네"를 기다리는 일. */
     private var pending: VoiceReply.Confirm? = null
+
+    init {
+        // 받아쓰는 화면이 화면을 옮기는 말을 가려 확인을 받고 옮길 수 있게 한다(#336).
+        targets.navigation =
+            object : VoiceNavigation {
+                override fun isNavigation(text: String): Boolean =
+                    VoiceWords.compact(text).length <= NAVIGATION_MAX && parseVoiceCommand(text) in NAVIGATIONS
+
+                override fun navigate(text: String) = global(text)
+            }
+    }
 
     /** 말 하나에 답한다. 다음 말을 계속 들을지 돌려준다. */
     suspend fun respond(text: String): Boolean {
@@ -165,3 +177,10 @@ private fun VoiceCommand.movedMessage(): Int = when (this) {
     // 홈이 이어서 답한다. 옮긴 곳만 적는다.
     VoiceCommand.RESUME, VoiceCommand.NEXT_VISIT -> R.string.voice_moved_home
 }
+
+/** 화면을 옮기는 전역 명령. 증상 · 일정 · 기록처럼 메모에 섞일 말을 부르는 명령은 넣지 않는다. */
+private val NAVIGATIONS =
+    setOf(VoiceCommand.HOME, VoiceCommand.CALENDAR, VoiceCommand.RECORD, VoiceCommand.PROFILE, VoiceCommand.BRIEF_CARDS)
+
+/** 화면을 옮기자는 말은 짧다. "다음 주에 홈쇼핑 약 말고 처방약 드시래요" 같은 메모가 걸리지 않게 한다. */
+private const val NAVIGATION_MAX = 12
