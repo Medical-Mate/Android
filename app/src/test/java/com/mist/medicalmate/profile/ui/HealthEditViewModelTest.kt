@@ -31,6 +31,24 @@ class HealthEditViewModelTest {
     }
 
     @Test
+    fun `말로 고르면 뒤집지 않고 넣은 것은 골라진 채로 선다`() {
+        // "고혈압 체크해 줘"를 두 번 말해도 골라진 채다(#334). 누를 때는 뒤집는다.
+        val viewModel = HealthEditViewModel(repository()).apply { load() }
+
+        viewModel.onVoiceChoose(ProfileSetupStep.CONDITIONS, "고혈압", chosen = true)
+        viewModel.onVoiceChoose(ProfileSetupStep.CONDITIONS, "고혈압", chosen = true)
+        viewModel.onVoiceAdd(ProfileSetupStep.ALLERGIES, "복숭아")
+
+        val state = viewModel.uiState.value
+        assertEquals(true, "고혈압" in state.chosenIn(ProfileSetupStep.CONDITIONS))
+        assertEquals(true, "복숭아" in state.chosenIn(ProfileSetupStep.ALLERGIES))
+        assertEquals(true, "복숭아" in state.extrasIn(ProfileSetupStep.ALLERGIES))
+
+        viewModel.onVoiceChoose(ProfileSetupStep.CONDITIONS, "고혈압", chosen = false)
+        assertEquals(false, "고혈압" in viewModel.uiState.value.chosenIn(ProfileSetupStep.CONDITIONS))
+    }
+
+    @Test
     fun `처음에는 비어 있고 불러오면 저장된 값이 들어온다`() {
         val viewModel = HealthEditViewModel(repository())
 

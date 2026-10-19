@@ -910,6 +910,16 @@
     <string name="voice_hospital_picked">%1$s, 골랐어요</string>
     <string name="voice_hospital_no_row">목록에 그 번호가 없어요</string>
     <string name="voice_hospital_none_selected">아직 고른 병원이 없어요. 몇 번째인지 말씀해 주세요</string>
+    <string name="voice_health_chosen">%1$s, 골랐어요</string>
+    <string name="voice_health_removed">%1$s, 뺐어요</string>
+    <string name="voice_health_added">%1$s, 넣었어요</string>
+    <string name="voice_health_confirm_save">건강 정보를 이대로 저장할까요?</string>
+    <string name="voice_suggest_health_choose">고혈압 체크해 줘</string>
+    <string name="voice_suggest_health_choose_do">항목 고르기</string>
+    <string name="voice_suggest_health_add">알러지에 복숭아 추가해 줘</string>
+    <string name="voice_suggest_health_add_do">직접 넣기</string>
+    <string name="voice_suggest_health_save">저장해 줘</string>
+    <string name="voice_suggest_health_save_do">저장하기</string>
     <string name="voice_hospital_make_card">브리핑 카드를 만들게요</string>
     <string name="voice_hospital_auto_picked">%1$s, 여기로 정했어요</string>
     <string name="voice_hospital_found_same">이름이 같은 병원이 %1$s곳이에요</string>
