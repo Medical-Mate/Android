@@ -35,6 +35,14 @@ object VoiceWords {
     fun isStop(text: String): Boolean = !isAsking(text) && STOP.matches(compact(text))
 
     /** 묻는 말인지. 물음표로 끝나거나 "…나요", "…까요", "…되죠"처럼 끝난다. */
+    /**
+     * 떠 있는 시트나 창을 닫자는 말(#334). "뒤로", "창 닫아", "취소", "안 볼래", "나중에".
+     *
+     * 시트가 떠 있을 때만 본다. 안 보면 "뒤로"가 전역 명령으로 가서 시트가 아니라 화면째 빠졌다. "닫아"만 말하면 막대를
+     * 닫는다([isStop]) — 막대가 먼저 받는다.
+     */
+    fun isClose(text: String): Boolean = CLOSE.matches(compact(text))
+
     fun isAsking(text: String): Boolean = text.trim().endsWith("?") || ASKING_END.containsMatchIn(compact(text))
 
     /**
@@ -104,6 +112,12 @@ object VoiceWords {
         Regex(
             "(?:이제)?(?:그만|닫아|닫기|끝|끝내|종료|됐어|됐다|됐어요|됐습니다|꺼줘|꺼|멈춰|멈춰줘)" +
                 "(?:요|해|해요|할래|할게|하자|해줘|줘|주세요|닫아|닫아줘|이야|이에요)?",
+        )
+
+    private val CLOSE =
+        Regex(
+            "(?:뒤로(?:가)?|이전으로|(?:창|시트|이거|그거)(?:닫아|닫기|닫을래)|취소(?:해|할래)?|안볼래|안할래|나중에(?:할래|할게)?)" +
+                "(?:요|줘|줘요|주세요)?",
         )
 
     private val SAVE =

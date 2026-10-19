@@ -252,6 +252,17 @@ class ScheduleAddVoiceTest {
     }
 
     @Test
+    fun `시트가 떠 있으면 뒤로는 시트만 닫는다`() = runTest {
+        // 전에는 전역 "뒤로"로 가서 화면째 빠졌다(#334).
+        val viewModel = viewModel().apply { onSheetOpen(ScheduleAddSheet.DATE) }
+
+        val reply = viewModel.voice.handle("뒤로", ScheduleAddVoiceRoutes())
+
+        assertEquals(ScheduleAddSheet.NONE, viewModel.uiState.value.sheet)
+        assertEquals(R.string.voice_sheet_closed, (reply as VoiceReply.Done).message)
+    }
+
+    @Test
     fun `읽을 것이 없는 말은 이 화면의 말이 아니다`() = runTest {
         // "뒤로", "홈" 같은 전역 명령이 이 길로 간다.
         assertEquals(VoiceReply.NotMine, viewModel().voice.handle("뒤로 가", ScheduleAddVoiceRoutes()))

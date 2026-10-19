@@ -58,6 +58,8 @@ internal fun BriefCardExportSheet(
     onShare: (ImageBitmap) -> Unit,
 ) {
     if (!export.opened || card == null) return
+    // 시트가 떠 있는 동안은 시트가 말을 받는다(#334). 전에는 열 수만 있어 "뒤로"가 카드 화면째 빠졌다.
+    BriefCardExportVoice(export = export, onSave = onSave, onShare = onShare)
     MedicalMateBottomSheet(onDismissRequest = export::close, grabberGap = MedicalMateSpace.s14) {
         Column(modifier = Modifier.fillMaxWidth()) {
             SheetHead(

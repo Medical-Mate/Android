@@ -47,6 +47,11 @@ internal class ScheduleAddVoiceActions(
      * 병원 찾기·새 카드처럼 화면을 떠나는 일이면 묻지 않는다. 옮겨 간 화면이 묻는다.
      */
     suspend fun handle(text: String, routes: ScheduleAddVoiceRoutes): VoiceReply {
+        // 시트가 떠 있으면 "뒤로"·"취소"는 시트만 닫는다(#334). 값을 말하면 지금처럼 채우고 닫는다.
+        if (state().sheet != ScheduleAddSheet.NONE && VoiceWords.isClose(text)) {
+            update { it.copy(sheet = ScheduleAddSheet.NONE) }
+            return VoiceReply.Done(R.string.voice_sheet_closed, question = state().nextQuestion())
+        }
         val voice = parseScheduleAddVoice(text)
         val reply =
             when (voice) {
