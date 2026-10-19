@@ -33,6 +33,9 @@ internal enum class BriefCardVoiceAction {
 
     /** 저장 직후 시트의 "아직 안 정했어요". */
     LATER,
+
+    /** 병원 블록의 "변경"(#336). 말로도 허용한다(사용자 결정). 병원 찾기를 연다. */
+    HOSPITAL,
 }
 
 /**
@@ -45,6 +48,7 @@ internal fun parseBriefCardVoice(text: String): BriefCardVoiceAction? {
     val heard = VoiceWords.compact(text)
     return when {
         EXPORT.any { heard.contains(it) } -> BriefCardVoiceAction.EXPORT
+        HOSPITAL.any { heard.contains(it) } -> BriefCardVoiceAction.HOSPITAL
         LATER.any { heard.contains(it) } -> BriefCardVoiceAction.LATER
         RECORD_VISIT.any { heard.contains(it) } -> BriefCardVoiceAction.RECORD_VISIT
         SCHEDULE_ADD.any { heard.contains(it) } -> BriefCardVoiceAction.SCHEDULE
@@ -113,6 +117,11 @@ private fun answer(
         voice == BriefCardVoiceAction.EXPORT -> {
             routes.onExport()
             VoiceReply.Done(R.string.voice_card_export_opened, question = VoiceText(R.string.voice_card_ask_export))
+        }
+
+        voice == BriefCardVoiceAction.HOSPITAL -> {
+            callbacks.onHospitalChangeClick()
+            VoiceReply.Done(R.string.voice_card_hospital_change)
         }
 
         voice == BriefCardVoiceAction.SAVE ->
@@ -199,6 +208,9 @@ private fun briefCardSuggestions(action: BriefCardFooterAction?): List<VoiceSugg
 private val BACK = Regex("""(?:뒤로|이전|이전화면|앞화면|돌아가|나가)(?:가|가줘|가자|줘|요|기|갈래|갈게)?""")
 
 /** 내보내자는 말. 카드 저장("저장해 줘")보다 먼저 본다. */
+
+/** 병원을 바꾸자는 말. "병원 바꿀래", "다른 병원으로 할래". */
+private val HOSPITAL = listOf("병원바꿀", "병원바꿔", "병원변경", "다른병원", "병원다시", "병원찾", "병원고를")
 private val EXPORT = listOf("이미지", "사진", "갤러리", "앨범", "공유", "내보내", "캡처", "캡쳐", "보내줘")
 
 /** 저장 직후 시트의 "아직 안 정했어요". */
