@@ -52,9 +52,15 @@ class BodyMapActions(private val update: ((BodyMapUiState) -> BodyMapUiState) ->
         update { it.copy(focus = null, selection = null) }
     }
 
-    /** 확대한 앵커에서 부위를 골랐다. 목록에서 고르는 길이 쓴다. */
-    fun onPartSelect(selection: BodyMapSelection) {
-        update { it.copy(selection = selection) }
+    /**
+     * 확대한 앵커에서 부위를 골랐다. 목록과 3D 판이 쓴다.
+     *
+     * [toggle]이면 **이미 고른 곳을 다시 짚을 때 푼다**(#331) — 3D 판이 그렇고 전신 · 피부 칩과 같은 규칙이다.
+     * 되돌리기(X)는 확대까지 지워서, 확대한 채 고른 것만 물릴 길이 없었다. 목록과 음성은 풀지 않는다. 같은 부위를
+     * 다시 말했는데 풀리면 안 된다.
+     */
+    fun onPartSelect(selection: BodyMapSelection, toggle: Boolean = false) {
+        update { it.copy(selection = if (toggle && it.selection == selection) null else selection) }
     }
 
     /**

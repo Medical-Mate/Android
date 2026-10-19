@@ -245,6 +245,35 @@ class IntakeViewModelTest {
     }
 
     @Test
+    fun `3D 판에서 고른 세부 부위를 다시 짚으면 풀린다`() {
+        // 확대는 그대로 두고 고른 것만 물린다(#331). 되돌리기는 확대까지 지운다.
+        val viewModel = intakeViewModel()
+        val arm = BodyMapSelection("ANC:013", side = BodyMapSide.RIGHT)
+        val wrist = BodyMapSelection("ANC:013", zoneId = "SUR:065", side = BodyMapSide.RIGHT)
+        viewModel.bodyMap.onAnchorFocus(arm)
+        viewModel.bodyMap.onPartSelect(wrist, toggle = true)
+        assertEquals(wrist, viewModel.uiState.value.bodyMap.selection)
+
+        viewModel.bodyMap.onPartSelect(wrist, toggle = true)
+
+        val bodyMap = viewModel.uiState.value.bodyMap
+        assertEquals(null, bodyMap.selection)
+        assertEquals(arm, bodyMap.focus)
+    }
+
+    @Test
+    fun `목록에서 같은 부위를 다시 고르면 그대로 남는다`() {
+        // 음성으로 같은 부위를 다시 말해도 풀리면 안 된다. 목록과 음성은 고르기만 한다.
+        val viewModel = intakeViewModel()
+        val wrist = BodyMapSelection("ANC:013", zoneId = "SUR:065", side = BodyMapSide.RIGHT)
+        viewModel.bodyMap.onPartSelect(wrist)
+
+        viewModel.bodyMap.onPartSelect(wrist)
+
+        assertEquals(wrist, viewModel.uiState.value.bodyMap.selection)
+    }
+
+    @Test
     fun `목록에서 앵커 줄을 누르면 확대만 되고 골라지지 않는다`() {
         val viewModel = intakeViewModel()
 

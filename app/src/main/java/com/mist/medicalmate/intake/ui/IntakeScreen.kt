@@ -67,6 +67,8 @@ data class IntakeCallbacks(
     val onBodyDotClick: (String) -> Unit = {},
     val onBodySideAnchorClick: (String) -> Unit = {},
     val onBodyPartSelect: (BodyMapSelection) -> Unit = {},
+    /** 3D 판에서 세부 부위를 짚었다. 고른 곳을 다시 짚으면 푼다(#331). */
+    val onBodyPartToggle: (BodyMapSelection) -> Unit = {},
     val onBodyAnchorFocus: (BodyMapSelection) -> Unit = {},
     val onBodyFocusClear: () -> Unit = {},
     val onBodyListModeToggle: () -> Unit = {},
