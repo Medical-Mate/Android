@@ -176,10 +176,10 @@ private fun MateSection(
                 MedicalMateSettingToggleRow(
                     title = stringResource(setting.labelRes),
                     description =
-                    if (setting == AppSetting.VOICE_WAKE) {
-                        stringResource(R.string.my_profile_voice_wake_description)
-                    } else {
-                        null
+                    when (setting) {
+                        AppSetting.VOICE_WAKE -> stringResource(R.string.my_profile_voice_wake_description)
+                        AppSetting.CLEAN_MIC -> stringResource(R.string.my_profile_clean_mic_description)
+                        else -> null
                     },
                     checked = state.isOn(setting),
                     onCheckedChange = { onSettingChange(setting, it) },

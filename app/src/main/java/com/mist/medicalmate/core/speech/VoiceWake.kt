@@ -59,7 +59,8 @@ interface VoiceWake {
     suspend fun deleteModel()
 }
 
-private val Context.speechDataStore: DataStore<Preferences> by preferencesDataStore(name = "speech")
+/** 음성의 기기 설정. 호출어 켜짐과 받아쓰기 방식(#328)이 함께 쓴다. */
+internal val Context.speechDataStore: DataStore<Preferences> by preferencesDataStore(name = "speech")
 
 @Singleton
 internal class DefaultVoiceWake

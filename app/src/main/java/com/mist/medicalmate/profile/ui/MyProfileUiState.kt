@@ -22,6 +22,8 @@ data class MyProfileUiState(
     val untimedReminderTime: LocalTime = DEFAULT_UNTIMED_REMINDER,
     val voiceWake: VoiceWakeUi = VoiceWakeUi(),
     val onDevice: OnDeviceUi = OnDeviceUi(),
+    /** 받아쓰기 방식 비교 토글을 그릴지(#328). debug 빌드에서만 참이다. */
+    val cleanMicAvailable: Boolean = false,
 ) {
     fun isOn(setting: AppSetting): Boolean = settings[setting] == true
 
@@ -31,6 +33,7 @@ data class MyProfileUiState(
             listOfNotNull(
                 AppSetting.VOICE_WAKE.takeIf { voiceWake.supported },
                 AppSetting.ON_DEVICE.takeIf { onDevice.supported },
+                AppSetting.CLEAN_MIC.takeIf { cleanMicAvailable },
             )
 
     /** "정리 모델 지우기"를 둘지. 꺼 둔 채 모델이 남아 있을 때만이다. */
@@ -83,6 +86,7 @@ private val DefaultSettings =
         AppSetting.RECORD_REMINDER to true,
         AppSetting.VOICE_WAKE to false,
         AppSetting.ON_DEVICE to false,
+        AppSetting.CLEAN_MIC to false,
     )
 
 /**
@@ -150,6 +154,12 @@ enum class AppSetting(@StringRes val labelRes: Int) {
      * 결정). NPU가 잡히는 기기에서만 그린다.
      */
     ON_DEVICE(R.string.my_profile_setting_on_device),
+
+    /**
+     * 받아쓰기 전에 마이크 소리를 다듬을지(#328). 지금 방식과 비교하려고 둔 시험용 줄이다. 여러 곳에서 PC 없이
+     * 바꿔야 해서 화면에 둔다(사용자 결정). 시안에 없고 debug 빌드에서만 그린다. 비교가 끝나면 걷어낸다.
+     */
+    CLEAN_MIC(R.string.my_profile_setting_clean_mic),
 }
 
 /**
