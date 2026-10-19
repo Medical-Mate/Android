@@ -72,6 +72,10 @@ internal class IntakeVoiceCommands(
 
     private fun body(text: String, routes: IntakeVoiceRoutes): VoiceReply {
         val current = state()
+        // 앞면·뒷면 · 목록 · 다른 부위 보기(#336). 버튼과 같은 일이다.
+        current.bodyMap.viewVoice(text) { change -> update { it.copy(bodyMap = change(it.bodyMap)) } }?.let { reply ->
+            return (reply as? VoiceReply.Done)?.copy(question = state().voiceQuestion(labels)) ?: reply
+        }
         return when {
             isNextVoice(text) && current.canLeaveBodyPart -> {
                 routes.next()

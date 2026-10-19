@@ -80,6 +80,11 @@ internal fun BodyMap3dStep(
         )
     }
 
+    // 말로 앞면·뒷면을 바꿨다(#336). 세그먼트를 누른 것과 같이 그 면으로 돈다.
+    LaunchedEffect(state.viewAsked) {
+        if (state.viewAsked > 0) camera.glideTo(camera.value.facing(state.view))
+    }
+
     Heading(focus)
     if (focus != null) {
         ZoneActions(focus = focus, callbacks = callbacks)

@@ -458,6 +458,55 @@ class IntakeVoiceTest {
         assertEquals(listOf(IntakeFocusTarget.Questions), viewModel.uiState.value.voiceFocus?.targets)
     }
 
+    // 버튼과 같게 맞춘 말(#336)
+
+    @Test
+    fun `앞면 뒷면을 말하면 판이 그 면으로 돈다`() {
+        val viewModel = IntakeViewModel(VoiceSessionRepository(), FakeSpeechToText())
+
+        viewModel.handle("뒷면 보여 줘")
+
+        assertEquals(BodyMapView.BACK, viewModel.uiState.value.bodyMap.view)
+        assertEquals(1, viewModel.uiState.value.bodyMap.viewAsked)
+        // "목 뒤쪽이 아파"는 부위를 고르는 말이다.
+        viewModel.handle("목 뒤쪽이 아파요")
+        assertEquals(1, viewModel.uiState.value.bodyMap.viewAsked)
+    }
+
+    @Test
+    fun `목록으로 바꾸고 인체도로 돌아온다`() {
+        val viewModel = IntakeViewModel(VoiceSessionRepository(), FakeSpeechToText())
+
+        viewModel.handle("목록에서 고를래")
+        assertTrue(viewModel.uiState.value.bodyMap.byList)
+
+        viewModel.handle("인체도로 돌아가")
+        assertFalse(viewModel.uiState.value.bodyMap.byList)
+    }
+
+    @Test
+    fun `다른 부위 보기는 확대만 닫고 고른 부위를 남긴다`() {
+        val viewModel = IntakeViewModel(VoiceSessionRepository(), FakeSpeechToText())
+        viewModel.handle("왼쪽 무릎이 아파요")
+        val picked = viewModel.uiState.value.bodyMap.selection
+
+        viewModel.handle("다른 부위 볼래")
+
+        assertNull(viewModel.uiState.value.bodyMap.focus)
+        assertEquals(picked, viewModel.uiState.value.bodyMap.selection)
+        assertFalse(isOtherPartVoice("다른 데도 아파요"))
+    }
+
+    @Test
+    fun `질문 추가라고만 하면 다음 말을 그대로 질문으로 넣는다`() {
+        val viewModel = IntakeViewModel(VoiceSessionRepository(ends = true), FakeSpeechToText()).inQuestions()
+
+        viewModel.handle("질문 추가")
+        viewModel.handle("술은 언제부터 마셔도 돼")
+
+        assertEquals(listOf("술은 언제부터 마셔도 돼"), viewModel.uiState.value.questions)
+    }
+
     private fun IntakeViewModel.handle(text: String): VoiceReply = voiceCommands.handle(
         text,
         IntakeVoiceRoutes(next = { onNext("라벨") }, severityLabel = { it.name }),

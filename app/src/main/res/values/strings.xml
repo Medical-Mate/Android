@@ -685,6 +685,11 @@
     <string name="voice_home_next_opened">다음 일정을 열었어요</string>
     <string name="voice_home_card_schedule">%1$s 카드로 일정을 잡을게요</string>
     <string name="voice_home_today_record">오늘 진료 기록을 시작할게요</string>
+    <string name="voice_intake_view_front">앞면으로 돌렸어요</string>
+    <string name="voice_intake_view_back">뒷면으로 돌렸어요</string>
+    <string name="voice_intake_list_mode">목록으로 바꿨어요</string>
+    <string name="voice_intake_map_mode">인체도로 돌아왔어요</string>
+    <string name="voice_intake_other_part">전신으로 돌아왔어요. 고른 부위는 그대로예요</string>
     <string name="voice_day_no_card_to_open">이 날은 가져간 브리핑 카드가 없어요</string>
     <string name="voice_clinic_ask">%1$s 맞나요? "네"나 "다른 병원이에요"로 답해 주세요</string>
     <string name="voice_clinic_confirmed">그 병원으로 적을게요</string>
