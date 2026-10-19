@@ -18,6 +18,16 @@ class VoiceDateTest {
     }
 
     @Test
+    fun `다음 달과 지난달은 보고 있는 달에서 센다`() {
+        // 11월을 보며 "다음 달"이면 12월이다(#334). 오늘에서 세면 11월에 머물렀다. "이번 달"은 오늘의 달이다.
+        val shown = YearMonth.of(2026, 11)
+        val today = LocalDate.of(2026, 10, 13)
+        assertEquals(VoiceDate.Month(YearMonth.of(2026, 12)), parseVoiceDate("다음 달", today, shown))
+        assertEquals(VoiceDate.Month(YearMonth.of(2026, 10)), parseVoiceDate("지난달", today, shown))
+        assertEquals(VoiceDate.Month(YearMonth.of(2026, 10)), parseVoiceDate("이번 달", today, shown))
+    }
+
+    @Test
     fun `요일은 주를 말하면 그 주이고 아니면 처음 오는 그 요일이다`() {
         assertEquals(day(2026, 10, 20), parse("다음 주 화요일 일정"))
         assertEquals(day(2026, 10, 16), parse("금요일"))
