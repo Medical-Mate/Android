@@ -69,14 +69,21 @@ internal fun BodyMap3dBoard(
     val renderer = remember { BodyMap3dRenderer(context) }
     var mesh by remember { mutableStateOf<BodyMap3dMesh?>(null) }
     var ready by remember { mutableStateOf(false) }
+    // 모델을 바꾸면(#330) 같은 판에서 모델만 갈아 끼운다. 짚는 판정은 같은 몸체라 그대로 쓴다.
+    val model = BodyMap3dModelChoice.current
     val background = MedicalMateTheme.colors.bgSubtle
     val candidates = bodyMap3dCandidates(focus)
 
     LaunchedEffect(renderer) {
         renderer.setBackground(background.red, background.green, background.blue)
-        mesh = loadBodyMap3d(context, renderer)
+        mesh = loadBodyMap3d(context, renderer, model.asset)
         renderer.start()
         ready = true
+    }
+    LaunchedEffect(renderer, model) {
+        if (!ready) return@LaunchedEffect
+        val bytes = withContext(Dispatchers.IO) { context.assets.open(model.asset).use { it.readBytes() } }
+        renderer.load(bytes)
     }
     DisposableEffect(renderer) {
         onDispose { renderer.destroy() }
@@ -122,9 +129,9 @@ internal fun BodyMap3dBoard(
  * 파일을 읽는 것만 다른 갈래에서 한다. 엔진에 넘기는 것은 메인 갈래여야 한다 — Filament의
  * 작업 큐가 들이지 않은 갈래를 거절한다. 다 읽은 뒤에 그리기를 시작한다.
  */
-private suspend fun loadBodyMap3d(context: Context, renderer: BodyMap3dRenderer): BodyMap3dMesh {
+private suspend fun loadBodyMap3d(context: Context, renderer: BodyMap3dRenderer, asset: String): BodyMap3dMesh {
     val model = withContext(Dispatchers.IO) {
-        context.assets.open(BODY_3D_MODEL_ASSET).use { it.readBytes() }
+        context.assets.open(asset).use { it.readBytes() }
     }
     renderer.load(model)
     return withContext(Dispatchers.IO) {

@@ -19,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import com.mist.medicalmate.BuildConfig
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
 import com.mist.medicalmate.core.designsystem.MedicalMateRadius
@@ -27,6 +28,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonSize
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonType
+import com.mist.medicalmate.core.designsystem.component.MedicalMateChip
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButtonSize
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButtonStyle
@@ -94,7 +96,7 @@ internal fun BodyMap3dStep(
                 if (focus == null) {
                     callbacks.onBodyAnchorFocus(pick.point.toFocus())
                 } else {
-                    callbacks.onBodyPartSelect(pick.point.toSelection())
+                    callbacks.onBodyPartToggle(pick.point.toSelection())
                 }
             }
         },
@@ -116,9 +118,9 @@ internal fun BodyMap3dStep(
 /**
  * 인체도 판.
  *
- * 고른 것이 있으면 판 오른쪽 위에 지우는 버튼이 선다. 3D는 돌리고 확대하다 보면 처음
- * 자리에서 멀어지는데, 고른 것을 물린 채로는 어디서부터 다시 짚어야 할지가 흐려진다.
- * 고르기 전에는 지울 것이 없어서 두지 않는다.
+ * 고른 것이 있거나 큰 부위를 짚어 확대했으면 판 오른쪽 위에 지우는 버튼이 선다(#331). 3D는 돌리고
+ * 확대하다 보면 처음 자리에서 멀어지는데, 고른 것을 물린 채로는 어디서부터 다시 짚어야 할지가 흐려진다.
+ * 전신에서 아무것도 고르지 않았으면 지울 것이 없어서 두지 않는다.
  *
  * 판 안에 얹는 것은 좌우 안내와 고른 부위 알약이 그렇듯 판의 언어다. 판 밖에 두면 조작
  * 줄이 한 줄 더 생겨 판이 그만큼 내려간다.
@@ -145,7 +147,24 @@ private fun Board(
                     onPick = onPick,
                     modifier = Modifier.fillMaxSize(),
                 )
-                if (state.selection != null) {
+                // 새 모델과 지금 모델을 번갈아 본다(#330). debug 빌드에서만 있다.
+                if (BuildConfig.DEBUG) {
+                    MedicalMateChip(
+                        label = stringResource(R.string.body_map_3d_model_bx05),
+                        selected = BodyMap3dModelChoice.current == BodyMap3dModel.BX05,
+                        onClick = {
+                            BodyMap3dModelChoice.current =
+                                if (BodyMap3dModelChoice.current == BodyMap3dModel.BX05) {
+                                    BodyMap3dModel.CURRENT
+                                } else {
+                                    BodyMap3dModel.BX05
+                                }
+                        },
+                        modifier = Modifier.align(Alignment.TopStart).padding(ResetInset),
+                    )
+                }
+                // 큰 부위를 짚어 확대만 한 때도 선다(#331). 전신으로 돌아갈 길을 찾지 않아도 된다.
+                if (state.focus != null || state.selection != null) {
                     MedicalMateIconButton(
                         onClick = onReset,
                         icon = MedicalMateIcons.Close,
