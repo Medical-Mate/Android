@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.mist.medicalmate.core.model.VisitReminders
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.core.ondevice.OnDeviceModel
+import com.mist.medicalmate.core.speech.CleanMicSetting
 import com.mist.medicalmate.core.speech.VoiceWake
 import com.mist.medicalmate.core.speech.WakeWordModelState
 import com.mist.medicalmate.profile.data.HealthField
@@ -57,6 +58,7 @@ internal constructor(
     private val reminders: VisitReminders,
     private val voiceWake: VoiceWake,
     onDevice: OnDeviceModel,
+    private val cleanMic: CleanMicSetting,
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(MyProfileUiState())
     val uiState: StateFlow<MyProfileUiState> = mutableUiState.asStateFlow()
@@ -65,6 +67,12 @@ internal constructor(
     val onDeviceToggle = OnDeviceToggle(viewModelScope, onDevice, mutableUiState)
 
     init {
+        mutableUiState.update { it.copy(cleanMicAvailable = cleanMic.available) }
+        viewModelScope.launch {
+            cleanMic.enabled.collect { enabled ->
+                mutableUiState.update { it.copy(settings = it.settings + (AppSetting.CLEAN_MIC to enabled)) }
+            }
+        }
         viewModelScope.launch {
             voiceWake.enabled.collect { enabled ->
                 mutableUiState.update { it.copy(settings = it.settings + (AppSetting.VOICE_WAKE to enabled)) }
@@ -133,16 +141,16 @@ internal constructor(
      * 것이 서버에 안 남았는데 화면만 꺼져 있으면 알림이 계속 온다.
      */
     fun onSettingChange(setting: AppSetting, enabled: Boolean) {
-        if (setting == AppSetting.VOICE_WAKE) {
-            onVoiceWakeChange(enabled)
-            return
+        when (setting) {
+            AppSetting.VOICE_WAKE -> onVoiceWakeChange(enabled)
+            AppSetting.ON_DEVICE -> onDeviceToggle.change(enabled)
+            // 기기 값이다. 다음 받아쓰기부터 그 방식으로 듣는다(#328).
+            AppSetting.CLEAN_MIC -> viewModelScope.launch { cleanMic.set(enabled) }
+            AppSetting.VISIT_REMINDER, AppSetting.RECORD_REMINDER -> {
+                mutableUiState.update { it.copy(settings = it.settings + (setting to enabled)) }
+                viewModelScope.launch { saveReminder(setting, enabled) }
+            }
         }
-        if (setting == AppSetting.ON_DEVICE) {
-            onDeviceToggle.change(enabled)
-            return
-        }
-        mutableUiState.update { it.copy(settings = it.settings + (setting to enabled)) }
-        viewModelScope.launch { saveReminder(setting, enabled) }
     }
 
     /**
@@ -179,7 +187,7 @@ internal constructor(
             when (setting) {
                 AppSetting.VISIT_REMINDER -> settings.update(beforeVisit = enabled)
                 AppSetting.RECORD_REMINDER -> settings.update(afterVisit = enabled)
-                AppSetting.VOICE_WAKE, AppSetting.ON_DEVICE -> return
+                AppSetting.VOICE_WAKE, AppSetting.ON_DEVICE, AppSetting.CLEAN_MIC -> return
             }
         if (result is ApiResult.Success) {
             reminders.refresh()

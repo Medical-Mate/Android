@@ -5,6 +5,7 @@ import com.mist.medicalmate.core.model.ReminderSettings
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.core.ondevice.FakeOnDeviceModel
 import com.mist.medicalmate.core.ondevice.OnDeviceModelState
+import com.mist.medicalmate.core.speech.FakeCleanMicSetting
 import com.mist.medicalmate.core.speech.FakeVoiceWake
 import com.mist.medicalmate.core.speech.WakeWordModelState
 import com.mist.medicalmate.profile.data.FakeHealthProfileRepository
@@ -176,7 +177,8 @@ class MyProfileViewModelTest {
         settings: FakeSettingsRepository = FakeSettingsRepository(),
         voiceWake: FakeVoiceWake = FakeVoiceWake(),
         onDevice: FakeOnDeviceModel = FakeOnDeviceModel(),
-    ) = MyProfileViewModel(repository, settings, reminders, voiceWake, onDevice)
+        cleanMic: FakeCleanMicSetting = FakeCleanMicSetting(),
+    ) = MyProfileViewModel(repository, settings, reminders, voiceWake, onDevice, cleanMic)
 
     @Test
     fun `휴대폰 정리는 NPU가 없는 기기에서 줄이 없다`() {
@@ -248,6 +250,27 @@ class MyProfileViewModelTest {
 
         assertEquals(1, onDevice.deleteCalls)
         assertFalse(viewModel.uiState.value.canDeleteOnDeviceModel)
+    }
+
+    @Test
+    fun `마이크 소리 다듬기는 release 빌드에 줄이 없다`() {
+        // 받아쓰기 방식을 비교하는 시험용 줄이라 debug 빌드에서만 그린다(#328).
+        val viewModel = viewModel(cleanMic = FakeCleanMicSetting(available = false))
+
+        assertFalse(AppSetting.CLEAN_MIC in viewModel.uiState.value.mateSettings)
+    }
+
+    @Test
+    fun `마이크 소리 다듬기를 켜면 기기 값으로 남는다`() {
+        // 다음 받아쓰기부터 그 방식으로 듣는다. 계정 값이 아니라 서버에 보내지 않는다.
+        val cleanMic = FakeCleanMicSetting(available = true)
+        val viewModel = viewModel(cleanMic = cleanMic)
+
+        viewModel.onSettingChange(AppSetting.CLEAN_MIC, true)
+
+        assertTrue(cleanMic.enabled.value)
+        assertTrue(AppSetting.CLEAN_MIC in viewModel.uiState.value.mateSettings)
+        assertTrue(viewModel.uiState.value.isOn(AppSetting.CLEAN_MIC))
     }
 
     @Test

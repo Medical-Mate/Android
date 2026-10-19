@@ -1,5 +1,6 @@
 package com.mist.medicalmate.core.speech
 
+import android.content.Context
 import android.os.Build
 import com.google.mlkit.genai.common.DownloadStatus
 import com.google.mlkit.genai.common.FeatureStatus
@@ -10,12 +11,17 @@ import com.google.mlkit.genai.speechrecognition.SpeechRecognizerOptions
 import com.google.mlkit.genai.speechrecognition.SpeechRecognizerResponse
 import com.google.mlkit.genai.speechrecognition.speechRecognizerOptions
 import com.google.mlkit.genai.speechrecognition.speechRecognizerRequest
+import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 /**
@@ -27,9 +33,9 @@ import java.util.Locale
  * 두 화면이 쓴다 — 증상 문답(1c-3·1c-4)과 진료 후 메모(1p). 한 도메인이 다른 도메인을
  * 참조하지 않으므로 `core`에 둔다.
  *
- * **마이크를 직접 잡지 않는다.** `AudioSource.fromMic()`에 맡긴다. 실험 코드
- * (`C:\Claude\mlkit`)는 `AudioRecord`로 직접 잡아 파이프로 넘기는데, 그것은 같은 오디오를
- * whisper와 나눠 들어야 비교가 공정해서였다. 엔진이 하나면 그 층이 전부 군더더기다.
+ * **마이크는 두 방식이다**(#328). 지금은 `AudioSource.fromMic()`에 맡긴다. debug 빌드에서 내 정보의 토글을 켜면
+ * 앱이 마이크를 잡아 다듬은 소리([CleanMic])를 `AudioSource.fromPfd`로 넘긴다. 어느 쪽이 나은지 기기에서 비교한
+ * 뒤 하나만 남긴다. 다듬기 효과는 문서가 보증하지 않는다 — 문서는 `fromMic()`을 권한다.
  */
 interface SpeechToText {
     /**
@@ -81,7 +87,11 @@ sealed interface SpeechChunk {
 
 internal class MlKitSpeechToText
 @Inject
-constructor() : SpeechToText {
+constructor(
+    @ApplicationContext private val context: Context,
+    private val cleanMic: CleanMicSetting,
+    private val trace: VoiceWakeTrace,
+) : SpeechToText {
     private var recognizer: SpeechRecognizer? = null
 
     private val listening = MutableStateFlow(false)
@@ -117,18 +127,24 @@ constructor() : SpeechToText {
                 return@flow
             }
         }
-        val request = speechRecognizerRequest { audioSource = AudioSource.fromMic() }
+        // 다듬는 방식이면 앱이 마이크를 잡는다(#328). 못 잡으면 지금 방식으로 듣는다.
+        val mic = if (cleanMic.enabled.first()) CleanMic.open(context) else null
+        trace.log { "받아쓰기: ${if (mic == null) "fromMic" else "다듬어 넘김"}" }
+        val source = mic?.let { AudioSource.fromPfd(it.input) } ?: AudioSource.fromMic()
+        val request = speechRecognizerRequest { audioSource = source }
         listening.value = true
         try {
-            client.startRecognition(request).collect { response ->
-                when (response) {
-                    is SpeechRecognizerResponse.PartialTextResponse -> emit(SpeechChunk.Partial(response.text))
-                    is SpeechRecognizerResponse.FinalTextResponse -> emit(SpeechChunk.Final(response.text))
-                    is SpeechRecognizerResponse.ErrorResponse -> emit(SpeechChunk.Failed)
-                    else -> Unit
+            coroutineScope {
+                val pump = mic?.let { launch(Dispatchers.IO) { it.pump() } }
+                try {
+                    client.startRecognition(request).collect { response -> response.toChunk()?.let { emit(it) } }
+                } finally {
+                    mic?.close()
+                    pump?.cancel()
                 }
             }
         } finally {
+            mic?.let { trace.log { "받아쓰기: ${it.summary()}" } }
             listening.value = false
         }
     }
@@ -155,4 +171,11 @@ constructor() : SpeechToText {
             },
         )
         .also { recognizer = it }
+}
+
+private fun SpeechRecognizerResponse.toChunk(): SpeechChunk? = when (this) {
+    is SpeechRecognizerResponse.PartialTextResponse -> SpeechChunk.Partial(text)
+    is SpeechRecognizerResponse.FinalTextResponse -> SpeechChunk.Final(text)
+    is SpeechRecognizerResponse.ErrorResponse -> SpeechChunk.Failed
+    else -> null
 }

@@ -425,6 +425,8 @@
     <string name="my_profile_voice_wake_denied">마이크를 허용해야 켤 수 있어요</string>
     <string name="my_profile_voice_wake_delete_model">음성 모델 지우기 (68MB)</string>
     <string name="my_profile_setting_on_device">휴대폰에서 기록 정리</string>
+    <string name="my_profile_setting_clean_mic">마이크 소리 다듬기 (시험)</string>
+    <string name="my_profile_clean_mic_description">켜면 잡음을 줄여서 받아쓰기에 넘겨요.\n끄면 지금 방식이에요.</string>
     <string name="my_profile_on_device_downloading">정리 모델을 받고 있어요 (%1$d%%)</string>
     <string name="my_profile_on_device_failed">정리 모델을 못 받았어요. 인터넷 연결과 남은 공간을 확인하고 다시 켜 주세요</string>
     <string name="my_profile_on_device_delete_model">정리 모델 지우기 (1.2GB)</string>
