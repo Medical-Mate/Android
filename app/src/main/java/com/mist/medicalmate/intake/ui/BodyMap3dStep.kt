@@ -19,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import com.mist.medicalmate.BuildConfig
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
 import com.mist.medicalmate.core.designsystem.MedicalMateRadius
@@ -27,6 +28,7 @@ import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonSize
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButtonType
+import com.mist.medicalmate.core.designsystem.component.MedicalMateChip
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButtonSize
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButtonStyle
@@ -145,6 +147,22 @@ private fun Board(
                     onPick = onPick,
                     modifier = Modifier.fillMaxSize(),
                 )
+                // 새 모델과 지금 모델을 번갈아 본다(#330). debug 빌드에서만 있다.
+                if (BuildConfig.DEBUG) {
+                    MedicalMateChip(
+                        label = stringResource(R.string.body_map_3d_model_bx05),
+                        selected = BodyMap3dModelChoice.current == BodyMap3dModel.BX05,
+                        onClick = {
+                            BodyMap3dModelChoice.current =
+                                if (BodyMap3dModelChoice.current == BodyMap3dModel.BX05) {
+                                    BodyMap3dModel.CURRENT
+                                } else {
+                                    BodyMap3dModel.BX05
+                                }
+                        },
+                        modifier = Modifier.align(Alignment.TopStart).padding(ResetInset),
+                    )
+                }
                 if (state.selection != null) {
                     MedicalMateIconButton(
                         onClick = onReset,

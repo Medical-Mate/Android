@@ -99,8 +99,17 @@ internal class BodyMap3dRenderer(context: Context) : Choreographer.FrameCallback
         }
     }
 
-    /** 모델을 읽어 장면에 올린다. **메인 갈래에서** 부른다. 압축을 푸는 동안 화면이 멎는다. */
+    /**
+     * 모델을 읽어 장면에 올린다. **메인 갈래에서** 부른다. 압축을 푸는 동안 화면이 멎는다.
+     *
+     * 이미 올린 모델이 있으면 내리고 바꾼다(#330). 엔진째 새로 띄우면 판의 표면이 바뀌는 사이 끌기 처리가 멈추지 않고
+     * 이어져 몸이 저절로 돌았다.
+     */
     fun load(bytes: ByteArray) {
+        asset?.let {
+            scene.removeEntities(it.entities)
+            assetLoader.destroyAsset(it)
+        }
         val buffer = ByteBuffer.allocateDirect(bytes.size)
         buffer.put(bytes)
         buffer.rewind()
@@ -215,6 +224,9 @@ internal class BodyMap3dRenderer(context: Context) : Choreographer.FrameCallback
 
 /** 화면에 그리는 모델. Draco로 압축돼 있고 gltfio가 푼다. */
 internal const val BODY_3D_MODEL_ASSET = "body3d/body.glb"
+
+/** 디자인 트랙의 새 모델 BX05(#330). 지금 모델과 같은 몸체에 재질만 다르다. 비교가 끝나면 하나만 남긴다. */
+internal const val BODY_3D_BX05_MODEL_ASSET = "body3d/body_bx05.glb"
 
 /** 짚은 자리를 찾는 메시. 그리는 모델을 줄인 사본이다. */
 internal const val BODY_3D_COLLISION_ASSET = "body3d/body_collision.bin"
