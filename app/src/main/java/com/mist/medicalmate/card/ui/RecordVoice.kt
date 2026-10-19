@@ -33,17 +33,39 @@ internal fun List<RecordItem>.findRecordByVoice(text: String, today: LocalDate):
     val date = parseVoiceDate(text, today)
     val words = recordWordsOf(text)
     if (ordinal == null && date == null && words.isEmpty()) return null
-    val matched =
-        filter { item ->
-            when (date) {
-                is VoiceDate.Day -> item.visitedOn == date.date
-                is VoiceDate.Month -> item.visitedOn?.let(YearMonth::from) == date.month
-                null -> true
-            }
-        }.filter { item -> words.all { VoiceWords.compact(item.title + (item.clinic ?: "")).contains(it) } }
+    val matched = filter { item -> item.matches(date, words) }
     val index = ordinal?.let { if (it == VoiceWords.LAST) matched.lastIndex else it }
-    return if (index != null) listOfNotNull(matched.getOrNull(index)) else matched
+    val vague = ordinal == null && date == null && !heard.contains(RECORD_WORD)
+    return when {
+        pointsElsewhere(heard) -> null
+        index != null -> listOfNotNull(matched.getOrNull(index))
+        // 기록을 가리킨 말이 아닌데 낱말이 아무 기록에도 없으면 이 화면의 말이 아니다(#333). "캘린더 보여 줘",
+        // "증상 정리할래"가 "그런 기록을 찾지 못했어요"가 돼 전역 명령으로 가지 못했다. 카드 목록과 같은 규칙이다.
+        matched.isEmpty() && vague -> null
+        else -> matched
+    }
 }
+
+/** 말한 날이나 달에 다녀왔고, 남은 낱말이 모두 제목이나 병원에 있는지. */
+private fun RecordItem.matches(date: VoiceDate?, words: List<String>): Boolean {
+    val onDate =
+        when (date) {
+            is VoiceDate.Day -> visitedOn == date.date
+            is VoiceDate.Month -> visitedOn?.let(YearMonth::from) == date.month
+            null -> true
+        }
+    return onDate && words.all { VoiceWords.compact(title + (clinic ?: "")).contains(it) }
+}
+
+/** 다른 화면의 것을 가리키는지(#333). "10월 20일 일정", "두 번째 카드"는 날짜나 몇 번째가 있어도 넘긴다. */
+private fun pointsElsewhere(heard: String): Boolean =
+    !heard.contains(RECORD_WORD) && OTHER_SCREENS.any { heard.contains(it) }
+
+/** 기록을 가리키는 낱말. "정형외과 기록", "진료 기록 열어 줘". */
+private const val RECORD_WORD = "기록"
+
+/** 다른 화면의 것. 기록 탭에서 말해도 그 화면이 받는다. */
+private val OTHER_SCREENS = listOf("일정", "캘린더", "달력", "카드", "브리핑")
 
 /** 기록 탭이 받는 말의 갈래. */
 internal enum class RecordVoiceIntent {
