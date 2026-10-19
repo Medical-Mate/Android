@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -43,6 +42,7 @@ import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButtonSiz
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
 import com.mist.medicalmate.core.designsystem.component.rememberSpeechActivityLevel
 import com.mist.medicalmate.core.voice.VoiceSuggestion
+import com.mist.medicalmate.core.voice.rememberVoiceScrollState
 
 /**
  * "헤이 메이트"로 부르면 뜨는 `Mate Card`(Figma `3532:5543`, #273·#282·#312).
@@ -176,7 +176,8 @@ private fun ChoiceGuide(choices: VoiceChoices) {
             modifier =
             Modifier
                 .heightIn(max = GuideRowMinHeight * MAX_CHOICE_ROWS + MedicalMateSpace.s2 * (MAX_CHOICE_ROWS - 1))
-                .verticalScroll(rememberScrollState()),
+                // 넘칠 때는 "아래로" · "위로"가 이 목록을 굴린다(#336, 사용자 결정). 뒤의 화면보다 나중에 등록돼 먼저 받는다.
+                .verticalScroll(rememberVoiceScrollState(register = choices.items.size > MAX_CHOICE_ROWS)),
             verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s2),
         ) {
             choices.items.forEachIndexed { index, choice -> ChoiceRow(number = index + 1, choice = choice) }

@@ -49,12 +49,17 @@ fun interface VoiceScroller {
     fun scroll(direction: VoiceScroll): Boolean
 }
 
-/** 말로 굴릴 수 있는 [ScrollState]. 화면의 `rememberScrollState()` 자리에 쓴다. */
+/**
+ * 말로 굴릴 수 있는 [ScrollState]. 화면의 `rememberScrollState()` 자리에 쓴다.
+ *
+ * @param register 말로 굴릴 것으로 등록할지. 음성 막대의 고를 목록(#336)은 넘칠 때만 등록한다 — 늘 등록하면 넘치지
+ *   않는 목록이 "아래로"를 받아 뒤의 화면이 굴러가지 않는다.
+ */
 @Composable
-fun rememberVoiceScrollState(): ScrollState {
+fun rememberVoiceScrollState(register: Boolean = true): ScrollState {
     val state = rememberScrollState()
     val scope = rememberCoroutineScope()
-    VoiceScrollerEffect(state) { direction -> state.scrollBy(direction, scope) }
+    if (register) VoiceScrollerEffect(state) { direction -> state.scrollBy(direction, scope) }
     return state
 }
 
