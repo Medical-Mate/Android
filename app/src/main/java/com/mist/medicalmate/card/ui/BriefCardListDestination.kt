@@ -23,10 +23,13 @@ import java.time.LocalDate
 @Serializable
 internal data object BriefCardListDestination
 
-/** [onResumeClick]은 카드 없는 문답 줄을 눌렀을 때다(#338). 홈의 이어서 하기와 같은 곳으로 간다. */
+/**
+ * [onResumeClick]은 카드 없는 문답 줄을 눌렀을 때다(#338). 홈의 이어서 하기와 같은 곳으로 간다. [ended]가 true면
+ * 문답이 끝난 임시 저장이다.
+ */
 internal fun NavGraphBuilder.briefCardListDestination(
     onCardClick: (cardId: String) -> Unit,
-    onResumeClick: (sessionId: Long) -> Unit,
+    onResumeClick: (sessionId: Long, ended: Boolean) -> Unit,
     onStartIntakeClick: () -> Unit,
     onExit: () -> Unit,
 ) {
@@ -43,7 +46,7 @@ internal fun NavGraphBuilder.briefCardListDestination(
 @Composable
 private fun BriefCardListRoute(
     onCardClick: (cardId: String) -> Unit,
-    onResumeClick: (sessionId: Long) -> Unit,
+    onResumeClick: (sessionId: Long, ended: Boolean) -> Unit,
     onStartIntakeClick: () -> Unit,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
@@ -79,7 +82,14 @@ private fun BriefCardListRoute(
         callbacks =
         BriefCardListCallbacks(
             onBackClick = onExit,
-            onCardClick = { item -> intakeSessionOf(item.id)?.let(onResumeClick) ?: onCardClick(item.id) },
+            onCardClick = { item ->
+                val session = intakeSessionOf(item.id)
+                if (session != null) {
+                    onResumeClick(session, item.status == RecordItem.Status.TEMP_SAVED)
+                } else {
+                    onCardClick(item.id)
+                }
+            },
             onStartIntakeClick = onStartIntakeClick,
             onEditStart = viewModel::onEditStart,
             onEditCancel = viewModel::onEditCancel,

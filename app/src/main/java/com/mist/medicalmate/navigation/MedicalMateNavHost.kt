@@ -251,7 +251,7 @@ private fun SessionBoundarySync(
 private fun NavHostController.homeCallbacks(): HomeCallbacks = HomeCallbacks(
     // 이어서 하기는 서버가 들고 있는 문답 id를 함께 넘긴다. 새로 시작하면 null이다.
     onStartIntakeClick = { navigate(IntakeDestination(null)) },
-    onResumeClick = { sessionId -> navigate(IntakeDestination(sessionId?.toLongOrNull())) },
+    onResumeClick = { sessionId, ended -> resumeIntake(sessionId?.toLongOrNull(), ended) },
     onSavedCardClick = { cardId -> navigate(BriefCardDestination(cardId = cardId)) },
     onAllCardsClick = { navigate(BriefCardListDestination) },
     // 일정 줄과 구역의 "캘린더"가 가는 곳. 줄은 그 일정의 일자 화면으로 바로 가고,

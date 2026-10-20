@@ -281,6 +281,22 @@ internal fun NavGraphBuilder.visitDestinations(navController: NavHostController)
 }
 
 /**
+ * 카드를 아직 만들지 않은 문답을 잇는다. 홈의 이어서 하기와 브리핑 카드 목록의 문답 줄이 함께 쓴다.
+ *
+ * 문답이 끝난 임시 저장이면 증상 정리 완료(1c-5)로 가서 카드를 만들지 병원을 먼저 찾을지 고른다(#338, 사용자
+ * 결정). 아니면 멈춘 곳부터 문답을 잇는다. 문답 id가 없으면 새로 시작한다.
+ */
+internal fun NavHostController.resumeIntake(sessionId: Long?, ended: Boolean) {
+    if (ended &&
+        sessionId != null
+    ) {
+        navigate(IntakeDoneDestination(sessionId))
+    } else {
+        navigate(IntakeDestination(sessionId))
+    }
+}
+
+/**
  * 기록 탭과 그 아래 화면.
  *
  * 목록에서 상세로, 상세의 "카드 열기"에서 브리핑 카드로 이어진다. 이 묶음만 따로 뺀 이유는
@@ -297,7 +313,7 @@ internal fun NavGraphBuilder.recordDestinations(navController: NavHostController
     // 짜임이라 여기 함께 둔다.
     briefCardListDestination(
         onCardClick = { cardId -> navController.navigate(BriefCardDestination(cardId = cardId)) },
-        onResumeClick = { sessionId -> navController.navigate(IntakeDestination(sessionId)) },
+        onResumeClick = { sessionId, ended -> navController.resumeIntake(sessionId, ended) },
         onStartIntakeClick = { navController.navigate(IntakeDestination()) },
         onExit = { navController.popBackStack() },
     )

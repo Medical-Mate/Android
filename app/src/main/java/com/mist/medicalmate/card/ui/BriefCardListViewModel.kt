@@ -206,7 +206,8 @@ private fun List<CardListItem>.withIntake(intake: OpenIntake?, today: LocalDate)
 /**
  * 문답 줄. 시안 1j-4의 "무릎 통증 · 오늘 · n단계 중 n단계 · 이어서 정리하기"다. 제목은 홈의 이어서 하기처럼 부위다.
  *
- * 단계는 홈처럼 세 단계로 센다(사용자 결정). 세션은 강도를 고른 뒤에 생기므로(#310) 이 줄의 문답은 늘 마지막 단계다.
+ * 단계는 홈의 이어서 하기처럼 끝낸 단계를 센다(사용자 결정). 세션은 강도를 고른 뒤에 생기므로(#310) 문답 중이면
+ * 두 단계를 끝냈고, 문답이 끝난 임시 저장이면 세 단계를 다 끝냈다.
  */
 private fun OpenIntake.toRow(today: LocalDate) = RecordItem(
     id = INTAKE_ROW_PREFIX + sessionId,
@@ -214,7 +215,7 @@ private fun OpenIntake.toRow(today: LocalDate) = RecordItem(
     status = if (ended) RecordItem.Status.TEMP_SAVED else RecordItem.Status.IN_PROGRESS,
     meta = listOfNotNull(
         startedOn?.let { if (it == today) TODAY else it.format(WRITTEN_ON) },
-        "${IntakeStep.total}단계 중 ${IntakeStep.SYMPTOM_CHAT.number}단계",
+        "${IntakeStep.total}단계 중 ${if (ended) IntakeStep.total else IntakeStep.SYMPTOM_CHAT.number - 1}단계",
     ).joinToString(" · "),
     resumeLabel = RESUME_LABEL,
 )

@@ -88,6 +88,11 @@ internal data class InProgressSessionResponse(
     val siteText: String? = null,
     val progressCurrent: Int,
     val progressTotal: Int,
+    /**
+     * 문답이 끝났는지. 끝났으면 카드를 만들기 전이고 "임시 저장"이다(#338) — 이어서 하기를 누르면 문답이 아니라
+     * 증상 정리 완료(1c-5)로 간다.
+     */
+    val ended: Boolean = false,
 )
 
 @Serializable

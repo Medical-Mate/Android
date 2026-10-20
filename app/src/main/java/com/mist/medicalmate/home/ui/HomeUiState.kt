@@ -91,9 +91,21 @@ sealed interface HomeBanner {
  *
  * 어디까지 했는지를 [step]으로 갖는다. 진행 원은 끝낸 단계 수를 세 칸 중에 채운다.
  */
-data class HomeResume(val intakeId: String, val symptomTitle: String, val step: IntakeStep) {
-    /** 끝낸 단계 수. 지금 있는 단계 앞까지다. */
-    val doneSteps: Int get() = step.number - 1
+/**
+ * 이어서 하기. 카드를 아직 만들지 않은 문답이고 서버가 늘 최근 하나만 남긴다 — 문답 중이든 임시 저장이든 하나다.
+ *
+ * [ended]가 true면 문답이 끝나 카드를 만들기 전인 "임시 저장"이다(#338, 사용자 결정). 세 단계를 다 마친 것으로
+ * 보고(3/3) 누르면 증상 정리 완료(1c-5)로 가서 카드를 만들지 병원을 먼저 찾을지 고른다. 아니면 멈춘 단계부터
+ * 이어서 한다.
+ */
+data class HomeResume(
+    val intakeId: String,
+    val symptomTitle: String,
+    val step: IntakeStep,
+    val ended: Boolean = false,
+) {
+    /** 끝낸 단계 수. 지금 있는 단계 앞까지이고, 임시 저장이면 전부다. */
+    val doneSteps: Int get() = if (ended) IntakeStep.total else step.number - 1
 }
 
 /**

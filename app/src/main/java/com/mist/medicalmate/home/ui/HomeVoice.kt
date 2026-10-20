@@ -70,7 +70,7 @@ internal fun HomeVoiceTarget(uiState: StateFlow<HomeUiState>, callbacks: HomeCal
         if (home !is HomeUiState.Content) return@VoiceTargetEffect VoiceReply.Done(R.string.voice_home_not_ready)
         home.bannerAnswer(voice, callbacks) ?: when (voice) {
             HomeVoice.RESUME -> home.resume?.let {
-                callbacks.onResumeClick(it.intakeId)
+                callbacks.onResumeClick(it.intakeId, it.ended)
                 VoiceReply.Done(R.string.voice_home_resumed, listOf(it.symptomTitle))
             } ?: VoiceReply.Done(R.string.voice_home_no_resume)
 

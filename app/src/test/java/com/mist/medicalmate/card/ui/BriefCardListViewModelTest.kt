@@ -260,7 +260,8 @@ class BriefCardListViewModelTest {
         assertEquals("intake:7", row.id)
         assertEquals("무릎", row.title)
         assertEquals(RecordItem.Status.IN_PROGRESS, row.status)
-        assertEquals("오늘 · 3단계 중 3단계", row.meta)
+        // 홈의 이어서 하기처럼 끝낸 단계를 센다. 문답 중이면 부위와 강도까지 두 단계다.
+        assertEquals("오늘 · 3단계 중 2단계", row.meta)
         assertEquals("이어서 정리하기", row.resumeLabel)
     }
 
