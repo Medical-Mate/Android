@@ -24,12 +24,12 @@ import java.time.LocalDate
 internal data object BriefCardListDestination
 
 /**
- * [onResumeClick]은 카드 없는 문답 줄을 눌렀을 때다(#338). 홈의 이어서 하기와 같은 곳으로 간다. [ended]가 true면
- * 문답이 끝난 임시 저장이다.
+ * [onResumeClick]은 카드 없는 문답 줄을 눌렀을 때다(#338). 홈의 이어서 하기와 같은 곳으로 간다. [tempSaved]가 true면
+ * 질문 고르기까지 마친 임시 저장이다.
  */
 internal fun NavGraphBuilder.briefCardListDestination(
     onCardClick: (cardId: String) -> Unit,
-    onResumeClick: (sessionId: Long, ended: Boolean) -> Unit,
+    onResumeClick: (sessionId: Long, tempSaved: Boolean) -> Unit,
     onStartIntakeClick: () -> Unit,
     onExit: () -> Unit,
 ) {
@@ -46,7 +46,7 @@ internal fun NavGraphBuilder.briefCardListDestination(
 @Composable
 private fun BriefCardListRoute(
     onCardClick: (cardId: String) -> Unit,
-    onResumeClick: (sessionId: Long, ended: Boolean) -> Unit,
+    onResumeClick: (sessionId: Long, tempSaved: Boolean) -> Unit,
     onStartIntakeClick: () -> Unit,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,

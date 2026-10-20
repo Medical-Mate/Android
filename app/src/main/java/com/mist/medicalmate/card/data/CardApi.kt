@@ -76,14 +76,15 @@ internal data class OpenIntakeHomeResponse(val inProgressSession: OpenIntakeResp
 /**
  * 카드 없는 문답.
  *
- * [ended]가 true면 문답은 끝났고 카드를 만들기 전이다(질문 고르기 · 1c-5). [startedAt]은 ISO-8601이고 날짜로
+ * [questionsConfirmed]가 true면 질문 고르기에서 "다음"까지 눌러 카드를 만들기 전이다(Backend#185 · #186). 서버의
+ * `ended`는 AI 채팅이 끝난 순간이라 질문 고르기 도중에 나간 문답도 참이어서 쓰지 않는다. [startedAt]은 ISO-8601이고 날짜로
  * 자르는 것은 앱이 한다(Backend#183) — 서버가 날짜로 주면 시간대가 어긋날 때 하루 틀린다.
  */
 @Serializable
 internal data class OpenIntakeResponse(
     val sessionId: Long,
     val siteText: String? = null,
-    val ended: Boolean = false,
+    val questionsConfirmed: Boolean = false,
     val startedAt: String? = null,
 )
 

@@ -118,15 +118,15 @@ constructor(private val api: CardApi, private val json: Json) :
 /**
  * 카드를 아직 만들지 않은 문답(#338). 브리핑 카드 목록(1j-4)에 한 줄로 선다.
  *
- * [ended]가 false면 문답 중("작성 중"), true면 문답은 끝났고 카드를 만들기 전("임시 저장")이다. [startedOn]은
+ * [tempSaved]가 false면 증상 정리 중("작성 중"), true면 질문 고르기까지 마치고 카드를 만들기 전("임시 저장")이다. [startedOn]은
  * 기기 시간대의 날짜이고, 서버가 시작 시각을 주지 않으면 null이다.
  */
-data class OpenIntake(val sessionId: Long, val site: String?, val ended: Boolean, val startedOn: LocalDate?)
+data class OpenIntake(val sessionId: Long, val site: String?, val tempSaved: Boolean, val startedOn: LocalDate?)
 
 private fun OpenIntakeResponse.toOpenIntake() = OpenIntake(
     sessionId = sessionId,
     site = siteText?.takeIf { it.isNotBlank() },
-    ended = ended,
+    tempSaved = questionsConfirmed,
     startedOn = startedAt?.let { OffsetDateTime.parse(it).atZoneSameInstant(ZoneId.systemDefault()).toLocalDate() },
 )
 

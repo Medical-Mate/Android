@@ -33,7 +33,7 @@ import java.util.Locale
  * 상태 타입이 달라 합치지 않았다. 각자 다른 엔드포인트를 부른다.
  *
  * **카드를 아직 만들지 않은 문답도 한 줄로 선다**(#338, 시안 1j-4의 "무릎 통증"). 홈의 이어서 하기와 같은 문답이고
- * 서버가 늘 최근 하나만 남긴다. 칩은 문답 중이면 작성 중, 문답이 끝났으면 임시 저장이다. 누르면 이어서 하기로
+ * 서버가 늘 최근 하나만 남긴다. 칩은 증상 정리 중이면 작성 중, 질문 고르기까지 마쳤으면 임시 저장이다. 누르면 이어서 하기로
  * 가고, 편집에서 카드와 함께 골라 지운다. 그 줄의 id는 카드 id와 겹치지 않게 [INTAKE_ROW_PREFIX]를 붙인다.
  * 문답을 못 읽어도 카드 목록은 그린다 — 줄 하나 때문에 목록 전체가 실패할 일은 아니다.
  */
@@ -207,15 +207,15 @@ private fun List<CardListItem>.withIntake(intake: OpenIntake?, today: LocalDate)
  * 문답 줄. 시안 1j-4의 "무릎 통증 · 오늘 · n단계 중 n단계 · 이어서 정리하기"다. 제목은 홈의 이어서 하기처럼 부위다.
  *
  * 단계는 홈의 이어서 하기처럼 끝낸 단계를 센다(사용자 결정). 세션은 강도를 고른 뒤에 생기므로(#310) 문답 중이면
- * 두 단계를 끝냈고, 문답이 끝난 임시 저장이면 세 단계를 다 끝냈다.
+ * 두 단계를 끝냈고, 질문 고르기까지 마친 임시 저장이면 세 단계를 다 끝냈다.
  */
 private fun OpenIntake.toRow(today: LocalDate) = RecordItem(
     id = INTAKE_ROW_PREFIX + sessionId,
     title = site ?: INTAKE_TITLE,
-    status = if (ended) RecordItem.Status.TEMP_SAVED else RecordItem.Status.IN_PROGRESS,
+    status = if (tempSaved) RecordItem.Status.TEMP_SAVED else RecordItem.Status.IN_PROGRESS,
     meta = listOfNotNull(
         startedOn?.let { if (it == today) TODAY else it.format(WRITTEN_ON) },
-        "${IntakeStep.total}단계 중 ${if (ended) IntakeStep.total else IntakeStep.SYMPTOM_CHAT.number - 1}단계",
+        "${IntakeStep.total}단계 중 ${if (tempSaved) IntakeStep.total else IntakeStep.SYMPTOM_CHAT.number - 1}단계",
     ).joinToString(" · "),
     resumeLabel = RESUME_LABEL,
 )

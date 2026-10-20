@@ -146,14 +146,14 @@ private fun AppointmentResponse.clinicLabel(): String? =
  * 왕복을 센 것이고 상한이 20이다. 그대로 찍으면 "20단계 중 0단계까지 답했어요"가 되는데
  * 환자가 보는 증상 정리는 세 단계다.
  *
- * 세션은 부위와 강도를 고른 뒤에 생기므로(#310) 홈에 뜨는 문답은 늘 3단계에 있다. 문답이 끝났으면([ended])
- * 세 단계를 다 마친 "임시 저장"이다(#338).
+ * 세션은 부위와 강도를 고른 뒤에 생기므로(#310) 홈에 뜨는 문답은 늘 3단계에 있다. 질문 고르기에서 "다음"을
+ * 눌렀으면([questionsConfirmed]) 세 단계를 다 마친 "임시 저장"이다(#338).
  */
 private fun InProgressSessionResponse.toResume() = HomeResume(
     intakeId = sessionId.toString(),
     symptomTitle = siteText.orEmpty(),
     step = IntakeStep.SYMPTOM_CHAT,
-    ended = ended,
+    tempSaved = questionsConfirmed,
 )
 
 /** 시간 미정이면 [HomeSchedule.time]이 없다(#202). */

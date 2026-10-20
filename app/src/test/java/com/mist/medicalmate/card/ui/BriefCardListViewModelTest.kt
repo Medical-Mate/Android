@@ -251,7 +251,7 @@ class BriefCardListViewModelTest {
 
     @Test
     fun `문답 중이면 작성 중 줄이 날짜순으로 선다`() {
-        val viewModel = withIntake(OpenIntake(sessionId = 7, site = "무릎", ended = false, startedOn = TODAY))
+        val viewModel = withIntake(OpenIntake(sessionId = 7, site = "무릎", tempSaved = false, startedOn = TODAY))
 
         // 오늘 시작한 문답이라 10월 묶음의 맨 위다.
         val october = viewModel.content().groups.first()
@@ -266,9 +266,9 @@ class BriefCardListViewModelTest {
     }
 
     @Test
-    fun `문답이 끝났고 카드가 없으면 임시 저장이다`() {
+    fun `질문 고르기까지 마쳤고 카드가 없으면 임시 저장이다`() {
         val viewModel =
-            withIntake(OpenIntake(sessionId = 7, site = "무릎", ended = true, startedOn = LocalDate.of(2026, 9, 10)))
+            withIntake(OpenIntake(sessionId = 7, site = "무릎", tempSaved = true, startedOn = LocalDate.of(2026, 9, 10)))
 
         // 9월 묶음에 들고, 그보다 먼저 쓴 9월 4일 카드보다 위다.
         val september = viewModel.content().groups.first { it.monthLabel == "2026년 9월" }.items.map { it.id }
@@ -297,7 +297,7 @@ class BriefCardListViewModelTest {
     @Test
     fun `편집에서 문답 줄을 고르면 문답을 지운다`() {
         val cards = FakeCardRepository(list = ApiResult.Success(testItems))
-        cards.intake = ApiResult.Success(OpenIntake(sessionId = 7, site = "무릎", ended = true, startedOn = TODAY))
+        cards.intake = ApiResult.Success(OpenIntake(sessionId = 7, site = "무릎", tempSaved = true, startedOn = TODAY))
         val viewModel = BriefCardListViewModel(cards, LIST_CLOCK).apply { load() }
         viewModel.onEditStart()
         viewModel.onSelectChange("intake:7", true)
@@ -315,7 +315,7 @@ class BriefCardListViewModelTest {
     @Test
     fun `문답을 못 지우면 그 줄이 남는다`() {
         val cards = FakeCardRepository(list = ApiResult.Success(testItems))
-        cards.intake = ApiResult.Success(OpenIntake(sessionId = 7, site = "무릎", ended = true, startedOn = TODAY))
+        cards.intake = ApiResult.Success(OpenIntake(sessionId = 7, site = "무릎", tempSaved = true, startedOn = TODAY))
         cards.intakeDeleteFails = true
         val viewModel = BriefCardListViewModel(cards, LIST_CLOCK).apply { load() }
         viewModel.onEditStart()

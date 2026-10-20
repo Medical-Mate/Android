@@ -69,7 +69,8 @@ data class RecordItem(
     val visitedOn: java.time.LocalDate? = null,
 ) {
     /**
-     * 칩 넷(#338, 사용자 결정). 문답 중이면 [IN_PROGRESS], 문답은 끝났고 카드를 만들기 전이면 [TEMP_SAVED], 카드를
+     * 칩 넷(#338, 사용자 결정). 증상 정리 중이면 [IN_PROGRESS](AI 채팅만 끝나고 질문 고르기에서 나간 것도), 질문
+     * 고르기에서 "다음"까지 누르고 카드를 만들기 전이면 [TEMP_SAVED], 카드를
      * 만들었으면 [BEFORE_VISIT], 진료 후 기록까지 남겼으면 [CONFIRMED]다. 카드는 만들 때부터 확정돼 있어
      * (Backend#181) 저장하지 않은 카드라는 상태가 없다.
      */
