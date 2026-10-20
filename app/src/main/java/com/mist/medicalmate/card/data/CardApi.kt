@@ -11,7 +11,9 @@ import retrofit2.http.Path
 /**
  * 브리핑 카드 API. `/v3/api-docs`의 `/api/cards`와 `/api/me/cards` 기준이다.
  *
- * 카드는 `DRAFT`로 만들어지고 [confirm]이 따로 있다. 그것이 이 도메인의 임시저장이다.
+ * **카드는 만들 때부터 확정돼 있다**(Backend#181). 고쳐서 생기는 새 버전도 그렇다. 전에는 `DRAFT`로 만들어지고
+ * 1e-1의 "저장하기"가 `POST /api/cards/{id}/confirm`을 불렀는데, 고친 새 버전이 다시 `DRAFT`로 남아 진료 후
+ * 기록이 막히는 길이 있었다. 서버가 확정을 맡으면서 confirm을 부르지 않는다(#338).
  */
 internal interface CardApi {
     /** 문답을 카드로 만든다. 검증에 걸린 필드는 `UNKNOWN`으로 저장되고 이름이 온다. */
@@ -53,10 +55,37 @@ internal interface CardApi {
     @DELETE("api/cards/{cardId}")
     suspend fun delete(@Path("cardId") cardId: Long)
 
-    /** 이미 확정한 카드를 다시 확정하면 400이다. */
-    @POST("api/cards/{cardId}/confirm")
-    suspend fun confirm(@Path("cardId") cardId: Long): CardResponse
+    /**
+     * 카드를 아직 만들지 않은 문답(#338). 홈 응답의 `inProgressSession`만 읽는다.
+     *
+     * 문답 목록을 주는 API가 없고, 서버가 카드 없는 문답을 늘 최근 하나만 남긴다(Backend#174) — 새 문답을 시작하면
+     * 앞의 것을 놓는다. 홈 도메인의 `HomeApi`가 같은 경로를 읽지만 도메인끼리 참조하지 않아 여기 따로 적는다.
+     */
+    @GET("api/me/home")
+    suspend fun openIntake(): OpenIntakeHomeResponse
+
+    /** 카드가 없는 문답을 지운다(Backend#184). 대화와 고른 질문도 함께 지워진다. 카드가 있으면 409다. */
+    @DELETE("api/sessions/{sessionId}")
+    suspend fun deleteIntake(@Path("sessionId") sessionId: Long)
 }
+
+/** 홈 응답에서 이 도메인이 읽는 것. 나머지 필드는 버린다. */
+@Serializable
+internal data class OpenIntakeHomeResponse(val inProgressSession: OpenIntakeResponse? = null)
+
+/**
+ * 카드 없는 문답.
+ *
+ * [ended]가 true면 문답은 끝났고 카드를 만들기 전이다(질문 고르기 · 1c-5). [startedAt]은 ISO-8601이고 날짜로
+ * 자르는 것은 앱이 한다(Backend#183) — 서버가 날짜로 주면 시간대가 어긋날 때 하루 틀린다.
+ */
+@Serializable
+internal data class OpenIntakeResponse(
+    val sessionId: Long,
+    val siteText: String? = null,
+    val ended: Boolean = false,
+    val startedAt: String? = null,
+)
 
 @Serializable
 internal data class CardSummaryResponse(

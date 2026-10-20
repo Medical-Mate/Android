@@ -58,7 +58,7 @@ class BriefCardVoiceTest {
 
     @Test
     fun `하나면 열고 여럿이면 후보를 적어 묻고 다음 말로 그중에서 고른다`() = runTest {
-        val viewModel = BriefCardListViewModel(FakeCardRepository(list = ApiResult.Success(CARDS)))
+        val viewModel = BriefCardListViewModel(FakeCardRepository(list = ApiResult.Success(CARDS)), LIST_CLOCK)
         viewModel.load()
         val opened = mutableListOf<String>()
 
@@ -72,7 +72,7 @@ class BriefCardVoiceTest {
 
     @Test
     fun `없으면 알리고 단서가 없는 말은 넘긴다`() = runTest {
-        val viewModel = BriefCardListViewModel(FakeCardRepository(list = ApiResult.Success(CARDS)))
+        val viewModel = BriefCardListViewModel(FakeCardRepository(list = ApiResult.Success(CARDS)), LIST_CLOCK)
         viewModel.load()
 
         val none = viewModel.onVoice("무릎 카드", TODAY) {} as VoiceReply.Done
@@ -85,9 +85,9 @@ class BriefCardVoiceTest {
 
         val CARDS =
             listOf(
-                CardListItem("1", "두통 · 어지러움", true, true, "고려튼튼통증의학과", LocalDate.of(2026, 9, 4)),
-                CardListItem("2", "오른쪽 어깨 통증", true, false, null, LocalDate.of(2026, 10, 12)),
-                CardListItem("3", "두통 재발", false, false, "서울내과", LocalDate.of(2026, 10, 10)),
+                CardListItem("1", "두통 · 어지러움", true, "고려튼튼통증의학과", LocalDate.of(2026, 9, 4)),
+                CardListItem("2", "오른쪽 어깨 통증", false, null, LocalDate.of(2026, 10, 12)),
+                CardListItem("3", "두통 재발", false, "서울내과", LocalDate.of(2026, 10, 10)),
             )
     }
 }

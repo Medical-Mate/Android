@@ -31,7 +31,6 @@ import java.time.LocalDate
 data class BriefCard(
     val id: String,
     val title: String,
-    val status: Status,
     val patientLine: String,
     /**
      * 이름·나이를 가린 환자 줄(#306). 이미지로 내보낼 때 가리기를 켜면 [patientLine] 대신 이것이 찍힌다.
@@ -47,10 +46,8 @@ data class BriefCard(
     /**
      * 이 카드로 진료를 마쳤는지. 카드 머리의 뱃지가 읽는 값이다.
      *
-     * **[status]와 다른 축이다.** 서버 문서가 그렇게 못 박고 "진료 완료 뱃지는 `visited`로
-     * 판단하세요"라고 적는다. 확정은 "의사에게 보여줄 준비가 됐다"이고 진료 완료는 "그 카드에
-     * 진료 기록이 붙었다"다. 저장하기가 카드를 확정하게 되면서(#196) 둘을 섞으면 진료를
-     * 받기도 전에 "진료 완료"가 뜬다.
+     * 서버 문서가 "진료 완료 뱃지는 `visited`로 판단하세요"라고 적는다. 카드는 만들 때부터 확정돼
+     * 있어서(Backend#181) 확정 여부로는 진료 전과 진료 완료를 가를 수 없다.
      *
      * **상세 응답에 이 값이 없어 늘 false다.** `CardSummary`에만 있다(Backend#101). 그래서
      * 1e-1의 뱃지는 지금 언제나 `진료 전`이고, 진료를 마쳤는지는 목록(1j-4)에서만 갈린다.
@@ -66,15 +63,7 @@ data class BriefCard(
     val writtenOn: LocalDate? = null,
     /** 이 카드로 잡은 일정(#314). 하단 버튼이 이 값으로 갈린다. 없으면 일정을 잡지 않은 카드다. */
     val appointment: BriefCardAppointment? = null,
-) {
-    /**
-     * 백엔드 카드 상태 `DRAFT` / `CONFIRMED`에 대응한다.
-     *
-     * 화면에 그리는 값이 아니라 확정을 한 번만 부르려고 드는 값이다. 뱃지는 [visited]가
-     * 읽는다.
-     */
-    enum class Status { BEFORE_VISIT, CONFIRMED }
-}
+)
 
 /**
  * 카드에 붙은 진료받을 병원. Figma 1e-1의 `진료받을 병원` 섹션이다.
@@ -98,13 +87,10 @@ data class BriefCardAppointment(val id: String, val date: LocalDate, val clinic:
 /**
  * 읽는 중 하단 버튼(#314). 시안 1e-1 네 장이다.
  *
- * 저장하지 않은 카드는 [SAVE]다. 저장한 카드는 그 카드로 잡은 일정으로 갈린다. 일정이 없으면 [SCHEDULE],
- * 앞날이면 [VIEW_SCHEDULE], 당일이거나 지났으면 [RECORD_VISIT]다.
+ * 그 카드로 잡은 일정으로 갈린다. 일정이 없으면 [SCHEDULE], 앞날이면 [VIEW_SCHEDULE], 당일이거나 지났으면
+ * [RECORD_VISIT]다. 시안의 "저장하기"는 걷어냈다(#338) — 카드가 만들 때부터 확정돼 있다(Backend#181).
  */
 enum class BriefCardFooterAction {
-    /** Primary "저장하기". 카드를 확정한다. */
-    SAVE,
-
     /** Primary "진료 일정 잡기". 이 카드가 골라진 일정 추가로 간다. */
     SCHEDULE,
 
@@ -119,7 +105,6 @@ enum class BriefCardFooterAction {
 fun BriefCard.footerAction(today: LocalDate): BriefCardFooterAction {
     val on = appointment?.date
     return when {
-        status != BriefCard.Status.CONFIRMED -> BriefCardFooterAction.SAVE
         on == null -> BriefCardFooterAction.SCHEDULE
         on.isAfter(today) -> BriefCardFooterAction.VIEW_SCHEDULE
         else -> BriefCardFooterAction.RECORD_VISIT
@@ -192,7 +177,7 @@ sealed interface BriefCardUiState {
         val draft: BriefCardDraft? = null,
         val deleteRequested: Boolean = false,
         val saveFailed: Boolean = false,
-        /** 저장 직후 일정 시트(1e-1-S, #314)가 떠 있는지. 처음 저장했고 그 카드로 잡은 일정이 없을 때만 뜬다. */
+        /** 일정 시트(1e-1-S, #314)가 떠 있는지. 문답에서 막 만든 카드이고 그 카드로 잡은 일정이 없을 때만 뜬다(#338). */
         val scheduleSheet: Boolean = false,
     ) : BriefCardUiState {
         val editing: Boolean get() = draft != null

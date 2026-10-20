@@ -170,27 +170,19 @@ private const val FOLLOW_UP_ORIGIN = "VISIT_FOLLOW_UP"
 /** 시안 1n-1의 최근 브리핑 카드 수. */
 private const val RECENT_CARDS = 2
 
-/** 확정한 카드. 진료 전 배지의 기준이다. */
-private const val STATUS_CONFIRMED = "CONFIRMED"
-
 /** 못 읽으면 시간 미정으로 본다. 일정 하나 때문에 홈 전체가 죽는 것보다 낫다. */
 private fun parseTime(value: String): LocalTime? = runCatching { LocalTime.parse(value) }.getOrNull()
 
 /**
  * 병원 이름은 진료를 마쳤어도 비어 있을 수 있다. 선택 입력이라서다.
  *
- * 배지는 브리핑 카드 전체(1j-4)와 같은 규칙이다. 진료를 다녀왔는지(`visited`)가 먼저고, 아니면 확정했는지로
- * 가른다.
+ * 배지는 브리핑 카드 전체(1j-4)와 같은 규칙이다. 진료를 다녀왔으면(`visited`) 진료 완료, 아니면 진료 전이다.
+ * 카드는 만들 때부터 확정돼 있다(Backend#181).
  */
 private fun CardSummaryResponse.toSummary() = SavedCardSummary(
     id = cardId.toString(),
     title = title.orEmpty(),
-    status =
-    when {
-        visited -> HomeCardStatus.VISITED
-        status == STATUS_CONFIRMED -> HomeCardStatus.BEFORE_VISIT
-        else -> HomeCardStatus.DRAFT
-    },
+    status = if (visited) HomeCardStatus.VISITED else HomeCardStatus.BEFORE_VISIT,
     writtenOn = OffsetDateTime.parse(createdAt).toLocalDate(),
     clinic = clinicName,
 )

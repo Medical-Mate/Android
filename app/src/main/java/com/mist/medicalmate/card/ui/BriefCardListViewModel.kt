@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.mist.medicalmate.R
 import com.mist.medicalmate.card.data.CardListItem
 import com.mist.medicalmate.card.data.CardRepository
+import com.mist.medicalmate.card.data.OpenIntake
+import com.mist.medicalmate.core.model.IntakeStep
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.core.voice.VoiceReply
 import com.mist.medicalmate.core.voice.VoiceText
@@ -16,6 +18,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import java.time.Clock
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -28,11 +31,19 @@ import java.util.Locale
  *
  * 편집 조작이 [RecordViewModel]과 같다. 두 화면이 같은 CRUD 규칙을 쓰기 때문이다. 그래도
  * 상태 타입이 달라 합치지 않았다. 각자 다른 엔드포인트를 부른다.
+ *
+ * **카드를 아직 만들지 않은 문답도 한 줄로 선다**(#338, 시안 1j-4의 "무릎 통증"). 홈의 이어서 하기와 같은 문답이고
+ * 서버가 늘 최근 하나만 남긴다. 칩은 문답 중이면 작성 중, 문답이 끝났으면 임시 저장이다. 누르면 이어서 하기로
+ * 가고, 편집에서 카드와 함께 골라 지운다. 그 줄의 id는 카드 id와 겹치지 않게 [INTAKE_ROW_PREFIX]를 붙인다.
+ * 문답을 못 읽어도 카드 목록은 그린다 — 줄 하나 때문에 목록 전체가 실패할 일은 아니다.
  */
 @HiltViewModel
 class BriefCardListViewModel
 @Inject
-internal constructor(private val repository: CardRepository) : ViewModel() {
+internal constructor(
+    private val repository: CardRepository,
+    private val clock: Clock,
+) : ViewModel() {
     private val mutableUiState = MutableStateFlow<BriefCardListUiState>(BriefCardListUiState.Loading)
     val uiState: StateFlow<BriefCardListUiState> = mutableUiState.asStateFlow()
 
@@ -42,14 +53,26 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
     /** 여럿이 걸려 되물은 후보. 다음 말이 "두 번째"면 이 안에서 센다. */
     private var candidates: List<CardListItem> = emptyList()
 
+    /** 카드 없는 문답. 없거나 못 읽었으면 null이다. */
+    private var intake: OpenIntake? = null
+
+    /**
+     * 목록을 읽는다. 화면에 돌아올 때마다 부른다 — 이어서 하기로 문답을 마치고 오면 그 줄이 카드가 돼 있다.
+     *
+     * 이미 그린 목록이 있으면 읽는 동안 그대로 둔다. 고르는 중(편집)이면 다시 읽지 않는다 — 고른 것이 사라진다.
+     */
     fun load() {
-        mutableUiState.value = BriefCardListUiState.Loading
+        val current = mutableUiState.value
+        if (current is BriefCardListUiState.Content && current.editing) return
+        if (current !is BriefCardListUiState.Content) mutableUiState.value = BriefCardListUiState.Loading
         viewModelScope.launch {
+            val result = repository.cards()
+            intake = (repository.openIntake() as? ApiResult.Success)?.value
             mutableUiState.value =
-                when (val result = repository.cards()) {
+                when (result) {
                     is ApiResult.Success -> {
                         cards = result.value
-                        BriefCardListUiState.Content(groups = result.value.toGroups())
+                        BriefCardListUiState.Content(groups = result.value.toGroups(intake, LocalDate.now(clock)))
                     }
 
                     is ApiResult.Rejected, is ApiResult.NetworkUnavailable -> BriefCardListUiState.Failed
@@ -83,15 +106,21 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
     /**
      * 고른 카드를 지운다.
      *
-     * 한 장씩 `DELETE /api/cards/{id}`로 나간다(#157). 안 지워진 것은 목록에 남긴다. 빈
-     * 묶음은 함께 사라지고 편집에서 빠져나온다.
+     * 한 장씩 `DELETE /api/cards/{id}`로 나간다(#157). 문답 줄은 `DELETE /api/sessions/{id}`다(#338). 안 지워진
+     * 것은 목록에 남긴다. 빈 묶음은 함께 사라지고 편집에서 빠져나온다.
      */
     fun onDeleteConfirm() {
         val ids = (mutableUiState.value as? BriefCardListUiState.Content)?.selectedIds.orEmpty()
         if (ids.isEmpty()) return
         updateContent { it.copy(deleteRequested = false) }
         viewModelScope.launch {
-            val gone = repository.deleteAll(ids)
+            val (intakeIds, cardIds) = ids.partition { intakeSessionOf(it) != null }
+            val gone = repository.deleteAll(cardIds.toSet()) +
+                intakeIds.filter { id ->
+                    val session = intakeSessionOf(id)
+                    session != null && repository.deleteIntake(session) is ApiResult.Success
+                }
+            if (intakeIds.any { it in gone }) intake = null
             updateContent { content -> content.without(gone).copy(selectedIds = null) }
         }
     }
@@ -101,10 +130,13 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
      *
      * 화면을 연 말이 넘어오면 목록을 받기 전일 수 있어 받을 때까지 기다린다. 고르는 중(편집)이면 받지 않는다.
      */
-    /** 카드가 하나도 없는지. 다 읽을 때까지 기다린다. 못 읽었으면 없다고 하지 않는다. */
+    /**
+     * 카드가 하나도 없는지. 다 읽을 때까지 기다린다. 못 읽었으면 없다고 하지 않는다. 문답 줄은 세지 않는다 — 말로 열
+     * 카드가 없다는 뜻이다.
+     */
     internal suspend fun awaitEmpty(): Boolean {
         val state = withTimeoutOrNull(VOICE_WAIT_MS) { uiState.first { it !is BriefCardListUiState.Loading } }
-        return state is BriefCardListUiState.Content && state.groups.all { it.items.isEmpty() }
+        return state is BriefCardListUiState.Content && cards.isEmpty()
     }
 
     internal suspend fun onVoice(text: String, today: LocalDate, open: (String) -> Unit): VoiceReply {
@@ -152,14 +184,60 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
  *
  * 서버가 최근 작성 순으로 주므로 순서를 다시 세우지 않는다. 같은 달끼리 이어 붙이기만 한다.
  */
-private fun List<CardListItem>.toGroups(): List<RecordGroup> = groupBy { it.writtenOn.format(MONTH_LABEL) }
-    .map { (label, items) -> RecordGroup(monthLabel = label, items = items.map { it.toRow() }) }
+private fun List<CardListItem>.toGroups(intake: OpenIntake?, today: LocalDate): List<RecordGroup> =
+    withIntake(intake, today)
+        .groupBy { (on, _) -> on.format(MONTH_LABEL) }
+        .map { (label, rows) -> RecordGroup(monthLabel = label, items = rows.map { it.second }) }
+
+/**
+ * 카드 줄 사이에 문답 줄을 날짜순으로 끼운다. 카드는 서버가 최근 작성 순으로 준다.
+ *
+ * 같은 날이면 문답이 위다 — 진행 중인 쪽이 더 최근이다. 시작 시각이 없으면 맨 위 묶음의 맨 위에 서고 날짜는
+ * 적지 않는다.
+ */
+private fun List<CardListItem>.withIntake(intake: OpenIntake?, today: LocalDate): List<Pair<LocalDate, RecordItem>> {
+    val rows = map { it.writtenOn to it.toRow() }
+    if (intake == null) return rows
+    val on = intake.startedOn ?: rows.firstOrNull()?.first ?: today
+    val at = rows.indexOfFirst { (written, _) -> !written.isAfter(on) }.takeIf { it >= 0 } ?: rows.size
+    return rows.toMutableList().apply { add(at, on to intake.toRow(today)) }
+}
+
+/**
+ * 문답 줄. 시안 1j-4의 "무릎 통증 · 오늘 · n단계 중 n단계 · 이어서 정리하기"다. 제목은 홈의 이어서 하기처럼 부위다.
+ *
+ * 단계는 홈처럼 세 단계로 센다(사용자 결정). 세션은 강도를 고른 뒤에 생기므로(#310) 이 줄의 문답은 늘 마지막 단계다.
+ */
+private fun OpenIntake.toRow(today: LocalDate) = RecordItem(
+    id = INTAKE_ROW_PREFIX + sessionId,
+    title = site ?: INTAKE_TITLE,
+    status = if (ended) RecordItem.Status.TEMP_SAVED else RecordItem.Status.IN_PROGRESS,
+    meta = listOfNotNull(
+        startedOn?.let { if (it == today) TODAY else it.format(WRITTEN_ON) },
+        "${IntakeStep.total}단계 중 ${IntakeStep.SYMPTOM_CHAT.number}단계",
+    ).joinToString(" · "),
+    resumeLabel = RESUME_LABEL,
+)
+
+/** 문답 줄의 세션. 그 줄이 아니면 null이다. 누르면 화면이 이어서 하기로 보낸다. */
+internal fun intakeSessionOf(id: String): Long? = id.removePrefix(INTAKE_ROW_PREFIX)
+    .takeIf { id.startsWith(INTAKE_ROW_PREFIX) }
+    ?.toLongOrNull()
+
+/** 문답 줄 id의 머리. 카드 id는 숫자라 겹치지 않는다. */
+internal const val INTAKE_ROW_PREFIX = "intake:"
+
+private const val INTAKE_TITLE = "증상 정리"
+
+private const val TODAY = "오늘"
+
+private const val RESUME_LABEL = "이어서 정리하기"
 
 /**
  * 목록의 한 줄.
  *
- * 상태가 세 갈래다. 확정 전이면 `DRAFT`, 확정했지만 아직 진료를 안 갔으면 `BEFORE_VISIT`,
- * 진료를 마쳤으면 `CONFIRMED`다. 문서가 "진료 완료" 뱃지는 `visited`로 판단하라고 적었다.
+ * 진료를 마쳤으면 진료 완료, 아니면 진료 전이다. 문서가 "진료 완료" 뱃지는 `visited`로 판단하라고 적었다.
+ * 카드는 만들 때부터 확정돼 있다(Backend#181).
  * 병원명은 선택 입력이라 진료를 마쳤어도 비어 있을 수 있다.
  *
  * 보조 줄([RecordItem.detail])은 비워 둔다. 목록 응답에 본문이 담기지 않아서 카드가 무엇을
@@ -168,12 +246,7 @@ private fun List<CardListItem>.toGroups(): List<RecordGroup> = groupBy { it.writ
 private fun CardListItem.toRow() = RecordItem(
     id = id,
     title = title,
-    status =
-    when {
-        visited -> RecordItem.Status.CONFIRMED
-        confirmed -> RecordItem.Status.BEFORE_VISIT
-        else -> RecordItem.Status.DRAFT
-    },
+    status = if (visited) RecordItem.Status.CONFIRMED else RecordItem.Status.BEFORE_VISIT,
     clinic = clinic,
     // 병원을 안 정한 카드는 "병원 미정"이다. 서버 문서가 그렇게 찍으라고 적었다(Backend#101).
     meta = listOf(writtenOn.format(WRITTEN_ON) + " 작성", clinic ?: "병원 미정").joinToString(" · "),
@@ -218,7 +291,7 @@ internal val previewBriefCardGroups =
                 RecordItem(
                     id = "card-3",
                     title = "무릎 통증",
-                    status = RecordItem.Status.DRAFT,
+                    status = RecordItem.Status.IN_PROGRESS,
                     meta = "오늘 · 4단계 중 2단계",
                     resumeLabel = "이어서 정리하기",
                 ),

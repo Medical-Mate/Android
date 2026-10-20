@@ -297,7 +297,6 @@ private val monthCards =
         CardListItem(
             id = "1",
             title = "복부 통증 · 3주",
-            confirmed = true,
             visited = false,
             clinic = "서울OO병원 내과",
             writtenOn = LocalDate.of(2026, 9, 4),

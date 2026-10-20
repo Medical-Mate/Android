@@ -1,6 +1,7 @@
 package com.mist.medicalmate.card.ui
 import com.mist.medicalmate.R
 import com.mist.medicalmate.card.data.CardListItem
+import com.mist.medicalmate.card.data.OpenIntake
 import com.mist.medicalmate.core.network.ApiResult
 import com.mist.medicalmate.core.voice.VoiceReply
 import kotlinx.coroutines.Dispatchers
@@ -16,7 +17,10 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class BriefCardListViewModelTest {
@@ -31,7 +35,7 @@ class BriefCardListViewModelTest {
     }
 
     private fun loaded(): BriefCardListViewModel =
-        BriefCardListViewModel(FakeCardRepository(list = ApiResult.Success(testItems))).apply {
+        BriefCardListViewModel(FakeCardRepository(list = ApiResult.Success(testItems)), LIST_CLOCK).apply {
             load()
         }
 
@@ -40,7 +44,7 @@ class BriefCardListViewModelTest {
 
     @Test
     fun `불러오기 전에는 편집으로 들어갈 수 없다`() {
-        val viewModel = BriefCardListViewModel(FakeCardRepository(list = ApiResult.Success(testItems)))
+        val viewModel = BriefCardListViewModel(FakeCardRepository(list = ApiResult.Success(testItems)), LIST_CLOCK)
 
         viewModel.onEditStart()
 
@@ -196,7 +200,7 @@ class BriefCardListViewModelTest {
     @Test
     fun `지운 것을 서버에도 지운다`() {
         val cards = FakeCardRepository(list = ApiResult.Success(testItems))
-        val viewModel = BriefCardListViewModel(cards).apply { load() }
+        val viewModel = BriefCardListViewModel(cards, LIST_CLOCK).apply { load() }
         viewModel.onEditStart()
         viewModel.onSelectChange("101", true)
         viewModel.onDeleteClick()
@@ -210,7 +214,7 @@ class BriefCardListViewModelTest {
     fun `안 지워진 것은 목록에 남는다`() {
         // 지워지지 않은 카드가 사라지면 다시 열었을 때 되살아난 것으로 읽힌다.
         val cards = FakeCardRepository(list = ApiResult.Success(testItems), deleteFails = setOf("103"))
-        val viewModel = BriefCardListViewModel(cards).apply { load() }
+        val viewModel = BriefCardListViewModel(cards, LIST_CLOCK).apply { load() }
         viewModel.onEditStart()
         viewModel.onSelectChange("101", true)
         viewModel.onSelectChange("103", true)
@@ -233,14 +237,124 @@ class BriefCardListViewModelTest {
 
         assertEquals(emptyList<RecordGroup>(), viewModel.content().groups)
     }
+
+    // 카드 없는 문답 줄(#338)
+
+    @Test
+    fun `카드는 진료를 마쳤으면 진료 완료 아니면 진료 전이다`() {
+        // 카드는 만들 때부터 확정돼 있다(Backend#181). 저장하지 않은 카드라는 상태가 없다.
+        val rows = loaded().content().groups.flatMap { it.items }.associate { it.id to it.status }
+
+        assertEquals(RecordItem.Status.CONFIRMED, rows["101"])
+        assertEquals(RecordItem.Status.BEFORE_VISIT, rows["103"])
+    }
+
+    @Test
+    fun `문답 중이면 작성 중 줄이 날짜순으로 선다`() {
+        val viewModel = withIntake(OpenIntake(sessionId = 7, site = "무릎", ended = false, startedOn = TODAY))
+
+        // 오늘 시작한 문답이라 10월 묶음의 맨 위다.
+        val october = viewModel.content().groups.first()
+        val row = october.items.first()
+        assertEquals("2026년 10월", october.monthLabel)
+        assertEquals("intake:7", row.id)
+        assertEquals("무릎", row.title)
+        assertEquals(RecordItem.Status.IN_PROGRESS, row.status)
+        assertEquals("오늘 · 3단계 중 3단계", row.meta)
+        assertEquals("이어서 정리하기", row.resumeLabel)
+    }
+
+    @Test
+    fun `문답이 끝났고 카드가 없으면 임시 저장이다`() {
+        val viewModel =
+            withIntake(OpenIntake(sessionId = 7, site = "무릎", ended = true, startedOn = LocalDate.of(2026, 9, 10)))
+
+        // 9월 묶음에 들고, 그보다 먼저 쓴 9월 4일 카드보다 위다.
+        val september = viewModel.content().groups.first { it.monthLabel == "2026년 9월" }.items.map { it.id }
+        assertTrue(september.indexOf("intake:7") < september.indexOf("101"))
+        val row = viewModel.content().groups.flatMap { it.items }.first { it.id == "intake:7" }
+        assertEquals(RecordItem.Status.TEMP_SAVED, row.status)
+        assertEquals("09.10 · 3단계 중 3단계", row.meta)
+    }
+
+    @Test
+    fun `문답 줄을 누르면 이어서 하기로 가고 카드 줄은 아니다`() {
+        assertEquals(7L, intakeSessionOf("intake:7"))
+        assertNull(intakeSessionOf("101"))
+    }
+
+    @Test
+    fun `문답을 못 읽어도 카드 목록은 그린다`() {
+        val cards = FakeCardRepository(list = ApiResult.Success(testItems))
+        cards.intake = ApiResult.NetworkUnavailable(java.io.IOException("offline"))
+
+        val viewModel = BriefCardListViewModel(cards, LIST_CLOCK).apply { load() }
+
+        assertEquals(3, viewModel.content().groups.sumOf { it.items.size })
+    }
+
+    @Test
+    fun `편집에서 문답 줄을 고르면 문답을 지운다`() {
+        val cards = FakeCardRepository(list = ApiResult.Success(testItems))
+        cards.intake = ApiResult.Success(OpenIntake(sessionId = 7, site = "무릎", ended = true, startedOn = TODAY))
+        val viewModel = BriefCardListViewModel(cards, LIST_CLOCK).apply { load() }
+        viewModel.onEditStart()
+        viewModel.onSelectChange("intake:7", true)
+        viewModel.onSelectChange("101", true)
+        viewModel.onDeleteClick()
+
+        viewModel.onDeleteConfirm()
+
+        assertEquals(listOf(7L), cards.deletedIntakes)
+        assertEquals(listOf(101L), cards.deleted)
+        val ids = viewModel.content().groups.flatMap { group -> group.items.map { it.id } }
+        assertEquals(listOf("103", "102"), ids)
+    }
+
+    @Test
+    fun `문답을 못 지우면 그 줄이 남는다`() {
+        val cards = FakeCardRepository(list = ApiResult.Success(testItems))
+        cards.intake = ApiResult.Success(OpenIntake(sessionId = 7, site = "무릎", ended = true, startedOn = TODAY))
+        cards.intakeDeleteFails = true
+        val viewModel = BriefCardListViewModel(cards, LIST_CLOCK).apply { load() }
+        viewModel.onEditStart()
+        viewModel.onSelectChange("intake:7", true)
+        viewModel.onDeleteClick()
+
+        viewModel.onDeleteConfirm()
+
+        assertTrue(viewModel.content().groups.flatMap { it.items }.any { it.id == "intake:7" })
+    }
+
+    @Test
+    fun `편집 중에는 다시 읽지 않는다`() {
+        // 화면에 돌아올 때마다 다시 읽는데, 고르는 중이면 고른 것이 사라진다.
+        val viewModel = loaded()
+        viewModel.onEditStart()
+        viewModel.onSelectChange("101", true)
+
+        viewModel.load()
+
+        assertEquals(setOf("101"), viewModel.content().selectedIds)
+    }
+
+    private fun withIntake(intake: OpenIntake): BriefCardListViewModel {
+        val cards = FakeCardRepository(list = ApiResult.Success(testItems))
+        cards.intake = ApiResult.Success(intake)
+        return BriefCardListViewModel(cards, LIST_CLOCK).apply { load() }
+    }
 }
+
+/** 2026-10-20 낮(한국). 목록 시험의 오늘이다. */
+internal val LIST_CLOCK: Clock = Clock.fixed(Instant.parse("2026-10-20T03:00:00Z"), ZoneId.of("Asia/Seoul"))
+
+private val TODAY = LocalDate.of(2026, 10, 20)
 
 private val testItems =
     listOf(
         CardListItem(
             id = "101",
             title = "복부 통증 · 3주",
-            confirmed = true,
             visited = true,
             clinic = "서울OO병원 내과",
             writtenOn = LocalDate.of(2026, 9, 4),
@@ -248,7 +362,6 @@ private val testItems =
         CardListItem(
             id = "103",
             title = "무릎 통증",
-            confirmed = false,
             visited = false,
             clinic = null,
             writtenOn = LocalDate.of(2026, 9, 20),
@@ -256,7 +369,6 @@ private val testItems =
         CardListItem(
             id = "102",
             title = "두통 · 잦은 어지러움",
-            confirmed = true,
             visited = false,
             clinic = null,
             writtenOn = LocalDate.of(2026, 8, 21),

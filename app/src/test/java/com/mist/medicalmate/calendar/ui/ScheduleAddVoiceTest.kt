@@ -585,7 +585,6 @@ class ScheduleAddVoiceTest {
     private fun card(id: String, title: String, clinic: String? = null) = CardListItem(
         id = id,
         title = title,
-        confirmed = true,
         visited = false,
         clinic = clinic,
         writtenOn = LocalDate.of(2026, 10, 1),

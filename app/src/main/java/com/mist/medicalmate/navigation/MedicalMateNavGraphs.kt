@@ -297,6 +297,7 @@ internal fun NavGraphBuilder.recordDestinations(navController: NavHostController
     // 짜임이라 여기 함께 둔다.
     briefCardListDestination(
         onCardClick = { cardId -> navController.navigate(BriefCardDestination(cardId = cardId)) },
+        onResumeClick = { sessionId -> navController.navigate(IntakeDestination(sessionId)) },
         onStartIntakeClick = { navController.navigate(IntakeDestination()) },
         onExit = { navController.popBackStack() },
     )

@@ -111,10 +111,10 @@ data class SavedCardSummary(
 )
 
 /**
- * 카드 줄의 배지. 브리핑 카드 전체(1j-4)와 같은 규칙이다(사용자 결정) — 진료 기록이 붙었으면 진료 완료,
- * 확정한 카드면 진료 전, 아니면 작성 중이다.
+ * 카드 줄의 배지. 브리핑 카드 전체(1j-4)와 같은 규칙이다(사용자 결정) — 진료 기록이 붙었으면 진료 완료, 아니면
+ * 진료 전이다. 카드는 만들 때부터 확정돼 있어(Backend#181) 저장하지 않은 카드가 없다(#338).
  */
-enum class HomeCardStatus { DRAFT, BEFORE_VISIT, VISITED }
+enum class HomeCardStatus { BEFORE_VISIT, VISITED }
 
 /**
  * 다가오는 일정. Figma `Card / Schedule`.

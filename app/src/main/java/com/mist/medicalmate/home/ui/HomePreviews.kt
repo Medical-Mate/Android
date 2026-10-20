@@ -44,7 +44,7 @@ private val previewContent =
             SavedCardSummary(
                 id = "card-2",
                 title = "두통 · 잦은 어지러움",
-                status = HomeCardStatus.DRAFT,
+                status = HomeCardStatus.BEFORE_VISIT,
                 writtenOn = LocalDate.of(2026, 8, 21),
                 clinic = null,
             ),

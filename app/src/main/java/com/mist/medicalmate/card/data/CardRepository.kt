@@ -12,11 +12,12 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import java.time.LocalDate
 import java.time.OffsetDateTime
+import java.time.ZoneId
 
 /**
  * 브리핑 카드 읽고 쓰기.
  *
- * 카드는 `DRAFT`로 만들어지고 [confirm]이 따로 있다. 그것이 이 도메인의 임시저장이다.
+ * 카드는 만들 때부터 확정돼 있다(Backend#181). 저장 단계가 따로 없다.
  */
 interface CardRepository {
     /** 문답을 카드로 만든다. 1c-5의 "브리핑 카드 만들기"가 여기로 온다. */
@@ -59,7 +60,11 @@ interface CardRepository {
      */
     suspend fun deleteAll(cardIds: Set<String>): Set<String>
 
-    suspend fun confirm(cardId: Long): ApiResult<BriefCard>
+    /** 카드를 아직 만들지 않은 문답. 없으면 null이다(#338). */
+    suspend fun openIntake(): ApiResult<OpenIntake?>
+
+    /** 카드 없는 문답을 지운다(#338). 되돌릴 수 없다. */
+    suspend fun deleteIntake(sessionId: Long): ApiResult<Unit>
 }
 
 internal class DefaultCardRepository
@@ -104,9 +109,26 @@ constructor(private val api: CardApi, private val json: Json) :
         .mapNotNull { id -> id.toLongOrNull()?.takeIf { delete(it) is ApiResult.Success }?.let { id } }
         .toSet()
 
-    override suspend fun confirm(cardId: Long): ApiResult<BriefCard> =
-        apiCall(json) { api.confirm(cardId) }.map { it.toBriefCard() }
+    override suspend fun openIntake(): ApiResult<OpenIntake?> =
+        apiCall(json) { api.openIntake() }.map { it.inProgressSession?.toOpenIntake() }
+
+    override suspend fun deleteIntake(sessionId: Long): ApiResult<Unit> = apiCall(json) { api.deleteIntake(sessionId) }
 }
+
+/**
+ * 카드를 아직 만들지 않은 문답(#338). 브리핑 카드 목록(1j-4)에 한 줄로 선다.
+ *
+ * [ended]가 false면 문답 중("작성 중"), true면 문답은 끝났고 카드를 만들기 전("임시 저장")이다. [startedOn]은
+ * 기기 시간대의 날짜이고, 서버가 시작 시각을 주지 않으면 null이다.
+ */
+data class OpenIntake(val sessionId: Long, val site: String?, val ended: Boolean, val startedOn: LocalDate?)
+
+private fun OpenIntakeResponse.toOpenIntake() = OpenIntake(
+    sessionId = sessionId,
+    site = siteText?.takeIf { it.isNotBlank() },
+    ended = ended,
+    startedOn = startedAt?.let { OffsetDateTime.parse(it).atZoneSameInstant(ZoneId.systemDefault()).toLocalDate() },
+)
 
 /** 고친 축 하나. 서버가 `{"axis":"onset","value":"3주 전"}`으로 받는다. */
 data class AxisEdit(val axis: String, val value: String)
@@ -114,14 +136,13 @@ data class AxisEdit(val axis: String, val value: String)
 /**
  * 목록의 카드 한 줄. 본문은 담기지 않는다.
  *
- * [visited]가 진료를 마쳤는지다. [confirmed]와 다른 축이라 따로 둔다. 문서가 "진료 완료"
- * 뱃지는 [visited]로 판단하라고 적었다. 병원명은 선택 입력이라 진료를 마쳤어도 비어 있을
+ * [visited]가 진료를 마쳤는지다. 문서가 "진료 완료" 뱃지는 [visited]로 판단하라고 적었다. 확정 여부는 들지
+ * 않는다 — 카드는 만들 때부터 확정돼 있다(Backend#181). 병원명은 선택 입력이라 진료를 마쳤어도 비어 있을
  * 수 있어서 그것으로 판단하면 안 된다.
  */
 data class CardListItem(
     val id: String,
     val title: String,
-    val confirmed: Boolean,
     val visited: Boolean,
     val clinic: String?,
     val writtenOn: LocalDate,
@@ -136,7 +157,6 @@ data class CardListItem(
 internal fun CardSummaryResponse.toListItem() = CardListItem(
     id = cardId.toString(),
     title = (title ?: chiefComplaint)?.shorten().orEmpty(),
-    confirmed = status == "CONFIRMED",
     visited = visited,
     // 목록 줄의 병원은 "진료받을 병원"이다(Backend#101). `clinicName`은 진료를 받은 병원이라
     // 진료 전 카드는 비어 있다. 시안 1j-4의 `09.04 작성 · 서울OO병원 내과`가 이 값이다.
