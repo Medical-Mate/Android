@@ -89,8 +89,9 @@ internal fun NavGraphBuilder.intakeDoneDestination(
 /**
  * 상태 있는 진입점.
  *
- * 완료 신호를 [LaunchedEffect]로 한 번만 흘려보낸다. 목적지 스코프라 화면을 떠나면
- * ViewModel도 사라지므로 소비 표시를 따로 두지 않는다.
+ * 완료 신호를 [LaunchedEffect]로 한 번만 흘려보낸다. 1c-5로 갈 때 이 목적지를 백스택에서 걷어 내므로(#338)
+ * ViewModel도 함께 사라져 소비 표시를 따로 두지 않는다. 걷어 내지 않으면 뒤로 와서 다시 그려질 때 신호가 또
+ * 흐른다.
  */
 @Composable
 private fun IntakeRoute(

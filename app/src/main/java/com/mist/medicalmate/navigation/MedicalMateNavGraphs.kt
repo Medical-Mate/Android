@@ -94,7 +94,14 @@ internal fun NavGraphBuilder.entryDestinations(
  */
 internal fun NavGraphBuilder.intakeDestinations(navController: NavHostController) {
     intakeDestination(
-        onCompleted = { sessionId -> navController.navigate(IntakeDoneDestination(sessionId)) },
+        // 증상 정리를 백스택에서 걷어 낸다(#338, 사용자 결정). "다음"을 누르면 세 단계를 마친 임시 저장이라 1c-5에서
+        // 뒤로 가면 홈이다 — 다시 들어오는 길은 홈의 이어서 하기다. 남겨 두면 뒤로 갈 때 증상 정리가 다시 그려지면서
+        // 완료 신호(`completed`)가 또 흘러 1c-5로 되돌아오거나 전환이 멈춰 흰 화면이 났다.
+        onCompleted = { sessionId ->
+            navController.navigate(IntakeDoneDestination(sessionId)) {
+                popUpTo<IntakeDestination> { inclusive = true }
+            }
+        },
         onExit = { navController.popBackStack() },
     )
     intakeDoneDestination(
