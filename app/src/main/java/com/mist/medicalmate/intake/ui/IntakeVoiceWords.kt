@@ -57,6 +57,7 @@ private val BACK =
             "(?:요|가|가자|가줘|가주세요|가기|갈래|갈게|돌아가|돌아가줘|돌아갈래|줘|자)?",
     )
 
-private val RESET = listOf("다시고를", "다시선택", "처음부터", "다른부위", "다른데", "취소")
+/** "다른 부위"는 여기서 빠졌다(#336) — 버튼 "다른 부위 보기"처럼 고른 것을 남긴다([isOtherPartVoice]). */
+private val RESET = listOf("다시고를", "다시선택", "처음부터", "취소")
 
 private const val RESET_MAX = 12

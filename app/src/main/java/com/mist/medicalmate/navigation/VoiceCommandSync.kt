@@ -115,15 +115,18 @@ internal fun VoiceCommandHost(
             content = content,
         )
         state.panel?.let { panel ->
-            VoiceCommandPanel(
-                panel = panel,
-                onDismiss = viewModel::dismiss,
-                modifier =
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = if (entry.onTabRoot()) MedicalMateSize.tabBarHeight + gap else gap)
-                    .onSizeChanged { panelHeight = it.height },
-            )
+            // 막대도 말로 굴릴 것을 등록한다(#336). 고를 목록이 넘칠 때 "아래로"가 그 목록을 굴린다.
+            CompositionLocalProvider(LocalVoiceTargets provides viewModel.targets) {
+                VoiceCommandPanel(
+                    panel = panel,
+                    onDismiss = viewModel::dismiss,
+                    modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = if (entry.onTabRoot()) MedicalMateSize.tabBarHeight + gap else gap)
+                        .onSizeChanged { panelHeight = it.height },
+                )
+            }
         }
     }
 }

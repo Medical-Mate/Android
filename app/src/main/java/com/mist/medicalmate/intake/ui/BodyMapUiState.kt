@@ -33,6 +33,11 @@ data class BodyMapUiState(
      * 두 길은 같은 값을 고르고 같은 [selection]에 넣는다.
      */
     val byMap3d: Boolean = true,
+    /**
+     * 말로 앞면·뒷면을 바꾼 횟수(#336). 3D 판은 카메라를 화면이 들고 있어 상태로 옮길 수 없다. 이 값이 오르면
+     * 판이 [view] 쪽으로 돈다. 손으로 돌린 것은 여기에 남지 않는다.
+     */
+    val viewAsked: Int = 0,
     val search: String = "",
     /**
      * 마지막으로 결과가 있었던 검색.

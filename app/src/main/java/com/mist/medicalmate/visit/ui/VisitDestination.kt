@@ -13,6 +13,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.speech.rememberMicPermission
+import com.mist.medicalmate.core.voice.LocalVoiceTargets
+import com.mist.medicalmate.core.voice.VoiceNavigation
 import com.mist.medicalmate.core.voice.VoicePrompt
 import com.mist.medicalmate.core.voice.VoiceReply
 import com.mist.medicalmate.core.voice.VoiceTargetEffect
@@ -311,7 +313,10 @@ private fun VisitNoteRoute(
     val askVoice = rememberMicPermission(onGranted = viewModel::onVoiceClick, onDenied = viewModel::onMicDenied)
 
     // 막대가 메모를 받아 적는다(#288). "다 했어"면 적은 원문을 들고 1q-1로 간다.
-    VoiceTargetEffect(VISIT_NOTE_SUGGESTIONS) { text -> viewModel.onVoiceNote(text, onSaved) }
+    val targets = LocalVoiceTargets.current
+    VoiceTargetEffect(VISIT_NOTE_SUGGESTIONS) { text ->
+        viewModel.onVoiceNote(text, onSaved, targets?.navigation ?: VoiceNavigation.NONE)
+    }
     val prompt = rememberVoicePrompt()
     LaunchedEffect(Unit) { prompt(VoicePrompt(question = VoiceText(R.string.voice_note_ask))) }
 

@@ -98,6 +98,14 @@ class VoiceTargets {
      */
     @Volatile
     var handingOff: Boolean = false
+
+    /**
+     * 화면을 옮기는 전역 명령(#336). 받아쓰는 화면(진료 후 메모)이 "홈으로 가"를 메모에 적지 않고 옮기되, 적던 것이
+     * 있으면 먼저 물을 수 있게 둔다. 대화([isNavigation]로 가리고 [navigate]로 옮긴다)가 채운다. `core`는 전역 명령을
+     * 모르므로 이 창구로 받는다.
+     */
+    @Volatile
+    var navigation: VoiceNavigation = VoiceNavigation.NONE
         internal set
 
     /**
@@ -174,6 +182,24 @@ class VoiceTargets {
         const val PROMPT_BUFFER = 4
 
         const val HANDOFF_MS = 3_000L
+    }
+}
+
+/** 화면을 옮기는 전역 명령을 가리고 옮기는 창구(#336). [VoiceTargets.navigation]. */
+interface VoiceNavigation {
+    /** 말 전체가 탭이나 화면으로 옮기자는 짧은 말인지. "홈으로 가", "캘린더 열어 줘". */
+    fun isNavigation(text: String): Boolean
+
+    /** 그 말대로 옮긴다. */
+    fun navigate(text: String)
+
+    companion object {
+        val NONE =
+            object : VoiceNavigation {
+                override fun isNavigation(text: String) = false
+
+                override fun navigate(text: String) = Unit
+            }
     }
 }
 

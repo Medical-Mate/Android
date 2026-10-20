@@ -99,6 +99,29 @@ class HospitalPickVoiceTest {
     }
 
     @Test
+    fun `진료 전에는 병원을 안 골라도 이걸로 할게가 버튼처럼 넘어간다`() = runTest(dispatcher) {
+        // 버튼이 병원 없이도 눌리는 화면이다(#336).
+        val viewModel = HospitalPickViewModel(SearchRepository()).apply { load(HospitalPickPurpose.BEFORE_VISIT) }
+        var submitted = false
+
+        val reply = viewModel.onVoice("이걸로 할게") { submitted = it == null }
+
+        assertTrue(submitted)
+        assertEquals(VoiceReply.Done(R.string.voice_hospital_skipped), reply)
+    }
+
+    @Test
+    fun `진료 후에는 병원을 골라야 넘어간다`() = runTest(dispatcher) {
+        val viewModel = HospitalPickViewModel(SearchRepository()).apply { load(HospitalPickPurpose.AFTER_VISIT) }
+        var submitted = false
+
+        val reply = viewModel.onVoice("이걸로 할게") { submitted = true }
+
+        assertFalse(submitted)
+        assertEquals(VoiceReply.Done(R.string.voice_hospital_none_selected), reply)
+    }
+
+    @Test
     fun `진료 후에는 카드를 만들자는 말을 받지 않는다`() = runTest(dispatcher) {
         val viewModel = HospitalPickViewModel(SearchRepository()).apply { load(HospitalPickPurpose.AFTER_VISIT) }
 

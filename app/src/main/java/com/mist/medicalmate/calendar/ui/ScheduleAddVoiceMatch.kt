@@ -25,6 +25,10 @@ internal fun List<ScheduleAddCard>.byVoice(ordinal: Int?, words: String): Schedu
 internal fun List<ScheduleAddTodo>.byVoice(ordinal: Int?, words: String): ScheduleAddTodo? =
     matchVoice(ordinal, words).singleOrNull()
 
+/** 몇 번째나 낱말로 고른 것들. 일자 화면의 할 일(#336)도 같은 규칙으로 고른다. */
+internal fun <T> List<T>.matchItemsByVoice(ordinal: Int?, words: String, label: (T) -> String): List<T> =
+    matchByVoice(ordinal, words, label)
+
 private fun <T> List<T>.matchByVoice(ordinal: Int?, words: String, label: (T) -> String): List<T> {
     if (ordinal != null) return listOfNotNull(if (ordinal == VoiceWords.LAST) lastOrNull() else getOrNull(ordinal))
     val heard = VoiceWords.compact(words)

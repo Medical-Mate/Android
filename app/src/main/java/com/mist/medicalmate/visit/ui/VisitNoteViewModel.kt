@@ -6,6 +6,7 @@ import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
 import com.mist.medicalmate.core.speech.Dictation
 import com.mist.medicalmate.core.speech.SpeechToText
+import com.mist.medicalmate.core.voice.VoiceNavigation
 import com.mist.medicalmate.core.voice.VoiceReply
 import com.mist.medicalmate.core.voice.VoiceText
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -73,10 +74,23 @@ constructor(private val clock: Clock, private val speech: SpeechToText) : ViewMo
      * "헤이 메이트" 다음의 말(#288). **막대가 메모를 받아 적는다.** 짧은 명령("다 했어", "방금 거 지워",
      * "다 지워", "뒤로") 말고는 모두 메모 뒤에 이어 붙인다. 다 했으면 적은 원문을 들고 1q-1로 간다.
      */
-    internal fun onVoiceNote(text: String, save: (String) -> Unit): VoiceReply {
+    internal fun onVoiceNote(
+        text: String,
+        save: (String) -> Unit,
+        navigation: VoiceNavigation = VoiceNavigation.NONE,
+    ): VoiceReply {
         val note = mutableUiState.value.note
         val more = VoiceText(R.string.voice_note_ask_more)
         val from = spokenFrom
+        // 말 전체가 화면을 옮기자는 짧은 말이면 메모에 적지 않고 옮긴다(#336, 사용자 결정). 적던 것이 있으면 버리고
+        // 나갈지 묻는다. "다음 주에 다시 오래요" 같은 말은 그대로 메모다.
+        if (navigation.isNavigation(text)) {
+            return if (note.isBlank()) {
+                VoiceReply.NotMine
+            } else {
+                VoiceReply.Confirm(R.string.voice_note_confirm_leave) { navigation.navigate(text) }
+            }
+        }
         return when (parseNoteVoice(text)) {
             NoteVoice.BACK -> VoiceReply.NotMine
             NoteVoice.DONE ->

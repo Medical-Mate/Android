@@ -25,6 +25,12 @@ internal sealed interface ProfileVoice {
 
     /** 로그아웃 · 탈퇴 · 헤이 메이트 끄기처럼 말로 하지 않는 것. 화면에서 하라고 한다. */
     data object ByHand : ProfileVoice
+
+    /**
+     * 무엇을 켜고 끌지 없이 "꺼 줘"만 들렸다(#336). "헤이 메이트 꺼 줘"는 받아쓰기에 남은 호출어를 떼면서 이렇게 된다.
+     * 무엇을 끌지 묻는다.
+     */
+    data object Which : ProfileVoice
 }
 
 /**
@@ -35,11 +41,7 @@ internal sealed interface ProfileVoice {
  */
 internal fun parseProfileVoice(text: String): ProfileVoice? {
     val heard = VoiceWords.compact(text)
-    val enabled = when {
-        OFF.any { heard.contains(it) } -> false
-        ON.any { heard.contains(it) } -> true
-        else -> null
-    }
+    val enabled = enabledIn(heard)
     val reminder = heard.contains("알림")
     return when {
         BY_HAND.any { heard.contains(it) } -> ProfileVoice.ByHand
@@ -48,8 +50,16 @@ internal fun parseProfileVoice(text: String): ProfileVoice? {
 
         reminder && enabled != null -> ProfileVoice.Toggle(remindersIn(heard), enabled)
         HEALTH.any { heard.contains(it) } -> ProfileVoice.HealthEdit
+        enabled != null && heard.length <= WHICH_MAX -> ProfileVoice.Which
         else -> null
     }
+}
+
+/** 켜자는 말이면 true, 끄자는 말이면 false, 둘 다 아니면 null이다. 끄자는 말이 먼저다 — "안 켜"가 끄는 말이다. */
+private fun enabledIn(heard: String): Boolean? = when {
+    OFF.any { heard.contains(it) } -> false
+    ON.any { heard.contains(it) } -> true
+    else -> null
 }
 
 /** 말에 든 알림. 진료 후 기록이 먼저다 — "진료 후 기록 알림"에 "진료"가 들어 있다. 어느 쪽도 아니면 둘 다다. */
@@ -74,6 +84,9 @@ internal fun MyProfileVoice(routes: ProfileVoiceRoutes) {
         when (val voice = parseProfileVoice(text)) {
             null -> VoiceReply.NotMine
             ProfileVoice.ByHand -> VoiceReply.Done(R.string.voice_profile_by_hand)
+            ProfileVoice.Which ->
+                VoiceReply.Done(R.string.voice_profile_which, question = VoiceText(R.string.voice_profile_ask_which))
+
             ProfileVoice.HealthEdit -> {
                 routes.onHealthEdit()
                 VoiceReply.Done(R.string.voice_profile_health_opened)
@@ -173,6 +186,9 @@ internal val REMINDER_TIME_SUGGESTIONS =
     )
 
 private val OFF = listOf("꺼", "끄", "끌래", "안받", "그만받", "받지않", "받기싫", "해제", "중지", "없애")
+
+/** 무엇을 끌지 없이 켜고 끄자는 말만 남은 길이. "꺼 줘", "켜 주세요". */
+private const val WHICH_MAX = 6
 
 private val ON = listOf("켜", "킬래", "받을래", "받고싶", "받을게", "알려줘", "다시받")
 

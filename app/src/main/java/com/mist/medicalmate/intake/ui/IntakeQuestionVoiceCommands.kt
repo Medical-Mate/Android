@@ -16,10 +16,21 @@ internal class IntakeQuestionVoiceCommands(
     private val state: () -> IntakeUiState,
     private val update: ((IntakeUiState) -> IntakeUiState) -> Unit,
 ) {
+    /**
+     * "질문 추가"만 말해 무엇을 물을지 물어 둔 참인지(#336). 그러면 다음 말이 묻는 꼴이 아니어도 그 질문이다 — 손으로
+     * 빈 칸을 누른 것과 같다. 전에는 물어 놓고 다음 말이 묻는 꼴이 아니면 "못 알아들었어요"가 됐다.
+     */
+    private var awaitingQuestion = false
+
     fun handle(text: String, routes: IntakeVoiceRoutes): VoiceReply {
         val more = VoiceText(R.string.voice_intake_ask_more_questions)
+        val waiting = awaitingQuestion
+        awaitingQuestion = false
+        val parsed = parseQuestionVoice(text)
+        // 물어 둔 참이면 묻는 꼴이 아니어도 질문이다.
+        val voice = if (waiting && parsed == null) QuestionVoice.Add(text.trim()) else parsed
         if (isNextVoice(text)) return finish(routes)
-        return when (val voice = parseQuestionVoice(text)) {
+        return when (voice) {
             null -> VoiceReply.NotMine
             is QuestionVoice.Add -> addQuestion(voice.text, more)
             QuestionVoice.PickAll -> pickAll(more)
@@ -73,7 +84,14 @@ internal class IntakeQuestionVoiceCommands(
 
     /** 글이 비면 더하지 않고 무엇을 물을지 묻는다. 다 찼으면 그 사실을 알린다. 직접 적은 것이라 체크된 채 붙는다. */
     private fun addQuestion(text: String, more: VoiceText): VoiceReply = when {
-        text.isEmpty() -> VoiceReply.Done(R.string.voice_intake_question_ask)
+        text.isEmpty() -> {
+            awaitingQuestion = !state().questionsFull
+            if (state().questionsFull) {
+                VoiceReply.Done(R.string.voice_intake_question_full, listOf(MAX_BRIEF_CARD_QUESTIONS.toString()))
+            } else {
+                VoiceReply.Done(R.string.voice_intake_question_ask)
+            }
+        }
         state().questionsFull ->
             VoiceReply.Done(R.string.voice_intake_question_full, listOf(MAX_BRIEF_CARD_QUESTIONS.toString()))
 

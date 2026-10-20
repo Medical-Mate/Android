@@ -44,6 +44,17 @@ class VoiceAuditPhraseTest {
     private val today = LocalDate.of(2026, 10, 15)
 
     @Test
+    fun `일부만 되던 버튼의 말을 알아듣는다`() {
+        // #336. 홈 배너 둘, 카드의 병원 변경, 내 정보의 무엇인지 모를 "꺼 줘".
+        assertEquals(HomeVoice.CARD_SCHEDULE, parseHomeVoice("카드로 진료 일정 잡아 줘"))
+        assertEquals(HomeVoice.TODAY_RECORD, parseHomeVoice("진료 후 기록할래"))
+        assertNotEquals(HomeVoice.TODAY_RECORD, parseHomeVoice("진료 후 기록 알림 꺼 줘"))
+        assertEquals(BriefCardVoiceAction.HOSPITAL, parseBriefCardVoice("병원 바꿀래"))
+        assertEquals(ProfileVoice.Which, parseProfileVoice("꺼 줘"))
+        assertTrue(parseProfileVoice("진료 전 알림 꺼 줘") is ProfileVoice.Toggle)
+    }
+
+    @Test
     fun `알림 말은 기록이 아니라 내 정보다`() {
         // "진료 후 기록 알림 꺼 줘"가 "진료후기록"으로 진료 후 기록을 시작했다.
         assertEquals(VoiceCommand.PROFILE, parseVoiceCommand("진료 후 기록 알림 꺼 줘"))

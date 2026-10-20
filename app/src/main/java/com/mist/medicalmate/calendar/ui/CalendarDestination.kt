@@ -114,10 +114,21 @@ private fun CalendarMonthRoute(
     // "20일", "내일", "다음 주 화요일"이면 그 날을, "12월", "다음 달"이면 그 달로(#286). 다른 화면에서
     // "10월 20일 일정 보여줘"로 들어오면 그 말도 여기서 받는다.
     val targets = LocalVoiceTargets.current
+    val monthRoutes =
+        CalendarMonthVoiceRoutes(
+            onCardOpen = onCardOpen,
+            onDayOpen = onDayOpen,
+            onAdd = onAddClick,
+            dismissSheet = viewModel::onCardSheetDismiss,
+        )
     VoiceTargetEffect(CALENDAR_MONTH_SUGGESTIONS) { text ->
         val voice = parseVoiceDate(text, state.today, state.month)
         val record = parseDayVoice(text) == DayVoice.RECORD_ADD
+        val extra = state.monthVoice(text, voice, monthRoutes)
         when {
+            // 시트의 버튼 · 고른 날의 일정 추가 · 몇 번째 일정(#336). 날짜 말보다 먼저 본다.
+            extra != null -> extra
+
             // 시트가 떠 있으면 "뒤로"·"취소"는 시트만 닫는다(#334). 캘린더는 탭의 첫 화면이라 안 보면 "더 돌아갈 화면이
             // 없어요"가 됐다.
             state.cardSheet != null && VoiceWords.isClose(text) -> {
@@ -209,6 +220,17 @@ private fun CalendarDayRoute(
         onRecordAdd = onRecordAdd,
         onRecordOpen = onRecordOpen,
         onCardOpen = onCardOpen,
+        more =
+        CalendarDayVoiceRoutes(
+            onTodoToggle = viewModel.todo::onToggle,
+            onNextConfirm = {
+                viewModel.uiState.value?.nextEvent?.let { next ->
+                    onScheduleConfirm(next.clinic, next.on, next.appointmentId, next.cardId, next.followUp)
+                }
+            },
+            // 이 날을 들고 일정 추가를 연다. 다음 일정 확정과 같은 길이고 병원 · 일정 · 카드는 비운다.
+            onScheduleAdd = { day -> onScheduleConfirm(null, day, null, null, false) },
+        ),
     )
 
     CalendarDayScreen(
