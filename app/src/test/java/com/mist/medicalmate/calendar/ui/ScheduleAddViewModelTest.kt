@@ -541,7 +541,6 @@ private val pickableCards =
         CardListItem(
             id = "1",
             title = "복부 통증 · 3주",
-            confirmed = true,
             visited = false,
             clinic = "서울OO병원 내과",
             writtenOn = java.time.LocalDate.of(2026, 9, 4),
@@ -549,7 +548,6 @@ private val pickableCards =
         CardListItem(
             id = "2",
             title = "두통 · 잦은 어지러움",
-            confirmed = false,
             visited = false,
             clinic = null,
             writtenOn = java.time.LocalDate.of(2026, 8, 21),

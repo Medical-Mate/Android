@@ -150,7 +150,7 @@ internal val previewRecordGroups =
                 RecordItem(
                     id = "card-3",
                     title = "무릎 통증",
-                    status = RecordItem.Status.DRAFT,
+                    status = RecordItem.Status.IN_PROGRESS,
                     meta = "오늘 · 증상 문답 4단계 중 2단계",
                     resumeLabel = "이어서 정리하기",
                 ),

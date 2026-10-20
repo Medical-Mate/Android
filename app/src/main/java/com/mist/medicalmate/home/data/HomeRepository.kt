@@ -146,12 +146,14 @@ private fun AppointmentResponse.clinicLabel(): String? =
  * 왕복을 센 것이고 상한이 20이다. 그대로 찍으면 "20단계 중 0단계까지 답했어요"가 되는데
  * 환자가 보는 증상 정리는 세 단계다.
  *
- * 세션은 부위와 강도를 고른 뒤에 생기므로(#310) 홈에 뜨는 문답은 늘 3단계에 있다.
+ * 세션은 부위와 강도를 고른 뒤에 생기므로(#310) 홈에 뜨는 문답은 늘 3단계에 있다. 질문 고르기에서 "다음"을
+ * 눌렀으면([questionsConfirmed]) 세 단계를 다 마친 "임시 저장"이다(#338).
  */
 private fun InProgressSessionResponse.toResume() = HomeResume(
     intakeId = sessionId.toString(),
     symptomTitle = siteText.orEmpty(),
     step = IntakeStep.SYMPTOM_CHAT,
+    tempSaved = questionsConfirmed,
 )
 
 /** 시간 미정이면 [HomeSchedule.time]이 없다(#202). */
@@ -170,27 +172,19 @@ private const val FOLLOW_UP_ORIGIN = "VISIT_FOLLOW_UP"
 /** 시안 1n-1의 최근 브리핑 카드 수. */
 private const val RECENT_CARDS = 2
 
-/** 확정한 카드. 진료 전 배지의 기준이다. */
-private const val STATUS_CONFIRMED = "CONFIRMED"
-
 /** 못 읽으면 시간 미정으로 본다. 일정 하나 때문에 홈 전체가 죽는 것보다 낫다. */
 private fun parseTime(value: String): LocalTime? = runCatching { LocalTime.parse(value) }.getOrNull()
 
 /**
  * 병원 이름은 진료를 마쳤어도 비어 있을 수 있다. 선택 입력이라서다.
  *
- * 배지는 브리핑 카드 전체(1j-4)와 같은 규칙이다. 진료를 다녀왔는지(`visited`)가 먼저고, 아니면 확정했는지로
- * 가른다.
+ * 배지는 브리핑 카드 전체(1j-4)와 같은 규칙이다. 진료를 다녀왔으면(`visited`) 진료 완료, 아니면 진료 전이다.
+ * 카드는 만들 때부터 확정돼 있다(Backend#181).
  */
 private fun CardSummaryResponse.toSummary() = SavedCardSummary(
     id = cardId.toString(),
     title = title.orEmpty(),
-    status =
-    when {
-        visited -> HomeCardStatus.VISITED
-        status == STATUS_CONFIRMED -> HomeCardStatus.BEFORE_VISIT
-        else -> HomeCardStatus.DRAFT
-    },
+    status = if (visited) HomeCardStatus.VISITED else HomeCardStatus.BEFORE_VISIT,
     writtenOn = OffsetDateTime.parse(createdAt).toLocalDate(),
     clinic = clinicName,
 )

@@ -127,8 +127,8 @@ private fun BriefCardRoute(
     val content = state as? BriefCardUiState.Content
     // 말로 내보내기 시트를 연다(#320). 누를 때마다 하나씩 늘려 화면이 시트를 띄운다.
     var exportRequest by remember { mutableIntStateOf(0) }
-    // 문답에서 막 만든 카드를 저장했으면 뒤로 가기가 홈이다. 아래에 끝난 문답이 쌓여 있다.
-    val toHome = sessionId != null && content?.card?.status == BriefCard.Status.CONFIRMED
+    // 문답에서 막 만든 카드면 뒤로 가기가 홈이다. 아래에 끝난 문답이 쌓여 있다. 카드는 만들 때 이미 확정돼 있다.
+    val toHome = sessionId != null && content != null
     val exit = if (toHome) routes.onHome else routes.onExit
     BackHandler(enabled = toHome, onBack = routes.onHome)
     val context = LocalContext.current
@@ -150,7 +150,6 @@ private fun BriefCardRoute(
             onEditDoneClick = viewModel::onEditDoneClick,
             onCancelClick = viewModel::onCancelClick,
             edit = viewModel.editActions,
-            onSaveClick = viewModel::onSaveClick,
             onDeleteClick = viewModel::onDeleteClick,
             onOverlayDismiss = viewModel::onOverlayDismiss,
             onDeleteConfirm = { viewModel.onDeleteConfirm(routes.onDeleted) },
@@ -163,7 +162,6 @@ private fun BriefCardRoute(
         content = content,
         routes =
         BriefCardVoiceRoutes(
-            onSave = viewModel::onSaveClick,
             onExport = { exportRequest++ },
             onLater = viewModel::onOverlayDismiss,
             callbacks = { callbacks },
@@ -181,7 +179,7 @@ private fun BriefCardRoute(
 }
 
 /**
- * 하단 버튼 셋(#314)이 가는 곳을 붙인다. `진료 일정 잡기`는 저장 직후 시트에서도 누르므로 시트를 닫고 간다 —
+ * 하단 버튼 셋(#314)이 가는 곳을 붙인다. `진료 일정 잡기`는 일정 시트(1e-1-S)에서도 누르므로 시트를 닫고 간다 —
  * 돌아왔을 때 다시 떠 있으면 안 된다. 진료 후 기록의 병원은 일정에 적은 것, 없으면 카드의 병원이다.
  */
 private fun BriefCardCallbacks.withSchedule(

@@ -3,6 +3,7 @@ package com.mist.medicalmate.card.ui
 import com.mist.medicalmate.card.data.AxisEdit
 import com.mist.medicalmate.card.data.CardListItem
 import com.mist.medicalmate.card.data.CardRepository
+import com.mist.medicalmate.card.data.OpenIntake
 import com.mist.medicalmate.core.network.ApiErrorCode
 import com.mist.medicalmate.core.network.ApiResult
 import kotlinx.coroutines.Dispatchers
@@ -388,57 +389,14 @@ class BriefCardViewModelTest {
     }
 
     @Test
-    fun `뱃지는 확정이 아니라 진료를 마쳤는지로 갈린다`() {
-        // 저장하기가 카드를 확정하게 되면서(#196) 확정으로 판단하면 진료를 받기도 전에
-        // "진료 완료"가 뜬다. 서버도 둘을 다른 축으로 둔다.
-        val repository = FakeCardRepository()
-        val viewModel = BriefCardViewModel(repository)
-        viewModel.open(1)
-
-        viewModel.onSaveClick()
+    fun `막 만든 카드는 진료 전이다`() {
+        // 카드는 만들 때부터 확정돼 있다(Backend#181). 진료 완료는 진료 후 기록이 붙었는지로만 갈린다.
+        val viewModel = BriefCardViewModel(FakeCardRepository())
+        viewModel.open(cardId = null, sessionId = 3)
 
         val content = viewModel.uiState.value as BriefCardUiState.Content
-        assertEquals(BriefCard.Status.CONFIRMED, content.card.status)
         assertFalse(content.card.visited)
-    }
-
-    @Test
-    fun `저장하기가 카드를 확정한다`() {
-        // 확정하지 않으면 진료 후 기록을 남길 수 없다. 서버가 확정한 카드에만 받는다(#196).
-        val repository = FakeCardRepository()
-        val viewModel = BriefCardViewModel(repository)
-        viewModel.open(1)
-
-        viewModel.onSaveClick()
-
-        assertEquals(1L, repository.confirmedId)
-    }
-
-    @Test
-    fun `이미 확정한 카드는 다시 확정하지 않는다`() {
-        // 두 번 확정하면 400이다.
-        val repository = FakeCardRepository(card = testCard.copy(status = BriefCard.Status.CONFIRMED))
-        val viewModel = BriefCardViewModel(repository)
-        viewModel.open(1)
-
-        viewModel.onSaveClick()
-
-        assertNull(repository.confirmedId)
-    }
-
-    @Test
-    fun `확정이 거절되면 알리고 일정 시트를 띄우지 않는다`() {
-        // 저장되지 않은 카드에 일정을 잡으라고 하면 저장된 것으로 알게 된다.
-        val repository = FakeCardRepository()
-        repository.confirmFails = true
-        val viewModel = BriefCardViewModel(repository)
-        viewModel.open(1)
-
-        viewModel.onSaveClick()
-
-        val content = viewModel.uiState.value as BriefCardUiState.Content
-        assertTrue(content.saveFailed)
-        assertFalse(content.scheduleSheet)
+        assertEquals(BriefCardFooterAction.SCHEDULE, content.card.footerAction(java.time.LocalDate.of(2026, 10, 20)))
     }
 
     private fun editing(): BriefCardViewModel {
@@ -612,7 +570,6 @@ internal class FakeCardRepository(
     var deleteFails: Set<String> = emptySet(),
 ) : CardRepository {
     var updatedQuestions: List<String>? = null
-    var confirmedId: Long? = null
     var deleted = mutableListOf<Long>()
 
     /** 어느 문답으로 만들었는지. 카드 없이 들어온 경로가 이 값을 채운다. */
@@ -667,17 +624,6 @@ internal class FakeCardRepository(
     /** 수정만 실패해야 하는 시험이 있다. 카드 조회까지 실패하면 화면이 Content가 아니다. */
     var updateFails: Boolean = false
 
-    /** 확정만 실패해야 하는 시험이 있다. 카드 조회까지 실패하면 화면이 Content가 아니다. */
-    var confirmFails: Boolean = false
-
-    override suspend fun confirm(cardId: Long): ApiResult<BriefCard> {
-        confirmedId = cardId
-        return when {
-            confirmFails -> OFFLINE
-            else -> result ?: ApiResult.Success(card.copy(status = BriefCard.Status.CONFIRMED))
-        }
-    }
-
     override suspend fun delete(cardId: Long): ApiResult<Unit> {
         deleted += cardId
         return if (cardId.toString() in deleteFails) OFFLINE else ApiResult.Success(Unit)
@@ -685,6 +631,21 @@ internal class FakeCardRepository(
 
     override suspend fun deleteAll(cardIds: Set<String>): Set<String> =
         cardIds.filter { id -> id.toLongOrNull()?.let { delete(it) is ApiResult.Success } == true }.toSet()
+
+    /** 카드 없는 문답(#338). 목록 시험이 채운다. */
+    var intake: ApiResult<OpenIntake?> = ApiResult.Success(null)
+
+    /** 지운 문답. 지우기가 실패해야 하는 시험은 [intakeDeleteFails]를 켠다. */
+    val deletedIntakes = mutableListOf<Long>()
+
+    var intakeDeleteFails: Boolean = false
+
+    override suspend fun openIntake(): ApiResult<OpenIntake?> = intake
+
+    override suspend fun deleteIntake(sessionId: Long): ApiResult<Unit> {
+        deletedIntakes += sessionId
+        return if (intakeDeleteFails) OFFLINE else ApiResult.Success(Unit)
+    }
 
     private companion object {
         val OFFLINE = ApiResult.NetworkUnavailable(java.io.IOException("offline"))
@@ -695,7 +656,6 @@ internal val testCard =
     BriefCard(
         id = "1",
         title = "복부 통증 · 3주",
-        status = BriefCard.Status.BEFORE_VISIT,
         patientLine = "김OO · 32세 여 · 2026.09.04 작성",
         items =
         listOf(

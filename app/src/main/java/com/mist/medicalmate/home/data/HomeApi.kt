@@ -88,6 +88,13 @@ internal data class InProgressSessionResponse(
     val siteText: String? = null,
     val progressCurrent: Int,
     val progressTotal: Int,
+    /**
+     * 질문 고르기에서 "다음"을 눌렀는지(Backend#185 · #186). 눌렀으면 증상 정리 세 단계를 다 마쳤고 카드를 만들기
+     * 전인 "임시 저장"이다(#338) — 이어서 하기를 누르면 문답이 아니라 증상 정리 완료(1c-5)로 간다.
+     *
+     * 서버의 `ended`는 AI 채팅이 끝난 순간이라 질문 고르기 도중에 나간 문답도 참이다. 그래서 그 값으로 가르지 않는다.
+     */
+    val questionsConfirmed: Boolean = false,
 )
 
 @Serializable

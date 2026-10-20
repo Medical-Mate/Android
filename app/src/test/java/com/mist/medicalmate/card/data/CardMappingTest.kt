@@ -1,6 +1,5 @@
 package com.mist.medicalmate.card.data
 
-import com.mist.medicalmate.card.ui.BriefCard
 import com.mist.medicalmate.core.designsystem.MedicalMateSeverity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -99,12 +98,6 @@ class CardMappingTest {
     fun `제목이 없으면 환자가 말한 것을 쓴다`() {
         // 서버가 title을 아직 내려주지 않는다.
         assertEquals("왼쪽 무릎이 아파요", response().toBriefCard().title)
-    }
-
-    @Test
-    fun `확정 여부가 상태가 된다`() {
-        assertEquals(BriefCard.Status.CONFIRMED, response(status = "CONFIRMED").toBriefCard().status)
-        assertEquals(BriefCard.Status.BEFORE_VISIT, response(status = "DRAFT").toBriefCard().status)
     }
 
     @Test

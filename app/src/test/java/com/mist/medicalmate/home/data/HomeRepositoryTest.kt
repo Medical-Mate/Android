@@ -192,6 +192,28 @@ class HomeRepositoryTest {
     }
 
     @Test
+    fun `질문 고르기까지 마친 임시 저장은 세 단계를 다 마친 것이다`() = runTest {
+        // 질문 고르기에서 다음을 눌렀고(Backend#186) 카드를 만들기 전이라 이어서 하기에 서고, 누르면 증상 정리
+        // 완료(1c-5)로 간다(#338).
+        val snapshot = load(
+            HomeResponse(
+                inProgressSession =
+                InProgressSessionResponse(
+                    sessionId = 7,
+                    siteText = "복부",
+                    progressCurrent = 5,
+                    progressTotal = 20,
+                    questionsConfirmed = true,
+                ),
+            ),
+        )
+
+        val resume = requireNotNull(snapshot.resume)
+        assertTrue(resume.tempSaved)
+        assertEquals(3, resume.doneSteps)
+    }
+
+    @Test
     fun `작성 중이던 문답이 없으면 이어서 하기도 없다`() = runTest {
         assertNull(load(HomeResponse()).resume)
     }

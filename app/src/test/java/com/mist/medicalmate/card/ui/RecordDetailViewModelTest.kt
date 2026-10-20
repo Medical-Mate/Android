@@ -353,7 +353,6 @@ class RecordDetailViewModelTest {
             BriefCard(
                 id = "3",
                 title = "복부 통증 · 3주",
-                status = BriefCard.Status.CONFIRMED,
                 patientLine = "김OO · 32세 여",
                 items =
                 listOf(

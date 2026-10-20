@@ -109,14 +109,12 @@ internal fun ScheduleCard(schedule: HomeSchedule, today: LocalDate, onClick: () 
 internal fun daysUntil(today: LocalDate, date: LocalDate): Long = ChronoUnit.DAYS.between(today, date)
 
 private fun HomeCardStatus.label(): Int = when (this) {
-    HomeCardStatus.DRAFT -> R.string.record_status_draft
     HomeCardStatus.BEFORE_VISIT -> R.string.record_status_before_visit
     HomeCardStatus.VISITED -> R.string.record_status_confirmed
 }
 
 /** 브리핑 카드 전체(1j-4)와 같은 톤. 작성 중 Warning · 진료 전 Brand · 진료 완료 Success. */
 private fun HomeCardStatus.tone(): MedicalMateBadgeTone = when (this) {
-    HomeCardStatus.DRAFT -> MedicalMateBadgeTone.WARNING
     HomeCardStatus.BEFORE_VISIT -> MedicalMateBadgeTone.BRAND
     HomeCardStatus.VISITED -> MedicalMateBadgeTone.SUCCESS
 }

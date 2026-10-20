@@ -41,8 +41,8 @@ data class RecordGroup(val monthLabel: String, val items: List<RecordItem>)
  * 준비한 것이, 진료 완료면 들은 것이 온다. 그 문구를 [detail]로 받는 이유는 상태마다
  * 다른 값을 화면이 조립하지 않게 하려는 것이다. 어떤 말을 담을지는 데이터가 정한다.
  *
- * [resumeLabel]은 작성 중인 카드에만 있다. 눌러서 문답으로 돌아가는 줄이고, 다른 상태에는
- * 이어서 할 것이 없다.
+ * [resumeLabel]은 카드를 아직 만들지 않은 문답 줄에만 있다(작성 중 · 임시 저장). 눌러서 문답으로 돌아가는
+ * 줄이고, 카드에는 이어서 할 것이 없다.
  */
 data class RecordItem(
     val id: String,
@@ -68,5 +68,11 @@ data class RecordItem(
     /** 진료한 날. 말로 "10월 2일 기록"을 찾을 때 쓴다(#324). 카드 목록 줄에는 없다. */
     val visitedOn: java.time.LocalDate? = null,
 ) {
-    enum class Status { DRAFT, BEFORE_VISIT, CONFIRMED }
+    /**
+     * 칩 넷(#338, 사용자 결정). 증상 정리 중이면 [IN_PROGRESS](AI 채팅만 끝나고 질문 고르기에서 나간 것도), 질문
+     * 고르기에서 "다음"까지 누르고 카드를 만들기 전이면 [TEMP_SAVED], 카드를
+     * 만들었으면 [BEFORE_VISIT], 진료 후 기록까지 남겼으면 [CONFIRMED]다. 카드는 만들 때부터 확정돼 있어
+     * (Backend#181) 저장하지 않은 카드라는 상태가 없다.
+     */
+    enum class Status { IN_PROGRESS, TEMP_SAVED, BEFORE_VISIT, CONFIRMED }
 }

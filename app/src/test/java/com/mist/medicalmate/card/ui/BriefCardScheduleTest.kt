@@ -27,15 +27,8 @@ class BriefCardScheduleTest {
     }
 
     @Test
-    fun `저장하지 않은 카드는 저장하기다`() {
-        // 일정이 있어도 먼저 저장해야 한다. 확정하지 않은 카드에는 진료 후 기록을 붙일 수 없다.
-        val card = testCard.copy(appointment = BriefCardAppointment("7", TODAY))
-
-        assertEquals(BriefCardFooterAction.SAVE, card.footerAction(TODAY))
-    }
-
-    @Test
-    fun `저장했고 일정이 없으면 진료 일정 잡기다`() {
+    fun `일정이 없으면 진료 일정 잡기다`() {
+        // 저장하기는 없다(#338). 카드는 만들 때부터 확정돼 있다(Backend#181).
         assertEquals(BriefCardFooterAction.SCHEDULE, saved().footerAction(TODAY))
     }
 
@@ -57,31 +50,31 @@ class BriefCardScheduleTest {
     }
 
     @Test
-    fun `처음 저장하면 화면에 남고 일정 시트가 뜬다`() {
-        // 전에는 저장하기가 곧 홈으로 나가기였다. 시안 1e-1-S는 저장한 카드 위에 시트를 띄운다.
+    fun `문답에서 막 만든 카드면 일정 시트가 뜬다`() {
+        // 전에는 처음 저장하기를 누를 때 떴다. 저장 단계가 없어져 카드를 처음 여는 이때로 옮겼다(#338).
+        val viewModel = BriefCardViewModel(FakeCardRepository()).apply { open(cardId = null, sessionId = 3) }
+
+        assertTrue(viewModel.content().scheduleSheet)
+    }
+
+    @Test
+    fun `이미 있는 카드를 열면 시트를 띄우지 않는다`() {
         val viewModel = BriefCardViewModel(FakeCardRepository()).apply { open(1) }
 
-        viewModel.onSaveClick()
-
-        val content = viewModel.content()
-        assertEquals(BriefCard.Status.CONFIRMED, content.card.status)
-        assertTrue(content.scheduleSheet)
+        assertFalse(viewModel.content().scheduleSheet)
     }
 
     @Test
     fun `그 카드로 잡은 일정이 이미 있으면 시트를 띄우지 않는다`() {
         val repository = FakeCardRepository(card = testCard.copy(appointment = BriefCardAppointment("7", TODAY)))
-        val viewModel = BriefCardViewModel(repository).apply { open(1) }
-
-        viewModel.onSaveClick()
+        val viewModel = BriefCardViewModel(repository).apply { open(cardId = null, sessionId = 3) }
 
         assertFalse(viewModel.content().scheduleSheet)
     }
 
     @Test
     fun `아직 안 정했다고 하면 시트만 닫는다`() {
-        val viewModel = BriefCardViewModel(FakeCardRepository()).apply { open(1) }
-        viewModel.onSaveClick()
+        val viewModel = BriefCardViewModel(FakeCardRepository()).apply { open(cardId = null, sessionId = 3) }
 
         viewModel.onOverlayDismiss()
 
@@ -116,7 +109,7 @@ class BriefCardScheduleTest {
         assertEquals(null, content.card.appointment)
     }
 
-    private fun saved() = testCard.copy(status = BriefCard.Status.CONFIRMED)
+    private fun saved() = testCard
 
     private fun BriefCardViewModel.content(): BriefCardUiState.Content = uiState.value as BriefCardUiState.Content
 

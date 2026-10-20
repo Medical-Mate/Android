@@ -24,9 +24,9 @@ import java.time.LocalDate
  * 편집 중에는 `브리핑 카드 삭제` 하나다. 사본을 옮기는 것은 Nav 우측 `확인`이 하고 되돌리는 것은 `취소`가 한다.
  * 개체를 통째로 지우는 것이라 문서가 하단 Danger CTA와 확인 대화상자를 함께 요구한다.
  *
- * 읽는 중에는 시안 1e-1 네 장대로 그 카드의 저장 여부와 일정으로 갈린다([footerAction]). 저장하지 않았으면
- * `저장하기`, 일정이 없으면 `진료 일정 잡기`, 앞날 일정이면 Outline `진료 일정 보기`, 당일이거나 지났으면
- * Tonal `진료 후 기록하기`다.
+ * 읽는 중에는 그 카드의 일정으로 갈린다([footerAction]). 일정이 없으면 `진료 일정 잡기`, 앞날 일정이면 Outline
+ * `진료 일정 보기`, 당일이거나 지났으면 Tonal `진료 후 기록하기`다. 시안 1e-1의 `저장하기`는 걷어냈다(#338) —
+ * 카드가 만들 때부터 확정돼 있다(Backend#181).
  *
  * 저장에 실패하면 버튼 위에 왜 안 됐는지를 적는다. 아무 말도 하지 않으면 버튼이 안 먹는 것으로 읽고 계속 누르게
  * 된다 — 기기에서 실제로 그랬다(#196·#198). 버튼은 살려 둔다.
@@ -53,8 +53,6 @@ internal fun BriefCardFooter(state: BriefCardUiState.Content, today: LocalDate, 
         val appointment = state.card.appointment
         val (label, type, onClick) =
             when (state.card.footerAction(today)) {
-                BriefCardFooterAction.SAVE ->
-                    Triple(R.string.brief_card_save, MedicalMateButtonType.PRIMARY, callbacks.onSaveClick)
                 BriefCardFooterAction.SCHEDULE ->
                     Triple(R.string.brief_card_schedule, MedicalMateButtonType.PRIMARY, callbacks.onScheduleClick)
                 BriefCardFooterAction.VIEW_SCHEDULE ->
@@ -76,9 +74,9 @@ internal fun BriefCardFooter(state: BriefCardUiState.Content, today: LocalDate, 
 }
 
 /**
- * 저장 직후 일정 시트. Figma 1e-1-S `3681:17846`(#314).
+ * 막 만든 카드의 일정 시트. Figma 1e-1-S `3681:17846`(#314).
  *
- * 카드를 처음 저장했고 그 카드로 잡은 일정이 없을 때 뜬다. 그래버 아래 14 · 제목 · 4 · 설명 · 20 · Primary
+ * 문답에서 막 만든 카드이고 그 카드로 잡은 일정이 없을 때 뜬다(#338). 그래버 아래 14 · 제목 · 4 · 설명 · 20 · Primary
  * `진료 일정 잡기` · 8 · Ghost `아직 안 정했어요`다. 안 정했다고 하면 시트만 닫고, 하단이 `진료 일정 잡기`로
  * 남아 나중에 잡을 수 있다.
  */

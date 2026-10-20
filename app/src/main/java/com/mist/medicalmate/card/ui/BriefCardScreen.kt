@@ -121,7 +121,7 @@ fun BriefCardScreen(
     BriefCardOverlays(content = content, export = export, callbacks = callbacks)
 }
 
-/** 화면 위에 뜨는 것들. 내보내기 시트(1e-1-X) · 저장 직후 일정 시트(1e-1-S) · 삭제 확인(1e-1-DC)이다. */
+/** 화면 위에 뜨는 것들. 내보내기 시트(1e-1-X) · 막 만든 카드의 일정 시트(1e-1-S) · 삭제 확인(1e-1-DC)이다. */
 @Composable
 private fun BriefCardOverlays(
     content: BriefCardUiState.Content?,
@@ -165,10 +165,9 @@ data class BriefCardCallbacks(
     val onEditDoneClick: () -> Unit = {},
     val onCancelClick: () -> Unit = {},
     val edit: BriefCardEditActions = BriefCardEditActions {},
-    val onSaveClick: () -> Unit = {},
     val onHospitalChangeClick: () -> Unit = {},
     val onDeleteClick: () -> Unit = {},
-    /** 삭제 확인 대화상자나 저장 직후 일정 시트를 닫는다. */
+    /** 삭제 확인 대화상자나 일정 시트(1e-1-S)를 닫는다. */
     val onOverlayDismiss: () -> Unit = {},
     /** `진료 일정 잡기`. 이 카드가 골라진 일정 추가(1r-4)로 간다. */
     val onScheduleClick: () -> Unit = {},
@@ -348,7 +347,6 @@ internal val previewBriefCard =
     BriefCard(
         id = "card-1",
         title = "복부 통증 · 3주",
-        status = BriefCard.Status.BEFORE_VISIT,
         patientLine = "김OO · 32세 여 · 2026.09.04 작성",
         items =
         listOf(

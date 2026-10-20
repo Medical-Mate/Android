@@ -27,7 +27,8 @@
     <!-- Figma 1j-1(406:2569)·1j-2(406:2646) 기록. -->
     <string name="record_title">기록</string>
     <string name="record_count">%1$d건</string>
-    <string name="record_status_draft">작성 중</string>
+    <string name="record_status_in_progress">작성 중</string>
+    <string name="record_status_temp_saved">임시 저장</string>
     <string name="record_status_before_visit">진료 전</string>
     <string name="record_status_confirmed">진료 완료</string>
     <string name="record_failed_title">기록을 불러오지 못했어요</string>
@@ -267,7 +268,6 @@
     <string name="brief_card_allergy">알러지 · %1$s</string>
     <string name="brief_card_allergy_body">처방 전에 꼭 확인해 주세요</string>
     <string name="brief_card_questions">환자가 묻고 싶어 하는 것</string>
-    <string name="brief_card_save">저장하기</string>
     <string name="brief_card_cancel">취소</string>
     <string name="brief_card_failed_title">카드를 불러오지 못했어요</string>
     <string name="brief_card_failed_description">인터넷 연결을 확인하고 다시 시도해주세요</string>
@@ -767,8 +767,6 @@
     <string name="voice_suggest_done_card_do">브리핑 카드</string>
     <string name="voice_suggest_done_hospital">병원부터 찾을래</string>
     <string name="voice_suggest_done_hospital_do">병원 찾기</string>
-    <string name="voice_suggest_card_save">저장해 줘</string>
-    <string name="voice_suggest_card_save_do">저장</string>
     <string name="voice_suggest_card_down">아래로</string>
     <string name="voice_suggest_card_down_do">내려 보기</string>
     <string name="voice_suggest_card_schedule">진료 일정 잡아 줘</string>
@@ -897,10 +895,7 @@
     <string name="voice_intake_done_ask">브리핑 카드를 만들까요, 병원부터 찾을까요?</string>
     <string name="voice_intake_done_card">브리핑 카드를 만들게요</string>
     <string name="voice_intake_done_hospital">병원을 찾아볼게요</string>
-    <string name="voice_card_ask_save">이대로 괜찮으면 "저장"이라고 해 주세요</string>
-    <string name="voice_card_confirm_save">브리핑 카드를 저장할까요?</string>
-    <string name="voice_card_already_saved">이미 저장한 카드예요</string>
-    <string name="voice_card_save_first">일정을 잡으려면 카드를 먼저 저장해야 해요. 저장할까요?</string>
+    <string name="voice_card_already_saved">카드는 만들 때 이미 저장돼 있어요</string>
     <string name="voice_card_ask_schedule">진료 날짜가 정해졌으면 "진료 일정 잡아 줘", 아니면 "나중에"라고 해 주세요</string>
     <string name="voice_card_later">일정은 나중에 잡아도 돼요</string>
     <string name="voice_card_no_schedule">이 카드로 잡은 일정이 아직 없어요</string>

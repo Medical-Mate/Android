@@ -94,7 +94,14 @@ internal fun NavGraphBuilder.entryDestinations(
  */
 internal fun NavGraphBuilder.intakeDestinations(navController: NavHostController) {
     intakeDestination(
-        onCompleted = { sessionId -> navController.navigate(IntakeDoneDestination(sessionId)) },
+        // 증상 정리를 백스택에서 걷어 낸다(#338, 사용자 결정). "다음"을 누르면 세 단계를 마친 임시 저장이라 1c-5에서
+        // 뒤로 가면 홈이다 — 다시 들어오는 길은 홈의 이어서 하기다. 남겨 두면 뒤로 갈 때 증상 정리가 다시 그려지면서
+        // 완료 신호(`completed`)가 또 흘러 1c-5로 되돌아오거나 전환이 멈춰 흰 화면이 났다.
+        onCompleted = { sessionId ->
+            navController.navigate(IntakeDoneDestination(sessionId)) {
+                popUpTo<IntakeDestination> { inclusive = true }
+            }
+        },
         onExit = { navController.popBackStack() },
     )
     intakeDoneDestination(
@@ -281,6 +288,22 @@ internal fun NavGraphBuilder.visitDestinations(navController: NavHostController)
 }
 
 /**
+ * 카드를 아직 만들지 않은 문답을 잇는다. 홈의 이어서 하기와 브리핑 카드 목록의 문답 줄이 함께 쓴다.
+ *
+ * 질문 고르기까지 마친 임시 저장이면 증상 정리 완료(1c-5)로 가서 카드를 만들지 병원을 먼저 찾을지 고른다(#338, 사용자
+ * 결정). 아니면 멈춘 곳부터 문답을 잇는다. 문답 id가 없으면 새로 시작한다.
+ */
+internal fun NavHostController.resumeIntake(sessionId: Long?, tempSaved: Boolean) {
+    if (tempSaved &&
+        sessionId != null
+    ) {
+        navigate(IntakeDoneDestination(sessionId))
+    } else {
+        navigate(IntakeDestination(sessionId))
+    }
+}
+
+/**
  * 기록 탭과 그 아래 화면.
  *
  * 목록에서 상세로, 상세의 "카드 열기"에서 브리핑 카드로 이어진다. 이 묶음만 따로 뺀 이유는
@@ -297,6 +320,7 @@ internal fun NavGraphBuilder.recordDestinations(navController: NavHostController
     // 짜임이라 여기 함께 둔다.
     briefCardListDestination(
         onCardClick = { cardId -> navController.navigate(BriefCardDestination(cardId = cardId)) },
+        onResumeClick = { sessionId, tempSaved -> navController.resumeIntake(sessionId, tempSaved) },
         onStartIntakeClick = { navController.navigate(IntakeDestination()) },
         onExit = { navController.popBackStack() },
     )

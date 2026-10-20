@@ -122,7 +122,7 @@ private val draftRecordDetail =
     RecordDetail(
         id = "card-3",
         title = "무릎 통증",
-        status = RecordItem.Status.DRAFT,
+        status = RecordItem.Status.IN_PROGRESS,
         clinicLine = "오늘 작성 중 · 4단계 중 2단계",
         steps =
         listOf(

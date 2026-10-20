@@ -14,9 +14,9 @@ import com.mist.medicalmate.core.voice.VoiceWords
 import com.mist.medicalmate.core.voice.rememberVoicePrompt
 import java.time.LocalDate
 
-/** 브리핑 카드(1e-1)에서 말로 하는 일(#320). 하단 버튼 넷과 내보내기 시트, 저장 직후 일정 시트(1e-1-S)다. */
+/** 브리핑 카드(1e-1)에서 말로 하는 일(#320). 하단 버튼 넷과 내보내기 시트, 막 만든 카드의 일정 시트(1e-1-S)다. */
 internal enum class BriefCardVoiceAction {
-    /** 카드를 저장(확정)한다. */
+    /** "저장해 줘". 카드는 만들 때 이미 저장돼 있어 그렇다고 답한다(#338). */
     SAVE,
 
     /** 이 카드로 일정을 잡는다. "진료 일정 잡아 줘". */
@@ -31,7 +31,7 @@ internal enum class BriefCardVoiceAction {
     /** 이미지로 내보낸다. "이미지로 저장해 줘", "공유해 줘". 내보내기 시트를 연다. */
     EXPORT,
 
-    /** 저장 직후 시트의 "아직 안 정했어요". */
+    /** 일정 시트(1e-1-S)의 "아직 안 정했어요". */
     LATER,
 
     /** 병원 블록의 "변경"(#336). 말로도 허용한다(사용자 결정). 병원 찾기를 연다. */
@@ -60,18 +60,16 @@ internal fun parseBriefCardVoice(text: String): BriefCardVoiceAction? {
 
 /** 이 화면에서 버튼과 같은 일을 한다. 화면을 떠나는 것은 라우트가 넘긴다. */
 internal class BriefCardVoiceRoutes(
-    val onSave: () -> Unit,
     val onExport: () -> Unit,
     val onLater: () -> Unit,
     val callbacks: () -> BriefCardCallbacks,
-    /** 문답에서 막 만들어 저장한 카드면 뒤로 가기가 홈이다. 아니면 null이고 전역 "뒤로"가 맡는다. */
+    /** 문답에서 막 만든 카드면 뒤로 가기가 홈이다. 아니면 null이고 전역 "뒤로"가 맡는다. */
     val onBackHome: (() -> Unit)? = null,
 )
 
 /**
- * 말로 저장하고 일정을 잡고 내보낸다(#284 · #320). 버튼이 그 카드의 일정으로 갈리듯 말도 그렇다 — 저장하지 않은
- * 카드에 일정을 잡자고 하면 먼저 저장할지 묻는다. 저장이 곧 확정이라 한 번 묻는다. 고치는 중이면 받지 않는다.
- * 아직 저장하지 않은 카드가 열리면 저장하라고 막대에 묻는다.
+ * 말로 일정을 잡고 내보낸다(#284 · #320). 버튼이 그 카드의 일정으로 갈리듯 말도 그렇다. 고치는 중이면 받지 않는다.
+ * 카드는 만들 때부터 저장돼 있어(#338) 저장하라고 묻지 않는다.
  */
 @Composable
 internal fun BriefCardVoice(content: BriefCardUiState.Content?, routes: BriefCardVoiceRoutes) {
@@ -93,11 +91,7 @@ internal fun BriefCardVoice(content: BriefCardUiState.Content?, routes: BriefCar
         }
     }
     val prompt = rememberVoicePrompt()
-    val saved = card?.status == BriefCard.Status.CONFIRMED
-    LaunchedEffect(card?.id, saved) {
-        if (content != null && !saved) prompt(VoicePrompt(question = VoiceText(R.string.voice_card_ask_save)))
-    }
-    // 저장 직후 일정 시트가 뜨면 말로도 답할 수 있게 묻는다.
+    // 막 만든 카드의 일정 시트가 뜨면 말로도 답할 수 있게 묻는다.
     LaunchedEffect(content?.scheduleSheet) {
         if (content?.scheduleSheet == true) prompt(VoicePrompt(question = VoiceText(R.string.voice_card_ask_schedule)))
     }
@@ -110,7 +104,6 @@ private fun answer(
     routes: BriefCardVoiceRoutes,
 ): VoiceReply {
     val card = content.card
-    val saved = card.status == BriefCard.Status.CONFIRMED
     val appointment = card.appointment
     val callbacks = routes.callbacks()
     return when {
@@ -124,15 +117,7 @@ private fun answer(
             VoiceReply.Done(R.string.voice_card_hospital_change)
         }
 
-        voice == BriefCardVoiceAction.SAVE ->
-            if (saved) {
-                VoiceReply.Done(R.string.voice_card_already_saved)
-            } else {
-                VoiceReply.Confirm(R.string.voice_card_confirm_save, onConfirm = routes.onSave)
-            }
-
-        // 저장하지 않은 카드는 일정에 걸 수 없다. 저장부터 묻는다 — 저장하면 일정 시트가 뜬다.
-        !saved -> VoiceReply.Confirm(R.string.voice_card_save_first, onConfirm = routes.onSave)
+        voice == BriefCardVoiceAction.SAVE -> VoiceReply.Done(R.string.voice_card_already_saved)
         voice == BriefCardVoiceAction.LATER -> {
             routes.onLater()
             VoiceReply.Done(R.string.voice_card_later)
@@ -159,17 +144,10 @@ private fun answer(
 
 private fun askSchedule() = VoiceText(R.string.voice_card_ask_schedule)
 
-/** 지금 하단 버튼에 맞는 추천. 저장한 카드에 "저장해 줘"를 권하지 않는다. */
+/** 지금 하단 버튼에 맞는 추천. */
 private fun briefCardSuggestions(action: BriefCardFooterAction?): List<VoiceSuggestion> {
     val main = when (action) {
-        null, BriefCardFooterAction.SAVE ->
-            VoiceSuggestion(
-                R.string.voice_suggest_card_save,
-                R.string.voice_suggest_card_save_do,
-                MedicalMateIcons.CheckCircle,
-            )
-
-        BriefCardFooterAction.SCHEDULE ->
+        null, BriefCardFooterAction.SCHEDULE ->
             VoiceSuggestion(
                 R.string.voice_suggest_card_schedule,
                 R.string.voice_suggest_card_schedule_do,
@@ -213,7 +191,7 @@ private val BACK = Regex("""(?:뒤로|이전|이전화면|앞화면|돌아가|�
 private val HOSPITAL = listOf("병원바꿀", "병원바꿔", "병원변경", "다른병원", "병원다시", "병원찾", "병원고를")
 private val EXPORT = listOf("이미지", "사진", "갤러리", "앨범", "공유", "내보내", "캡처", "캡쳐", "보내줘")
 
-/** 저장 직후 시트의 "아직 안 정했어요". */
+/** 일정 시트(1e-1-S)의 "아직 안 정했어요". */
 private val LATER = listOf("아직안정", "안정했", "나중에", "다음에할", "정해지면", "아직몰라", "안잡을")
 
 private val RECORD_VISIT =

@@ -48,8 +48,12 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
      * 문답을 마치면(1c-5) 아직 카드가 없다. 병원을 먼저 찾고 오는 길과 바로 오는 길이 여기서
      * 만나고, 만드는 자리가 하나라 어느 쪽으로 와도 같은 카드가 나온다.
      *
-     * 카드는 `DRAFT`로 만들어진다. 확정은 진료실에서 보여줄 때 한다. 검증에 걸린 필드가
-     * 있어도 만들기 자체는 성공한다. 통째로 실패시키면 환자가 답한 문답이 날아간다.
+     * 카드는 만들 때부터 확정돼 있다(Backend#181). 검증에 걸린 필드가 있어도 만들기 자체는 성공한다. 통째로
+     * 실패시키면 환자가 답한 문답이 날아간다.
+     *
+     * **문답에서 막 만들었으면 진료 날짜를 묻는 시트(1e-1-S)를 띄운다**(#338, 사용자 결정). 전에는 처음 "저장하기"를
+     * 누를 때 떴는데 저장 단계가 없어지면서 카드를 처음 여는 이때로 옮겼다. 그 카드로 잡은 일정이 있으면 띄우지
+     * 않는다. 이미 있는 카드를 열 때는 띄우지 않는다.
      *
      * [hospital]은 진료 전 병원 찾기(1m-B)에서 고른 것이다. **만들 때만 쓴다** — 서버에
      * 함께 보내면 카드가 그 값을 들고, 다음부터는 응답에서 온다(Backend#101). 전에는 카드
@@ -81,7 +85,7 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
                 if (card == null) {
                     BriefCardUiState.Failed
                 } else {
-                    BriefCardUiState.Content(card = card)
+                    BriefCardUiState.Content(card = card, scheduleSheet = cardId == null && card.appointment == null)
                 }
         }
     }
@@ -160,46 +164,6 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
         }
     }
 
-    /**
-     * 하단 `저장하기`. 카드를 확정하고 화면을 나간다.
-     *
-     * **확정하지 않으면 진료 후 기록을 남길 수 없다.** 서버가
-     * `POST /api/cards/{cardId}/visit`을 확정한 카드에만 받는다. 카드는 `DRAFT`로 만들어지고
-     * 확정을 부르던 곳은 진료실 전달 버튼 하나였는데 그 버튼이 시안에서 빠지면서(#165)
-     * 확정이 아예 일어나지 않게 됐다. 기기에서 400으로 막히는 것을 확인했다(#196).
-     *
-     * 저장하기가 이 일을 맡는 이유는 IA가 `1e-1 | 저장하기 → 홈 · 최근 브리핑 카드`로 적고,
-     * 카드를 다 고치고 나가는 자리가 여기이기 때문이다. 그 전까지 이 버튼은 화면을 나가는
-     * 일만 했다.
-     *
-     * **확정한 뒤에 고치면 서버가 새 버전을 만든다.** 그것이 서버가 정한 모양이고
-     * [onEditDoneClick]이 이미 응답으로 온 카드로 갈아탄다.
-     *
-     * 이미 확정한 카드는 다시 부르지 않는다. 두 번 확정하면 400이다.
-     *
-     * **저장해도 화면을 나가지 않는다**(#314). 시안 1e-1-S가 저장한 카드 위에 "진료 날짜가 정해졌나요?" 시트를
-     * 띄운다. 그 카드로 잡은 일정이 이미 있으면 띄우지 않는다. 확정에 실패하면 하단에 이유를 적는다.
-     */
-    fun onSaveClick() {
-        val state = mutableUiState.value as? BriefCardUiState.Content ?: return
-        // 이미 확정했거나 부를 수 없는 id면 할 일이 없다.
-        val cardId =
-            state.card.id.toLongOrNull()?.takeIf { state.card.status != BriefCard.Status.CONFIRMED } ?: return
-
-        viewModelScope.launch {
-            when (val result = repository.confirm(cardId)) {
-                is ApiResult.Success -> {
-                    val card = result.value.copy(hospital = state.card.hospital)
-                    mutableUiState.value =
-                        BriefCardUiState.Content(card = card, scheduleSheet = card.appointment == null)
-                }
-
-                is ApiResult.Rejected, is ApiResult.NetworkUnavailable ->
-                    mutableUiState.value = state.copy(saveFailed = true)
-            }
-        }
-    }
-
     /** Nav 우측 `취소`. 사본을 버리고 원래 값으로 돌아간다. */
     fun onCancelClick() {
         mutableUiState.update { state ->
@@ -218,7 +182,7 @@ internal constructor(private val repository: CardRepository) : ViewModel() {
         }
     }
 
-    /** 떠 있는 것을 닫는다. 삭제 확인 대화상자와 저장 직후 일정 시트(1e-1-S)는 함께 뜨지 않는다. */
+    /** 떠 있는 것을 닫는다. 삭제 확인 대화상자와 일정 시트(1e-1-S)는 함께 뜨지 않는다. */
     fun onOverlayDismiss() {
         mutableUiState.update { state ->
             if (state !is BriefCardUiState.Content) {

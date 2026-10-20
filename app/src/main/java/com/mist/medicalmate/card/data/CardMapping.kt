@@ -21,7 +21,6 @@ internal fun CardResponse.toBriefCard(): BriefCard = BriefCard(
     id = cardId.toString(),
     // 서버가 `title`을 아직 내려주지 않는다. 환자가 말한 것이 제목 자리를 대신한다.
     title = title ?: chiefComplaint.orEmpty(),
-    status = if (status == STATUS_CONFIRMED) BriefCard.Status.CONFIRMED else BriefCard.Status.BEFORE_VISIT,
     patientLine = patientLine(),
     maskedPatientLine = maskedPatientLine(),
     items = axes.toItems(),
@@ -165,8 +164,6 @@ private const val STATUS_FILLED = "FILLED"
 private const val STATUS_UNKNOWN = "UNKNOWN"
 
 private const val STATUS_AMBIGUOUS = "AMBIGUOUS"
-
-private const val STATUS_CONFIRMED = "CONFIRMED"
 
 private const val UNKNOWN_LABEL = "잘 모르겠어요"
 

@@ -78,7 +78,8 @@ fun HomeScreen(
  */
 data class HomeCallbacks(
     val onStartIntakeClick: () -> Unit = {},
-    val onResumeClick: (String?) -> Unit = {},
+    /** 이어서 하기. 질문 고르기까지 마친 임시 저장(`tempSaved`)이면 증상 정리 완료(1c-5)로 간다(#338). */
+    val onResumeClick: (intakeId: String?, tempSaved: Boolean) -> Unit = { _, _ -> },
     val onSavedCardClick: (cardId: String) -> Unit = {},
     val onAllCardsClick: () -> Unit = {},
     val onScheduleClick: (date: LocalDate, appointmentId: String) -> Unit = { _, _ -> },
@@ -226,7 +227,7 @@ private fun SheetTop(content: HomeUiState.Content, callbacks: HomeCallbacks) {
             total = IntakeStep.total,
             label = stringResource(R.string.home_resume_label),
             title = stringResource(R.string.home_resume_step, resume.symptomTitle, resume.doneSteps),
-            onClick = { callbacks.onResumeClick(resume.intakeId) },
+            onClick = { callbacks.onResumeClick(resume.intakeId, resume.tempSaved) },
         )
     }
 }
