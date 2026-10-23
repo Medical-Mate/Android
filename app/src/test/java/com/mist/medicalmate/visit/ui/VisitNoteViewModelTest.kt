@@ -296,6 +296,44 @@ class VisitNoteViewModelTest {
         assertTrue(viewModel.uiState.value.visit.today)
     }
 
+    // 300자 제한(#342)
+
+    @Test
+    fun `손으로 적은 글은 300자까지만 받는다`() {
+        val viewModel = viewModel()
+
+        viewModel.onNoteChange("가".repeat(VISIT_NOTE_MAX_LENGTH + 20))
+
+        assertEquals(VISIT_NOTE_MAX_LENGTH, viewModel.uiState.value.note.length)
+    }
+
+    @Test
+    fun `받아쓰다 300자가 차면 거기까지 남기고 듣기를 끝낸다`() {
+        val long = "가".repeat(VISIT_NOTE_MAX_LENGTH + 5)
+        val speech = FakeSpeechToText(chunks = listOf(SpeechChunk.Final(long)), keepOpen = true)
+        val viewModel = viewModel(speech)
+
+        viewModel.onVoiceClick()
+
+        assertEquals(VISIT_NOTE_MAX_LENGTH, viewModel.uiState.value.note.length)
+        assertNull(viewModel.uiState.value.voice)
+        assertFalse(speech.active.value)
+    }
+
+    @Test
+    fun `말로 적다 넘치면 들어가는 만큼만 적고 알린다`() {
+        val viewModel = viewModel()
+        viewModel.onNoteChange("가".repeat(VISIT_NOTE_MAX_LENGTH - 3))
+
+        val cut = viewModel.onVoiceNote("위염이래요", {}) as VoiceReply.Done
+        val full = viewModel.onVoiceNote("약은 일주일", {}) as VoiceReply.Done
+
+        assertEquals(R.string.voice_note_cut, cut.message)
+        assertEquals(VISIT_NOTE_MAX_LENGTH, viewModel.uiState.value.note.length)
+        assertEquals(R.string.voice_note_full, full.message)
+        assertEquals(VISIT_NOTE_MAX_LENGTH, viewModel.uiState.value.note.length)
+    }
+
     @Test
     fun `짧은 이동 명령은 적던 메모가 있으면 나갈지 묻는다`() {
         // 메모 칸이 모든 말을 받아 "홈으로 가"도 메모가 됐다(#336, 사용자 결정).

@@ -172,7 +172,7 @@ private fun NoteArea(state: VisitNoteUiState, callbacks: VisitNoteCallbacks) {
             }
         },
         placeholder = stringResource(R.string.visit_note_placeholder),
-        maxLength = NOTE_MAX_LENGTH,
+        maxLength = VISIT_NOTE_MAX_LENGTH,
     )
 }
 
@@ -268,8 +268,6 @@ private val IconBoxShape = RoundedCornerShape(14.dp)
 private val HeadlineDate: DateTimeFormatter = DateTimeFormatter.ofPattern("M월 d일", Locale.KOREAN)
 
 /** 시안의 카운터가 `71 / 300`이다. */
-private const val NOTE_MAX_LENGTH = 300
-
 @MedicalMateScreenPreviews
 @Composable
 private fun VisitNoteScreenPreview() {

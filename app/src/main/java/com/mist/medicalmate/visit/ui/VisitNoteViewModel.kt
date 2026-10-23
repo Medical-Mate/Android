@@ -63,8 +63,9 @@ constructor(private val clock: Clock, private val speech: SpeechToText) : ViewMo
         }
     }
 
+    /** 손으로 적은 글. [VISIT_NOTE_MAX_LENGTH]를 넘는 만큼은 받지 않는다(#342). 붙여 넣은 긴 글은 앞에서부터 남는다. */
     fun onNoteChange(note: String) {
-        mutableUiState.update { it.copy(note = note) }
+        mutableUiState.update { it.copy(note = note.take(VISIT_NOTE_MAX_LENGTH)) }
     }
 
     /** 말로 적은 것이 시작한 자리. "방금 거 지워"가 여기까지 되돌린다. */
@@ -120,11 +121,22 @@ constructor(private val clock: Clock, private val speech: SpeechToText) : ViewMo
                     }
                 }
 
-            null -> {
-                spokenFrom = note.length
-                onNoteChange(if (note.isBlank()) text.trim() else note.trimEnd() + " " + text.trim())
-                VoiceReply.Done(R.string.voice_note_written, question = more)
-            }
+            null -> appendSpoken(note, text, more)
+        }
+    }
+
+    /** 말을 메모 뒤에 붙인다. 300자가 차면 더 적지 않고, 넘치면 들어가는 만큼만 적고 알린다(#342). */
+    private fun appendSpoken(note: String, text: String, more: VoiceText): VoiceReply {
+        if (note.length >= VISIT_NOTE_MAX_LENGTH) {
+            return VoiceReply.Done(R.string.voice_note_full, listOf(VISIT_NOTE_MAX_LENGTH.toString()))
+        }
+        val next = if (note.isBlank()) text.trim() else note.trimEnd() + " " + text.trim()
+        spokenFrom = note.length
+        onNoteChange(next)
+        return if (next.length > VISIT_NOTE_MAX_LENGTH) {
+            VoiceReply.Done(R.string.voice_note_cut, listOf(VISIT_NOTE_MAX_LENGTH.toString()))
+        } else {
+            VoiceReply.Done(R.string.voice_note_written, question = more)
         }
     }
 
@@ -133,6 +145,8 @@ constructor(private val clock: Clock, private val speech: SpeechToText) : ViewMo
      *
      * 받아쓴 글은 적던 메모 뒤에 붙는다. 말하는 중에 부분 결과가 계속 갱신되므로 누를 때의
      * 글을 기준으로 매번 새로 붙인다.
+     *
+     * **300자가 차면 듣기를 끝낸다**(#342). 더 들어도 적을 자리가 없다. 받아쓴 글은 앞에서부터 300자까지 남는다.
      */
     private val dictation =
         Dictation(
@@ -140,8 +154,8 @@ constructor(private val clock: Clock, private val speech: SpeechToText) : ViewMo
             scope = viewModelScope,
             onVoice = { voice -> mutableUiState.update { it.copy(voice = voice) } },
             onDictated = { note, _ ->
-                mutableUiState.update { it.copy(note = note) }
-                closeAfterSilence()
+                mutableUiState.update { it.copy(note = note.take(VISIT_NOTE_MAX_LENGTH)) }
+                if (note.length >= VISIT_NOTE_MAX_LENGTH) onTypeInsteadClick() else closeAfterSilence()
             },
         )
 
@@ -205,6 +219,9 @@ constructor(private val clock: Clock, private val speech: SpeechToText) : ViewMo
         mutableUiState.update { it.copy(voice = null) }
     }
 }
+
+/** 메모 글자 수 한도(#342). 시안 1p의 `Text Area` 카운터가 "n / 300"이다. 서버(`rawNote`)는 2000자까지 받는다. */
+internal const val VISIT_NOTE_MAX_LENGTH = 300
 
 /** 아무 말이 없을 때 패널을 닫기까지 기다리는 시간(#318, 사용자 결정). */
 private const val SILENCE_CLOSE_MS = 5_000L
