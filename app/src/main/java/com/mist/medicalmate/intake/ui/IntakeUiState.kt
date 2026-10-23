@@ -73,6 +73,10 @@ data class IntakeUiState(
     val writingQuestion: Boolean = false,
     val chatFinished: Boolean = false,
     val completed: Boolean = false,
+    /** 질문 고르기의 "다음"이 질문을 저장하는 중인지(#344). 그동안 다음 버튼을 끈다. */
+    val savingQuestions: Boolean = false,
+    /** 질문 저장이 서버에 닿지 못했는지(#344). 다음 버튼 위에 다시 누르라고 적는다. */
+    val questionsSaveFailed: Boolean = false,
     val sessionId: Long? = null,
     val restoring: Boolean = false,
     val restoreFailed: Boolean = false,

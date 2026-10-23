@@ -72,6 +72,7 @@ internal constructor(
                 when (result) {
                     is ApiResult.Success -> {
                         cards = result.value
+                        candidates = emptyList()
                         BriefCardListUiState.Content(groups = result.value.toGroups(intake, LocalDate.now(clock)))
                     }
 
@@ -121,6 +122,9 @@ internal constructor(
                     session != null && repository.deleteIntake(session) is ApiResult.Success
                 }
             if (intakeIds.any { it in gone }) intake = null
+            // 말로 찾는 목록에서도 뺀다(#344). 남겨 두면 "첫 번째 카드"가 지운 카드를 연다.
+            cards = cards.filterNot { it.id in gone }
+            candidates = emptyList()
             updateContent { content -> content.without(gone).copy(selectedIds = null) }
         }
     }
@@ -139,15 +143,34 @@ internal constructor(
         return state is BriefCardListUiState.Content && cards.isEmpty()
     }
 
-    internal suspend fun onVoice(text: String, today: LocalDate, open: (String) -> Unit): VoiceReply {
+    /**
+     * [resume]은 문답 줄이 골라졌을 때다(#344). 홈의 이어서 하기와 같은 곳으로 간다 — 임시 저장이면 1c-5다.
+     *
+     * **화면에 보이는 차례 그대로 센다**(#344). 맨 위의 문답 줄도 한 줄로 센다. 전에는 카드만 세어 "두 번째 카드"가
+     * 화면의 두 번째 줄이 아닌 카드를 열었다.
+     */
+    internal suspend fun onVoice(
+        text: String,
+        today: LocalDate,
+        resume: (sessionId: Long, tempSaved: Boolean) -> Unit = { _, _ -> },
+        open: (String) -> Unit,
+    ): VoiceReply {
         val state = withTimeoutOrNull(VOICE_WAIT_MS) { uiState.first { it !is BriefCardListUiState.Loading } }
-        val pool = candidates.ifEmpty { cards }
-        val found = pool.findByVoice(text, today)?.ifEmpty { cards.findByVoice(text, today).orEmpty() }
+        val rows = cards.voiceRows(intake, LocalDate.now(clock))
+        val pool = candidates.ifEmpty { rows }
+        val found = pool.findByVoice(text, today)?.ifEmpty { rows.findByVoice(text, today).orEmpty() }
         val card = found?.singleOrNull()
+        val session = card?.let { intakeSessionOf(it.id) }
         return when {
             state !is BriefCardListUiState.Content || state.editing -> VoiceReply.NotMine
             isCardDeleteRequest(text) -> VoiceReply.Done(R.string.voice_by_hand)
             found == null -> VoiceReply.NotMine
+            session != null -> {
+                candidates = emptyList()
+                resume(session, intake?.tempSaved == true)
+                VoiceReply.Done(R.string.voice_home_resumed, listOf(card.title))
+            }
+
             card != null -> {
                 candidates = emptyList()
                 open(card.id)
@@ -198,9 +221,33 @@ private fun List<CardListItem>.toGroups(intake: OpenIntake?, today: LocalDate): 
 private fun List<CardListItem>.withIntake(intake: OpenIntake?, today: LocalDate): List<Pair<LocalDate, RecordItem>> {
     val rows = map { it.writtenOn to it.toRow() }
     if (intake == null) return rows
-    val on = intake.startedOn ?: rows.firstOrNull()?.first ?: today
-    val at = rows.indexOfFirst { (written, _) -> !written.isAfter(on) }.takeIf { it >= 0 } ?: rows.size
+    val (at, on) = intakeSlot(intake, today)
     return rows.toMutableList().apply { add(at, on to intake.toRow(today)) }
+}
+
+/** 문답 줄이 설 자리와 그 줄의 날짜. 화면과 말이 같은 자리를 쓴다(#344). */
+private fun List<CardListItem>.intakeSlot(intake: OpenIntake, today: LocalDate): Pair<Int, LocalDate> {
+    val on = intake.startedOn ?: firstOrNull()?.writtenOn ?: today
+    val at = indexOfFirst { !it.writtenOn.isAfter(on) }.takeIf { it >= 0 } ?: size
+    return at to on
+}
+
+/**
+ * 말로 찾을 줄. 화면에 보이는 차례 그대로이고 문답 줄도 한 줄로 든다(#344). 문답 줄은 부위를 제목으로, 시작한
+ * 날을 작성일로 삼아 "무릎 열어 줘"·"오늘 거"로도 찾는다. id가 [INTAKE_ROW_PREFIX]로 시작한다.
+ */
+internal fun List<CardListItem>.voiceRows(intake: OpenIntake?, today: LocalDate): List<CardListItem> {
+    if (intake == null) return this
+    val (at, on) = intakeSlot(intake, today)
+    val row =
+        CardListItem(
+            id = INTAKE_ROW_PREFIX + intake.sessionId,
+            title = intake.site ?: INTAKE_TITLE,
+            visited = false,
+            clinic = null,
+            writtenOn = on,
+        )
+    return toMutableList().apply { add(at, row) }
 }
 
 /**

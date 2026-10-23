@@ -68,7 +68,7 @@ private fun BriefCardListRoute(
             onExit()
             VoiceReply.Done(R.string.voice_cards_empty, question = VoiceText(R.string.voice_cards_ask_intake))
         } else {
-            viewModel.onVoice(text, LocalDate.now()) { id -> onCardClick(id) }
+            viewModel.onVoice(text, LocalDate.now(), open = { id -> onCardClick(id) }, resume = onResumeClick)
         }
     }
     val prompt = rememberVoicePrompt()
