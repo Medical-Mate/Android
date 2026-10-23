@@ -339,6 +339,48 @@ class BriefCardListViewModelTest {
         assertEquals(setOf("101"), viewModel.content().selectedIds)
     }
 
+    // 말로 셀 때도 화면 차례 그대로(#344)
+
+    @Test
+    fun `말한 차례는 화면 차례 그대로이고 맨 위 문답 줄도 센다`() = runTest {
+        val viewModel = withIntake(OpenIntake(sessionId = 7, site = "무릎", tempSaved = false, startedOn = TODAY))
+        val opened = mutableListOf<String>()
+        val resumed = mutableListOf<Pair<Long, Boolean>>()
+
+        viewModel.onVoice("두 번째 카드 열어 줘", TODAY, open = { opened += it }, resume = { s, t -> resumed += s to t })
+        viewModel.onVoice("첫 번째 열어 줘", TODAY, open = { opened += it }, resume = { s, t -> resumed += s to t })
+
+        // 화면은 [무릎(문답), 101, 103, 102]다.
+        assertEquals(listOf("101"), opened)
+        assertEquals(listOf(7L to false), resumed)
+    }
+
+    @Test
+    fun `문답 줄을 부위로 찾으면 이어서 하기로 간다`() = runTest {
+        // 목록에 "무릎 통증" 카드가 있어 다른 부위로 둔다. 같은 낱말이면 둘을 띄워 되묻는다.
+        val viewModel = withIntake(OpenIntake(sessionId = 7, site = "어깨", tempSaved = true, startedOn = TODAY))
+        var resumed: Pair<Long, Boolean>? = null
+
+        val reply = viewModel.onVoice("어깨 열어 줘", TODAY, open = {}, resume = { s, t -> resumed = s to t })
+
+        assertEquals(7L to true, resumed)
+        assertEquals(R.string.voice_home_resumed, (reply as VoiceReply.Done).message)
+    }
+
+    @Test
+    fun `지운 카드는 말로 찾는 목록에서도 빠진다`() = runTest {
+        val viewModel = loaded()
+        viewModel.onEditStart()
+        viewModel.onSelectChange("101", true)
+        viewModel.onDeleteClick()
+        viewModel.onDeleteConfirm()
+        var opened: String? = null
+
+        viewModel.onVoice("첫 번째 카드 열어 줘", TODAY, open = { opened = it })
+
+        assertEquals("103", opened)
+    }
+
     private fun withIntake(intake: OpenIntake): BriefCardListViewModel {
         val cards = FakeCardRepository(list = ApiResult.Success(testItems))
         cards.intake = ApiResult.Success(intake)
