@@ -1,6 +1,9 @@
 package com.mist.medicalmate.calendar.ui
 
 import com.mist.medicalmate.core.voice.VoiceWords
+import com.mist.medicalmate.core.voice.parseVoiceClock
+import com.mist.medicalmate.core.voice.parseVoiceDate
+import java.time.LocalDate
 
 /**
  * 일정 추가(1r-4)에서 알아듣는 말(#282).
@@ -246,3 +249,17 @@ private val DATE_TIME_HINT =
     )
 
 private const val TRIM = " .,!?~"
+
+/**
+ * 이미 잡은 일정을 고치러 연 화면에서 이 화면을 고치자는 말인지(#346). 그런 말은 "화면에서 직접 해 주세요"라고만
+ * 답하고(저장이 곧 수정이다), 아니면 전역 명령으로 넘긴다.
+ *
+ * [parseScheduleAddVoice]는 마지막 갈래에서 어떤 말이든 칸을 채우는 말([ScheduleAddVoice.Fill])로 받는다. 그래서
+ * 그대로 쓰면 "홈으로 가" · "뒤로"까지 이 화면의 말이 되어 화면을 떠날 수 없었다. 칸을 채우는 말은 날짜나 시각이
+ * 들어 있을 때만 이 화면의 말로 본다. 나가자는 말은 전역 "뒤로"가 맡는다.
+ */
+internal fun isScheduleEditRequest(text: String, today: LocalDate): Boolean = when (parseScheduleAddVoice(text)) {
+    null, ScheduleAddVoice.Exit -> false
+    is ScheduleAddVoice.Fill -> parseVoiceDate(text, today) != null || parseVoiceClock(text) != null
+    else -> true
+}
