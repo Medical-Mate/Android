@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -40,11 +41,12 @@ import androidx.compose.ui.unit.dp
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
 import com.mist.medicalmate.core.designsystem.MedicalMateRadius
+import com.mist.medicalmate.core.designsystem.MedicalMateSpace
 import com.mist.medicalmate.core.designsystem.MedicalMateTheme
 import com.mist.medicalmate.core.designsystem.component.MedicalMateBottomSheet
 import com.mist.medicalmate.core.designsystem.component.MedicalMateButton
-import com.mist.medicalmate.core.designsystem.component.MedicalMateDateCell
-import com.mist.medicalmate.core.designsystem.component.MedicalMateDateCellSizeCompact
+import com.mist.medicalmate.core.designsystem.component.MedicalMateCalendarDayState
+import com.mist.medicalmate.core.designsystem.component.MedicalMateCalendarGrid
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButton
 import com.mist.medicalmate.core.designsystem.component.MedicalMateIconButtonSize
 import kotlinx.coroutines.launch
@@ -81,10 +83,13 @@ internal fun ScheduleAddSheets(state: ScheduleAddUiState, callbacks: ScheduleAdd
 }
 
 /**
- * 날짜 선택 시트.
+ * 날짜 선택 시트. Figma 1r-4-D(`3663:14950`, #340).
  *
- * 격자는 월 화면과 같은 [MedicalMateDateCell]인데 크기가 34다. 시트에 제목과 버튼까지
- * 들어가서 42로는 한 달이 다 보이지 않는다.
+ * 격자는 월 화면과 같은 `Calendar Grid`다. 시안의 인스턴스(`3982:16243`)가 범례를 끄고 그림자를 지운 채 시트 면에
+ * 그대로 놓여 있다. 칸은 마스터 크기(줄 46)이고 **시트 높이를 시안(482)에 맞추지 않는다**(사용자 결정) — 6주인 달은
+ * 한 줄만큼 길어진다. 전에는 예전 `Date Cell` 34 칸으로 따로 그렸다.
+ *
+ * 그래버 `border/subtle` 아래 14, 제목 `Heading/S`, 10, 월 머리 32, 격자, 12, 버튼이다. 바닥 24는 시트가 둔다.
  *
  * 기록·예정 점은 찍지 않는다. 여기서는 앞으로의 날을 고르는 것이고, 지난 기록이 있는지는
  * 이 판단에 쓰이지 않는다.
@@ -96,28 +101,43 @@ private fun DateSheet(initial: LocalDate?, onConfirm: (LocalDate) -> Unit, onDis
     var picked by remember { mutableStateOf(initial ?: today) }
     var month by remember { mutableStateOf(YearMonth.from(picked)) }
 
-    MedicalMateBottomSheet(onDismissRequest = onDismissRequest) {
-        SheetTitle(stringResource(R.string.schedule_add_date_sheet))
-        MonthHead(
-            month = month,
-            onPreviousClick = { month = month.minusMonths(1) },
-            onNextClick = { month = month.plusMonths(1) },
-        )
-        DateGrid(
-            month = month,
-            picked = picked,
-            today = today,
-            onDayClick = { picked = it },
-        )
-        MedicalMateButton(
-            label = stringResource(R.string.schedule_add_sheet_confirm),
-            onClick = { onConfirm(picked) },
-            modifier = Modifier.fillMaxWidth(),
-        )
+    MedicalMateBottomSheet(
+        onDismissRequest = onDismissRequest,
+        grabberGap = MedicalMateSpace.s14,
+        grabberColor = MedicalMateTheme.colors.borderSubtle,
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            SheetTitle(stringResource(R.string.schedule_add_date_sheet))
+            Spacer(modifier = Modifier.height(MedicalMateSpace.s10))
+            MonthHead(
+                month = month,
+                onPreviousClick = { month = month.minusMonths(1) },
+                onNextClick = { month = month.plusMonths(1) },
+            )
+            MedicalMateCalendarGrid(
+                month = month,
+                onDayClick = { picked = it },
+                stateOf = { date ->
+                    when (date) {
+                        picked -> MedicalMateCalendarDayState.SELECTED
+                        today -> MedicalMateCalendarDayState.TODAY
+                        else -> MedicalMateCalendarDayState.DEFAULT
+                    }
+                },
+                showLegend = false,
+                elevated = false,
+            )
+            Spacer(modifier = Modifier.height(MedicalMateSpace.s12))
+            MedicalMateButton(
+                label = stringResource(R.string.schedule_add_sheet_confirm),
+                onClick = { onConfirm(picked) },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
 
-/** 월 이동. 월 화면과 같은 짜임인데 화살표가 S다. 시트 안이라 32 줄에 들어간다. */
+/** 월 이동. 시안의 32 줄에 `Body/L Strong` 달과 좌우 화살표다. */
 @Composable
 private fun MonthHead(month: YearMonth, onPreviousClick: () -> Unit, onNextClick: () -> Unit) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -129,7 +149,7 @@ private fun MonthHead(month: YearMonth, onPreviousClick: () -> Unit, onNextClick
         )
         Text(
             text = stringResource(R.string.calendar_month, month.year, month.monthValue),
-            style = MedicalMateTheme.typography.headingS,
+            style = MedicalMateTheme.typography.bodyLStrong,
             color = MedicalMateTheme.colors.fgDefault,
             textAlign = TextAlign.Center,
             modifier = Modifier.weight(1f),
@@ -140,51 +160,6 @@ private fun MonthHead(month: YearMonth, onPreviousClick: () -> Unit, onNextClick
             contentDescription = stringResource(R.string.calendar_next_month),
             size = MedicalMateIconButtonSize.S,
         )
-    }
-}
-
-/** 한 주가 일요일에서 시작한다. 첫 주의 빈 칸은 그 달 1일의 요일만큼 비운다. */
-@Composable
-private fun DateGrid(month: YearMonth, picked: LocalDate, today: LocalDate, onDayClick: (LocalDate) -> Unit) {
-    val firstDayOffset = month.atDay(1).dayOfWeek.value % SHEET_DAYS_IN_WEEK
-    val lastDay = month.lengthOfMonth()
-
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(modifier = Modifier.fillMaxWidth()) {
-            weekdayLabels().forEach { label ->
-                Text(
-                    text = label,
-                    style = MedicalMateTheme.typography.labelS,
-                    color = MedicalMateTheme.colors.fgSubtle,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-        var day = 1 - firstDayOffset
-        while (day <= lastDay) {
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                repeat(SHEET_DAYS_IN_WEEK) { index ->
-                    val current = day + index
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        if (current in 1..lastDay) {
-                            val date = month.atDay(current)
-                            MedicalMateDateCell(
-                                day = current,
-                                selected = date == picked,
-                                isToday = date == today,
-                                onClick = { onDayClick(date) },
-                                size = MedicalMateDateCellSizeCompact,
-                            )
-                        } else {
-                            // 빈 칸도 자리를 차지해야 요일이 어긋나지 않는다.
-                            Box(modifier = Modifier.size(MedicalMateDateCellSizeCompact))
-                        }
-                    }
-                }
-            }
-            day += SHEET_DAYS_IN_WEEK
-        }
     }
 }
 
@@ -353,12 +328,12 @@ private fun ReportSettledItem(listState: LazyListState, onSettle: (Int) -> Unit)
     }
 }
 
-/** 시트 제목. 두 시트가 같은 자리에 같은 크기로 둔다. */
+/** 시트 제목. 두 시트가 같은 자리에 같은 크기로 둔다. 시안 1r-4-D · 1r-4-T 둘 다 `Heading/S`다(#340). */
 @Composable
 private fun ColumnScope.SheetTitle(text: String) {
     Text(
         text = text,
-        style = MedicalMateTheme.typography.bodyLStrong,
+        style = MedicalMateTheme.typography.headingS,
         color = MedicalMateTheme.colors.fgDefault,
         textAlign = TextAlign.Center,
         modifier = Modifier.fillMaxWidth(),
@@ -372,8 +347,6 @@ private val WheelItemHeight = 52.dp
 
 /** 가운데 밴드 48. 항목 52보다 낮아서 위아래 항목이 밴드 밖으로 나온다. */
 private val BandHeight = 48.dp
-
-private const val SHEET_DAYS_IN_WEEK = 7
 
 private const val NOON = 12
 

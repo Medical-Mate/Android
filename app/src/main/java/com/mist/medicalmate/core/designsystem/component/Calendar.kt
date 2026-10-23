@@ -168,6 +168,9 @@ private fun dotColor(marker: MedicalMateDateMarker, selected: Boolean, enabled: 
  * 요일 줄(`Label/S`, 일 `fg/danger` · 토 `fg/link` · 나머지 `fg/subtle`, 아래 4) 아래로 주마다 일곱 칸이 서고, 맨
  * 아래 범례(기록 있음 · 예정)다. 한 주는 일요일에서 시작하고 그 달에 든 주만큼 줄이 선다 — 마스터의 `Show Week 6`이
  * 6주인 달에만 켜진다. 그 달이 아닌 칸은 비운다(`Empty`).
+ *
+ * [showLegend]는 마스터의 `Show Legend`다. [elevated]가 false면 그림자를 빼고 면만 둔다 — 날짜 선택 시트(1r-4-D,
+ * `3982:16243`)의 인스턴스가 범례를 끄고 effects를 지워 시트 면 위에 그대로 놓는다(#340).
  */
 @Composable
 fun MedicalMateCalendarGrid(
@@ -176,6 +179,8 @@ fun MedicalMateCalendarGrid(
     modifier: Modifier = Modifier,
     stateOf: (LocalDate) -> MedicalMateCalendarDayState = { MedicalMateCalendarDayState.DEFAULT },
     markerOf: (LocalDate) -> MedicalMateDateMarker = { MedicalMateDateMarker.NONE },
+    showLegend: Boolean = true,
+    elevated: Boolean = true,
 ) {
     val colors = MedicalMateTheme.colors
     val shape = MedicalMateRadius.lg
@@ -185,29 +190,21 @@ fun MedicalMateCalendarGrid(
         modifier =
         modifier
             .fillMaxWidth()
-            .dropShadow(shape, MedicalMateEffects.cardWide)
-            .dropShadow(shape, MedicalMateEffects.cardTight)
+            .then(
+                if (elevated) {
+                    Modifier
+                        .dropShadow(shape, MedicalMateEffects.cardWide)
+                        .dropShadow(shape, MedicalMateEffects.cardTight)
+                } else {
+                    Modifier
+                },
+            )
             .clip(shape)
             .background(colors.bgSurface)
             .padding(horizontal = MedicalMateSpace.s8, vertical = MedicalMateSpace.s12),
         verticalArrangement = Arrangement.spacedBy(MedicalMateSpace.s4),
     ) {
-        Row(modifier = Modifier.fillMaxWidth().padding(bottom = MedicalMateSpace.s4)) {
-            stringArrayResource(R.array.calendar_weekdays).forEachIndexed { index, label ->
-                Text(
-                    text = label,
-                    style = MedicalMateTheme.typography.labelS,
-                    color =
-                    when (index) {
-                        0 -> colors.fgDanger
-                        DAYS_IN_WEEK - 1 -> colors.fgLink
-                        else -> colors.fgSubtle
-                    },
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
+        CalendarWeekdays()
         var first = 1 - offset
         while (first <= last) {
             Row(modifier = Modifier.fillMaxWidth()) {
@@ -230,7 +227,29 @@ fun MedicalMateCalendarGrid(
             }
             first += DAYS_IN_WEEK
         }
-        CalendarLegend()
+        if (showLegend) CalendarLegend()
+    }
+}
+
+/** 요일 줄. `Label/S`이고 일요일은 `fg/danger`, 토요일은 `fg/link`, 나머지는 `fg/subtle`이다. 아래 4를 띄운다. */
+@Composable
+private fun CalendarWeekdays() {
+    val colors = MedicalMateTheme.colors
+    Row(modifier = Modifier.fillMaxWidth().padding(bottom = MedicalMateSpace.s4)) {
+        stringArrayResource(R.array.calendar_weekdays).forEachIndexed { index, label ->
+            Text(
+                text = label,
+                style = MedicalMateTheme.typography.labelS,
+                color =
+                when (index) {
+                    0 -> colors.fgDanger
+                    DAYS_IN_WEEK - 1 -> colors.fgLink
+                    else -> colors.fgSubtle
+                },
+                textAlign = TextAlign.Center,
+                modifier = Modifier.weight(1f),
+            )
+        }
     }
 }
 

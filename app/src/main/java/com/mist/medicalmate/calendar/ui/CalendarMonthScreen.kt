@@ -15,7 +15,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.MedicalMateIcons
@@ -305,18 +304,6 @@ private fun ColumnScope.SelectedDay(state: CalendarUiState, onScheduleClick: (St
         )
     }
 }
-
-/**
- * 일요일부터의 요일 머리글.
- *
- * `DayOfWeek.getDisplayName`을 쓰지 않는다. 컴포저블 안에서 기기 로케일을 직접 읽으면
- * 언어가 바뀌어도 다시 그리지 않고, lint가 그것을 잡는다. 번역 대상이기도 해서 리소스에
- * 둔다.
- *
- * 날짜 선택 시트(1r-4-D)의 격자도 같은 머리글을 쓴다.
- */
-@Composable
-internal fun weekdayLabels(): List<String> = stringArrayResource(R.array.calendar_weekdays).toList()
 
 /** "9월 12일 (금)" 형식. 홈의 일정 줄과 같은 형식이다. */
 private val dayFormat = DateTimeFormatter.ofPattern("M월 d일 (E)")
