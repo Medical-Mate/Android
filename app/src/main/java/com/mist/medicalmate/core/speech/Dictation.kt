@@ -2,6 +2,7 @@ package com.mist.medicalmate.core.speech
 
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -49,7 +50,9 @@ class Dictation(
         if (listening) return
         committed = base
         onVoice(MedicalMateVoiceState.IDLE)
-        job = scope.launch {
+        // [job]을 먼저 들고 나서 시작한다(#342). 바로 도는 디스패처에서는 `launch`가 돌아오기 전에 첫 조각이
+        // [onDictated]를 부를 수 있고, 거기서 [stop]을 부르면 아직 비어 있는 [job]을 멈춰 듣기가 이어졌다.
+        val listening = scope.launch(start = CoroutineStart.LAZY) {
             speech.listen().collect { chunk ->
                 when (chunk) {
                     // 모델을 처음 받는 중이다. 다 받으면 다시 기다리는 상태로 돌아온다.
@@ -73,6 +76,8 @@ class Dictation(
             }
             onVoice(MedicalMateVoiceState.IDLE)
         }
+        job = listening
+        listening.start()
     }
 
     /** 패널 안의 마이크. 듣는 중이면 멈추고 아니면 다시 듣는다. */
