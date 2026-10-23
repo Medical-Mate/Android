@@ -335,6 +335,28 @@ class VisitNoteViewModelTest {
     }
 
     @Test
+    fun `이전으로 시작하는 메모는 뒤로 가기가 아니다`() {
+        // 앞머리로 보던 때 "이전보다 나아졌대요"가 화면을 나가 메모가 사라졌다(#346).
+        val viewModel = viewModel()
+
+        viewModel.onVoiceNote("이전보다 나아졌대요", {})
+
+        assertEquals("이전보다 나아졌대요", viewModel.uiState.value.note)
+    }
+
+    @Test
+    fun `뒤로 가자고 하면 적던 메모가 있을 때만 묻는다`() {
+        val viewModel = viewModel()
+
+        assertEquals(VoiceReply.NotMine, viewModel.onVoiceNote("뒤로 가", {}))
+
+        viewModel.onNoteChange("위염이래요")
+        val reply = viewModel.onVoiceNote("뒤로 가", {}) as VoiceReply.Confirm
+        assertEquals(R.string.voice_note_confirm_leave, reply.prompt)
+        assertEquals("위염이래요", viewModel.uiState.value.note)
+    }
+
+    @Test
     fun `짧은 이동 명령은 적던 메모가 있으면 나갈지 묻는다`() {
         // 메모 칸이 모든 말을 받아 "홈으로 가"도 메모가 됐다(#336, 사용자 결정).
         val viewModel = viewModel()
