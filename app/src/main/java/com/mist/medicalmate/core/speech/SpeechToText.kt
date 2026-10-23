@@ -16,9 +16,7 @@ import jakarta.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
@@ -59,11 +57,13 @@ interface SpeechToText {
      *
      * 모델이 없으면 먼저 받는다. 흘러나오는 값은 [SpeechChunk]이고, 부분 결과는 여러 번
      * 최종 결과는 한 번 온다.
+     *
+     * [owner]는 여는 쪽이다(#348). 인식기는 하나라 한 번에 한쪽만 열고, 화면이 열면 막대가 양보한다([SpeechTurns]).
      */
-    fun listen(): Flow<SpeechChunk>
+    fun listen(owner: SpeechOwner): Flow<SpeechChunk>
 
-    /** 듣기를 멈춘다. [listen]의 흐름이 끝난다. */
-    suspend fun stop()
+    /** 듣기를 멈춘다. **[owner]가 쓰고 있을 때만이다**(#348) — 다른 쪽의 받아쓰기는 끊지 않는다. */
+    suspend fun stop(owner: SpeechOwner)
 }
 
 /**
@@ -94,9 +94,10 @@ constructor(
 ) : SpeechToText {
     private var recognizer: SpeechRecognizer? = null
 
-    private val listening = MutableStateFlow(false)
+    /** 누가 쓰는지(#348). 화면이 열려 할 때 막대가 쓰고 있으면 그 인식을 멈추게 한다. */
+    private val turns = SpeechTurns(interrupt = { runCatching { recognizer?.stopRecognition() } })
 
-    override val active: StateFlow<Boolean> = listening.asStateFlow()
+    override val active: StateFlow<Boolean> = turns.active
 
     override suspend fun available(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return false
@@ -108,7 +109,7 @@ constructor(
         }.getOrDefault(false)
     }
 
-    override fun listen(): Flow<SpeechChunk> = flow {
+    override fun listen(owner: SpeechOwner): Flow<SpeechChunk> = flow {
         // 화면이 available()을 보고 마이크를 그리지만 여기서도 막는다. 그 확인과 이 호출
         // 사이가 벌어져 있고, 막지 않으면 API 31 미만에서 없는 것을 부른다.
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
@@ -127,12 +128,14 @@ constructor(
                 return@flow
             }
         }
+        // 차례를 받은 뒤에 마이크를 연다(#348). 앞 차례가 아직 마이크를 쥐고 있을 수 있다.
+        turns.take(owner)
+        trace.log { "받아쓰기: $owner 차례" }
         // 다듬는 방식이면 앱이 마이크를 잡는다(#328). 못 잡으면 지금 방식으로 듣는다.
         val mic = if (cleanMic.enabled.first()) CleanMic.open(context) else null
         trace.log { "받아쓰기: ${if (mic == null) "fromMic" else "다듬어 넘김"}" }
         val source = mic?.let { AudioSource.fromPfd(it.input) } ?: AudioSource.fromMic()
         val request = speechRecognizerRequest { audioSource = source }
-        listening.value = true
         try {
             coroutineScope {
                 val pump = mic?.let { launch(Dispatchers.IO) { it.pump() } }
@@ -145,12 +148,12 @@ constructor(
             }
         } finally {
             mic?.let { trace.log { "받아쓰기: ${it.summary()}" } }
-            listening.value = false
+            turns.release()
         }
     }
 
-    override suspend fun stop() {
-        runCatching { recognizer?.stopRecognition() }
+    override suspend fun stop(owner: SpeechOwner) {
+        if (turns.owns(owner)) runCatching { recognizer?.stopRecognition() }
     }
 
     /** 모델을 받는다. 받아 둔 것이 있으면 부르지 않는다. */

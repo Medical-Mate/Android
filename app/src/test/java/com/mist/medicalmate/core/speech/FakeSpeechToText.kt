@@ -23,6 +23,12 @@ internal class FakeSpeechToText(
 ) : SpeechToText {
     var stopped = false
 
+    /** 멈추라고 한 쪽(#348). */
+    val stoppedBy = mutableListOf<SpeechOwner>()
+
+    /** 받아쓰기를 연 쪽(#348). */
+    val listenedBy = mutableListOf<SpeechOwner>()
+
     /** 받아쓰기를 연 횟수. */
     var listens = 0
         private set
@@ -31,7 +37,8 @@ internal class FakeSpeechToText(
 
     override suspend fun available(): Boolean = usable
 
-    override fun listen(): Flow<SpeechChunk> = flow {
+    override fun listen(owner: SpeechOwner): Flow<SpeechChunk> = flow {
+        listenedBy += owner
         active.value = true
         val first = listens++ == 0
         try {
@@ -42,7 +49,8 @@ internal class FakeSpeechToText(
         }
     }
 
-    override suspend fun stop() {
+    override suspend fun stop(owner: SpeechOwner) {
         stopped = true
+        stoppedBy += owner
     }
 }
