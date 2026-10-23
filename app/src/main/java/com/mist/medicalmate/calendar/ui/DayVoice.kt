@@ -2,6 +2,7 @@ package com.mist.medicalmate.calendar.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.voice.VoiceDate
 import com.mist.medicalmate.core.voice.VoicePrompt
@@ -67,9 +68,11 @@ internal fun CalendarDayVoice(
     onCardOpen: (String) -> Unit,
     more: CalendarDayVoiceRoutes = CalendarDayVoiceRoutes(),
 ) {
+    // 되물은 할 일(#346). 다음 말이 번호면 그 후보 안에서 센다.
+    val candidates = remember { VoiceCandidates() }
     VoiceTargetEffect(CALENDAR_DAY_SUGGESTIONS) { text ->
         val loaded = uiState.value
-        val todo = loaded?.todoVoice(text, more.onTodoToggle)
+        val todo = loaded?.todoVoice(text, candidates, more.onTodoToggle)
         val voice = parseDayVoice(text)
         val state = voice?.let { withTimeoutOrNull(DAY_WAIT_MS) { uiState.first { it != null } } }
         val spokenDay = state?.let { (parseVoiceDate(text, LocalDate.now()) as? VoiceDate.Day)?.date }

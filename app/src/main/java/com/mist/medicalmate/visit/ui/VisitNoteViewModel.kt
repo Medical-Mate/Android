@@ -93,7 +93,13 @@ constructor(private val clock: Clock, private val speech: SpeechToText) : ViewMo
             }
         }
         return when (parseNoteVoice(text)) {
-            NoteVoice.BACK -> VoiceReply.NotMine
+            // 적던 메모가 있으면 버리고 나갈지 묻는다(#346). 이동 명령(#336)과 같은 물음이다.
+            NoteVoice.BACK ->
+                if (note.isBlank()) {
+                    VoiceReply.NotMine
+                } else {
+                    VoiceReply.Confirm(R.string.voice_note_confirm_leave) { navigation.navigate(text) }
+                }
             NoteVoice.DONE ->
                 if (note.isBlank()) {
                     VoiceReply.Done(R.string.voice_note_empty, question = VoiceText(R.string.voice_note_ask))

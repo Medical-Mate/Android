@@ -236,8 +236,8 @@ private fun ScheduleAddVoiceTarget(
             }
 
             !editing -> voice.handle(text, routes)
-            parseScheduleAddVoice(text) == null -> VoiceReply.NotMine
-            else -> VoiceReply.Done(R.string.voice_by_hand)
+            isScheduleEditRequest(text, LocalDate.now()) -> VoiceReply.Done(R.string.voice_by_hand)
+            else -> VoiceReply.NotMine
         }
     }
 }

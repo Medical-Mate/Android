@@ -494,6 +494,43 @@ class ScheduleAddVoiceTest {
         assertTrue(viewModel.uiState.value.todos.none { it.done })
     }
 
+    @Test
+    fun `되물은 뒤 번호로 답하면 후보 안에서 센다`() = runTest {
+        // 후보는 1번과 3번이다. 전에는 "두 번째"를 전체 목록에서 세어 후보가 아니던 2번을 골랐다(#346).
+        val cards = listOf(card("1", "두통 · 어지러움"), card("2", "복부 통증"), card("3", "두통 재진"))
+        val viewModel = viewModel(cards = cards)
+        viewModel.load()
+        viewModel.voice.handle("두통 카드 가져갈게", ScheduleAddVoiceRoutes())
+
+        viewModel.voice.handle("두 번째", ScheduleAddVoiceRoutes())
+
+        assertEquals(listOf("3"), viewModel.uiState.value.cards.filter { it.picked }.map { it.id })
+    }
+
+    @Test
+    fun `되물은 할 일도 번호로 답하면 후보 안에서 센다`() = runTest {
+        val viewModel = viewModel()
+        viewModel.voice.handle("할 일 추가, 약 챙기기", ScheduleAddVoiceRoutes())
+        viewModel.voice.handle("할 일 추가, 신분증", ScheduleAddVoiceRoutes())
+        viewModel.voice.handle("할 일 추가, 약 봉투 챙기기", ScheduleAddVoiceRoutes())
+        viewModel.voice.handle("챙기기 할 일 완료", ScheduleAddVoiceRoutes())
+
+        viewModel.voice.handle("두 번째 할 일 완료", ScheduleAddVoiceRoutes())
+
+        assertEquals(listOf("약 봉투 챙기기"), viewModel.uiState.value.todos.filter { it.done }.map { it.label })
+    }
+
+    @Test
+    fun `고치러 연 화면은 그 화면을 고치자는 말만 받는다`() {
+        // 전에는 "홈으로 가" · "뒤로"까지 받아 화면을 떠날 수 없었다(#346).
+        assertFalse(isScheduleEditRequest("홈으로 가", OCT_20))
+        assertFalse(isScheduleEditRequest("뒤로", OCT_20))
+        assertFalse(isScheduleEditRequest("배가 아파요", OCT_20))
+        assertTrue(isScheduleEditRequest("10월 25일로 바꿔 줘", OCT_20))
+        assertTrue(isScheduleEditRequest("오후 3시로 해 줘", OCT_20))
+        assertTrue(isScheduleEditRequest("할 일 추가, 약 챙기기", OCT_20))
+    }
+
     // 말로 바뀐 자리 보이기
 
     @Test

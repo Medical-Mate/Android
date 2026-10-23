@@ -41,6 +41,9 @@ internal class ScheduleAddVoiceActions(
     private val update: ((ScheduleAddUiState) -> ScheduleAddUiState) -> Unit,
     private val nextTodoId: () -> String,
 ) {
+    /** 되물은 카드나 할 일(#346). 다음 말이 번호면 이 안에서 센다. */
+    private val candidates = VoiceCandidates()
+
     /**
      * 말 하나를 처리한다. **이 화면에 머무는 일이면 빠진 칸을 이어서 묻는다**(#282). 병원이 없으면
      * 병원을, 날짜가 없으면 날짜를, 다 찼으면 저장하라고 한다. 사용자는 막대를 보고 다음 말을 한다.
@@ -53,8 +56,9 @@ internal class ScheduleAddVoiceActions(
             return VoiceReply.Done(R.string.voice_sheet_closed, question = state().nextQuestion())
         }
         val voice = parseScheduleAddVoice(text)
+        val answered = candidates.answer(text, voice, VoiceReply.Done(R.string.voice_schedule_no_such))
         val reply =
-            when (voice) {
+            answered ?: when (voice) {
                 null -> VoiceReply.NotMine
                 is ScheduleAddVoice.Fill -> fill(voice.text, routes.save)
                 ScheduleAddVoice.Save, ScheduleAddVoice.Exit, ScheduleAddVoice.OpenHospital, ScheduleAddVoice.CardNew ->
@@ -110,7 +114,7 @@ internal class ScheduleAddVoiceActions(
         is ScheduleAddVoice.CardPick -> card(state().cards.matchVoice(voice.ordinal, voice.words), pick = true)
         is ScheduleAddVoice.CardDrop -> card(state().cards.toDrop(voice), pick = false)
         is ScheduleAddVoice.TodoAdd -> addTodo(voice.label)
-        is ScheduleAddVoice.TodoCheck -> checkTodo(voice)
+        is ScheduleAddVoice.TodoCheck -> checkTodo(state().todos.matchVoice(voice.ordinal, voice.words), voice.done)
         is ScheduleAddVoice.TodoDelete -> deleteTodo(state().todos.matchVoice(voice.ordinal, voice.words))
         is ScheduleAddVoice.TodoEdit -> editTodo(voice)
         else -> VoiceReply.NotMine
@@ -135,9 +139,13 @@ internal class ScheduleAddVoiceActions(
         )
     }
 
-    /** 맞는 카드가 없거나 여럿이면 하지 않고 되묻는다. 몇 번째인지로 답하면 된다. */
+    /** 맞는 카드가 없거나 여럿이면 하지 않고 되묻는다. 몇 번째인지로 답하면 그 후보 안에서 센다(#346). */
     private fun card(matches: List<ScheduleAddCard>, pick: Boolean): VoiceReply {
         update { it.focusing(matches.map { card -> ScheduleAddFocusTarget.Card(card.id) }) }
+        if (matches.size > 1) {
+            val kind = if (pick) ScheduleAddVoice.CardPick::class else ScheduleAddVoice.CardDrop::class
+            candidates.ask(matches.map { it.id }, kind) { id -> card(state().cards.filter { it.id == id }, pick) }
+        }
         val card = matches.singleOrNull() ?: return whichOne(matches.map { it.title }, ScheduleAddTarget.CARD)
         update { it.withCardPicked(card.id, picked = pick) }
         val message = if (pick) R.string.voice_schedule_card_picked else R.string.voice_schedule_card_dropped
@@ -155,18 +163,27 @@ internal class ScheduleAddVoiceActions(
         return VoiceReply.Done(R.string.voice_schedule_todo_added, listOf(label))
     }
 
-    private fun checkTodo(voice: ScheduleAddVoice.TodoCheck): VoiceReply {
-        val matches = state().todos.matchVoice(voice.ordinal, voice.words)
+    private fun checkTodo(matches: List<ScheduleAddTodo>, done: Boolean): VoiceReply {
         update { it.focusing(matches.map { todo -> ScheduleAddFocusTarget.Todo(todo.id) }) }
+        if (matches.size > 1) {
+            candidates.ask(matches.map { it.id }, ScheduleAddVoice.TodoCheck::class) { id ->
+                checkTodo(state().todos.filter { it.id == id }, done)
+            }
+        }
         val todo = matches.singleOrNull() ?: return whichOne(matches.map { it.label }, ScheduleAddTarget.TODO)
-        update { it.withTodo(todo.id) { found -> found.copy(done = voice.done) } }
-        val message = if (voice.done) R.string.voice_schedule_todo_done else R.string.voice_schedule_todo_undone
+        update { it.withTodo(todo.id) { found -> found.copy(done = done) } }
+        val message = if (done) R.string.voice_schedule_todo_done else R.string.voice_schedule_todo_undone
         return VoiceReply.Done(message, listOf(todo.label))
     }
 
     /** 지운 줄은 남지 않아 할 일 구역을 보인다. 여럿이 걸리면 그 줄들을 보이고 되묻는다. */
     private fun deleteTodo(matches: List<ScheduleAddTodo>): VoiceReply {
         update { it.focusing(matches.map { todo -> ScheduleAddFocusTarget.Todo(todo.id) }) }
+        if (matches.size > 1) {
+            candidates.ask(matches.map { it.id }, ScheduleAddVoice.TodoDelete::class) { id ->
+                deleteTodo(state().todos.filter { it.id == id })
+            }
+        }
         val todo = matches.singleOrNull() ?: return whichOne(matches.map { it.label }, ScheduleAddTarget.TODO)
         update {
             it.copy(todos = it.todos.filterNot { found -> found.id == todo.id })

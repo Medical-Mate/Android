@@ -114,7 +114,17 @@ internal constructor(
         // 호출어 없이 부른다(#312). 홈 배너의 "메이트에게 말해보기"다. 호출어 설정과 상관없이 받아쓰기로 듣는다 —
         // 배너는 호출어 모델을 받지 않은 사람에게도 보인다. 마이크 권한은 부른 화면이 방금 받았고, 그 결과가 화면
         // 복귀(setAllowed)보다 먼저 와서 여기서는 권한 값을 보지 않는다.
-        targets.summon = { if (commandJob == null && foreground.value) onWake() }
+        //
+        // **앱이 잠깐 앞에서 내려가 있으면 돌아올 때 연다**(#346). 권한 창이 뜨면 앱이 멈추고(ON_PAUSE), 허용한 결과는
+        // 앱이 돌아오기 전에 온다. 그때 버리면 처음 허용한 사람은 배너를 눌러도 막대가 뜨지 않았다. 앱을 나가면
+        // (ON_STOP) 걸어 둔 것을 버린다.
+        targets.summon = {
+            when {
+                commandJob != null -> Unit
+                foreground.value -> onWake()
+                else -> reopen = true
+            }
+        }
         val setting = combine(voiceWake.enabled, voiceWake.model, ::Pair)
         val screen = combine(foreground, allowed, ::Pair)
         val idle = combine(speech.active, mutableUiState.map { it.panel != null }, ::Pair)

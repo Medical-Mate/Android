@@ -31,7 +31,7 @@ internal enum class NoteVoice {
     /** 적은 것을 다 지운다. 되돌릴 수 없어 묻는다. */
     CLEAR,
 
-    /** 앞 화면으로. 전역 "뒤로"에 넘긴다. */
+    /** 앞 화면으로. 적던 메모가 있으면 나갈지 묻고, 없으면 전역 "뒤로"에 넘긴다(#346). */
     BACK,
 }
 
@@ -46,7 +46,7 @@ internal fun parseNoteVoice(text: String): NoteVoice? {
         NOTE_CLEAR.any { heard.contains(it) } -> NoteVoice.CLEAR
         NOTE_UNDO.any { heard.contains(it) } -> NoteVoice.UNDO
         NOTE_DONE.any { heard.startsWith(it) } || heard in NOTE_NEXT -> NoteVoice.DONE
-        NOTE_BACK.any { heard.startsWith(it) } -> NoteVoice.BACK
+        NOTE_BACK.matches(heard) -> NoteVoice.BACK
         else -> null
     }
 }
@@ -69,4 +69,12 @@ private val NOTE_UNDO = listOf("방금거지워", "방금말지워", "방금지�
 
 private val NOTE_CLEAR = listOf("다지워", "전부지워", "모두지워", "처음부터다시", "다시쓸래", "처음부터쓸래")
 
-private val NOTE_BACK = listOf("뒤로", "이전")
+/**
+ * 앞 화면으로 가자는 말. **말 전체가 그 말일 때만이다**(#346). 앞머리로 보면 "이전보다 나아졌대요" · "뒤로 젖히면
+ * 아프대요"가 뒤로 가기가 되어 적던 메모가 사라졌다.
+ */
+private val NOTE_BACK =
+    Regex(
+        "(?:뒤로|이전|이전으로|이전화면|이전화면으로|전으로|돌아가)" +
+            "(?:요|가|가자|가줘|가주세요|갈래|갈게|돌아가|돌아가줘|돌아갈래|줘)?",
+    )

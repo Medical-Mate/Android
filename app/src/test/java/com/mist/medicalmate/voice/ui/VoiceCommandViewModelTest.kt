@@ -684,6 +684,31 @@ class VoiceCommandViewModelTest {
         assertFalse(navigation.isNavigation("위염이래요 약은 일주일 치 받았어요 홈에서 쉬래요"))
     }
 
+    @Test
+    fun `앱이 잠깐 내려가 있을 때 부르면 돌아올 때 막대를 연다`() = runTest {
+        // 권한 창이 뜨면 앱이 멈추고 허용 결과가 돌아오기 전에 온다. 전에는 그때 버려 막대가 뜨지 않았다(#346).
+        val viewModel = viewModel(speech = FakeSpeechToText(usable = true, keepOpen = true)).ready()
+        viewModel.setForeground(false)
+
+        viewModel.targets.summon()
+        assertNull(viewModel.uiState.value.panel)
+
+        viewModel.setForeground(true)
+        assertNotNull(viewModel.uiState.value.panel)
+    }
+
+    @Test
+    fun `앱을 나갔으면 걸어 둔 호출을 버린다`() = runTest {
+        val viewModel = viewModel(speech = FakeSpeechToText(usable = true, keepOpen = true)).ready()
+        viewModel.setForeground(false)
+        viewModel.targets.summon()
+
+        viewModel.setForeground(false, leftApp = true)
+        viewModel.setForeground(true)
+
+        assertNull(viewModel.uiState.value.panel)
+    }
+
     private fun viewModel(
         wake: FakeVoiceWake = FakeVoiceWake(usable = true, enabled = true, model = WakeWordModelState.Ready),
         speech: FakeSpeechToText = FakeSpeechToText(usable = true),
