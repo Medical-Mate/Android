@@ -66,10 +66,29 @@ internal class IntakeSessionActions(
         scope.launch { repository.setSeverity(sessionId, severity) }
     }
 
-    /** 체크한 질문을 화면 순서대로 통째로 보낸다. 체크를 푼 줄은 보내지 않는다. */
-    fun saveQuestions(state: IntakeUiState) {
-        val sessionId = state.sessionId ?: return
-        scope.launch { repository.setQuestions(sessionId, state.questions) }
+    /**
+     * 체크한 질문을 화면 순서대로 통째로 보낸다. 체크를 푼 줄은 보내지 않는다. 서버에 닿았는지 돌려준다.
+     *
+     * **끝날 때까지 기다린다**(#344). 질문 고르기의 "다음"이 이 저장을 띄워 두고 바로 1c-5로 가면, 1c-5가 증상
+     * 정리를 백스택에서 걷어 내면서(#338) 이 화면의 코루틴과 함께 저장이 끊길 수 있었다. 끊기면 서버에 "질문 고르기를
+     * 마쳤다"(`questionsConfirmed`)가 남지 않고 고른 질문 없이 카드가 만들어질 수 있다. 세션이 없으면 보낼 곳이
+     * 없어 그대로 넘어간다.
+     */
+    private suspend fun saveQuestions(state: IntakeUiState): Boolean {
+        val sessionId = state.sessionId ?: return true
+        return repository.setQuestions(sessionId, state.questions) is ApiResult.Success
+    }
+
+    /**
+     * 질문 고르기의 "다음". 저장이 끝난 뒤에 1c-5로 간다(#344). 실패하면 화면에 남아 다시 누르게 한다(사용자 결정) —
+     * 넘어가 버리면 고른 질문 없이 카드가 만들어질 수 있다. 저장하는 동안에는 다음 버튼이 꺼져 한 번만 보낸다.
+     */
+    fun finishQuestions(state: IntakeUiState) {
+        update { it.copy(savingQuestions = true, questionsSaveFailed = false) }
+        scope.launch {
+            val saved = saveQuestions(state)
+            update { it.copy(savingQuestions = false, questionsSaveFailed = !saved, completed = saved) }
+        }
     }
 
     /**

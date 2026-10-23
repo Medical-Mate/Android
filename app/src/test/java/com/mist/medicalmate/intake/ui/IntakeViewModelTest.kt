@@ -96,9 +96,16 @@ internal class FakeSessionRepository(
         return ApiResult.Success(savedSession)
     }
 
+    /** 질문 저장이 실패해야 하는 시험이 있다(#344). */
+    var questionsFail: Boolean = false
+
     override suspend fun setQuestions(sessionId: Long, questions: List<String>): ApiResult<IntakeSession> {
         sentQuestions = questions
-        return ApiResult.Success(savedSession)
+        return if (questionsFail) {
+            ApiResult.NetworkUnavailable(java.io.IOException("offline"))
+        } else {
+            ApiResult.Success(savedSession)
+        }
     }
 }
 
@@ -755,6 +762,31 @@ class IntakeViewModelTest {
         viewModel.onNext("")
 
         assertTrue(viewModel.uiState.value.completed)
+    }
+
+    @Test
+    fun `질문 저장이 안 되면 넘어가지 않고 다시 누르면 다시 보낸다`() {
+        // 저장을 띄워 두고 넘어가면 1c-5가 이 화면을 걷어 내면서 저장이 끊길 수 있었다(#344).
+        val repository = FakeSessionRepository(ends = true)
+        val viewModel = intakeViewModel(repository)
+        viewModel.bodyMap.onDotClick("ANC:004@CENTER")
+        viewModel.bodyMap.onDotClick("SUR:031@RIGHT")
+        viewModel.onNext("꽤 아파요")
+        viewModel.onNext("꽤 아파요")
+        viewModel.finishChat()
+        repository.questionsFail = true
+
+        viewModel.onNext("")
+
+        assertFalse(viewModel.uiState.value.completed)
+        assertTrue(viewModel.uiState.value.questionsSaveFailed)
+        assertFalse(viewModel.uiState.value.savingQuestions)
+
+        repository.questionsFail = false
+        viewModel.onNext("")
+
+        assertTrue(viewModel.uiState.value.completed)
+        assertFalse(viewModel.uiState.value.questionsSaveFailed)
     }
 
     @Test

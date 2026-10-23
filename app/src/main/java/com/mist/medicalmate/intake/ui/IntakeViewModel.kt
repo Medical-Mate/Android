@@ -189,9 +189,8 @@ internal constructor(private val repository: SessionRepository, speech: SpeechTo
             IntakeStep.SYMPTOM_CHAT -> {
                 // 문답이 끝나야 다음이 있다. 화면의 다음 버튼도 그때 선다. 질문을 적는 중에는 하단이
                 // 입력칸이라 다음 버튼이 없다.
-                if (!state.chatFinished || state.writingQuestion) return
-                session.saveQuestions(state)
-                mutableUiState.update { it.copy(completed = true) }
+                if (!state.chatFinished || state.writingQuestion || state.savingQuestions) return
+                session.finishQuestions(state)
             }
         }
     }

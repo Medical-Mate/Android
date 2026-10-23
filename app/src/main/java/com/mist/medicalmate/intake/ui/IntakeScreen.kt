@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -130,7 +131,17 @@ private fun IntakeFooter(state: IntakeUiState, callbacks: IntakeCallbacks) {
             state.step == IntakeStep.SYMPTOM_CHAT && (!state.chatFinished || state.writingQuestion) ->
                 ChatInput(state = state, callbacks = callbacks)
 
-            else -> NextButton(onClick = callbacks.onNextClick)
+            else -> {
+                // 질문 저장이 안 되면 버튼 위에 알린다(#344, 사용자 결정 — 시안에 없다). 카드 편집 실패와 같은 문구 · 자리다.
+                if (state.questionsSaveFailed) {
+                    Text(
+                        text = stringResource(R.string.intake_questions_save_failed),
+                        style = MedicalMateTheme.typography.bodyS,
+                        color = MedicalMateTheme.colors.fgDanger,
+                    )
+                }
+                NextButton(onClick = callbacks.onNextClick, enabled = !state.savingQuestions)
+            }
         }
     }
 }

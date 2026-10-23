@@ -337,6 +337,7 @@
     <string name="intake_questions_summary_more">질문 %1$d개를 카드에 담을게요.\n더 묻고 싶은 게 있으면 빈 칸에 적어주세요.</string>
     <string name="intake_questions_summary_done">질문 %1$d개를 카드에 담을게요.\n진료실에서 순서대로 물어보세요.</string>
     <string name="intake_questions_add_row">질문 직접 추가</string>
+    <string name="intake_questions_save_failed">저장하지 못했어요. 다시 눌러주세요.</string>
     <string name="intake_questions_writing">작성 중…</string>
 
     <!-- Figma V2 · 스플래시(1320:4553). -->
