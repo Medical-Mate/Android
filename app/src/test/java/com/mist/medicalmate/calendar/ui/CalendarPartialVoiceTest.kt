@@ -32,6 +32,25 @@ class CalendarPartialVoiceTest {
     }
 
     @Test
+    fun `일자 화면도 되물은 할 일 안에서 번호를 센다`() {
+        val state =
+            dayState.copy(
+                todos = listOf(
+                    DayTodo("1", "약 챙기기", false),
+                    DayTodo("2", "신분증", false),
+                    DayTodo("3", "약 봉투 챙기기", false),
+                ),
+            )
+        val candidates = VoiceCandidates()
+        val toggled = mutableListOf<String>()
+
+        state.todoVoice("챙기기 할 일 했어", candidates) { id, _ -> toggled += id }
+        state.todoVoice("두 번째", candidates) { id, _ -> toggled += id }
+
+        assertEquals(listOf("3"), toggled)
+    }
+
+    @Test
     fun `일자 화면의 할 일은 더하거나 지우지 않는다`() {
         // 편집이라 말로 하지 않는다(#296, 사용자 결정).
         assertEquals(VoiceReply.Done(R.string.voice_by_hand), dayState.todoVoice("할 일 추가, 보험증") { _, _ -> })

@@ -10,25 +10,45 @@ import com.mist.medicalmate.core.voice.VoiceText
  * **체크와 해제만 한다**(사용자 결정). 더하기 · 고치기 · 지우기는 일자 화면의 편집이라 말로 하지 않는다(#296).
  * 일정 추가와 같은 말을 받는다 — "약 챙기기 할 일 했어", "첫 번째 할 일 완료", "할 일 완료 취소". 할 일이 아니면 null이다.
  */
-internal fun CalendarDayUiState.todoVoice(text: String, toggle: (id: String, done: Boolean) -> Unit): VoiceReply? =
-    when (val voice = parseScheduleAddVoice(text)) {
-        is ScheduleAddVoice.TodoCheck -> if (editing) VoiceReply.Done(R.string.voice_by_hand) else check(voice, toggle)
+internal fun CalendarDayUiState.todoVoice(
+    text: String,
+    candidates: VoiceCandidates = VoiceCandidates(),
+    toggle: (id: String, done: Boolean) -> Unit,
+): VoiceReply? {
+    val voice = parseScheduleAddVoice(text)
+    // 되물은 뒤 번호로 답했으면 그 후보 안에서 센다(#346).
+    candidates.answer(text, voice, VoiceReply.Done(R.string.voice_schedule_no_such))?.let { return it }
+    return when (voice) {
+        is ScheduleAddVoice.TodoCheck ->
+            if (editing) {
+                VoiceReply.Done(R.string.voice_by_hand)
+            } else {
+                check(todos.matchItemsByVoice(voice.ordinal, voice.words) { it.label }, voice.done, toggle, candidates)
+            }
+
         is ScheduleAddVoice.TodoAdd, is ScheduleAddVoice.TodoDelete, is ScheduleAddVoice.TodoEdit ->
             VoiceReply.Done(R.string.voice_by_hand)
 
         else -> null
     }
+}
 
 private fun CalendarDayUiState.check(
-    voice: ScheduleAddVoice.TodoCheck,
+    matches: List<DayTodo>,
+    done: Boolean,
     toggle: (id: String, done: Boolean) -> Unit,
+    candidates: VoiceCandidates,
 ): VoiceReply {
-    val matches = todos.matchItemsByVoice(voice.ordinal, voice.words) { it.label }
     val todo = matches.singleOrNull()
+    if (matches.size > 1) {
+        candidates.ask(matches.map { it.id }, ScheduleAddVoice.TodoCheck::class) { id ->
+            check(todos.filter { it.id == id }, done, toggle, candidates)
+        }
+    }
     return when {
         todo != null -> {
-            toggle(todo.id, voice.done)
-            val message = if (voice.done) R.string.voice_schedule_todo_done else R.string.voice_schedule_todo_undone
+            toggle(todo.id, done)
+            val message = if (done) R.string.voice_schedule_todo_done else R.string.voice_schedule_todo_undone
             VoiceReply.Done(message, listOf(todo.label))
         }
 
