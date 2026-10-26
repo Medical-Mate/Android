@@ -53,7 +53,7 @@ class Dictation(
         // [job]을 먼저 들고 나서 시작한다(#342). 바로 도는 디스패처에서는 `launch`가 돌아오기 전에 첫 조각이
         // [onDictated]를 부를 수 있고, 거기서 [stop]을 부르면 아직 비어 있는 [job]을 멈춰 듣기가 이어졌다.
         val listening = scope.launch(start = CoroutineStart.LAZY) {
-            speech.listen().collect { chunk ->
+            speech.listen(SpeechOwner.SCREEN).collect { chunk ->
                 when (chunk) {
                     // 모델을 처음 받는 중이다. 다 받으면 다시 기다리는 상태로 돌아온다.
                     SpeechChunk.Preparing -> onVoice(MedicalMateVoiceState.PROCESSING)
@@ -94,7 +94,8 @@ class Dictation(
     fun stop() {
         job?.cancel()
         job = null
-        scope.launch { speech.stop() }
+        // 자기 받아쓰기만 멈춘다(#348). 막대가 듣고 있으면 그대로 둔다.
+        scope.launch { speech.stop(SpeechOwner.SCREEN) }
         onVoice(MedicalMateVoiceState.IDLE)
     }
 }

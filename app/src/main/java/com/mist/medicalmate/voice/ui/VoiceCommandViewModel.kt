@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.mist.medicalmate.R
 import com.mist.medicalmate.core.designsystem.component.MedicalMateVoiceState
 import com.mist.medicalmate.core.speech.SpeechChunk
+import com.mist.medicalmate.core.speech.SpeechOwner
 import com.mist.medicalmate.core.speech.SpeechToText
 import com.mist.medicalmate.core.speech.VoiceWake
 import com.mist.medicalmate.core.speech.VoiceWakeTrace
@@ -182,7 +183,7 @@ internal constructor(
         val listening = commandJob ?: return
         commandJob = null
         listening.cancel()
-        viewModelScope.launch { speech.stop() }
+        viewModelScope.launch { speech.stop(SpeechOwner.PANEL) }
         mutableUiState.update { it.copy(panel = null) }
     }
 
@@ -210,7 +211,7 @@ internal constructor(
             viewModelScope.launch {
                 detecting?.join()
                 converse()
-                speech.stop()
+                speech.stop(SpeechOwner.PANEL)
                 commandJob = null
                 mutableUiState.update { it.copy(panel = null) }
             }
@@ -271,7 +272,9 @@ internal constructor(
         while (failures < MAX_FAILURES) {
             var open = true
             var failed = false
-            val heard = speech.listen().map<SpeechChunk, Heard>(Heard::Spoken).onCompletion { emit(Heard.Ended) }
+            val heard = speech.listen(SpeechOwner.PANEL).map<SpeechChunk, Heard>(Heard::Spoken).onCompletion {
+                emit(Heard.Ended)
+            }
             merge(heard, targets.prompts.map(Heard::Asked))
                 .takeWhile { event ->
                     when {

@@ -5,6 +5,7 @@ import com.mist.medicalmate.core.speech.VoiceWakeTrace
 import com.mist.medicalmate.core.voice.VoiceNavigation
 import com.mist.medicalmate.core.voice.VoiceReply
 import com.mist.medicalmate.core.voice.VoiceScroll
+import com.mist.medicalmate.core.voice.VoiceTarget
 import com.mist.medicalmate.core.voice.VoiceTargets
 import com.mist.medicalmate.core.voice.VoiceWords
 import com.mist.medicalmate.core.voice.parseVoiceScroll
@@ -34,6 +35,12 @@ internal class VoiceConversation(
     /** 아직 "네"를 기다리는 일. */
     private var pending: VoiceReply.Confirm? = null
 
+    /**
+     * 그 일을 물은 화면(#348). **지금 화면이 이 화면이 아니면 묻던 것을 버린다.** 전에는 화면을 옮긴 뒤의 "네"가 떠난
+     * 화면의 저장을 실행하거나, 일정 추가의 "나갈래"가 맨 위의 다른 화면을 닫았다.
+     */
+    private var pendingFrom: VoiceTarget? = null
+
     init {
         // 받아쓰는 화면이 화면을 옮기는 말을 가려 확인을 받고 옮길 수 있게 한다(#336).
         targets.navigation =
@@ -47,6 +54,11 @@ internal class VoiceConversation(
 
     /** 말 하나에 답한다. 다음 말을 계속 들을지 돌려준다. */
     suspend fun respond(text: String): Boolean {
+        if (pending != null && targets.current !== pendingFrom) {
+            trace.log { "대화: 묻던 화면을 떠나 확인을 버린다" }
+            pending = null
+            pendingFrom = null
+        }
         val asking = pending
         val panel = shown()
         val scroll = parseVoiceScroll(text)
@@ -104,6 +116,7 @@ internal class VoiceConversation(
             is VoiceReply.Done -> say(VoiceMessage(reply.message, reply.args), false, reply.question)
             is VoiceReply.Confirm -> {
                 pending = reply
+                pendingFrom = targets.current
                 say(VoiceMessage(reply.prompt, reply.args), true, VoiceMessage(R.string.voice_command_yes_no))
             }
 
