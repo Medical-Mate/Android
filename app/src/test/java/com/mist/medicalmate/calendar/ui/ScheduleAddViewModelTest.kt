@@ -435,6 +435,20 @@ class ScheduleAddViewModelTest {
     }
 
     @Test
+    fun `저장하지 못하면 옮기지 않고 알린다`() {
+        // 말로 저장했으면 막대가 이것으로 실패를 알린다(#350). 전에는 아무 말도 없어서 "했어요"만 남았다.
+        val repository = RecordingAppointmentRepository()
+        repository.createFails = true
+        var saved = false
+        var failed = false
+
+        filled(repository).onSaveClick(onFailed = { failed = true }) { saved = true }
+
+        assertFalse(saved)
+        assertTrue(failed)
+    }
+
+    @Test
     fun `저장이 끝나야 화면을 옮긴다`() {
         var saved = false
 
@@ -564,6 +578,9 @@ internal class RecordingAppointmentRepository : AppointmentRepository {
     var createdOrigin: AppointmentOrigin? = null
     var createCount = 0
 
+    /** 저장이 실패해야 하는 시험이 있다(#350). */
+    var createFails = false
+
     override suspend fun month(month: YearMonth) = ApiResult.Success(emptyList<Appointment>())
 
     /** 그 날 서버에 있는 일정. 고치러 들어오는 경로가 여기서 찾는다. */
@@ -584,6 +601,7 @@ internal class RecordingAppointmentRepository : AppointmentRepository {
         createdCardIds = appointment.cardIds
         createdOrigin = appointment.origin
         createdTodos = appointment.todos
+        if (createFails) return ApiResult.NetworkUnavailable(java.io.IOException("offline"))
         return ApiResult.Success(
             Appointment(
                 id = 1,

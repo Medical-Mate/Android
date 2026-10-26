@@ -14,6 +14,7 @@ import com.mist.medicalmate.R
 import com.mist.medicalmate.core.notification.rememberNotificationPermission
 import com.mist.medicalmate.core.voice.VoicePrompt
 import com.mist.medicalmate.core.voice.VoiceReply
+import com.mist.medicalmate.core.voice.VoiceSave
 import com.mist.medicalmate.core.voice.VoiceTargetEffect
 import com.mist.medicalmate.core.voice.VoiceWords
 import com.mist.medicalmate.core.voice.rememberVoicePrompt
@@ -178,7 +179,11 @@ private fun ScheduleAddRoute(
     val save = {
         // 일정을 잡는 순간이 진료 알림이 왜 필요한지 보이는 자리다.
         requestNotificationPermission()
-        viewModel.onSaveClick(onSaved)
+        // 결과는 막대에도 알린다(#350). 이 화면은 저장 실패를 따로 그리지 않는다.
+        viewModel.onSaveClick(onFailed = { prompt(VoiceSave.failed) }) {
+            prompt(VoiceSave.saved)
+            onSaved()
+        }
     }
 
     ScheduleAddVoiceTarget(

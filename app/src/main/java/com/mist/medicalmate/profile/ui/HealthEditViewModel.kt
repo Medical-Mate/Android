@@ -57,14 +57,14 @@ internal constructor(private val repository: HealthProfileRepository) : ViewMode
      *
      * 실패하면 화면에 남는다. 나가 버리면 고친 것이 사라지고 무엇이 저장됐는지 알 수 없다.
      */
-    fun onSaveClick(onSaved: () -> Unit) {
+    fun onSaveClick(onFailed: () -> Unit = {}, onSaved: () -> Unit) {
         val base = profile ?: return
         if (mutableUiState.value.saving) return
         mutableUiState.update { it.copy(saving = true, saveFailed = false) }
         viewModelScope.launch {
             val saved = repository.save(base, mutableUiState.value.toHealthEdit())
             mutableUiState.update { it.copy(saving = false, saveFailed = saved !is ApiResult.Success) }
-            if (saved is ApiResult.Success) onSaved()
+            if (saved is ApiResult.Success) onSaved() else onFailed()
         }
     }
 

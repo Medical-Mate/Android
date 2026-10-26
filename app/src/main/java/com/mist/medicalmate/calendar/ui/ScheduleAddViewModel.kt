@@ -217,9 +217,9 @@ internal constructor(
      * **할 일은 보내지 않는다.** `AppointmentResponse`에 자리가 없다. 여러 줄에 줄마다 체크
      * 상태까지 있어서 `purpose` 하나로 담을 수 없다. 화면에만 남는다(#141).
      *
-     * [onSaved]는 저장이 끝난 뒤의 화면 이동이다. 실패하면 부르지 않는다.
+     * [onSaved]는 저장이 끝난 뒤의 화면 이동이다. 실패하면 부르지 않고 [onFailed]를 부른다(#350).
      */
-    fun onSaveClick(onSaved: () -> Unit) {
+    fun onSaveClick(onFailed: () -> Unit = {}, onSaved: () -> Unit) {
         val state = mutableUiState.value
         if (!state.canSave) {
             // 비활성 버튼으로 막지 않는다. 문서가 비활성만으로 필요한 행동을 숨기지 말라고 한다.
@@ -266,7 +266,7 @@ internal constructor(
                     ),
                 )
             saving = false
-            if (result is ApiResult.Success) onSaved()
+            if (result is ApiResult.Success) onSaved() else onFailed()
         }
     }
 }

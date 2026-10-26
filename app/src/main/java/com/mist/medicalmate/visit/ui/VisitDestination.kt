@@ -17,6 +17,7 @@ import com.mist.medicalmate.core.voice.LocalVoiceTargets
 import com.mist.medicalmate.core.voice.VoiceNavigation
 import com.mist.medicalmate.core.voice.VoicePrompt
 import com.mist.medicalmate.core.voice.VoiceReply
+import com.mist.medicalmate.core.voice.VoiceSave
 import com.mist.medicalmate.core.voice.VoiceTargetEffect
 import com.mist.medicalmate.core.voice.VoiceText
 import com.mist.medicalmate.core.voice.rememberVoicePrompt
@@ -361,10 +362,15 @@ private fun VisitRecordRoute(
     }
 
     // "저장"(#288). 확인을 받는다. 말로는 고치거나 지우지 않는다(#296).
-    VoiceTargetEffect(VISIT_RECORD_SUGGESTIONS) { text ->
-        viewModel.voice.handle(text) { viewModel.onSaveClick(cardId = route.cardId, onSaved = onSaved) }
-    }
     val prompt = rememberVoicePrompt()
+    // 결과는 막대에도 알린다(#350). 실패는 화면에도 그린다.
+    val save = {
+        viewModel.onSaveClick(cardId = route.cardId, onFailed = { prompt(it.voicePrompt()) }) {
+            prompt(VoiceSave.saved)
+            onSaved()
+        }
+    }
+    VoiceTargetEffect(VISIT_RECORD_SUGGESTIONS) { text -> viewModel.voice.handle(text, save) }
     val loaded = state is VisitRecordUiState.Content
     LaunchedEffect(loaded) { if (loaded) prompt(VoicePrompt(question = VoiceText(R.string.voice_record_ask))) }
 
@@ -379,7 +385,7 @@ private fun VisitRecordRoute(
             edit = viewModel.editActions,
             // 편집 중에는 하단에 저장하기가 없다. 그 자리가 삭제이고 사본을 옮기는 것은
             // Nav 우측 `확인`이 한다. 그래서 저장하기는 항상 화면을 나간다.
-            onSaveClick = { viewModel.onSaveClick(cardId = route.cardId, onSaved = onSaved) },
+            onSaveClick = save,
             onDeleteClick = viewModel::onDeleteClick,
             onDeleteDismiss = viewModel::onDeleteDismiss,
             onDeleteConfirm = {

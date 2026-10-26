@@ -1,7 +1,10 @@
 package com.mist.medicalmate.visit.ui
 
 import com.mist.medicalmate.R
+import com.mist.medicalmate.core.voice.VoicePrompt
 import com.mist.medicalmate.core.voice.VoiceReply
+import com.mist.medicalmate.core.voice.VoiceSave
+import com.mist.medicalmate.core.voice.VoiceText
 import com.mist.medicalmate.core.voice.VoiceWords
 
 /** 진료 후 기록 확인(1q-1)에서 한 말(#288). */
@@ -44,7 +47,11 @@ internal class VisitRecordVoiceActions(private val state: () -> VisitRecordUiSta
                 } else if (content.editing) {
                     VoiceReply.Done(R.string.voice_by_hand)
                 } else {
-                    VoiceReply.Confirm(R.string.voice_record_confirm_save, onConfirm = save)
+                    VoiceReply.Confirm(
+                        R.string.voice_record_confirm_save,
+                        confirmed = R.string.voice_saving,
+                        onConfirm = save,
+                    )
                 }
         }
     }
@@ -52,3 +59,10 @@ internal class VisitRecordVoiceActions(private val state: () -> VisitRecordUiSta
 
 /** 고치라는 말. "편집할래"도 그렇다(#320) — 화면이 "편집해 주세요"라고 적는데 그 말을 못 알아들었다. */
 private val BY_HAND = Regex("""바꿔|바꿀래|고쳐|고칠래|수정|지워|지울래|빼\s*줘|없애|삭제|편집""")
+
+/** 저장이 실패했을 때 막대에 거는 말(#350). 다시 해도 안 되는 실패는 다시 하라고 하지 않는다. */
+internal fun VisitSaveFailure.voicePrompt(): VoicePrompt = when (this) {
+    VisitSaveFailure.RETRYABLE -> VoiceSave.failed
+    VisitSaveFailure.REJECTED ->
+        VoicePrompt(message = VoiceText(R.string.voice_save_failed), question = VoiceText(R.string.voice_save_rejected))
+}

@@ -114,10 +114,13 @@ class HealthEditViewModelTest {
         val repository = FakeHealthProfileRepository(read = read(), written = FakeHealthProfileRepository.OFFLINE)
         val viewModel = HealthEditViewModel(repository).apply { load() }
         var left = false
+        var failed = false
 
-        viewModel.onSaveClick { left = true }
+        viewModel.onSaveClick(onFailed = { failed = true }) { left = true }
 
         assertFalse(left)
+        // 말로 저장했으면 막대가 이것으로 알린다(#350).
+        assertTrue(failed)
         assertTrue(viewModel.uiState.value.saveFailed)
         assertFalse(viewModel.uiState.value.saving)
     }

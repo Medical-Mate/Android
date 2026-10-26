@@ -234,6 +234,19 @@ class HospitalPickVoiceTest {
     }
 
     @Test
+    fun `말로 찾다 실패하면 없다고 하지 않고 못 찾았다고 한다`() = runTest(dispatcher) {
+        // 0건과 같은 말을 하면 이름을 잘못 말한 줄 알고 계속 바꿔 말한다(#350).
+        val viewModel = HospitalPickViewModel(SearchRepository(fails = true))
+
+        viewModel.load(HospitalPickPurpose.SCHEDULE, initialQuery = "고려튼튼통증의학과", voicePick = true)
+        advanceUntilIdle()
+
+        val decision = viewModel.uiState.value.voiceDecision as HospitalVoiceDecision.Ask
+        assertEquals(HospitalAskReason.FAILED, decision.reason)
+        assertEquals(R.string.voice_hospital_search_failed, decision.toPrompt().message?.text)
+    }
+
+    @Test
     fun `손이나 예약 문자로 열린 병원 찾기는 알아서 고르지 않는다`() = runTest(dispatcher) {
         val viewModel = HospitalPickViewModel(SearchRepository(listOf(Hospital("고려튼튼통증의학과의원"))))
 
@@ -306,11 +319,13 @@ class HospitalPickVoiceTest {
         advanceUntilIdle()
     }
 
-    private class SearchRepository(private val hospitals: List<Hospital> = SEOUL) : HospitalRepository {
+    private class SearchRepository(private val hospitals: List<Hospital> = SEOUL, private val fails: Boolean = false) :
+        HospitalRepository {
         var lastQuery: String? = null
 
         override suspend fun search(query: String): ApiResult<HospitalSearchResult> {
             lastQuery = query
+            if (fails) return ApiResult.NetworkUnavailable(java.io.IOException("offline"))
             return ApiResult.Success(HospitalSearchResult(hospitals, hospitals.size))
         }
     }

@@ -102,7 +102,11 @@ internal fun HealthEditVoiceTarget(
             }
 
             // 계정의 건강 정보를 통째로 덮어쓰는 저장이라 확인을 받는다. 카드 저장과 같다.
-            HealthEditVoice.Save -> VoiceReply.Confirm(R.string.voice_health_confirm_save, onConfirm = onSave)
+            HealthEditVoice.Save -> VoiceReply.Confirm(
+                R.string.voice_health_confirm_save,
+                confirmed = R.string.voice_saving,
+                onConfirm = onSave,
+            )
         }
     }
 }

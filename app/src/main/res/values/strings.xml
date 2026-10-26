@@ -624,6 +624,11 @@
     <string name="voice_command_yes_no">"네"나 "아니요"로 답해 주세요</string>
     <string name="voice_command_cancelled">알겠어요, 안 할게요</string>
     <string name="voice_command_confirmed">네, 했어요</string>
+    <string name="voice_saving">저장하고 있어요</string>
+    <string name="voice_saved">저장했어요</string>
+    <string name="voice_save_failed">저장하지 못했어요</string>
+    <string name="voice_save_retry">잠시 뒤 다시 "저장"이라고 해 주세요</string>
+    <string name="voice_save_rejected">다시 해도 저장되지 않아요. 화면의 안내를 봐 주세요</string>
     <string name="voice_command_confirm_again">잘 못 들었어요. "네"나 "아니요"로 답해 주세요</string>
     <string name="voice_moved_home">홈으로 왔어요</string>
     <string name="voice_moved_calendar">캘린더를 열었어요</string>
@@ -893,6 +898,11 @@
     <string name="voice_intake_question_full">질문은 %1$s개까지예요</string>
     <string name="voice_intake_question_which">몇 번째 질문인지 말씀해 주세요</string>
     <string name="voice_intake_finished">정리를 마쳤어요</string>
+    <string name="voice_intake_saving_questions">질문을 저장하고 있어요</string>
+    <string name="voice_intake_questions_failed">질문을 저장하지 못했어요</string>
+    <string name="voice_intake_questions_retry">다시 "다음"이라고 해 주세요</string>
+    <string name="voice_intake_send_failed">답을 보내지 못했어요</string>
+    <string name="voice_intake_send_retry">한 번 더 말씀해 주세요</string>
     <string name="voice_intake_done_ask">브리핑 카드를 만들까요, 병원부터 찾을까요?</string>
     <string name="voice_intake_done_card">브리핑 카드를 만들게요</string>
     <string name="voice_intake_done_hospital">병원을 찾아볼게요</string>
@@ -954,6 +964,8 @@
     <string name="voice_hospital_found_same">이름이 같은 병원이 %1$s곳이에요</string>
     <string name="voice_hospital_found_many">%1$s곳이 나왔어요</string>
     <string name="voice_hospital_not_found">그 이름으로는 병원이 안 나와요</string>
+    <string name="voice_hospital_search_failed">지금은 병원을 찾을 수 없어요</string>
+    <string name="voice_hospital_ask_later">잠시 뒤 병원 이름을 다시 말씀해 주세요</string>
     <string name="voice_hospital_ask_which">몇 번째인가요? 동네나 지점 이름으로 말씀하셔도 돼요</string>
     <string name="voice_hospital_ask_which_or_name">몇 번째인가요? 이름을 더 자세히 말씀하셔도 돼요</string>
     <string name="voice_hospital_ask_name">병원 이름을 한 번 더 말씀해 주세요</string>

@@ -19,6 +19,8 @@ import com.mist.medicalmate.BuildConfig
 import com.mist.medicalmate.core.notification.rememberNotificationPermission
 import com.mist.medicalmate.core.speech.rememberMicPermission
 import com.mist.medicalmate.core.voice.LocalVoiceTargets
+import com.mist.medicalmate.core.voice.VoiceSave
+import com.mist.medicalmate.core.voice.rememberVoicePrompt
 import kotlinx.serialization.Serializable
 
 /** 와이어프레임 1s-1. 홈 헤더의 아바타에서 들어온다. */
@@ -159,9 +161,15 @@ private fun HealthEditRoute(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) { viewModel.load() }
-    HealthEditVoiceTarget(uiState = viewModel.uiState, viewModel = viewModel, onSave = {
-        viewModel.onSaveClick(onSaved)
-    })
+    // 결과는 막대에도 알린다(#350). 실패는 화면에도 그린다.
+    val prompt = rememberVoicePrompt()
+    val save = {
+        viewModel.onSaveClick(onFailed = { prompt(VoiceSave.failed) }) {
+            prompt(VoiceSave.saved)
+            onSaved()
+        }
+    }
+    HealthEditVoiceTarget(uiState = viewModel.uiState, viewModel = viewModel, onSave = save)
 
     HealthEditScreen(
         state = state,
@@ -172,7 +180,7 @@ private fun HealthEditRoute(
             onAddClick = viewModel::onAddClick,
             onDraftChange = viewModel::onDraftChange,
             onDraftSubmit = viewModel::onDraftSubmit,
-            onSaveClick = { viewModel.onSaveClick(onSaved) },
+            onSaveClick = save,
         ),
         modifier = modifier,
     )
