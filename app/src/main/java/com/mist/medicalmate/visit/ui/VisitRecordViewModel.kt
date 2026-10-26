@@ -148,7 +148,7 @@ internal constructor(
      * 못 만들어도 저장은 성공이다 — 기록이 본체고 일정은 덧붙이는 것이다. 만들어진 일정은
      * 돌아가는 일자 화면의 "다음 일정"에 바로 선다.
      */
-    fun onSaveClick(cardId: String?, onSaved: () -> Unit) {
+    fun onSaveClick(cardId: String?, onFailed: (VisitSaveFailure) -> Unit = {}, onSaved: () -> Unit) {
         val content = mutableUiState.value as? VisitRecordUiState.Content
         val card = cardId?.toLongOrNull()
         if (content == null || card == null || saving) return
@@ -159,16 +159,18 @@ internal constructor(
             val result = repository.create(card, content.record.toNewVisit(visitedOn))
             if (result is ApiResult.Success) scheduleFollowUp(content.record, card)
             saving = false
-            when (result) {
-                is ApiResult.Success -> onSaved()
-                is ApiResult.NetworkUnavailable -> update { it.copy(saveFailure = VisitSaveFailure.RETRYABLE) }
-                is ApiResult.Rejected ->
-                    update {
-                        it.copy(
-                            saveFailure =
-                            if (result.retryable) VisitSaveFailure.RETRYABLE else VisitSaveFailure.REJECTED,
-                        )
-                    }
+            val failure =
+                when (result) {
+                    is ApiResult.Success -> null
+                    is ApiResult.NetworkUnavailable -> VisitSaveFailure.RETRYABLE
+                    is ApiResult.Rejected ->
+                        if (result.retryable) VisitSaveFailure.RETRYABLE else VisitSaveFailure.REJECTED
+                }
+            if (failure == null) {
+                onSaved()
+            } else {
+                update { it.copy(saveFailure = failure) }
+                onFailed(failure)
             }
         }
     }

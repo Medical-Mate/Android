@@ -381,10 +381,13 @@ class VisitRecordViewModelTest {
         repository.createRejection = rejection(retryable = false)
         val viewModel = filled(repository)
 
-        viewModel.onSaveClick(cardId = "3", onSaved = {})
+        var failure: VisitSaveFailure? = null
+        viewModel.onSaveClick(cardId = "3", onFailed = { failure = it }, onSaved = {})
 
         val content = viewModel.uiState.value as VisitRecordUiState.Content
         assertEquals(VisitSaveFailure.REJECTED, content.saveFailure)
+        // 말로 저장했으면 막대도 다시 하라고 하지 않는다(#350).
+        assertEquals(VisitSaveFailure.REJECTED, failure)
     }
 
     @Test

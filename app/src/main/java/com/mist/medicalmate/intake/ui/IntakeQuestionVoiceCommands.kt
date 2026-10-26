@@ -51,11 +51,15 @@ internal class IntakeQuestionVoiceCommands(
         return when {
             current.writingQuestion -> VoiceReply.Done(R.string.voice_intake_writing_first)
             current.questions.isEmpty() && current.questionRows.isNotEmpty() ->
-                VoiceReply.Confirm(R.string.voice_intake_confirm_no_questions) { routes.next() }
+                VoiceReply.Confirm(
+                    R.string.voice_intake_confirm_no_questions,
+                    confirmed = R.string.voice_intake_saving_questions,
+                ) { routes.next() }
 
             else -> {
                 routes.next()
-                VoiceReply.Done(R.string.voice_intake_finished)
+                // 저장이 끝나기 전이다(#350). 마쳤다는 말은 저장이 되어 1c-5가 열린 뒤에 한다.
+                VoiceReply.Done(R.string.voice_intake_saving_questions)
             }
         }
     }

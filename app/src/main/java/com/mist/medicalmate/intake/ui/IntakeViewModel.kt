@@ -92,6 +92,8 @@ internal constructor(private val repository: SessionRepository, speech: SpeechTo
                 messages = it.messages + it.newMessage(IntakeMessage.Sender.PATIENT, text),
                 draft = "",
                 awaitingReply = true,
+                // 다시 보내면 지난 실패를 지운다. 같은 실패가 또 나도 다시 알린다(#350).
+                sendFailed = false,
             )
         }
         viewModelScope.launch {

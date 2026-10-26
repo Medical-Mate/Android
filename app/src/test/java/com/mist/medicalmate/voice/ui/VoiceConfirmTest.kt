@@ -15,11 +15,13 @@ class VoiceConfirmTest {
 
     private val commands = mutableListOf<VoiceCommandRequest>()
 
+    private val said = mutableListOf<Int>()
+
     private val conversation =
         VoiceConversation(
             targets = targets,
             trace = VoiceWakeTrace {},
-            say = { _, _, _ -> },
+            say = { message, _, _ -> said += message.text },
             command = { commands += it },
         )
 
@@ -32,6 +34,21 @@ class VoiceConfirmTest {
         conversation.respond("네")
 
         assertEquals(1, saved)
+    }
+
+    @Test
+    fun `기다려야 하는 일은 네 뒤에 했다고 하지 않고 하는 중이라고 한다`() = runTest {
+        // 저장 요청을 보내자마자 "했어요"라고 하면 실패해도 막대는 했다고 한다(#350). 결과는 화면이 받은 뒤에 알린다.
+        targets.register(
+            VoiceTarget {
+                VoiceReply.Confirm(R.string.voice_record_confirm_save, confirmed = R.string.voice_saving) {}
+            },
+        )
+
+        conversation.respond("저장해 줘")
+        conversation.respond("네")
+
+        assertEquals(R.string.voice_saving, said.last())
     }
 
     @Test

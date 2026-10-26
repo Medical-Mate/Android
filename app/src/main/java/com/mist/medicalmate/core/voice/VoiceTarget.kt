@@ -54,9 +54,17 @@ sealed interface VoiceReply {
      * 되돌리기 어려운 일이라 한 번 더 묻는다. 다음 말이 "네"면 [onConfirm]을 부른다.
      *
      * 저장처럼 서버에 남는 일이 여기다. 화면 이동은 뒤로가기로 되돌릴 수 있어 묻지 않는다.
+     *
+     * @param confirmed "네" 뒤 막대에 적을 말. 비우면 "네, 했어요"다. 서버에 보내고 기다리는 일은 "저장하고 있어요"처럼
+     *   하는 중이라고 적고, 결과는 화면이 받은 뒤에 [VoiceTargets.ask]로 알린다(#350). 전에는 요청을 보내자마자
+     *   "했어요"라고 해서 저장이 실패해도 막대는 했다고 했다.
      */
-    data class Confirm(@StringRes val prompt: Int, val args: List<String> = emptyList(), val onConfirm: () -> Unit) :
-        VoiceReply
+    data class Confirm(
+        @StringRes val prompt: Int,
+        val args: List<String> = emptyList(),
+        @StringRes val confirmed: Int? = null,
+        val onConfirm: () -> Unit,
+    ) : VoiceReply
 }
 
 /**

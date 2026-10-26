@@ -75,10 +75,14 @@ internal class FakeSessionRepository(
     var sentQuestions: List<String>? = null
     var turnEnded: Boolean = ends
 
+    /** 보내기가 실패해야 하는 시험이 있다(#350). */
+    var sendFails: Boolean = false
+
     override suspend fun send(sessionId: Long, text: String, byVoice: Boolean): ApiResult<IntakeTurn> {
         sentCount++
         sentText = text
         sentByVoice = byVoice
+        if (sendFails) return ApiResult.NetworkUnavailable(java.io.IOException("offline"))
         return ApiResult.Success(
             IntakeTurn(
                 ended = turnEnded,
@@ -415,6 +419,24 @@ class IntakeViewModelTest {
         assertEquals("", viewModel.uiState.value.draft)
         assertFalse(viewModel.uiState.value.awaitingReply)
         assertEquals(IntakeMessage.Sender.AI, viewModel.uiState.value.messages.last().sender)
+    }
+
+    @Test
+    fun `보내지 못하면 알리고 다시 보내면 지난 실패를 지운다`() = runTest {
+        // 막대가 실패를 알리는 신호다(#350). 남아 있으면 같은 실패가 또 나도 다시 알리지 못한다.
+        val repository = FakeSessionRepository()
+        repository.sendFails = true
+        val viewModel = intakeViewModel(repository)
+        viewModel.openChatStep()
+
+        viewModel.onDraftChange("한 3주쯤 됐어요")
+        viewModel.onSend()
+        assertTrue(viewModel.uiState.value.sendFailed)
+
+        repository.sendFails = false
+        viewModel.onDraftChange("한 3주쯤 됐어요")
+        viewModel.onSend()
+        assertFalse(viewModel.uiState.value.sendFailed)
     }
 
     @Test

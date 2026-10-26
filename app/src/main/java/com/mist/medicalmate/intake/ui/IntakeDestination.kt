@@ -200,6 +200,28 @@ private fun IntakeVoice(state: IntakeUiState, spoken: String?, viewModel: Intake
         )
     }
 
+    // 실패는 화면이 버튼 위에만 적는다. 말로 하는 사람은 그것을 보지 않는다(#350).
+    LaunchedEffect(state.questionsSaveFailed) {
+        if (state.questionsSaveFailed) {
+            prompt(
+                VoicePrompt(
+                    message = VoiceText(R.string.voice_intake_questions_failed),
+                    question = VoiceText(R.string.voice_intake_questions_retry),
+                ),
+            )
+        }
+    }
+    LaunchedEffect(state.sendFailed) {
+        if (state.sendFailed) {
+            prompt(
+                VoicePrompt(
+                    message = VoiceText(R.string.voice_intake_send_failed),
+                    question = VoiceText(R.string.voice_intake_send_retry),
+                ),
+            )
+        }
+    }
+
     LaunchedEffect(Unit) {
         val reply =
             spoken?.let { viewModel.voiceCommands.handle(it, routes) } as? VoiceReply.Done ?: return@LaunchedEffect
@@ -226,5 +248,13 @@ private fun IntakeDoneVoice(onCard: () -> Unit, onHospital: () -> Unit) {
         }
     }
     val prompt = rememberVoicePrompt()
-    LaunchedEffect(Unit) { prompt(VoicePrompt(question = VoiceText(R.string.voice_intake_done_ask))) }
+    // 질문 저장이 끝나 이 화면이 열렸다. "저장하고 있어요"를 덮는다(#350).
+    LaunchedEffect(Unit) {
+        prompt(
+            VoicePrompt(
+                message = VoiceText(R.string.voice_intake_finished),
+                question = VoiceText(R.string.voice_intake_done_ask),
+            ),
+        )
+    }
 }

@@ -133,8 +133,9 @@ internal class VoiceConversation(
         VoiceWords.isYes(text) -> {
             trace.log { "대화: \"$text\" → 확인" }
             pending = null
+            // 하는 중이라는 말을 먼저 세운다. 결과는 화면이 받은 뒤에 이 줄을 덮는다(#350).
+            say(VoiceMessage(asking.confirmed ?: R.string.voice_command_confirmed), false, null)
             asking.onConfirm()
-            say(VoiceMessage(R.string.voice_command_confirmed), false, null)
             true
         }
 

@@ -106,7 +106,7 @@ internal constructor(private val repository: HospitalRepository) : ViewModel() {
                 apply(result)
                 if (voicePick && result !is ApiResult.Success) {
                     mutableUiState.update {
-                        it.copy(voiceDecision = HospitalVoiceDecision.Ask(HospitalAskReason.NONE, emptyList()))
+                        it.copy(voiceDecision = HospitalVoiceDecision.Ask(HospitalAskReason.FAILED, emptyList()))
                     }
                 } else if (voicePick && result is ApiResult.Success) {
                     val decision = decideVoicePick(query, result.value.hospitals)

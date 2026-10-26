@@ -135,6 +135,7 @@ internal class ScheduleAddVoiceActions(
         return VoiceReply.Confirm(
             R.string.voice_schedule_confirm_save,
             listOf(current.voiceSummary()),
+            confirmed = R.string.voice_saving,
             onConfirm = save,
         )
     }

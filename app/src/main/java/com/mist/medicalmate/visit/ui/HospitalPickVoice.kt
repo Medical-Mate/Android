@@ -95,6 +95,9 @@ enum class HospitalAskReason {
 
     /** 하나도 없다. */
     NONE,
+
+    /** 찾지 못했다. 연결이 없거나 서버가 거절했다. 0건과 가르지 않으면 이름을 계속 바꿔 말하게 된다(#350). */
+    FAILED,
 }
 
 internal fun decideVoicePick(spoken: String, results: List<Hospital>): HospitalVoiceDecision {
@@ -126,6 +129,12 @@ internal fun HospitalVoiceDecision.Ask.toPrompt(): VoicePrompt = when (reason) {
         VoicePrompt(
             message = VoiceText(R.string.voice_hospital_not_found),
             question = VoiceText(R.string.voice_hospital_ask_name),
+        )
+
+    HospitalAskReason.FAILED ->
+        VoicePrompt(
+            message = VoiceText(R.string.voice_hospital_search_failed),
+            question = VoiceText(R.string.voice_hospital_ask_later),
         )
 }
 
